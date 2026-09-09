@@ -1,0 +1,15 @@
+apt
+base-files
+bash
+ca-certificates
+curl
+grub-efi-amd64
+jq
+linux-image-amd64
+network-manager
+os-prober
+pipewire
+shim-signed
+sudo
+systemd
+xdg-desktop-portal

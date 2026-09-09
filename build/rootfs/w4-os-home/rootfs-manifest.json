@@ -1,0 +1,100 @@
+{
+    "rootfs_schema_version": 1,
+    "kind": "rootfs-bundle",
+    "profile_id": "w4-os-home",
+    "profile_name": "W4 OS Home",
+    "base_manifest_id": "w4-linux-base",
+    "source_build_input": "w4-os-home.build-input.json",
+    "target": {
+        "release_channel": "testing",
+        "image_format": "iso"
+    },
+    "upstream": {
+        "distribution": "debian",
+        "track": "stable",
+        "architectures": [
+            "amd64"
+        ],
+        "boot_modes": [
+            "uefi"
+        ]
+    },
+    "repositories": [
+        "debian-main",
+        "debian-security",
+        "w4-main"
+    ],
+    "packages": {
+        "required": [
+            "apt",
+            "base-files",
+            "bash",
+            "ca-certificates",
+            "firefox-esr",
+            "grub-efi-amd64",
+            "libreoffice",
+            "linux-image-amd64",
+            "network-manager",
+            "os-prober",
+            "pipewire",
+            "shim-signed",
+            "sudo",
+            "systemd",
+            "xdg-desktop-portal"
+        ],
+        "recommended": [
+            "evince",
+            "flatpak",
+            "fwupd",
+            "snapper",
+            "vlc"
+        ]
+    },
+    "meta_packages": {
+        "required": [
+            "w4-base-meta",
+            "w4-desktop-meta",
+            "w4-home-meta"
+        ],
+        "recommended": []
+    },
+    "features": [
+        "desktop-defaults",
+        "home-onboarding",
+        "local-backup-ready"
+    ],
+    "rootfs_directories": [
+        "\/boot",
+        "\/boot\/efi",
+        "\/dev",
+        "\/etc",
+        "\/etc\/apt",
+        "\/etc\/apt\/sources.list.d",
+        "\/etc\/default",
+        "\/etc\/systemd\/system",
+        "\/home",
+        "\/proc",
+        "\/root",
+        "\/run",
+        "\/sys",
+        "\/tmp",
+        "\/usr",
+        "\/usr\/local",
+        "\/var",
+        "\/var\/cache\/apt",
+        "\/var\/lib\/apt",
+        "\/var\/lib\/dpkg",
+        "\/var\/log",
+        "\/var\/tmp"
+    ],
+    "identity_cleanup": [
+        "\/etc\/machine-id",
+        "\/var\/lib\/dbus\/machine-id"
+    ],
+    "next_steps": [
+        "configurar primer inicio",
+        "anadir instalador y componentes live",
+        "generar formato de imagen",
+        "ejecutar pruebas de arranque"
+    ]
+}
