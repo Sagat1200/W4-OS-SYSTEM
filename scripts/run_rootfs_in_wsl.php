@@ -61,6 +61,25 @@ function quoteWslDistribution(string $value): string
     return quoteForWindowsCommand($value);
 }
 
+function isWslNativePath(string $path): bool
+{
+    return str_starts_with($path, '/');
+}
+
+function canUseSudoWithoutPassword(string $distribution): bool
+{
+    $output = [];
+    $exitCode = 0;
+    $command = sprintf(
+        'wsl -d %s -- bash -lc %s 2>&1',
+        quoteWslDistribution($distribution),
+        quoteForWindowsCommand('sudo -n true')
+    );
+    exec($command, $output, $exitCode);
+
+    return $exitCode === 0;
+}
+
 /**
  * @return array<string, string>
  */
@@ -184,17 +203,22 @@ try {
     ));
 
     if ($rootfsDir === null) {
-        $rootfsDir = $bundlePath . DIRECTORY_SEPARATOR . 'assembled-rootfs';
+        $rootfsDir = sprintf('/var/tmp/w4-os-system/%s/assembled-rootfs', $profileId ?? basename($bundlePath));
     }
 
-    $wslRootfsDir = runWindowsCommand(sprintf(
-        'wsl -d %s -- wslpath -a %s',
-        quoteWslDistribution($distribution),
-        quoteForWindowsCommand($rootfsDir)
-    ));
+    if (isWslNativePath($rootfsDir)) {
+        $wslRootfsDir = $rootfsDir;
+    } else {
+        $wslRootfsDir = runWindowsCommand(sprintf(
+            'wsl -d %s -- wslpath -a %s',
+            quoteWslDistribution($distribution),
+            quoteForWindowsCommand($rootfsDir)
+        ));
+    }
 
     $dependencies = detectDependencies($distribution);
     $missing = missingDependencies($dependencies);
+    $canUseSudo = canUseSudoWithoutPassword($distribution);
 
     if ($installDeps && $missing !== []) {
         $packages = implode(' ', $missing);
@@ -209,16 +233,8 @@ try {
     }
 
     if ($checkOnly) {
-        printJson([
-            'status' => $missing === [] ? 'ready' : 'missing_dependencies',
-            'distribution' => $distribution,
-            'bundle_path_windows' => $bundlePath,
-            'bundle_path_wsl' => $wslBundlePath,
-            'rootfs_dir_windows' => $rootfsDir,
-            'rootfs_dir_wsl' => $wslRootfsDir,
-            'dependencies' => $dependencies,
-            'missing_dependencies' => $missing,
-            'run_command' => sprintf(
+        $runCommand = $canUseSudo
+            ? sprintf(
                 'wsl -d %s -- bash -lc %s',
                 $distribution,
                 sprintf(
@@ -226,7 +242,28 @@ try {
                     quoteForBash($wslScriptPath),
                     quoteForBash($wslRootfsDir)
                 )
-            ),
+            )
+            : sprintf(
+                'wsl -d %s -u root -- bash -lc %s',
+                $distribution,
+                sprintf(
+                    'bash %s %s',
+                    quoteForBash($wslScriptPath),
+                    quoteForBash($wslRootfsDir)
+                )
+            );
+
+        printJson([
+            'status' => $missing === [] ? 'ready' : 'missing_dependencies',
+            'distribution' => $distribution,
+            'bundle_path_windows' => $bundlePath,
+            'bundle_path_wsl' => $wslBundlePath,
+            'rootfs_dir_windows' => isWslNativePath($rootfsDir) ? null : $rootfsDir,
+            'rootfs_dir_wsl' => $wslRootfsDir,
+            'dependencies' => $dependencies,
+            'sudo_non_interactive' => $canUseSudo,
+            'missing_dependencies' => $missing,
+            'run_command' => $runCommand,
         ]);
         exit(0);
     }
@@ -237,16 +274,27 @@ try {
         );
     }
 
-    $runCommand = sprintf(
-        'wsl -d %s -- bash -lc %s',
-        quoteWslDistribution($distribution),
-        quoteForWindowsCommand(sprintf(
-            'chmod +x %s && sudo bash %s %s',
+    $innerCommand = sprintf(
+        'chmod +x %s && %s %s',
+        quoteForBash($wslScriptPath),
+        $canUseSudo ? 'sudo bash' : 'bash',
+        implode(' ', [
             quoteForBash($wslScriptPath),
-            quoteForBash($wslScriptPath),
-            quoteForBash($wslRootfsDir)
-        ))
+            quoteForBash($wslRootfsDir),
+        ])
     );
+
+    $runCommand = $canUseSudo
+        ? sprintf(
+            'wsl -d %s -- bash -lc %s',
+            quoteWslDistribution($distribution),
+            quoteForWindowsCommand($innerCommand)
+        )
+        : sprintf(
+            'wsl -d %s -u root -- bash -lc %s',
+            quoteWslDistribution($distribution),
+            quoteForWindowsCommand($innerCommand)
+        );
 
     $executionOutput = runWindowsCommand($runCommand);
 
@@ -254,7 +302,8 @@ try {
         'status' => 'ok',
         'distribution' => $distribution,
         'bundle_path_windows' => $bundlePath,
-        'rootfs_dir_windows' => $rootfsDir,
+        'rootfs_dir_windows' => isWslNativePath($rootfsDir) ? null : $rootfsDir,
+        'rootfs_dir_wsl' => $wslRootfsDir,
         'execution_output' => $executionOutput,
     ]);
     exit(0);

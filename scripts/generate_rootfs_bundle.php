@@ -101,6 +101,7 @@ function buildRootfsScript(array $buildInput, array $directories): string
     $distribution = $buildInput['upstream']['distribution'];
     $track = $buildInput['upstream']['track'];
     $requiredPackages = implode(' ', $buildInput['packages']['required']);
+    $requiredPackagesForMmdebstrap = implode(',', $buildInput['packages']['required']);
     $recommendedPackages = implode(' ', $buildInput['packages']['recommended']);
     $repositories = implode(PHP_EOL, array_map(
         static fn (string $repository): string => sprintf('echo "  - %s"', $repository),
@@ -111,11 +112,19 @@ function buildRootfsScript(array $buildInput, array $directories): string
         $directories
     ));
 
-    return <<<BASH
+    $script = <<<BASH
 #!/usr/bin/env bash
 set -euo pipefail
 
 ROOTFS_DIR="\${1:-./rootfs}"
+
+cleanup() {
+  umount -lf "\${ROOTFS_DIR}/proc" 2>/dev/null || true
+  umount -lf "\${ROOTFS_DIR}/sys" 2>/dev/null || true
+  umount -lf "\${ROOTFS_DIR}/dev" 2>/dev/null || true
+}
+
+trap cleanup EXIT
 
 echo "==> W4 OS System rootfs assembly"
 echo "Profile: {$profileId}"
@@ -123,23 +132,42 @@ echo "Distribution: {$distribution}"
 echo "Track: {$track}"
 echo "Output: \${ROOTFS_DIR}"
 
-if ! command -v debootstrap >/dev/null 2>&1; then
-  echo "ERROR: debootstrap no esta disponible en este entorno Linux." >&2
+if ! command -v mmdebstrap >/dev/null 2>&1 && ! command -v debootstrap >/dev/null 2>&1; then
+  echo "ERROR: no hay ni mmdebstrap ni debootstrap disponibles en este entorno Linux." >&2
   exit 1
 fi
 
 mkdir -p "\${ROOTFS_DIR}"
-{$directoryCommands}
 
 echo "==> Repositorios declarados"
 {$repositories}
 
-echo "==> Bootstrap base Debian"
-debootstrap --variant=minbase {$track} "\${ROOTFS_DIR}" http://deb.debian.org/debian/
+if command -v mmdebstrap >/dev/null 2>&1; then
+  echo "==> Bootstrap base Debian con mmdebstrap"
+  mmdebstrap \
+    --variant=minbase \
+    --include={$requiredPackagesForMmdebstrap} \
+    {$track} "\${ROOTFS_DIR}" \
+    "deb [signed-by=/usr/share/keyrings/debian-archive-current.gpg] http://deb.debian.org/debian {$track} main"
+else
+  echo "==> Bootstrap base Debian con debootstrap"
+  debootstrap --merged-usr --variant=minbase {$track} "\${ROOTFS_DIR}" http://deb.debian.org/debian/
 
-echo "==> Instalacion de paquetes requeridos"
-chroot "\${ROOTFS_DIR}" apt-get update
-chroot "\${ROOTFS_DIR}" apt-get install -y {$requiredPackages}
+  echo "==> Asegurando estructura base de directorios"
+  {$directoryCommands}
+
+  echo "==> Montando pseudo-filesystems para chroot"
+  mount --bind /dev "\${ROOTFS_DIR}/dev"
+  mount -t proc proc "\${ROOTFS_DIR}/proc"
+  mount -t sysfs sysfs "\${ROOTFS_DIR}/sys"
+
+  echo "==> Instalacion de paquetes requeridos"
+  chroot "\${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get update
+  chroot "\${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get install -y {$requiredPackages}
+fi
+
+echo "==> Asegurando estructura base de directorios"
+{$directoryCommands}
 
 echo "==> Paquetes recomendados sugeridos"
 echo "{$recommendedPackages}"
@@ -152,6 +180,8 @@ rm -f "\${ROOTFS_DIR}/var/lib/dbus/machine-id"
 echo "==> Rootfs base ensamblado"
 echo "Siguiente etapa: configuracion de primer inicio, instalador y formato de imagen."
 BASH;
+
+    return str_replace(["\r\n", "\r"], "\n", $script);
 }
 
 try {
@@ -239,19 +269,19 @@ try {
         ],
     ];
 
-    $requiredPackages = implode(PHP_EOL, $buildInput['packages']['required']) . PHP_EOL;
-    $recommendedPackages = implode(PHP_EOL, $buildInput['packages']['recommended']) . PHP_EOL;
-    $repositories = implode(PHP_EOL, $buildInput['repositories']) . PHP_EOL;
-    $directoryList = implode(PHP_EOL, $directories) . PHP_EOL;
+    $requiredPackages = implode("\n", $buildInput['packages']['required']) . "\n";
+    $recommendedPackages = implode("\n", $buildInput['packages']['recommended']) . "\n";
+    $repositories = implode("\n", $buildInput['repositories']) . "\n";
+    $directoryList = implode("\n", $directories) . "\n";
     $rootfsScript = buildRootfsScript($buildInput, $directories);
 
     $filesToWrite = [
-        $outputPath . DIRECTORY_SEPARATOR . 'rootfs-manifest.json' => json_encode($rootfsManifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . PHP_EOL,
+        $outputPath . DIRECTORY_SEPARATOR . 'rootfs-manifest.json' => json_encode($rootfsManifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n",
         $outputPath . DIRECTORY_SEPARATOR . 'packages.required.list' => $requiredPackages,
         $outputPath . DIRECTORY_SEPARATOR . 'packages.recommended.list' => $recommendedPackages,
         $outputPath . DIRECTORY_SEPARATOR . 'repositories.list' => $repositories,
         $outputPath . DIRECTORY_SEPARATOR . 'directories.list' => $directoryList,
-        $outputPath . DIRECTORY_SEPARATOR . 'build-rootfs.sh' => $rootfsScript . PHP_EOL,
+        $outputPath . DIRECTORY_SEPARATOR . 'build-rootfs.sh' => $rootfsScript . "\n",
     ];
 
     foreach ($filesToWrite as $path => $contents) {
