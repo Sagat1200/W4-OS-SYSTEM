@@ -24,7 +24,7 @@ Mantener trazabilidad entre:
 | --- | --- | --- | --- | --- |
 | DOC | DOC-0.2 | 2026-09-09 | Activa | Base de gestion creada y README introductorio inicial publicado |
 | PLAN | PLAN-0.1 | 2026-09-09 | Activa | Ruta ejecutiva inicial para V1 basada en la coleccion W4 OS |
-| TECH | TECH-0.1 | 2026-09-09 | Activa | Primer artefacto tecnico base: manifiestos versionados y validador funcional |
+| TECH | TECH-0.2 | 2026-09-09 | Activa | Pipeline minimo inicial disponible: manifiestos, validacion y generacion de build-inputs |
 | REL | REL-0.0 | 2026-09-09 | Base | Sin candidato de release registrado |
 
 ## Historial
@@ -35,6 +35,7 @@ Mantener trazabilidad entre:
 | 2026-09-09 | DOC | DOC-0.2 | Creacion del `README.md` introductorio del proyecto `W4 OS System` | Se define una presentacion base del repositorio con vision, familia de productos y documentos clave | `README.md` |
 | 2026-09-09 | PLAN | PLAN-0.1 | Definicion inicial del orden de implementacion V1 | Se prioriza H0-H5 con foco en MVP recuperable | `DEVELOPMENT_TABLE.md`, `EXECUTIVE_IMPLEMENTATION_PLAN.md` |
 | 2026-09-09 | TECH | TECH-0.1 | Creacion del sistema inicial de manifiestos y validador | El proyecto dispone ya de una fuente versionada para base, Home y Business, y de una verificacion automatica de consistencia | `manifests/w4-linux-base.manifest.json`, `manifests/w4-os-home.profile.json`, `manifests/w4-os-business.profile.json`, `scripts/validate_manifests.php` |
+| 2026-09-09 | TECH | TECH-0.2 | Creacion del pipeline minimo de exportacion de build | El proyecto ya puede validar perfiles y generar artefactos `build-input` consumibles por la siguiente etapa del sistema de build | `scripts/lib/ManifestToolkit.php`, `scripts/generate_build_input.php`, `build/inputs/w4-os-home.build-input.json`, `build/inputs/w4-os-business.build-input.json` |
 
 ## Regla de versionado
 

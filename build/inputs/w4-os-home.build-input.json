@@ -1,0 +1,75 @@
+{
+    "build_schema_version": 1,
+    "kind": "build-input",
+    "profile_id": "w4-os-home",
+    "profile_name": "W4 OS Home",
+    "base_manifest_id": "w4-linux-base",
+    "upstream": {
+        "distribution": "debian",
+        "track": "stable",
+        "architectures": [
+            "amd64"
+        ],
+        "boot_modes": [
+            "uefi"
+        ]
+    },
+    "target": {
+        "release_channel": "testing",
+        "image_format": "iso"
+    },
+    "repositories": [
+        "debian-main",
+        "debian-security",
+        "w4-main"
+    ],
+    "meta_packages": {
+        "required": [
+            "w4-base-meta",
+            "w4-desktop-meta",
+            "w4-home-meta"
+        ],
+        "recommended": []
+    },
+    "packages": {
+        "required": [
+            "apt",
+            "base-files",
+            "bash",
+            "ca-certificates",
+            "firefox-esr",
+            "grub-efi-amd64",
+            "libreoffice",
+            "linux-image-amd64",
+            "network-manager",
+            "os-prober",
+            "pipewire",
+            "shim-signed",
+            "sudo",
+            "systemd",
+            "xdg-desktop-portal"
+        ],
+        "recommended": [
+            "evince",
+            "flatpak",
+            "fwupd",
+            "snapper",
+            "vlc"
+        ]
+    },
+    "features": [
+        "desktop-defaults",
+        "home-onboarding",
+        "local-backup-ready"
+    ],
+    "source_manifests": {
+        "base": "w4-linux-base.manifest.json",
+        "profile": "w4-os-home.profile.json"
+    },
+    "counts": {
+        "required_meta_packages": 3,
+        "recommended_meta_packages": 0,
+        "required_packages": 15,
+        "recommended_packages": 5
+    }
+}

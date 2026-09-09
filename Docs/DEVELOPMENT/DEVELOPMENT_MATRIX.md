@@ -25,7 +25,7 @@ Matriz operativa para seguimiento continuo del desarrollo. Su objetivo es mostra
 | ID | Prioridad | Area | Estado | Responsable | Dependencias | Evidencia actual | Siguiente accion | Riesgo activo |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | MX-001 | P0 | ADRs y base de plataforma | Decision pendiente | Pendiente | 001, 401, 406, 414, 415 | Especificacion documental base disponible | Aprobar ADRs de escritorio, boot, layout y update V1 | Reabrir decisiones durante el MVP |
-| MX-002 | P0 | Supply, build y repositorios | En analisis | Pendiente | MX-001 | Manifiestos iniciales `base/home/business` y validador PHP disponibles | Usar los manifiestos como entrada de un pipeline minimo de resolucion y build | Artefactos sin procedencia comprobable |
+| MX-002 | P0 | Supply, build y repositorios | En implementacion | Pendiente | MX-001 | Manifiestos versionados, libreria PHP compartida y `build-inputs` generados para Home y Business | Conectar `build-inputs` a la siguiente etapa de ensamblado de imagen | Artefactos sin procedencia comprobable |
 | MX-003 | P0 | Instalacion | No iniciado | Pendiente | MX-001, MX-002 | Contrato funcional documentado | Elegir motor del instalador y prototipo en VM | Error destructivo de disco o particionado |
 | MX-004 | P0 | Update y recovery | No iniciado | Pendiente | MX-001, MX-002 | Contrato de estados y recovery documentado | Implementar coordinador durable y prueba de reinicio | Rollback inconsistente |
 | MX-005 | P0 | Seguridad baseline | No iniciado | Pendiente | MX-002, MX-003, MX-004 | Baseline documental disponible | Convertir baseline en checklist validable por imagen | Imagen util sin baseline verificable |
@@ -43,6 +43,7 @@ Matriz operativa para seguimiento continuo del desarrollo. Su objetivo es mostra
 | C-000 | 2026-09-09 | Crear base de gobierno de desarrollo | Todas | Documentos iniciales de gestion creados | `DEVELOPMENT_TABLE.md`, `EXECUTIVE_IMPLEMENTATION_PLAN.md`, `DEVELOPMENT_MATRIX.md`, `DEVELOPMENT_VERSIONS.md`, `DEVELOPMENT_GUIDELINES.md` | Empezar H0 con ADRs y responsables |
 | C-001 | 2026-09-09 | Crear presentacion inicial del proyecto | Identidad documental, onboarding del repositorio | `README.md` introductorio creado con vision, alcance y documentos clave | `README.md` | Continuar con H0 y alinear nombre del proyecto en futuras piezas nuevas |
 | C-002 | 2026-09-09 | Crear el primer artefacto tecnico base | Supply, build y perfiles de edicion | Manifiestos versionados iniciales y validador funcional creados | `manifests/w4-linux-base.manifest.json`, `manifests/w4-os-home.profile.json`, `manifests/w4-os-business.profile.json`, `scripts/validate_manifests.php` | Conectar los manifiestos a un pipeline minimo de resolucion y generacion de artefactos |
+| C-003 | 2026-09-09 | Crear pipeline minimo de exportacion de build | Supply, build y perfiles de edicion | Libreria PHP compartida y generador de `build-input` funcionales creados | `scripts/lib/ManifestToolkit.php`, `scripts/generate_build_input.php`, `build/inputs/w4-os-home.build-input.json`, `build/inputs/w4-os-business.build-input.json` | Implementar la etapa siguiente: resolucion hacia ensamblado de raiz o imagen |
 
 ## Regla de cierre
 
