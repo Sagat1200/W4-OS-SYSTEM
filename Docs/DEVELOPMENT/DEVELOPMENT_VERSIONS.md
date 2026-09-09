@@ -24,7 +24,7 @@ Mantener trazabilidad entre:
 | --- | --- | --- | --- | --- |
 | DOC | DOC-0.2 | 2026-09-09 | Activa | Base de gestion creada y README introductorio inicial publicado |
 | PLAN | PLAN-0.1 | 2026-09-09 | Activa | Ruta ejecutiva inicial para V1 basada en la coleccion W4 OS |
-| TECH | TECH-0.3 | 2026-09-09 | Activa | Pipeline minimo ampliado: manifiestos, build-inputs y bundles de rootfs listos para Linux |
+| TECH | TECH-0.4 | 2026-09-09 | Activa | Pipeline minimo ampliado con soporte de ejecucion en WSL2 y chequeo de dependencias Linux |
 | REL | REL-0.0 | 2026-09-09 | Base | Sin candidato de release registrado |
 
 ## Historial
@@ -37,6 +37,7 @@ Mantener trazabilidad entre:
 | 2026-09-09 | TECH | TECH-0.1 | Creacion del sistema inicial de manifiestos y validador | El proyecto dispone ya de una fuente versionada para base, Home y Business, y de una verificacion automatica de consistencia | `manifests/w4-linux-base.manifest.json`, `manifests/w4-os-home.profile.json`, `manifests/w4-os-business.profile.json`, `scripts/validate_manifests.php` |
 | 2026-09-09 | TECH | TECH-0.2 | Creacion del pipeline minimo de exportacion de build | El proyecto ya puede validar perfiles y generar artefactos `build-input` consumibles por la siguiente etapa del sistema de build | `scripts/lib/ManifestToolkit.php`, `scripts/generate_build_input.php`, `build/inputs/w4-os-home.build-input.json`, `build/inputs/w4-os-business.build-input.json` |
 | 2026-09-09 | TECH | TECH-0.3 | Creacion de la etapa de ensamblado de raiz | El proyecto ya puede generar bundles de `rootfs` con metadata, listas de paquetes y script de ejecucion Linux preparado para `debootstrap` | `scripts/generate_rootfs_bundle.php`, `build/rootfs/w4-os-home/rootfs-manifest.json`, `build/rootfs/w4-os-home/build-rootfs.sh`, `build/rootfs/w4-os-business/rootfs-manifest.json`, `build/rootfs/w4-os-business/build-rootfs.sh` |
+| 2026-09-09 | TECH | TECH-0.4 | Adaptacion del ensamblado a WSL2 | El proyecto ya puede verificar Ubuntu WSL2, convertir rutas Windows/WSL y preparar la ejecucion del `rootfs`; el unico bloqueo actual detectado es la ausencia de `debootstrap` | `scripts/run_rootfs_in_wsl.php` |
 
 ## Regla de versionado
 
