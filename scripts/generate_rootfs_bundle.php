@@ -147,6 +147,7 @@ if command -v mmdebstrap >/dev/null 2>&1; then
   mmdebstrap \
     --variant=minbase \
     --include={$requiredPackagesForMmdebstrap} \
+    --aptopt='Acquire::Retries "3"' \
     {$track} "\${ROOTFS_DIR}" \
     "deb [signed-by=/usr/share/keyrings/debian-archive-current.gpg] http://deb.debian.org/debian {$track} main"
 else
@@ -162,8 +163,8 @@ else
   mount -t sysfs sysfs "\${ROOTFS_DIR}/sys"
 
   echo "==> Instalacion de paquetes requeridos"
-  chroot "\${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get update
-  chroot "\${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get install -y {$requiredPackages}
+  chroot "\${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 update
+  chroot "\${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 install -y {$requiredPackages}
 fi
 
 echo "==> Asegurando estructura base de directorios"
