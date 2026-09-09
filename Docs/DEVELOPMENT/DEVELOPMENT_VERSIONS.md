@@ -24,7 +24,7 @@ Mantener trazabilidad entre:
 | --- | --- | --- | --- | --- |
 | DOC | DOC-0.2 | 2026-09-09 | Activa | Base de gestion creada y README introductorio inicial publicado |
 | PLAN | PLAN-0.1 | 2026-09-09 | Activa | Ruta ejecutiva inicial para V1 basada en la coleccion W4 OS |
-| TECH | TECH-0.6 | 2026-09-09 | Activa | Primer rootfs Home completado en WSL2 y replicacion del flujo hacia Business en curso |
+| TECH | TECH-0.7 | 2026-09-09 | Activa | Primer ciclo de ensamblado real completado en WSL2 para Home y Business |
 | REL | REL-0.0 | 2026-09-09 | Base | Sin candidato de release registrado |
 
 ## Historial
@@ -40,6 +40,7 @@ Mantener trazabilidad entre:
 | 2026-09-09 | TECH | TECH-0.4 | Adaptacion del ensamblado a WSL2 | El proyecto ya puede verificar Ubuntu WSL2, convertir rutas Windows/WSL y preparar la ejecucion del `rootfs`; el unico bloqueo actual detectado es la ausencia de `debootstrap` | `scripts/run_rootfs_in_wsl.php` |
 | 2026-09-09 | TECH | TECH-0.5 | Inicio del ensamblado real del rootfs en WSL2 | El proyecto ya ejecuta el perfil `w4-os-home` dentro de Ubuntu WSL2 usando `mmdebstrap` y un keyring Debian actualizado por HTTPS; la instalacion del rootfs sigue en progreso y ya supera la fase de bootstrap base | `scripts/generate_rootfs_bundle.php`, `scripts/run_rootfs_in_wsl.php` |
 | 2026-09-09 | TECH | TECH-0.6 | Finalizacion del primer rootfs Home y arranque de Business | `w4-os-home` ya completo con Debian 13, kernel, GRUB y paquetes clave; el mismo flujo corregido ya se relanza para `w4-os-business` | `scripts/generate_rootfs_bundle.php`, `scripts/run_rootfs_in_wsl.php` |
+| 2026-09-09 | TECH | TECH-0.7 | Finalizacion del ciclo de rootfs para Home y Business | Ambas ediciones ya se ensamblan realmente en Ubuntu WSL2: Home validado con `452` paquetes y Business con `298`, incluyendo kernel, GRUB y paquetes base de cada perfil | `scripts/generate_rootfs_bundle.php`, `scripts/run_rootfs_in_wsl.php` |
 
 ## Regla de versionado
 
