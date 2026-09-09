@@ -1,0 +1,65 @@
+# W4 OS · Development Versions
+
+Registro de versiones del trabajo de desarrollo, util para relacionar decisiones, documentos, artefactos y cambios de alcance.
+
+## Objetivo
+
+Mantener trazabilidad entre:
+
+- version documental,
+- version del plan de implementacion,
+- hitos tecnicos,
+- cambios relevantes de alcance o prioridad.
+
+## Convencion recomendada
+
+- `DOC-x.y`: cambios en documentacion de desarrollo y gobernanza.
+- `PLAN-x.y`: cambios en plan ejecutivo o prioridades.
+- `TECH-x.y`: hitos tecnicos o entregables de implementacion.
+- `REL-x.y`: candidatos de release o versiones publicables.
+
+## Estado actual
+
+| Tipo | Version | Fecha | Estado | Descripcion |
+| --- | --- | --- | --- | --- |
+| DOC | DOC-0.2 | 2026-09-09 | Activa | Base de gestion creada y README introductorio inicial publicado |
+| PLAN | PLAN-0.1 | 2026-09-09 | Activa | Ruta ejecutiva inicial para V1 basada en la coleccion W4 OS |
+| TECH | TECH-0.0 | 2026-09-09 | Base | Sin entregables tecnicos implementados registrados aun |
+| REL | REL-0.0 | 2026-09-09 | Base | Sin candidato de release registrado |
+
+## Historial
+
+| Fecha | Tipo | Version | Cambio | Impacto | Referencias |
+| --- | --- | --- | --- | --- | --- |
+| 2026-09-09 | DOC | DOC-0.1 | Alta inicial de documentos `DEVELOPMENT_*` y `EXECUTIVE_IMPLEMENTATION_PLAN` | Se establece la base operativa del proyecto para seguimiento de desarrollo | `DEVELOPMENT_TABLE.md`, `DEVELOPMENT_MATRIX.md`, `DEVELOPMENT_VERSIONS.md`, `DEVELOPMENT_GUIDELINES.md`, `EXECUTIVE_IMPLEMENTATION_PLAN.md` |
+| 2026-09-09 | DOC | DOC-0.2 | Creacion del `README.md` introductorio del proyecto `W4 OS System` | Se define una presentacion base del repositorio con vision, familia de productos y documentos clave | `README.md` |
+| 2026-09-09 | PLAN | PLAN-0.1 | Definicion inicial del orden de implementacion V1 | Se prioriza H0-H5 con foco en MVP recuperable | `DEVELOPMENT_TABLE.md`, `EXECUTIVE_IMPLEMENTATION_PLAN.md` |
+
+## Regla de versionado
+
+Incrementar:
+
+- version `DOC` cuando cambie la estructura de seguimiento o gobernanza,
+- version `PLAN` cuando cambie prioridad, alcance o fases,
+- version `TECH` cuando exista un entregable tecnico verificable,
+- version `REL` cuando exista un candidato de release formal.
+
+## Eventos que obligan registro
+
+- Aprobacion o reemplazo de un ADR base.
+- Cambio del escritorio oficial.
+- Cambio del alcance V1.
+- Primer build reproducible firmado.
+- Primer instalador funcional.
+- Primera prueba exitosa de update + recovery.
+- Apertura del piloto Business.
+- Creacion de candidato V1.
+
+## Regla de consistencia
+
+Todo cambio relevante registrado aqui debe reflejarse tambien en:
+
+- `DEVELOPMENT_MATRIX.md` si altera estado operativo,
+- `DEVELOPMENT_TABLE.md` si altera prioridad,
+- `EXECUTIVE_IMPLEMENTATION_PLAN.md` si altera fases o alcance,
+- `DEVELOPMENT_GUIDELINES.md` si introduce una nueva regla de trabajo.

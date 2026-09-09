@@ -1,0 +1,5556 @@
+{
+  "edition": "0.1",
+  "date": "2026-09-08",
+  "source_conversation": "6a9fb6f6-5ea0-83e8-beaa-89df6dd118c7",
+  "documents": [
+    {
+      "id": 1,
+      "file": "001_W4_OS_PROJECT_CONTEXT.md",
+      "area": "Fundación y ediciones",
+      "bytes": 4234,
+      "words": 540,
+      "sha256": "02671f22e3d9f9bda1af71d482095d195d60db3a09f06659daf1543893051378",
+      "related_documents": [
+        4,
+        5,
+        406,
+        415
+      ]
+    },
+    {
+      "id": 2,
+      "file": "002_W4_OS_PRODUCT_VISION.md",
+      "area": "Fundación y ediciones",
+      "bytes": 2194,
+      "words": 254,
+      "sha256": "80a04d61dc6a00eea0b1e21e7d55390a7e117f8a4e0195838f05c97d757a2c82",
+      "related_documents": [
+        11,
+        12,
+        104,
+        407
+      ]
+    },
+    {
+      "id": 3,
+      "file": "003_W4_OS_PRODUCT_FAMILY.md",
+      "area": "Fundación y ediciones",
+      "bytes": 2081,
+      "words": 244,
+      "sha256": "3f5f0aa67f3bb6e8d492e07b64bb4241eaf1e8cdf845579f5faef05e44c326d5",
+      "related_documents": [
+        8,
+        13,
+        14
+      ]
+    },
+    {
+      "id": 4,
+      "file": "004_W4_OS_ARCHITECTURE.md",
+      "area": "Fundación y ediciones",
+      "bytes": 4271,
+      "words": 532,
+      "sha256": "d3701fd7012df2878b59c54c6e569b03aac06d7541fb0907005005f243f5cb14",
+      "related_documents": [
+        8,
+        9,
+        71,
+        156
+      ]
+    },
+    {
+      "id": 5,
+      "file": "005_W4_OS_DEBIAN_BASE_STRATEGY.md",
+      "area": "Fundación y ediciones",
+      "bytes": 3607,
+      "words": 446,
+      "sha256": "c6194b14af6b5a5c831fd60581e313a88748180b92947148a2efc96412ca7e0d",
+      "related_documents": [
+        6,
+        391,
+        397
+      ]
+    },
+    {
+      "id": 6,
+      "file": "006_W4_OS_UPSTREAM_INTEGRATION_STRATEGY.md",
+      "area": "Fundación y ediciones",
+      "bytes": 1873,
+      "words": 211,
+      "sha256": "fbf8f63ebc2b7cf82e58cedde56c20a3bf57e16382c3e1942c94fd2386b02926",
+      "related_documents": [
+        7,
+        394,
+        396
+      ]
+    },
+    {
+      "id": 7,
+      "file": "007_W4_OS_FORK_AND_DERIVATIVE_STRATEGY.md",
+      "area": "Fundación y ediciones",
+      "bytes": 1975,
+      "words": 221,
+      "sha256": "78efd5cb7703531a7bf226f51c4f9f50360d913c50b7fd68779a0bc497b70148",
+      "related_documents": [
+        6,
+        309,
+        395
+      ]
+    },
+    {
+      "id": 8,
+      "file": "008_W4_OS_SHARED_CORE_ARCHITECTURE.md",
+      "area": "Fundación y ediciones",
+      "bytes": 1902,
+      "words": 223,
+      "sha256": "6b6a31af08700a568ba7109210af1bf3b37bd43d233d38e1dfe48d0212efe954",
+      "related_documents": [
+        9,
+        14,
+        68
+      ]
+    },
+    {
+      "id": 9,
+      "file": "009_W4_OS_LAYER_MODEL.md",
+      "area": "Fundación y ediciones",
+      "bytes": 1945,
+      "words": 219,
+      "sha256": "76c03a5008320343fad91bcdb49abbb35d618bf355b79e02e97fc527ae911501",
+      "related_documents": [
+        8,
+        377,
+        380
+      ]
+    },
+    {
+      "id": 10,
+      "file": "010_W4_OS_SYSTEM_COMPONENTS.md",
+      "area": "Fundación y ediciones",
+      "bytes": 2026,
+      "words": 238,
+      "sha256": "0828b970dfd64a4dd1f8b66bcf6a31354333d9e74b818d0cbc4d0a2f5934686c",
+      "related_documents": [
+        48,
+        70,
+        388
+      ]
+    },
+    {
+      "id": 11,
+      "file": "011_W4_OS_HOME_EDITION.md",
+      "area": "Fundación y ediciones",
+      "bytes": 1857,
+      "words": 214,
+      "sha256": "84c3d64d03fd9a813351b6f711fedc3a4a21e70b324ede80a53fbe3330e193bb",
+      "related_documents": [
+        131,
+        231,
+        408
+      ]
+    },
+    {
+      "id": 12,
+      "file": "012_W4_OS_BUSINESS_EDITION.md",
+      "area": "Fundación y ediciones",
+      "bytes": 1962,
+      "words": 214,
+      "sha256": "ca4aa144ad964ab18fb5576bc971b7abe15a9b5dba2247c7e0f29eab20afa0c3",
+      "related_documents": [
+        211,
+        222,
+        409
+      ]
+    },
+    {
+      "id": 13,
+      "file": "013_W4_OS_EDITION_DIFFERENTIATION_MODEL.md",
+      "area": "Fundación y ediciones",
+      "bytes": 1938,
+      "words": 215,
+      "sha256": "57a91c45f7f3d1edaee6a7df5339bbab614b7cace5db6e5b31aed16c79b9caf8",
+      "related_documents": [
+        3,
+        11,
+        12,
+        15
+      ]
+    },
+    {
+      "id": 14,
+      "file": "014_W4_OS_EDITION_PACKAGE_PROFILES.md",
+      "area": "Fundación y ediciones",
+      "bytes": 1986,
+      "words": 226,
+      "sha256": "5c6dcf387974ab1a56a7cf479e7c43ccdc5c91eb09ed5df3f8de3cca6c7a6498",
+      "related_documents": [
+        45,
+        46,
+        68
+      ]
+    },
+    {
+      "id": 15,
+      "file": "015_W4_OS_EDITION_UPGRADE_STRATEGY.md",
+      "area": "Fundación y ediciones",
+      "bytes": 2129,
+      "words": 255,
+      "sha256": "e1700576e4a761325b9a4003035dad2a876263d9381a129d42a8e6d5e2f7d2d9",
+      "related_documents": [
+        14,
+        83,
+        222
+      ]
+    },
+    {
+      "id": 16,
+      "file": "016_W4_OS_KERNEL_STRATEGY.md",
+      "area": "Kernel y hardware",
+      "bytes": 2017,
+      "words": 244,
+      "sha256": "0cd87b31a3d5458c544f39cee7f12b6bb8b53a911891e1d40af4361715ef6978",
+      "related_documents": [
+        17,
+        18,
+        22
+      ]
+    },
+    {
+      "id": 17,
+      "file": "017_W4_OS_KERNEL_CONFIGURATION.md",
+      "area": "Kernel y hardware",
+      "bytes": 1881,
+      "words": 217,
+      "sha256": "59763c6a63d9dd13d39d04ffde90e39919307fd74edbc6a98dce00e5493332c9",
+      "related_documents": [
+        16,
+        48,
+        279
+      ]
+    },
+    {
+      "id": 18,
+      "file": "018_W4_OS_KERNEL_UPDATE_POLICY.md",
+      "area": "Kernel y hardware",
+      "bytes": 1903,
+      "words": 218,
+      "sha256": "b6c0ffb638f2dde9c687695b58ec843b533a46d71163197c655bca0abafb87c3",
+      "related_documents": [
+        25,
+        76,
+        88
+      ]
+    },
+    {
+      "id": 19,
+      "file": "019_W4_OS_HARDWARE_ENABLEMENT_LAYER.md",
+      "area": "Kernel y hardware",
+      "bytes": 1848,
+      "words": 213,
+      "sha256": "f2d3d5481c3719d404932864d51be01a739ff90fcb95695518eadfe9d2d7109d",
+      "related_documents": [
+        20,
+        23,
+        57
+      ]
+    },
+    {
+      "id": 20,
+      "file": "020_W4_OS_FIRMWARE_MANAGEMENT.md",
+      "area": "Kernel y hardware",
+      "bytes": 1917,
+      "words": 212,
+      "sha256": "2c6725b4b660acdc6b4983339c5d4f59921433f70d1286d40151c548a7a85a6d",
+      "related_documents": [
+        19,
+        24,
+        279
+      ]
+    },
+    {
+      "id": 21,
+      "file": "021_W4_OS_DRIVER_ARCHITECTURE.md",
+      "area": "Kernel y hardware",
+      "bytes": 1848,
+      "words": 210,
+      "sha256": "8186e7e1a7909574db0d1bfd9ef7b20c305417454e502e42a81e2bfb96b69e5e",
+      "related_documents": [
+        16,
+        20,
+        22
+      ]
+    },
+    {
+      "id": 22,
+      "file": "022_W4_OS_GPU_DRIVER_SYSTEM.md",
+      "area": "Kernel y hardware",
+      "bytes": 2112,
+      "words": 249,
+      "sha256": "dc364217100162a6181d48fa5272587ab75e78d0c52aa679599d665364eeab7c",
+      "related_documents": [
+        19,
+        95,
+        145,
+        161
+      ]
+    },
+    {
+      "id": 23,
+      "file": "023_W4_OS_HARDWARE_DETECTION_SYSTEM.md",
+      "area": "Kernel y hardware",
+      "bytes": 1876,
+      "words": 203,
+      "sha256": "ba3542d96fc2ceb3d664274ad2184ff022c1710fbf7f0a2916fb89c0bc713ee9",
+      "related_documents": [
+        24,
+        187,
+        227
+      ]
+    },
+    {
+      "id": 24,
+      "file": "024_W4_OS_DEVICE_COMPATIBILITY_MODEL.md",
+      "area": "Kernel y hardware",
+      "bytes": 1829,
+      "words": 204,
+      "sha256": "dcfa327505811f9e80f39d7fdcd9ed8dec21d2dbf87d8b9d54de0fbc17c60e34",
+      "related_documents": [
+        19,
+        279,
+        287
+      ]
+    },
+    {
+      "id": 25,
+      "file": "025_W4_OS_BOOT_ARCHITECTURE.md",
+      "area": "Arranque y servicios",
+      "bytes": 1860,
+      "words": 212,
+      "sha256": "6c6741c8b643cac19880fbd8430fe1c829fa8ae144c2bf448cfdfe014b74f316",
+      "related_documents": [
+        26,
+        29,
+        88
+      ]
+    },
+    {
+      "id": 26,
+      "file": "026_W4_OS_BOOTLOADER_STRATEGY.md",
+      "area": "Arranque y servicios",
+      "bytes": 1976,
+      "words": 238,
+      "sha256": "fa670b4b6497c0d9996793ff09c3fdfa4422d8fba7e08425dfa79fba5790a7ce",
+      "related_documents": [
+        25,
+        38,
+        161
+      ]
+    },
+    {
+      "id": 27,
+      "file": "027_W4_OS_INIT_SYSTEM.md",
+      "area": "Arranque y servicios",
+      "bytes": 1803,
+      "words": 209,
+      "sha256": "8725a6a79ca233a7053f5369b6cec253bed780764bf10e2ff43bfc44e8525575",
+      "related_documents": [
+        28,
+        29,
+        30
+      ]
+    },
+    {
+      "id": 28,
+      "file": "028_W4_OS_SYSTEMD_INTEGRATION.md",
+      "area": "Arranque y servicios",
+      "bytes": 1910,
+      "words": 222,
+      "sha256": "a724d4cfcb7914f0b7a49919227066c9e95d93252aa1cfc74e90472c2b0ba446",
+      "related_documents": [
+        27,
+        156,
+        202
+      ]
+    },
+    {
+      "id": 29,
+      "file": "029_W4_OS_STARTUP_PIPELINE.md",
+      "area": "Arranque y servicios",
+      "bytes": 1817,
+      "words": 216,
+      "sha256": "4aa54fcd96049d0a249c467ce32f8b64af699fdbe53035047c1b4c617edb13f6",
+      "related_documents": [
+        25,
+        76,
+        292
+      ]
+    },
+    {
+      "id": 30,
+      "file": "030_W4_OS_SHUTDOWN_PIPELINE.md",
+      "area": "Arranque y servicios",
+      "bytes": 1826,
+      "words": 212,
+      "sha256": "f23535ce95dc71a957f7be0f663da98604b672c4d21e12934e20006a46080823",
+      "related_documents": [
+        27,
+        71,
+        193
+      ]
+    },
+    {
+      "id": 31,
+      "file": "031_W4_OS_INSTALLER_ARCHITECTURE.md",
+      "area": "Instalación y layout",
+      "bytes": 1875,
+      "words": 225,
+      "sha256": "140198893b060b74c196f259cb6210c5d26687bbf090cfff945f3169b14f245f",
+      "related_documents": [
+        32,
+        33,
+        37
+      ]
+    },
+    {
+      "id": 32,
+      "file": "032_W4_OS_INSTALLATION_FLOW.md",
+      "area": "Instalación y layout",
+      "bytes": 1860,
+      "words": 211,
+      "sha256": "ecd8f928c2aab28cc8c04f540455fd1258423ef12e7140eb73b996e24b6a499d",
+      "related_documents": [
+        31,
+        104,
+        232
+      ]
+    },
+    {
+      "id": 33,
+      "file": "033_W4_OS_PARTITIONING_SYSTEM.md",
+      "area": "Instalación y layout",
+      "bytes": 2016,
+      "words": 232,
+      "sha256": "5689a83deace6e8a7bd4364b67f52b29652e310427433429915308572eb8b9ca",
+      "related_documents": [
+        31,
+        34,
+        38
+      ]
+    },
+    {
+      "id": 34,
+      "file": "034_W4_OS_DISK_LAYOUT_STRATEGY.md",
+      "area": "Instalación y layout",
+      "bytes": 4120,
+      "words": 527,
+      "sha256": "b8e7e3eb65f528f36f95ab85017f4d33ac6add93257a8d84154e10323a684a04",
+      "related_documents": [
+        35,
+        83,
+        85
+      ]
+    },
+    {
+      "id": 35,
+      "file": "035_W4_OS_BTRFS_ARCHITECTURE.md",
+      "area": "Instalación y layout",
+      "bytes": 2326,
+      "words": 273,
+      "sha256": "3ec027cf638246de3e7ad74b95a24a44c3a191776562b0b4ce9bf989e9f8c55a",
+      "related_documents": [
+        34,
+        81,
+        193
+      ]
+    },
+    {
+      "id": 36,
+      "file": "036_W4_OS_FILESYSTEM_STRATEGY.md",
+      "area": "Instalación y layout",
+      "bytes": 1850,
+      "words": 214,
+      "sha256": "666f5b1456c2c21595ee72da841a4275f1499a3dd5ca07f9644a4e9207b71d39",
+      "related_documents": [
+        34,
+        186,
+        188
+      ]
+    },
+    {
+      "id": 37,
+      "file": "037_W4_OS_ENCRYPTED_INSTALLATION.md",
+      "area": "Instalación y layout",
+      "bytes": 1887,
+      "words": 220,
+      "sha256": "b19c4ff17e58b4e7e5271a76a0bad00ce1d9837dcf5b15f758f1e1a2cf75ebc4",
+      "related_documents": [
+        160,
+        162,
+        193
+      ]
+    },
+    {
+      "id": 38,
+      "file": "038_W4_OS_DUAL_BOOT_STRATEGY.md",
+      "area": "Instalación y layout",
+      "bytes": 2067,
+      "words": 241,
+      "sha256": "3e83388361c5b97848e9c01c84e92664b043bbd799144cf9a938a60f72f775dc",
+      "related_documents": [
+        26,
+        33,
+        341
+      ]
+    },
+    {
+      "id": 39,
+      "file": "039_W4_OS_OEM_INSTALLATION_MODE.md",
+      "area": "Instalación y layout",
+      "bytes": 1812,
+      "words": 214,
+      "sha256": "e1cd34ca834339172a229f844085802b3d2f8ce7af6a06d6373dedebfba4cee6",
+      "related_documents": [
+        232,
+        349,
+        350
+      ]
+    },
+    {
+      "id": 40,
+      "file": "040_W4_OS_UNATTENDED_INSTALLATION.md",
+      "area": "Instalación y layout",
+      "bytes": 1844,
+      "words": 211,
+      "sha256": "22cb54371271cece9f38b16158b469438001e960d25007c2824edb356894855e",
+      "related_documents": [
+        31,
+        222,
+        346
+      ]
+    },
+    {
+      "id": 41,
+      "file": "041_W4_OS_PACKAGE_SYSTEM.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1804,
+      "words": 201,
+      "sha256": "0768b7f2869d54e1f43ef60bf0a279d0ec45d690c23f70d7bed392104034e242",
+      "related_documents": [
+        42,
+        43,
+        71
+      ]
+    },
+    {
+      "id": 42,
+      "file": "042_W4_OS_DEB_PACKAGE_ARCHITECTURE.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 2403,
+      "words": 287,
+      "sha256": "89e4353197ccbbbf1fcda6b36ae52f53df846a7f773f65255facd69ac8147a4f",
+      "related_documents": [
+        44,
+        48,
+        320
+      ]
+    },
+    {
+      "id": 43,
+      "file": "043_W4_OS_APT_INTEGRATION.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1863,
+      "words": 206,
+      "sha256": "9707bf54f763d63842686e20ad8c185ff8848062028f44f8228d57d2c6bd4e8b",
+      "related_documents": [
+        41,
+        47,
+        51
+      ]
+    },
+    {
+      "id": 44,
+      "file": "044_W4_OS_PACKAGE_METADATA_SYSTEM.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1805,
+      "words": 207,
+      "sha256": "4e6e71239cf5cce339b6035f2d927f89320c69d1bea7b77a81408c105c1f78f5",
+      "related_documents": [
+        10,
+        42,
+        388
+      ]
+    },
+    {
+      "id": 45,
+      "file": "045_W4_OS_META_PACKAGE_SYSTEM.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1853,
+      "words": 201,
+      "sha256": "3b06302056bf687dad759610ce27c86596d013e9e07d9a4cdac4afe8d21cfc93",
+      "related_documents": [
+        14,
+        46,
+        50
+      ]
+    },
+    {
+      "id": 46,
+      "file": "046_W4_OS_PACKAGE_DEPENDENCY_POLICY.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1843,
+      "words": 210,
+      "sha256": "fb35cf593a562242a0a28c2192976bb1d2dc7de83a90e406609f38c70950f2e9",
+      "related_documents": [
+        42,
+        43,
+        65
+      ]
+    },
+    {
+      "id": 47,
+      "file": "047_W4_OS_PACKAGE_SIGNING_SYSTEM.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 2264,
+      "words": 275,
+      "sha256": "032c22440e4716c78f6c80b9545590eb401e05d51930b1f5584a95016aab05d2",
+      "related_documents": [
+        51,
+        168,
+        272
+      ]
+    },
+    {
+      "id": 48,
+      "file": "048_W4_OS_PACKAGE_BUILD_PIPELINE.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1835,
+      "words": 209,
+      "sha256": "b3f239f41ce914a0f1cb36af2ba6f9a4c116ab187ee892e8c48ddee21e51b00a",
+      "related_documents": [
+        61,
+        63,
+        64
+      ]
+    },
+    {
+      "id": 49,
+      "file": "049_W4_OS_PACKAGE_QA_SYSTEM.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1767,
+      "words": 206,
+      "sha256": "4c996d141e75547be80cfbbeaecabe74d4865fedc5cfd582a47bc0a946e8899c",
+      "related_documents": [
+        48,
+        275,
+        285
+      ]
+    },
+    {
+      "id": 50,
+      "file": "050_W4_OS_PACKAGE_LIFECYCLE.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1859,
+      "words": 208,
+      "sha256": "f1f8d81ef0100bc39a2b1f16432e6d654bec5b31c8241a6ffda47a8acea5c7b2",
+      "related_documents": [
+        44,
+        274,
+        404
+      ]
+    },
+    {
+      "id": 51,
+      "file": "051_W4_OS_REPOSITORY_ARCHITECTURE.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1859,
+      "words": 207,
+      "sha256": "8d8257e1e6fa63b5d687e64214b3313bd5e25cdd39a6fdc1b7a5e7b13ba88c3a",
+      "related_documents": [
+        52,
+        53,
+        60
+      ]
+    },
+    {
+      "id": 52,
+      "file": "052_W4_OS_REPOSITORY_LAYOUT.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1861,
+      "words": 223,
+      "sha256": "35003f43648c3e6438f711c776890be3d6c3f73e1a204d1c8d8a231cd016974f",
+      "related_documents": [
+        51,
+        308,
+        70
+      ]
+    },
+    {
+      "id": 53,
+      "file": "053_W4_OS_REPOSITORY_CHANNELS.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1776,
+      "words": 204,
+      "sha256": "87b8e218d1877c4723158d31bae3dbf136aeeafd40662400f7d65f0888ce009b",
+      "related_documents": [
+        78,
+        79,
+        268
+      ]
+    },
+    {
+      "id": 54,
+      "file": "054_W4_OS_SECURITY_REPOSITORY.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1925,
+      "words": 220,
+      "sha256": "b8cc64e85443726bf781ac2f0b616ea14bc61832d426cbc9ea68e9499637aab2",
+      "related_documents": [
+        165,
+        334,
+        392
+      ]
+    },
+    {
+      "id": 55,
+      "file": "055_W4_OS_UPDATES_REPOSITORY.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 2376,
+      "words": 282,
+      "sha256": "1cc87b516fce733a03239b81d1d23f49efe32b705dfa4a3fc78940dc4558bc98",
+      "related_documents": [
+        50,
+        71,
+        265
+      ]
+    },
+    {
+      "id": 56,
+      "file": "056_W4_OS_TESTING_REPOSITORY.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1806,
+      "words": 207,
+      "sha256": "9b2b2cec12c8c5be0c9798858b4effee3034280715b3cfca645213137ebed564",
+      "related_documents": [
+        53,
+        75,
+        286
+      ]
+    },
+    {
+      "id": 57,
+      "file": "057_W4_OS_HARDWARE_REPOSITORY.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1828,
+      "words": 212,
+      "sha256": "10d92c70aed1e9fe09c845aa56ec92f413a4c1113d3d6db729bbee2fb289ec7c",
+      "related_documents": [
+        19,
+        22,
+        46
+      ]
+    },
+    {
+      "id": 58,
+      "file": "058_W4_OS_HOME_REPOSITORY.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1811,
+      "words": 204,
+      "sha256": "9a5f65cb42e9bda7dbb000254b540e0f7570576e4799532cc037b95fe1fc6cc4",
+      "related_documents": [
+        11,
+        14,
+        131
+      ]
+    },
+    {
+      "id": 59,
+      "file": "059_W4_OS_BUSINESS_REPOSITORY.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1855,
+      "words": 212,
+      "sha256": "98ac2f0e55be622d790dbafd65455d76a85b5174c50695edadd947bcd771749d",
+      "related_documents": [
+        12,
+        14,
+        337
+      ]
+    },
+    {
+      "id": 60,
+      "file": "060_W4_OS_REPOSITORY_MIRROR_SYSTEM.md",
+      "area": "Paquetes y repositorios",
+      "bytes": 1802,
+      "words": 208,
+      "sha256": "7c934c33c5e131ed346c412bc8ff089959c52b99ac817656485bb2b63e54a12b",
+      "related_documents": [
+        47,
+        51,
+        273
+      ]
+    },
+    {
+      "id": 61,
+      "file": "061_W4_OS_BUILD_INFRASTRUCTURE.md",
+      "area": "Construcción y artefactos",
+      "bytes": 1849,
+      "words": 206,
+      "sha256": "b3c30bac3cb5aee167090f0a011c5c2c2ccd98d9d09a9f03feb5262851c1c0d0",
+      "related_documents": [
+        48,
+        62,
+        63
+      ]
+    },
+    {
+      "id": 62,
+      "file": "062_W4_OS_OPEN_BUILD_SERVICE_STRATEGY.md",
+      "area": "Construcción y artefactos",
+      "bytes": 2277,
+      "words": 272,
+      "sha256": "d72896873502d76fe05a5ce7e49c1439e9c8991ab0fe5a1423084e84bc5e374f",
+      "related_documents": [
+        48,
+        61,
+        64
+      ]
+    },
+    {
+      "id": 63,
+      "file": "063_W4_OS_BUILD_WORKERS.md",
+      "area": "Construcción y artefactos",
+      "bytes": 1843,
+      "words": 213,
+      "sha256": "3c0a1b3d45a95529e806ef3196bfb83e4ad59f285d60fb3ce0fe90209343c3f9",
+      "related_documents": [
+        61,
+        65,
+        169
+      ]
+    },
+    {
+      "id": 64,
+      "file": "064_W4_OS_BUILD_REPRODUCIBILITY.md",
+      "area": "Construcción y artefactos",
+      "bytes": 1850,
+      "words": 205,
+      "sha256": "aeef98acaa616f88b72bd973ca3bf08df54e319e2f32ad7481f8a587a32872bd",
+      "related_documents": [
+        48,
+        389,
+        390
+      ]
+    },
+    {
+      "id": 65,
+      "file": "065_W4_OS_MULTI_ARCH_BUILD_SYSTEM.md",
+      "area": "Construcción y artefactos",
+      "bytes": 1806,
+      "words": 204,
+      "sha256": "e322e8141b257a036bbffc9cdeaf41336fc9aaadb8a3b5583d60d0c7ad020fae",
+      "related_documents": [
+        66,
+        67,
+        279
+      ]
+    },
+    {
+      "id": 66,
+      "file": "066_W4_OS_AMD64_SUPPORT.md",
+      "area": "Construcción y artefactos",
+      "bytes": 1804,
+      "words": 208,
+      "sha256": "3595f0f166c6e157570d2d869b3658353eb08dbac4dd8af45b98ff59ca69e32e",
+      "related_documents": [
+        16,
+        24,
+        65
+      ]
+    },
+    {
+      "id": 67,
+      "file": "067_W4_OS_ARM64_SUPPORT.md",
+      "area": "Construcción y artefactos",
+      "bytes": 1879,
+      "words": 214,
+      "sha256": "63dab311116b3b4095593294ad8eff82949267db737685abc669f6e7b8f635a6",
+      "related_documents": [
+        19,
+        25,
+        65
+      ]
+    },
+    {
+      "id": 68,
+      "file": "068_W4_OS_IMAGE_BUILD_SYSTEM.md",
+      "area": "Construcción y artefactos",
+      "bytes": 1809,
+      "words": 209,
+      "sha256": "9d1831795eecaa4dc707ba130ef8131b9cc9808a0cf68063f595192791df3d77",
+      "related_documents": [
+        39,
+        69,
+        70
+      ]
+    },
+    {
+      "id": 69,
+      "file": "069_W4_OS_ISO_BUILD_PIPELINE.md",
+      "area": "Construcción y artefactos",
+      "bytes": 1819,
+      "words": 211,
+      "sha256": "161cb5c4eccd38f6f1b630a22310bc2cf63cc6d45fb5f707e171d83c632366ad",
+      "related_documents": [
+        31,
+        68,
+        87
+      ]
+    },
+    {
+      "id": 70,
+      "file": "070_W4_OS_RELEASE_ARTIFACT_SYSTEM.md",
+      "area": "Construcción y artefactos",
+      "bytes": 1815,
+      "words": 206,
+      "sha256": "e5e358b2f5407781e7547c980007ca3fbbce108be29489c926bdd8dbb5a3c7ca",
+      "related_documents": [
+        68,
+        272,
+        388
+      ]
+    },
+    {
+      "id": 71,
+      "file": "071_W4_OS_UPDATE_ARCHITECTURE.md",
+      "area": "Actualización y recuperación",
+      "bytes": 4014,
+      "words": 493,
+      "sha256": "3b9f21dcae9c8654d506a3bd8a862c9be45b104d6b93fd804b42c343cbb3e4b5",
+      "related_documents": [
+        72,
+        73,
+        83,
+        280
+      ]
+    },
+    {
+      "id": 72,
+      "file": "072_W4_OS_UPDATE_ENGINE.md",
+      "area": "Actualización y recuperación",
+      "bytes": 1870,
+      "words": 215,
+      "sha256": "46f169e238c0c437dc46c82b79fa66e0bb3ea079f170af74c706e9830e95469e",
+      "related_documents": [
+        41,
+        71,
+        369
+      ]
+    },
+    {
+      "id": 73,
+      "file": "073_W4_OS_ATOMIC_UPDATE_MODEL.md",
+      "area": "Actualización y recuperación",
+      "bytes": 3385,
+      "words": 425,
+      "sha256": "87fa621efa68398e3960fceca3ff62aade2f83964a819bee50298bf3b4bd25f6",
+      "related_documents": [
+        74,
+        83,
+        85
+      ]
+    },
+    {
+      "id": 74,
+      "file": "074_W4_OS_TRANSACTIONAL_UPDATE_STRATEGY.md",
+      "area": "Actualización y recuperación",
+      "bytes": 1991,
+      "words": 234,
+      "sha256": "8fa20930c5eac16b3c6f827e4f5c6c7bbac16fe4e7e48dac5fd6264e8b7ded0a",
+      "related_documents": [
+        62,
+        73,
+        75
+      ]
+    },
+    {
+      "id": 75,
+      "file": "075_W4_OS_UPDATE_STAGING_SYSTEM.md",
+      "area": "Actualización y recuperación",
+      "bytes": 1877,
+      "words": 218,
+      "sha256": "059dedc6895efdc3256625a731a620507739b4845311283d2dcda23903f096b2",
+      "related_documents": [
+        71,
+        72,
+        80
+      ]
+    },
+    {
+      "id": 76,
+      "file": "076_W4_OS_UPDATE_HEALTH_CHECK.md",
+      "area": "Actualización y recuperación",
+      "bytes": 1931,
+      "words": 223,
+      "sha256": "6db9956531ce8eec6f0f99486ce99f077d0790d04c74c76a92deb7ccb0a38020",
+      "related_documents": [
+        29,
+        71,
+        206
+      ]
+    },
+    {
+      "id": 77,
+      "file": "077_W4_OS_UPDATE_ROLLBACK_SYSTEM.md",
+      "area": "Actualización y recuperación",
+      "bytes": 1968,
+      "words": 223,
+      "sha256": "d86a560c315641cded30c6f4739fcb8491dfa736943df73ee1f8dcbfca2cf4ce",
+      "related_documents": [
+        83,
+        85,
+        175
+      ]
+    },
+    {
+      "id": 78,
+      "file": "078_W4_OS_UPDATE_RINGS.md",
+      "area": "Actualización y recuperación",
+      "bytes": 1824,
+      "words": 205,
+      "sha256": "0c06239054b42eafbb03466bbda9cebcf662180e76d9e2fb562f7b8bd5cca177",
+      "related_documents": [
+        53,
+        76,
+        273
+      ]
+    },
+    {
+      "id": 79,
+      "file": "079_W4_OS_UPDATE_CHANNELS.md",
+      "area": "Actualización y recuperación",
+      "bytes": 1825,
+      "words": 216,
+      "sha256": "f5759848f42b5558e884b73a5ebb952e59e24d3ccb184109c14990b46adc0450",
+      "related_documents": [
+        53,
+        268,
+        398
+      ]
+    },
+    {
+      "id": 80,
+      "file": "080_W4_OS_OFFLINE_UPDATE_SYSTEM.md",
+      "area": "Actualización y recuperación",
+      "bytes": 2318,
+      "words": 278,
+      "sha256": "c14e4f7ab241dc965dd52f6790edebc8d2eb73af3d876490a1300636a867b090",
+      "related_documents": [
+        71,
+        75,
+        87
+      ]
+    },
+    {
+      "id": 81,
+      "file": "081_W4_OS_SNAPSHOT_ARCHITECTURE.md",
+      "area": "Actualización y recuperación",
+      "bytes": 1961,
+      "words": 214,
+      "sha256": "bfd5b0156c511f7ae922bfd3c2c83970771ac87ca22d7613c394aa7ee04084e6",
+      "related_documents": [
+        34,
+        35,
+        82,
+        84
+      ]
+    },
+    {
+      "id": 82,
+      "file": "082_W4_OS_SNAPPER_INTEGRATION.md",
+      "area": "Actualización y recuperación",
+      "bytes": 2382,
+      "words": 288,
+      "sha256": "987944e33ab7bbfc775009bfcac0458d2f68b39257adf136a502135d551fe1b6",
+      "related_documents": [
+        35,
+        77,
+        81
+      ]
+    },
+    {
+      "id": 83,
+      "file": "083_W4_OS_SYSTEM_STATE_MODEL.md",
+      "area": "Actualización y recuperación",
+      "bytes": 3872,
+      "words": 472,
+      "sha256": "6a017ff906e41dd46ef47f8211fd8d40f8454feffea11aa083cdce7b626696c6",
+      "related_documents": [
+        34,
+        71,
+        85,
+        377
+      ]
+    },
+    {
+      "id": 84,
+      "file": "084_W4_OS_AUTOMATIC_SNAPSHOT_POLICY.md",
+      "area": "Actualización y recuperación",
+      "bytes": 1905,
+      "words": 218,
+      "sha256": "32552491eb3304735dfb1d88a98f9b9f2a9561fe4cd3b6bd42de83419df6effa",
+      "related_documents": [
+        81,
+        191,
+        353
+      ]
+    },
+    {
+      "id": 85,
+      "file": "085_W4_OS_ROLLBACK_ARCHITECTURE.md",
+      "area": "Actualización y recuperación",
+      "bytes": 2150,
+      "words": 248,
+      "sha256": "983340d60095762a0e954ac87c700f57fb895af4b55d3999dc9f0dd27e32956c",
+      "related_documents": [
+        77,
+        83,
+        88,
+        281
+      ]
+    },
+    {
+      "id": 86,
+      "file": "086_W4_OS_RECOVERY_ARCHITECTURE.md",
+      "area": "Actualización y recuperación",
+      "bytes": 1912,
+      "words": 218,
+      "sha256": "1421f455298e72ef3e6ba52ed47c05ac7d676399167e9bf39e25ab969273ec66",
+      "related_documents": [
+        87,
+        90,
+        193,
+        347
+      ]
+    },
+    {
+      "id": 87,
+      "file": "087_W4_OS_RECOVERY_ENVIRONMENT.md",
+      "area": "Actualización y recuperación",
+      "bytes": 1813,
+      "words": 211,
+      "sha256": "bb9bc8f6bccb86e30d047f3168cd0f3581128d99137e50b32c694a4b8e10cf2d",
+      "related_documents": [
+        69,
+        86,
+        160
+      ]
+    },
+    {
+      "id": 88,
+      "file": "088_W4_OS_BOOT_RECOVERY.md",
+      "area": "Actualización y recuperación",
+      "bytes": 1882,
+      "words": 214,
+      "sha256": "100953291c43d26102e8da6638436028ee116e60b91bd3ff0c498cc9aa09bc16",
+      "related_documents": [
+        25,
+        26,
+        85,
+        385
+      ]
+    },
+    {
+      "id": 89,
+      "file": "089_W4_OS_FACTORY_RESET_SYSTEM.md",
+      "area": "Actualización y recuperación",
+      "bytes": 1889,
+      "words": 209,
+      "sha256": "1bb45a142e7cc4391400e3fbdb6d39c3d6c54df412d4cd0ec39743cfa5294e72",
+      "related_documents": [
+        39,
+        86,
+        349
+      ]
+    },
+    {
+      "id": 90,
+      "file": "090_W4_OS_SYSTEM_REPAIR_SYSTEM.md",
+      "area": "Actualización y recuperación",
+      "bytes": 1871,
+      "words": 205,
+      "sha256": "f481570afa0795dc387a681d7cce608018364aa2bbd2e2f63839cfdae281b9eb",
+      "related_documents": [
+        41,
+        86,
+        322
+      ]
+    },
+    {
+      "id": 91,
+      "file": "091_W4_OS_DESKTOP_ARCHITECTURE.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1845,
+      "words": 211,
+      "sha256": "14c25b45fff216a0a3b54317e55844326fc3b0e8b54b63f36813129b834d5607",
+      "related_documents": [
+        92,
+        96,
+        97
+      ]
+    },
+    {
+      "id": 92,
+      "file": "092_W4_OS_DESKTOP_ENVIRONMENT_STRATEGY.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 2307,
+      "words": 275,
+      "sha256": "c2f1f66e1d228b16126508b3c938efeeb6a93be960a6ed63b885e805f83df8fd",
+      "related_documents": [
+        91,
+        104,
+        283
+      ]
+    },
+    {
+      "id": 93,
+      "file": "093_W4_OS_WINDOW_MANAGER_STRATEGY.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1864,
+      "words": 208,
+      "sha256": "9d46360c944bc3d5c7e057e074d1303830d50fcf3323fc781c3f5c2b58e1181f",
+      "related_documents": [
+        92,
+        94,
+        109
+      ]
+    },
+    {
+      "id": 94,
+      "file": "094_W4_OS_DISPLAY_SERVER_STRATEGY.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1904,
+      "words": 215,
+      "sha256": "6b34e2941918a2e1832be09493cc6ffad1f2410467215cf6a43d94250fe8deb3",
+      "related_documents": [
+        95,
+        122,
+        296
+      ]
+    },
+    {
+      "id": 95,
+      "file": "095_W4_OS_WAYLAND_ARCHITECTURE.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1818,
+      "words": 207,
+      "sha256": "2778600c5f21201dc9f4fe6b11a6106a98bc72d0766de4fa6a2e306a094b2f11",
+      "related_documents": [
+        94,
+        104,
+        136
+      ]
+    },
+    {
+      "id": 96,
+      "file": "096_W4_OS_DESKTOP_SHELL.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1785,
+      "words": 203,
+      "sha256": "a211a4ff389454255372d0bb62c37cbc3ef7d41f211fb41d7da5bc614501cce4",
+      "related_documents": [
+        91,
+        101,
+        305
+      ]
+    },
+    {
+      "id": 97,
+      "file": "097_W4_OS_DESKTOP_SESSION_SYSTEM.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1744,
+      "words": 205,
+      "sha256": "aeac54cb610649b4cbcbfa7ea3bd74050ab68fb92874c18a386064b9971bafe1",
+      "related_documents": [
+        98,
+        146,
+        153
+      ]
+    },
+    {
+      "id": 98,
+      "file": "098_W4_OS_LOGIN_MANAGER.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1814,
+      "words": 210,
+      "sha256": "ae809cf0b518d28eba44a368fcdb271a8c02b5354b69a303b94b22ebeea66d7e",
+      "related_documents": [
+        92,
+        148,
+        149
+      ]
+    },
+    {
+      "id": 99,
+      "file": "099_W4_OS_LOCK_SCREEN_SYSTEM.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1766,
+      "words": 201,
+      "sha256": "37def77b390bea1ac5e4705a065de902830a268ca4c34cb2b2dc0ae5f62d9bbe",
+      "related_documents": [
+        149,
+        153,
+        198
+      ]
+    },
+    {
+      "id": 100,
+      "file": "100_W4_OS_DESKTOP_CONFIGURATION.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1811,
+      "words": 204,
+      "sha256": "b8922dc6ab1dd98a4c2b496f3fd99e897ccdffa8ec46f6b06c28e11b9239b4b1",
+      "related_documents": [
+        377,
+        379,
+        380
+      ]
+    },
+    {
+      "id": 101,
+      "file": "101_W4_OS_THEME_SYSTEM.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1745,
+      "words": 206,
+      "sha256": "6799f4adf79270f80f814fded7988a7d1ed2e4c1b7e545c933f15648d32c6847",
+      "related_documents": [
+        102,
+        104,
+        302
+      ]
+    },
+    {
+      "id": 102,
+      "file": "102_W4_OS_ICON_SYSTEM.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1729,
+      "words": 202,
+      "sha256": "a990e3f3093a04d0982a8d6780287694fd69dececa3471711f5510907cf36c34",
+      "related_documents": [
+        101,
+        104,
+        302
+      ]
+    },
+    {
+      "id": 103,
+      "file": "103_W4_OS_FONT_SYSTEM.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 2305,
+      "words": 276,
+      "sha256": "7e4da8545bc654155d4f0fc0c9ce28c77744cfe29da74f419d4514bcacd464ca",
+      "related_documents": [
+        105,
+        106,
+        309
+      ]
+    },
+    {
+      "id": 104,
+      "file": "104_W4_OS_ACCESSIBILITY_SYSTEM.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1911,
+      "words": 224,
+      "sha256": "a8d64eb8975895d73c6cc9c4165a0e7f6b9f3452451f9f0b594571c5a705f653",
+      "related_documents": [
+        32,
+        98,
+        105,
+        283
+      ]
+    },
+    {
+      "id": 105,
+      "file": "105_W4_OS_LOCALIZATION_SYSTEM.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1836,
+      "words": 215,
+      "sha256": "442cbf1a66ccc23012e5ebb71105fb2faadc08bca7a14e2851efa3c5fea5a769",
+      "related_documents": [
+        103,
+        106,
+        107
+      ]
+    },
+    {
+      "id": 106,
+      "file": "106_W4_OS_LANGUAGE_PACK_SYSTEM.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 2376,
+      "words": 285,
+      "sha256": "b96f16e50da53c89ff993272aa8c94a4a793a81e271c9a93ef30e553b725768e",
+      "related_documents": [
+        103,
+        105,
+        131
+      ]
+    },
+    {
+      "id": 107,
+      "file": "107_W4_OS_INPUT_METHOD_SYSTEM.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1794,
+      "words": 204,
+      "sha256": "5b819d14a62c38476b24bf85722352cbe19a2288185f6de5abe8e9ec4901bfe3",
+      "related_documents": [
+        37,
+        98,
+        105
+      ]
+    },
+    {
+      "id": 108,
+      "file": "108_W4_OS_DISPLAY_CONFIGURATION.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1792,
+      "words": 211,
+      "sha256": "d4c65bd08f90348634df7a270076d04855361e43b3f7abc4307aae44a2a2ba27",
+      "related_documents": [
+        95,
+        109,
+        110
+      ]
+    },
+    {
+      "id": 109,
+      "file": "109_W4_OS_MULTI_MONITOR_SYSTEM.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1752,
+      "words": 206,
+      "sha256": "42ffeaf01e581d759b55af5564b78d29e4c271c443672c019003a56bf995cc29",
+      "related_documents": [
+        99,
+        108,
+        110
+      ]
+    },
+    {
+      "id": 110,
+      "file": "110_W4_OS_HIDPI_SUPPORT.md",
+      "area": "Escritorio y accesibilidad",
+      "bytes": 1780,
+      "words": 203,
+      "sha256": "6e67bf06e6087b560148f5e9fd382115eef7c229f969863391920ef5f91a4e99",
+      "related_documents": [
+        103,
+        104,
+        108
+      ]
+    },
+    {
+      "id": 111,
+      "file": "111_W4_OS_CONTROL_CENTER_ARCHITECTURE.md",
+      "area": "Centro de control",
+      "bytes": 1824,
+      "words": 210,
+      "sha256": "10232ab1422ff1d09405e94cb4e31821e40f88847c151b5b56578ffe3163aac3",
+      "related_documents": [
+        112,
+        120,
+        368
+      ]
+    },
+    {
+      "id": 112,
+      "file": "112_W4_OS_SYSTEM_SETTINGS.md",
+      "area": "Centro de control",
+      "bytes": 1846,
+      "words": 204,
+      "sha256": "150b1d51853654ca13aa729fbe9938a93bef797fe536e9ecb48cfbfbfd8eb75d",
+      "related_documents": [
+        111,
+        105,
+        377
+      ]
+    },
+    {
+      "id": 113,
+      "file": "113_W4_OS_HARDWARE_SETTINGS.md",
+      "area": "Centro de control",
+      "bytes": 1795,
+      "words": 201,
+      "sha256": "0e8426e15b99547188bd49d2f81e19ec6a47bae032598379ad0d2f65e2445a40",
+      "related_documents": [
+        21,
+        23,
+        108
+      ]
+    },
+    {
+      "id": 114,
+      "file": "114_W4_OS_NETWORK_SETTINGS.md",
+      "area": "Centro de control",
+      "bytes": 2361,
+      "words": 287,
+      "sha256": "4f680836ec4b8bb6ccf422d9061a8e2b16078b0c5928430b2e14080b909c90af",
+      "related_documents": [
+        176,
+        177,
+        181
+      ]
+    },
+    {
+      "id": 115,
+      "file": "115_W4_OS_USER_SETTINGS.md",
+      "area": "Centro de control",
+      "bytes": 1782,
+      "words": 210,
+      "sha256": "fe8ac0b8014b6534ae02bb3ee221fa67e8a45249e4d537e4a68c36ef7b93dbb3",
+      "related_documents": [
+        146,
+        147,
+        241
+      ]
+    },
+    {
+      "id": 116,
+      "file": "116_W4_OS_SECURITY_SETTINGS.md",
+      "area": "Centro de control",
+      "bytes": 1777,
+      "words": 205,
+      "sha256": "6268c2cc507ba978b40063f7315f76294f1d21b0277c9dff6230af0cc480c8c5",
+      "related_documents": [
+        156,
+        157,
+        365
+      ]
+    },
+    {
+      "id": 117,
+      "file": "117_W4_OS_UPDATE_SETTINGS.md",
+      "area": "Centro de control",
+      "bytes": 2388,
+      "words": 287,
+      "sha256": "5e31aa381c725c62b3bb463fea67732ee846250a338576688201d3b0121b1ea5",
+      "related_documents": [
+        71,
+        78,
+        120
+      ]
+    },
+    {
+      "id": 118,
+      "file": "118_W4_OS_STORAGE_SETTINGS.md",
+      "area": "Centro de control",
+      "bytes": 1781,
+      "words": 206,
+      "sha256": "9de3f3ce763e4b9b9199d0d3b935c72e81e5d6c50ddfad25209a1eb02450ff3b",
+      "related_documents": [
+        81,
+        84,
+        186
+      ]
+    },
+    {
+      "id": 119,
+      "file": "119_W4_OS_APPLICATION_SETTINGS.md",
+      "area": "Centro de control",
+      "bytes": 1822,
+      "words": 208,
+      "sha256": "04c93b9d1259a2b0be9a0ba2907906ef72e1d60bffc2645180317bf87844cced",
+      "related_documents": [
+        121,
+        129,
+        140
+      ]
+    },
+    {
+      "id": 120,
+      "file": "120_W4_OS_BUSINESS_POLICY_SETTINGS.md",
+      "area": "Centro de control",
+      "bytes": 1827,
+      "words": 212,
+      "sha256": "5259a6c931080a833b52dd17b95c090154594f3bec89d4f0dd552b1b3878cb5b",
+      "related_documents": [
+        213,
+        214,
+        381
+      ]
+    },
+    {
+      "id": 121,
+      "file": "121_W4_OS_APPLICATION_MODEL.md",
+      "area": "Aplicaciones",
+      "bytes": 1873,
+      "words": 206,
+      "sha256": "87b3fd3f5db23649439a489b4b32196d0281f66acf774c1ebaf5fd9068bacd9d",
+      "related_documents": [
+        122,
+        123,
+        124
+      ]
+    },
+    {
+      "id": 122,
+      "file": "122_W4_OS_APPLICATION_INSTALLATION_SYSTEM.md",
+      "area": "Aplicaciones",
+      "bytes": 1797,
+      "words": 207,
+      "sha256": "7585210dfd5ba1619f6101c5db6c229468dbb5a163795ad52e6049f6889155ae",
+      "related_documents": [
+        41,
+        121,
+        127
+      ]
+    },
+    {
+      "id": 123,
+      "file": "123_W4_OS_APPLICATION_SANDBOXING.md",
+      "area": "Aplicaciones",
+      "bytes": 1845,
+      "words": 214,
+      "sha256": "9d322df2e9fb4e883d8dfcc121f7fe42d1172771d88a9cbfb4d5c35b3cc344a2",
+      "related_documents": [
+        124,
+        129,
+        158
+      ]
+    },
+    {
+      "id": 124,
+      "file": "124_W4_OS_FLATPAK_STRATEGY.md",
+      "area": "Aplicaciones",
+      "bytes": 2197,
+      "words": 257,
+      "sha256": "70a70661307badfc55ee28287193862fa140b81ce3b3b51f3257834781d02d91",
+      "related_documents": [
+        121,
+        128,
+        130
+      ]
+    },
+    {
+      "id": 125,
+      "file": "125_W4_OS_NATIVE_APPLICATION_STRATEGY.md",
+      "area": "Aplicaciones",
+      "bytes": 1863,
+      "words": 205,
+      "sha256": "d21f8e74cc350dafa29f6cdf2bfe250ed7560225b199ab2189ab050691a2ebb4",
+      "related_documents": [
+        42,
+        123,
+        131
+      ]
+    },
+    {
+      "id": 126,
+      "file": "126_W4_OS_THIRD_PARTY_APPLICATION_SUPPORT.md",
+      "area": "Aplicaciones",
+      "bytes": 1884,
+      "words": 209,
+      "sha256": "e52edca00bf747c396262bc2c9080fecafeef18dd87d47c126dfa8eaf7414077",
+      "related_documents": [
+        124,
+        125,
+        264
+      ]
+    },
+    {
+      "id": 127,
+      "file": "127_W4_OS_APPLICATION_STORE.md",
+      "area": "Aplicaciones",
+      "bytes": 1848,
+      "words": 211,
+      "sha256": "0bac18d1eea4725b3ebda5d687743d6a8f7652eaf5fe23239eb7b62bbe5c7c46",
+      "related_documents": [
+        122,
+        128,
+        129
+      ]
+    },
+    {
+      "id": 128,
+      "file": "128_W4_OS_APPLICATION_REPOSITORY.md",
+      "area": "Aplicaciones",
+      "bytes": 1763,
+      "words": 201,
+      "sha256": "e6fc5e552637cc16e5c881829d3aaa0c9c811dab7d3e7598194d16b6b3caa42f",
+      "related_documents": [
+        44,
+        124,
+        127
+      ]
+    },
+    {
+      "id": 129,
+      "file": "129_W4_OS_APPLICATION_PERMISSIONS.md",
+      "area": "Aplicaciones",
+      "bytes": 1840,
+      "words": 206,
+      "sha256": "b8b136ccabde546211dc8de45ad23bcfc54194cdd80b7b3f23ea9f0ce39f5a5f",
+      "related_documents": [
+        119,
+        123,
+        213
+      ]
+    },
+    {
+      "id": 130,
+      "file": "130_W4_OS_APPLICATION_LIFECYCLE.md",
+      "area": "Aplicaciones",
+      "bytes": 1802,
+      "words": 207,
+      "sha256": "9796ad2d7f236e7aaf32dbd98f27561a6e59167a1e709ff7ae8cdfda3b1ccaf7",
+      "related_documents": [
+        50,
+        124,
+        193
+      ]
+    },
+    {
+      "id": 131,
+      "file": "131_W4_OS_DEFAULT_APPLICATIONS.md",
+      "area": "Aplicaciones",
+      "bytes": 1859,
+      "words": 216,
+      "sha256": "68f5ef078d45c8c50c978a6caf66f777208e762243c849d8379e93f73c27a5ce",
+      "related_documents": [
+        132,
+        133,
+        135,
+        136
+      ]
+    },
+    {
+      "id": 132,
+      "file": "132_W4_OS_BROWSER_STRATEGY.md",
+      "area": "Aplicaciones",
+      "bytes": 1857,
+      "words": 209,
+      "sha256": "ab2de627ad935d4e4495542f0f820f23683db4d518c19d847d1da8e293079b09",
+      "related_documents": [
+        131,
+        165,
+        345
+      ]
+    },
+    {
+      "id": 133,
+      "file": "133_W4_OS_OFFICE_SUITE_STRATEGY.md",
+      "area": "Aplicaciones",
+      "bytes": 1850,
+      "words": 210,
+      "sha256": "22d0b28d7e26d429c0f9e540ba9fcc68572500b894940bbf3240cc6f6d51a837",
+      "related_documents": [
+        131,
+        264,
+        341
+      ]
+    },
+    {
+      "id": 134,
+      "file": "134_W4_OS_EMAIL_CLIENT_STRATEGY.md",
+      "area": "Aplicaciones",
+      "bytes": 1836,
+      "words": 213,
+      "sha256": "fe55b32ae7a509f3f8858e750cad0df6b70e9111b198d200cd4a81f4afc3ca03",
+      "related_documents": [
+        131,
+        163,
+        245
+      ]
+    },
+    {
+      "id": 135,
+      "file": "135_W4_OS_PDF_SYSTEM.md",
+      "area": "Aplicaciones",
+      "bytes": 1816,
+      "words": 209,
+      "sha256": "4f2f7af595ce015072d77272ee63b8c5ce348c04f14ec41669bcc8d5c862f5cd",
+      "related_documents": [
+        131,
+        138,
+        289
+      ]
+    },
+    {
+      "id": 136,
+      "file": "136_W4_OS_MULTIMEDIA_SYSTEM.md",
+      "area": "Aplicaciones",
+      "bytes": 1813,
+      "words": 204,
+      "sha256": "6a970879980d2364d1243b98e25b0199918c90f456d4655df100cd88235c52f6",
+      "related_documents": [
+        95,
+        137,
+        180
+      ]
+    },
+    {
+      "id": 137,
+      "file": "137_W4_OS_MEDIA_CODEC_STRATEGY.md",
+      "area": "Aplicaciones",
+      "bytes": 1788,
+      "words": 200,
+      "sha256": "508359024f529ed7bf815348b88cebe39a16defc3ed32fd449781316960cd96c",
+      "related_documents": [
+        136,
+        309,
+        312
+      ]
+    },
+    {
+      "id": 138,
+      "file": "138_W4_OS_PRINTING_SYSTEM.md",
+      "area": "Aplicaciones",
+      "bytes": 1825,
+      "words": 201,
+      "sha256": "41b6d39b851d11c9dd96141471683f84a1b88990a7f77d6dda6ad19b415a7430",
+      "related_documents": [
+        176,
+        185,
+        289
+      ]
+    },
+    {
+      "id": 139,
+      "file": "139_W4_OS_SCANNING_SYSTEM.md",
+      "area": "Aplicaciones",
+      "bytes": 1722,
+      "words": 201,
+      "sha256": "0b430d07a8b7a8ac74c72532b5b016a33f2a43c3dc8eabd0219c700baeb420c8",
+      "related_documents": [
+        113,
+        135,
+        188
+      ]
+    },
+    {
+      "id": 140,
+      "file": "140_W4_OS_FILE_MANAGER.md",
+      "area": "Aplicaciones",
+      "bytes": 1760,
+      "words": 201,
+      "sha256": "4919f4d70445bb0e17d25d4ba91cd1ea6bc5fc6e94d405587db7f4aa6c3330fa",
+      "related_documents": [
+        119,
+        188,
+        190
+      ]
+    },
+    {
+      "id": 141,
+      "file": "141_W4_OS_GAMING_ARCHITECTURE.md",
+      "area": "Gaming",
+      "bytes": 1794,
+      "words": 207,
+      "sha256": "2a2ffcc55fca7521a578b9c8d500ab06287382fc8a356a9ade73bfc3236feb9d",
+      "related_documents": [
+        142,
+        143,
+        145
+      ]
+    },
+    {
+      "id": 142,
+      "file": "142_W4_OS_STEAM_INTEGRATION.md",
+      "area": "Gaming",
+      "bytes": 1805,
+      "words": 209,
+      "sha256": "957315672390dfcbe3f40690de4efed6cf2809bec25837f66a9ea321cb031174",
+      "related_documents": [
+        124,
+        141,
+        143
+      ]
+    },
+    {
+      "id": 143,
+      "file": "143_W4_OS_PROTON_INTEGRATION.md",
+      "area": "Gaming",
+      "bytes": 1814,
+      "words": 205,
+      "sha256": "11e6554dba8a81dfa8109e42e510ab7a51be08a2ce273685e305e786b737b3a1",
+      "related_documents": [
+        141,
+        142,
+        262
+      ]
+    },
+    {
+      "id": 144,
+      "file": "144_W4_OS_GAMEPAD_SUPPORT.md",
+      "area": "Gaming",
+      "bytes": 2314,
+      "words": 283,
+      "sha256": "7478f17b7aaf8fc340eaf4e18c6fb2e76394de180a926f5ce7f15153cbb5dcd4",
+      "related_documents": [
+        23,
+        180,
+        141
+      ]
+    },
+    {
+      "id": 145,
+      "file": "145_W4_OS_GAMING_DRIVER_PROFILE.md",
+      "area": "Gaming",
+      "bytes": 1788,
+      "words": 210,
+      "sha256": "e032e3682dc49d82d2b30706fc913a6dbd8502180e23c1967e30889bbb2a6324",
+      "related_documents": [
+        22,
+        141,
+        200
+      ]
+    },
+    {
+      "id": 146,
+      "file": "146_W4_OS_USER_MANAGEMENT.md",
+      "area": "Usuarios y autenticación",
+      "bytes": 1861,
+      "words": 211,
+      "sha256": "8916494334014be8842fb2e1c157ce5e0fa754b7f194de4aa7f3fa4ea2586f78",
+      "related_documents": [
+        147,
+        148,
+        215
+      ]
+    },
+    {
+      "id": 147,
+      "file": "147_W4_OS_GROUP_MANAGEMENT.md",
+      "area": "Usuarios y autenticación",
+      "bytes": 1798,
+      "words": 204,
+      "sha256": "32050de207f05db66b8ea2dbb292d81136eb6f03bed39ae5f8f2812c13bed76f",
+      "related_documents": [
+        146,
+        151,
+        255
+      ]
+    },
+    {
+      "id": 148,
+      "file": "148_W4_OS_AUTHENTICATION_ARCHITECTURE.md",
+      "area": "Usuarios y autenticación",
+      "bytes": 1822,
+      "words": 206,
+      "sha256": "84f153fb10c1d0ef3adb685db4c7c74ccb10dc0fd251b1d3867a8a1bbd37b99f",
+      "related_documents": [
+        149,
+        153,
+        216
+      ]
+    },
+    {
+      "id": 149,
+      "file": "149_W4_OS_LOGIN_SECURITY.md",
+      "area": "Usuarios y autenticación",
+      "bytes": 1809,
+      "words": 203,
+      "sha256": "21c235b3f6afb89974116e8623111c0402d90b47e722330bf2e540bbc898e08f",
+      "related_documents": [
+        98,
+        99,
+        148
+      ]
+    },
+    {
+      "id": 150,
+      "file": "150_W4_OS_BIOMETRIC_AUTHENTICATION.md",
+      "area": "Usuarios y autenticación",
+      "bytes": 1817,
+      "words": 207,
+      "sha256": "b5005d23b6ab24bdc9a580d01eab0f5d674f5122a5df974e7c631cf7e4ae15e3",
+      "related_documents": [
+        24,
+        148,
+        163
+      ]
+    },
+    {
+      "id": 151,
+      "file": "151_W4_OS_PRIVILEGE_ESCALATION_MODEL.md",
+      "area": "Usuarios y autenticación",
+      "bytes": 1802,
+      "words": 207,
+      "sha256": "b160c5ab72818a8b2f974cedc3c8dd7553af637112373c2dd51782291f87e597",
+      "related_documents": [
+        152,
+        156,
+        367
+      ]
+    },
+    {
+      "id": 152,
+      "file": "152_W4_OS_SUDO_POLICY.md",
+      "area": "Usuarios y autenticación",
+      "bytes": 1812,
+      "words": 206,
+      "sha256": "bf1d950991d7bbcb6ccbe6b5f46ad5da9bf7bd28335d7db62246d8faecb5251e",
+      "related_documents": [
+        146,
+        147,
+        151
+      ]
+    },
+    {
+      "id": 153,
+      "file": "153_W4_OS_SESSION_MANAGEMENT.md",
+      "area": "Usuarios y autenticación",
+      "bytes": 1776,
+      "words": 208,
+      "sha256": "2ce257419c24d0ce0379b7479eac24a73de4ed6a1dd986d577f8ef9dfdff1454",
+      "related_documents": [
+        97,
+        148,
+        163
+      ]
+    },
+    {
+      "id": 154,
+      "file": "154_W4_OS_GUEST_SESSION.md",
+      "area": "Usuarios y autenticación",
+      "bytes": 1824,
+      "words": 214,
+      "sha256": "c0062000ddbf70e85c96e958f5a03807c931235eae2a24f4b92c8ed3426ba21a",
+      "related_documents": [
+        146,
+        153,
+        240
+      ]
+    },
+    {
+      "id": 155,
+      "file": "155_W4_OS_PARENTAL_CONTROL_ARCHITECTURE.md",
+      "area": "Usuarios y autenticación",
+      "bytes": 1830,
+      "words": 214,
+      "sha256": "d407982a8825d3136b1c64eddfa8a9c280ffed9d75d9bb99e7ec50dd109905f2",
+      "related_documents": [
+        146,
+        234,
+        354
+      ]
+    },
+    {
+      "id": 156,
+      "file": "156_W4_OS_SECURITY_ARCHITECTURE.md",
+      "area": "Seguridad",
+      "bytes": 3658,
+      "words": 448,
+      "sha256": "5b197ec2125e77f14cda0747c66ea76d8f28f15c0e67d789f05ce33ef612d92f",
+      "related_documents": [
+        157,
+        169,
+        175
+      ]
+    },
+    {
+      "id": 157,
+      "file": "157_W4_OS_SECURITY_BASELINE.md",
+      "area": "Seguridad",
+      "bytes": 1862,
+      "words": 208,
+      "sha256": "c887e6bea446fbaecd21bff40b47a51499c171b433135baa9f929efd3210b42d",
+      "related_documents": [
+        149,
+        158,
+        159,
+        160
+      ]
+    },
+    {
+      "id": 158,
+      "file": "158_W4_OS_APPARMOR_ARCHITECTURE.md",
+      "area": "Seguridad",
+      "bytes": 1811,
+      "words": 202,
+      "sha256": "61a2c5fbba8006a7ca45ddcd8216fde02a90479f8db8830f4e20ac7ad2c056ca",
+      "related_documents": [
+        123,
+        156,
+        172
+      ]
+    },
+    {
+      "id": 159,
+      "file": "159_W4_OS_FIREWALL_SYSTEM.md",
+      "area": "Seguridad",
+      "bytes": 1805,
+      "words": 209,
+      "sha256": "218bf90e2187abdb996dff2e322cf91cdcddf728364f216fcfdb950ede45163b",
+      "related_documents": [
+        176,
+        184,
+        255
+      ]
+    },
+    {
+      "id": 160,
+      "file": "160_W4_OS_DISK_ENCRYPTION.md",
+      "area": "Seguridad",
+      "bytes": 1809,
+      "words": 210,
+      "sha256": "6496adbd488625a4567873b377b6eca0dfc93f6c81ba525ba651a55e014872f8",
+      "related_documents": [
+        37,
+        162,
+        193
+      ]
+    },
+    {
+      "id": 161,
+      "file": "161_W4_OS_SECURE_BOOT.md",
+      "area": "Seguridad",
+      "bytes": 1823,
+      "words": 214,
+      "sha256": "7690e56840cb7e706a65f0903dd3dcd92623d61e2f5ca37da972d68a0d842bc0",
+      "related_documents": [
+        25,
+        26,
+        168
+      ]
+    },
+    {
+      "id": 162,
+      "file": "162_W4_OS_TPM_INTEGRATION.md",
+      "area": "Seguridad",
+      "bytes": 1874,
+      "words": 212,
+      "sha256": "02f8f23876e5317cbdcb00d11bacdfab432c79d5d2d52478ed3b0b55677d9733",
+      "related_documents": [
+        20,
+        37,
+        160,
+        161
+      ]
+    },
+    {
+      "id": 163,
+      "file": "163_W4_OS_SECRET_STORAGE.md",
+      "area": "Seguridad",
+      "bytes": 1863,
+      "words": 206,
+      "sha256": "54f29eadf74a41ad3b84bf0bfc3fd23875cab0e1f27104f12622ebc4d7129a1e",
+      "related_documents": [
+        148,
+        164,
+        241
+      ]
+    },
+    {
+      "id": 164,
+      "file": "164_W4_OS_CERTIFICATE_MANAGEMENT.md",
+      "area": "Seguridad",
+      "bytes": 1819,
+      "words": 209,
+      "sha256": "6e5a788b44a9504b06b7eafe2357cccc6507e58b992088af283a0c03ec1db52d",
+      "related_documents": [
+        163,
+        185,
+        220
+      ]
+    },
+    {
+      "id": 165,
+      "file": "165_W4_OS_SECURITY_UPDATE_POLICY.md",
+      "area": "Seguridad",
+      "bytes": 2253,
+      "words": 260,
+      "sha256": "dc9ab0e0ea26c6a0aefece3cfb0915c64976d0461b839d65b54a3e7d7471d7f2",
+      "related_documents": [
+        54,
+        326,
+        334,
+        392
+      ]
+    },
+    {
+      "id": 166,
+      "file": "166_W4_OS_MALWARE_PROTECTION_STRATEGY.md",
+      "area": "Seguridad",
+      "bytes": 1882,
+      "words": 213,
+      "sha256": "4abf221c70e830c0a665e222902564171440061119576ce13712e855218025cb",
+      "related_documents": [
+        123,
+        167,
+        175
+      ]
+    },
+    {
+      "id": 167,
+      "file": "167_W4_OS_APPLICATION_TRUST_MODEL.md",
+      "area": "Seguridad",
+      "bytes": 1827,
+      "words": 209,
+      "sha256": "4a1f70f18c16c3f52d3312ae24e947d989ad21db3bda35bde4a379037d50080d",
+      "related_documents": [
+        126,
+        128,
+        168
+      ]
+    },
+    {
+      "id": 168,
+      "file": "168_W4_OS_CODE_SIGNING_MODEL.md",
+      "area": "Seguridad",
+      "bytes": 1870,
+      "words": 219,
+      "sha256": "cc7a9ccea66d62d17a3e000d81509f1d33068e7bdab0abf4a9edfd08893069a0",
+      "related_documents": [
+        47,
+        161,
+        169,
+        272
+      ]
+    },
+    {
+      "id": 169,
+      "file": "169_W4_OS_SUPPLY_CHAIN_SECURITY.md",
+      "area": "Seguridad",
+      "bytes": 1855,
+      "words": 211,
+      "sha256": "ee568c27922359cd2eb7f2ecc0e10e4e46d8e26b0655b44c506a60c6c26910b9",
+      "related_documents": [
+        48,
+        63,
+        387,
+        390
+      ]
+    },
+    {
+      "id": 170,
+      "file": "170_W4_OS_SECURITY_AUDIT_SYSTEM.md",
+      "area": "Seguridad",
+      "bytes": 2349,
+      "words": 274,
+      "sha256": "b11ec619a4dd2885ed5fb31b05e774d12da243a11e8e1871ebd025c786f1ef34",
+      "related_documents": [
+        156,
+        171,
+        228
+      ]
+    },
+    {
+      "id": 171,
+      "file": "171_W4_OS_SECURITY_EVENT_SYSTEM.md",
+      "area": "Seguridad",
+      "bytes": 2288,
+      "words": 280,
+      "sha256": "c6db5175561884b39624a0801d709612c516274caf6caa5e3aba40fab7679c8f",
+      "related_documents": [
+        202,
+        362,
+        363
+      ]
+    },
+    {
+      "id": 172,
+      "file": "172_W4_OS_SECURITY_HARDENING_PROFILES.md",
+      "area": "Seguridad",
+      "bytes": 1867,
+      "words": 201,
+      "sha256": "4fe61019bd160d6d26e3b14285acb8a5cd2b7ef0ebffb97f271af016341dd116",
+      "related_documents": [
+        157,
+        158,
+        173,
+        174
+      ]
+    },
+    {
+      "id": 173,
+      "file": "173_W4_OS_HOME_SECURITY_PROFILE.md",
+      "area": "Seguridad",
+      "bytes": 1814,
+      "words": 208,
+      "sha256": "ceef7241891ae1d7c36d5b2f8b26689f3b0f74d5b5e6b8f940c843e62ff62be7",
+      "related_documents": [
+        11,
+        157,
+        240
+      ]
+    },
+    {
+      "id": 174,
+      "file": "174_W4_OS_BUSINESS_SECURITY_PROFILE.md",
+      "area": "Seguridad",
+      "bytes": 1898,
+      "words": 209,
+      "sha256": "3305d5fd2200ceac494a7ba5e1a4e49c5c8b83a29288d7e84a5b0327b8c30b10",
+      "related_documents": [
+        12,
+        172,
+        213,
+        228
+      ]
+    },
+    {
+      "id": 175,
+      "file": "175_W4_OS_INCIDENT_RECOVERY_MODEL.md",
+      "area": "Seguridad",
+      "bytes": 1928,
+      "words": 213,
+      "sha256": "348e7483b0043ee3f336e748e986c079b4541045fda6924bbef7d0dc020494ce",
+      "related_documents": [
+        86,
+        166,
+        326,
+        347
+      ]
+    },
+    {
+      "id": 176,
+      "file": "176_W4_OS_NETWORK_ARCHITECTURE.md",
+      "area": "Red",
+      "bytes": 1780,
+      "words": 200,
+      "sha256": "a2abf78c9c9168625e2568452cec71e043088bc73b4f292419c130ab136877d4",
+      "related_documents": [
+        177,
+        182,
+        184
+      ]
+    },
+    {
+      "id": 177,
+      "file": "177_W4_OS_NETWORKMANAGER_INTEGRATION.md",
+      "area": "Red",
+      "bytes": 2195,
+      "words": 260,
+      "sha256": "bb75cb8bd9bee3920b1e085ee8c260b8a99f84d3e45036c53852bc963381a1ce",
+      "related_documents": [
+        114,
+        176,
+        367
+      ]
+    },
+    {
+      "id": 178,
+      "file": "178_W4_OS_WIFI_SYSTEM.md",
+      "area": "Red",
+      "bytes": 1785,
+      "words": 205,
+      "sha256": "f1f5f08563c16d0054a2b44eb8c9984de65e2ec14974dc7aea65fae2925161d1",
+      "related_documents": [
+        20,
+        177,
+        185
+      ]
+    },
+    {
+      "id": 179,
+      "file": "179_W4_OS_ETHERNET_SYSTEM.md",
+      "area": "Red",
+      "bytes": 2308,
+      "words": 274,
+      "sha256": "2248c7c9af5fce7b2230a340cc9844310b833392cb83edce0a2b82633ad52cea",
+      "related_documents": [
+        176,
+        177,
+        185
+      ]
+    },
+    {
+      "id": 180,
+      "file": "180_W4_OS_BLUETOOTH_SYSTEM.md",
+      "area": "Red",
+      "bytes": 2360,
+      "words": 285,
+      "sha256": "99141d2ae10a8d435be386dd2038e5897d33f98a66ac5db63117eeaa0aac31c7",
+      "related_documents": [
+        136,
+        144,
+        178
+      ]
+    },
+    {
+      "id": 181,
+      "file": "181_W4_OS_VPN_ARCHITECTURE.md",
+      "area": "Red",
+      "bytes": 1768,
+      "words": 209,
+      "sha256": "269feff68bc4fd9937357d12f8356c7579eb1d85872728090722bfcd45c9fcfa",
+      "related_documents": [
+        163,
+        182,
+        184
+      ]
+    },
+    {
+      "id": 182,
+      "file": "182_W4_OS_DNS_ARCHITECTURE.md",
+      "area": "Red",
+      "bytes": 1752,
+      "words": 202,
+      "sha256": "417f0ca3bf138d42eb76af6ae3f576d2e76736a99270ab3d3227e5d1f5c58018",
+      "related_documents": [
+        176,
+        177,
+        181
+      ]
+    },
+    {
+      "id": 183,
+      "file": "183_W4_OS_PROXY_SYSTEM.md",
+      "area": "Red",
+      "bytes": 1771,
+      "words": 205,
+      "sha256": "4ea8a00ab2b870c3d9343f0edd1b68605efcdb50eff14b314fd682f10f36ce0b",
+      "related_documents": [
+        114,
+        164,
+        185
+      ]
+    },
+    {
+      "id": 184,
+      "file": "184_W4_OS_NETWORK_SECURITY.md",
+      "area": "Red",
+      "bytes": 2268,
+      "words": 277,
+      "sha256": "a877a42adf5f69efa5f24e1556b40bfbdc3d45fea0bd7a392a4d09e9ddd07e3d",
+      "related_documents": [
+        159,
+        176,
+        181
+      ]
+    },
+    {
+      "id": 185,
+      "file": "185_W4_OS_ENTERPRISE_NETWORKING.md",
+      "area": "Red",
+      "bytes": 1855,
+      "words": 211,
+      "sha256": "faabd8ca8e89fa01ecbb81f65fbb32b796da19b53eea9cb2c977279666887402",
+      "related_documents": [
+        164,
+        178,
+        181,
+        220
+      ]
+    },
+    {
+      "id": 186,
+      "file": "186_W4_OS_STORAGE_ARCHITECTURE.md",
+      "area": "Almacenamiento y backup",
+      "bytes": 1794,
+      "words": 202,
+      "sha256": "e2cd3dbdec35a2f48e48c641b67af452993eafb01150097c13595eb78f4c4c7e",
+      "related_documents": [
+        187,
+        188,
+        190
+      ]
+    },
+    {
+      "id": 187,
+      "file": "187_W4_OS_STORAGE_DEVICE_MANAGER.md",
+      "area": "Almacenamiento y backup",
+      "bytes": 1760,
+      "words": 204,
+      "sha256": "d712c1bdd176528fb76eec90e18fc902a6ab7ffe86c22dfb47a5884053f9773b",
+      "related_documents": [
+        23,
+        33,
+        186
+      ]
+    },
+    {
+      "id": 188,
+      "file": "188_W4_OS_EXTERNAL_STORAGE.md",
+      "area": "Almacenamiento y backup",
+      "bytes": 1756,
+      "words": 208,
+      "sha256": "fd48e3afa7c81691d911618b63222b22cf3aa622a584a4adb16fba7bc9723ff6",
+      "related_documents": [
+        36,
+        140,
+        189
+      ]
+    },
+    {
+      "id": 189,
+      "file": "189_W4_OS_USB_STORAGE_POLICY.md",
+      "area": "Almacenamiento y backup",
+      "bytes": 1855,
+      "words": 210,
+      "sha256": "5c7dfecf9f2fe32be1e9c523bdf61d14c94fada9d962d72204187759407f1ddc",
+      "related_documents": [
+        174,
+        187,
+        213
+      ]
+    },
+    {
+      "id": 190,
+      "file": "190_W4_OS_MOUNT_SYSTEM.md",
+      "area": "Almacenamiento y backup",
+      "bytes": 1804,
+      "words": 207,
+      "sha256": "bc467948212580ffd5f96c064313f73c6941f61a65bf0eb26bdbca969d36e543",
+      "related_documents": [
+        34,
+        186,
+        188
+      ]
+    },
+    {
+      "id": 191,
+      "file": "191_W4_OS_DISK_HEALTH_SYSTEM.md",
+      "area": "Almacenamiento y backup",
+      "bytes": 1779,
+      "words": 205,
+      "sha256": "9cd2fa6b010ae2cd6c1c4c21a55cea82498e0668edb8d9e1d227196df4ec619e",
+      "related_documents": [
+        35,
+        186,
+        193
+      ]
+    },
+    {
+      "id": 192,
+      "file": "192_W4_OS_STORAGE_QUOTA_SYSTEM.md",
+      "area": "Almacenamiento y backup",
+      "bytes": 1811,
+      "words": 216,
+      "sha256": "75d0da8594d3a623c8c933805f303547e3c6d51f4b01dc29ffc7ef2ee786ff02",
+      "related_documents": [
+        35,
+        186,
+        300
+      ]
+    },
+    {
+      "id": 193,
+      "file": "193_W4_OS_BACKUP_ARCHITECTURE.md",
+      "area": "Almacenamiento y backup",
+      "bytes": 1865,
+      "words": 218,
+      "sha256": "32490a2d3072b4e935bfc78363ee016c499fcde75297b01e9cc7a5d2ad3ddc6c",
+      "related_documents": [
+        194,
+        195,
+        235
+      ]
+    },
+    {
+      "id": 194,
+      "file": "194_W4_OS_RESTORE_SYSTEM.md",
+      "area": "Almacenamiento y backup",
+      "bytes": 1805,
+      "words": 208,
+      "sha256": "bf9f0a78b3cf27285a51ea8cb1ba0b7895348a84009b2ea7d40b0b6ad78f3ee8",
+      "related_documents": [
+        193,
+        345,
+        347
+      ]
+    },
+    {
+      "id": 195,
+      "file": "195_W4_OS_CLOUD_BACKUP_STRATEGY.md",
+      "area": "Almacenamiento y backup",
+      "bytes": 1841,
+      "words": 224,
+      "sha256": "7c05ebfec65fc5ec5fd6c35861f66cb33b45271a8917e9ee4e05c4747b2c51b6",
+      "related_documents": [
+        193,
+        243,
+        248
+      ]
+    },
+    {
+      "id": 196,
+      "file": "196_W4_OS_POWER_MANAGEMENT.md",
+      "area": "Energía",
+      "bytes": 2354,
+      "words": 282,
+      "sha256": "e018745bf17ce69bbefcf994a0ff37c4a5c3adbdbe82ad5790689eb946043bc3",
+      "related_documents": [
+        197,
+        198,
+        200
+      ]
+    },
+    {
+      "id": 197,
+      "file": "197_W4_OS_BATTERY_MANAGEMENT.md",
+      "area": "Energía",
+      "bytes": 1764,
+      "words": 204,
+      "sha256": "490a592a5f70d798e879b77bd3cf863d49a31c49d43735f87536aac816c18686",
+      "related_documents": [
+        20,
+        196,
+        198
+      ]
+    },
+    {
+      "id": 198,
+      "file": "198_W4_OS_SLEEP_HIBERNATION.md",
+      "area": "Energía",
+      "bytes": 1794,
+      "words": 208,
+      "sha256": "26869082146f7eaf05588f15ed8464234427ee320f9126c06e58c7c4766411e2",
+      "related_documents": [
+        99,
+        160,
+        196
+      ]
+    },
+    {
+      "id": 199,
+      "file": "199_W4_OS_THERMAL_MANAGEMENT.md",
+      "area": "Energía",
+      "bytes": 1781,
+      "words": 204,
+      "sha256": "b7e0e1ed2e7bf99ab50d03a92f899e6c3612ed9dbe4caeb8f3a1a7279b6fc3b7",
+      "related_documents": [
+        196,
+        200,
+        294
+      ]
+    },
+    {
+      "id": 200,
+      "file": "200_W4_OS_PERFORMANCE_PROFILES.md",
+      "area": "Energía",
+      "bytes": 1783,
+      "words": 200,
+      "sha256": "2e76b54af054c11b3b132d268a54d2927712e8589c89da71c1e8be50e8f6dee6",
+      "related_documents": [
+        145,
+        196,
+        291
+      ]
+    },
+    {
+      "id": 201,
+      "file": "201_W4_OS_TELEMETRY_ARCHITECTURE.md",
+      "area": "Diagnóstico y privacidad",
+      "bytes": 1886,
+      "words": 212,
+      "sha256": "f4cfca6dc3fdb98348dd201f5ca62c0a192bc585ab72169460e21aa4cde11477",
+      "related_documents": [
+        207,
+        208,
+        209
+      ]
+    },
+    {
+      "id": 202,
+      "file": "202_W4_OS_SYSTEM_LOGGING.md",
+      "area": "Diagnóstico y privacidad",
+      "bytes": 1769,
+      "words": 208,
+      "sha256": "5db16f6a87c3801ea668e9616e8ad1b2beab5acec5d20635655dc4fdb75d8c90",
+      "related_documents": [
+        171,
+        210,
+        363
+      ]
+    },
+    {
+      "id": 203,
+      "file": "203_W4_OS_METRICS_SYSTEM.md",
+      "area": "Diagnóstico y privacidad",
+      "bytes": 2379,
+      "words": 283,
+      "sha256": "7cdfc445b7712e4fc609c376e06722d49022af9dfe1c21edfa904a834ab01e5d",
+      "related_documents": [
+        201,
+        291,
+        361
+      ]
+    },
+    {
+      "id": 204,
+      "file": "204_W4_OS_CRASH_REPORTING.md",
+      "area": "Diagnóstico y privacidad",
+      "bytes": 1794,
+      "words": 208,
+      "sha256": "3528e778f699c67cc45836e909f3b5c55c74b048377bdcb65678bd1c42fb1d97",
+      "related_documents": [
+        201,
+        205,
+        210
+      ]
+    },
+    {
+      "id": 205,
+      "file": "205_W4_OS_DIAGNOSTICS_SYSTEM.md",
+      "area": "Diagnóstico y privacidad",
+      "bytes": 1831,
+      "words": 213,
+      "sha256": "05cf3aac15a18527065904dc45cc9240a615eccd10d2313cf58a954f8742f45c",
+      "related_documents": [
+        90,
+        191,
+        206,
+        322
+      ]
+    },
+    {
+      "id": 206,
+      "file": "206_W4_OS_HEALTH_MONITOR.md",
+      "area": "Diagnóstico y privacidad",
+      "bytes": 1808,
+      "words": 208,
+      "sha256": "ed2dac5b011731ec925c8b6c011019617a4f75eb884cbcbbde0dfc543ee18d28",
+      "related_documents": [
+        76,
+        191,
+        205,
+        365
+      ]
+    },
+    {
+      "id": 207,
+      "file": "207_W4_OS_PRIVACY_MODEL.md",
+      "area": "Diagnóstico y privacidad",
+      "bytes": 1868,
+      "words": 206,
+      "sha256": "89fc7dd106796f0035fa127033d252483156e00e1c2d39076a73354f1b1544eb",
+      "related_documents": [
+        201,
+        209,
+        351
+      ]
+    },
+    {
+      "id": 208,
+      "file": "208_W4_OS_TELEMETRY_PRIVACY_POLICY.md",
+      "area": "Diagnóstico y privacidad",
+      "bytes": 1853,
+      "words": 218,
+      "sha256": "d4db5632329c78ab61f5fd025146da029dec9fd5fc40164a86ccea3821d4ef5d",
+      "related_documents": [
+        201,
+        352,
+        353
+      ]
+    },
+    {
+      "id": 209,
+      "file": "209_W4_OS_OPT_IN_TELEMETRY.md",
+      "area": "Diagnóstico y privacidad",
+      "bytes": 1812,
+      "words": 208,
+      "sha256": "a84b84b566dac64ef30471f82eb7a67311115cf42f8dc20969d265bdc3a9d489",
+      "related_documents": [
+        201,
+        207,
+        354
+      ]
+    },
+    {
+      "id": 210,
+      "file": "210_W4_OS_SUPPORT_BUNDLE_SYSTEM.md",
+      "area": "Diagnóstico y privacidad",
+      "bytes": 1891,
+      "words": 221,
+      "sha256": "83e9c7a163553bbbbd4224ac7eebb265f063a1a38651050a885e4cbcf314ec6c",
+      "related_documents": [
+        202,
+        204,
+        205,
+        226
+      ]
+    },
+    {
+      "id": 211,
+      "file": "211_W4_OS_BUSINESS_ARCHITECTURE.md",
+      "area": "Administración Business",
+      "bytes": 1942,
+      "words": 215,
+      "sha256": "adb7c5d98fc633439cc6a4fee1c15b08d86351dd5e9de14c516462fdc416cee1",
+      "related_documents": [
+        12,
+        212,
+        213,
+        221
+      ]
+    },
+    {
+      "id": 212,
+      "file": "212_W4_OS_ENTERPRISE_DEVICE_MANAGEMENT.md",
+      "area": "Administración Business",
+      "bytes": 1828,
+      "words": 206,
+      "sha256": "6e3e3847b0d815b61f8183b2ab2d92db702e0bfe8bdbc6577262ba4e4a81bbc2",
+      "related_documents": [
+        214,
+        222,
+        370
+      ]
+    },
+    {
+      "id": 213,
+      "file": "213_W4_OS_CENTRAL_POLICY_SYSTEM.md",
+      "area": "Administración Business",
+      "bytes": 3393,
+      "words": 403,
+      "sha256": "20591ca78f2e8a3102a9e4c200d173c1d224f39549c3f385aa7d10cc7373f244",
+      "related_documents": [
+        120,
+        214,
+        380,
+        381
+      ]
+    },
+    {
+      "id": 214,
+      "file": "214_W4_OS_CONFIGURATION_POLICY_ENGINE.md",
+      "area": "Administración Business",
+      "bytes": 1846,
+      "words": 200,
+      "sha256": "c25e96c2112347ae68ed925df085fe3110d527f4ed8966b8bcf3cbb6eeec924d",
+      "related_documents": [
+        213,
+        223,
+        377
+      ]
+    },
+    {
+      "id": 215,
+      "file": "215_W4_OS_ENTERPRISE_USER_MANAGEMENT.md",
+      "area": "Administración Business",
+      "bytes": 1831,
+      "words": 210,
+      "sha256": "43518cbf6e7f9232ed5fead638a4b63352e1f80278ac580da75bd4d166c7adbe",
+      "related_documents": [
+        146,
+        148,
+        216
+      ]
+    },
+    {
+      "id": 216,
+      "file": "216_W4_OS_DIRECTORY_SERVICES.md",
+      "area": "Administración Business",
+      "bytes": 1885,
+      "words": 203,
+      "sha256": "c839142b9f650f736f144f76aba14c641820003d82cdda3a8d5ce72511a9ebd3",
+      "related_documents": [
+        185,
+        215,
+        217,
+        218
+      ]
+    },
+    {
+      "id": 217,
+      "file": "217_W4_OS_LDAP_INTEGRATION.md",
+      "area": "Administración Business",
+      "bytes": 1794,
+      "words": 207,
+      "sha256": "348dea6880aae8d45b231c1850185d51591e6ad423b76d8a6cff1dfac8cce03a",
+      "related_documents": [
+        164,
+        216,
+        219
+      ]
+    },
+    {
+      "id": 218,
+      "file": "218_W4_OS_ACTIVE_DIRECTORY_INTEGRATION.md",
+      "area": "Administración Business",
+      "bytes": 1789,
+      "words": 207,
+      "sha256": "8881f8049562809755bf077a8a28dd0f34eb32080a958c8c09449ac0bf71bece",
+      "related_documents": [
+        185,
+        215,
+        216
+      ]
+    },
+    {
+      "id": 219,
+      "file": "219_W4_OS_SSO_ARCHITECTURE.md",
+      "area": "Administración Business",
+      "bytes": 1931,
+      "words": 217,
+      "sha256": "79f534f73708f5bd7cc20c912d5f1d86dc8f183d0f59df6d1271a775e0f1c1ee",
+      "related_documents": [
+        148,
+        163,
+        241,
+        247
+      ]
+    },
+    {
+      "id": 220,
+      "file": "220_W4_OS_ENTERPRISE_CERTIFICATES.md",
+      "area": "Administración Business",
+      "bytes": 1819,
+      "words": 208,
+      "sha256": "e64ce485a7aa7f45c3c90336e3f72655b779259f67092154f1384f5831e3fd99",
+      "related_documents": [
+        164,
+        185,
+        222
+      ]
+    },
+    {
+      "id": 221,
+      "file": "221_W4_OS_FLEET_MANAGEMENT.md",
+      "area": "Administración Business",
+      "bytes": 1886,
+      "words": 210,
+      "sha256": "a8a73931b40526f6bd44dbfd78c38b394040bedc9cde460fdf0d9949dacb7774",
+      "related_documents": [
+        78,
+        212,
+        224,
+        227
+      ]
+    },
+    {
+      "id": 222,
+      "file": "222_W4_OS_DEVICE_ENROLLMENT.md",
+      "area": "Administración Business",
+      "bytes": 3182,
+      "words": 391,
+      "sha256": "7dcc49e1c3dc650c730fc01f0bd7b3688e5373908446b4639e5fb5a3ab14591c",
+      "related_documents": [
+        39,
+        212,
+        220
+      ]
+    },
+    {
+      "id": 223,
+      "file": "223_W4_OS_REMOTE_CONFIGURATION.md",
+      "area": "Administración Business",
+      "bytes": 1875,
+      "words": 208,
+      "sha256": "f5120408f8e00582f778a0cb4930015d9e68467f28d585f3e831abbc80e3e5fd",
+      "related_documents": [
+        213,
+        214,
+        371
+      ]
+    },
+    {
+      "id": 224,
+      "file": "224_W4_OS_REMOTE_UPDATE_MANAGEMENT.md",
+      "area": "Administración Business",
+      "bytes": 1859,
+      "words": 214,
+      "sha256": "2c0d91ffe510ad04da661994eedb251401df29125037294065c8c14e0af390bb",
+      "related_documents": [
+        71,
+        78,
+        117,
+        221
+      ]
+    },
+    {
+      "id": 225,
+      "file": "225_W4_OS_REMOTE_SUPPORT_SYSTEM.md",
+      "area": "Administración Business",
+      "bytes": 1880,
+      "words": 209,
+      "sha256": "22355c9271761f846d9fba970428ea0999c7f7f7350a3975a483183e3217132f",
+      "related_documents": [
+        151,
+        226,
+        333
+      ]
+    },
+    {
+      "id": 226,
+      "file": "226_W4_OS_REMOTE_DIAGNOSTICS.md",
+      "area": "Administración Business",
+      "bytes": 1859,
+      "words": 211,
+      "sha256": "a92fab4907482e3fca4cdd65042c4ff94ce0972d7e4c5706d605d1560ed24218",
+      "related_documents": [
+        205,
+        210,
+        225,
+        355
+      ]
+    },
+    {
+      "id": 227,
+      "file": "227_W4_OS_INVENTORY_SYSTEM.md",
+      "area": "Administración Business",
+      "bytes": 1877,
+      "words": 205,
+      "sha256": "787ad2c25ce15dfb87058b6a3ddde8f3cbcb3e5b43f5ef166d53eec08ff152d3",
+      "related_documents": [
+        23,
+        10,
+        221,
+        352
+      ]
+    },
+    {
+      "id": 228,
+      "file": "228_W4_OS_COMPLIANCE_SYSTEM.md",
+      "area": "Administración Business",
+      "bytes": 1798,
+      "words": 203,
+      "sha256": "143dbc615bec3f425dfdbdbaa0e64f553dd9047baf5eac6615393f4ec2187d61",
+      "related_documents": [
+        170,
+        229,
+        356
+      ]
+    },
+    {
+      "id": 229,
+      "file": "229_W4_OS_ENTERPRISE_AUDITING.md",
+      "area": "Administración Business",
+      "bytes": 1873,
+      "words": 210,
+      "sha256": "944e939cb89e27adc3f6ce551f27b52d15e299b118f41dddc1406992fdc3089b",
+      "related_documents": [
+        171,
+        363,
+        355
+      ]
+    },
+    {
+      "id": 230,
+      "file": "230_W4_OS_ENTERPRISE_REPORTING.md",
+      "area": "Administración Business",
+      "bytes": 1887,
+      "words": 209,
+      "sha256": "1ee97e582e5ff5b2425fbec532065545c44338a3a6ce0c7dfd4bfa8c24a9bdeb",
+      "related_documents": [
+        221,
+        227,
+        228,
+        361
+      ]
+    },
+    {
+      "id": 231,
+      "file": "231_W4_OS_HOME_ARCHITECTURE.md",
+      "area": "Experiencia Home",
+      "bytes": 1865,
+      "words": 218,
+      "sha256": "17d0cb31e12bd60011ac279627fd91e2854c1c86c8dc2d9b170f9b5708534884",
+      "related_documents": [
+        11,
+        232,
+        237,
+        408
+      ]
+    },
+    {
+      "id": 232,
+      "file": "232_W4_OS_HOME_ONBOARDING.md",
+      "area": "Experiencia Home",
+      "bytes": 1759,
+      "words": 203,
+      "sha256": "a758ec285b5616a73ecd781158e05bf901f4290ecb86616e9434128417ee8443",
+      "related_documents": [
+        32,
+        39,
+        209
+      ]
+    },
+    {
+      "id": 233,
+      "file": "233_W4_OS_HOME_ACCOUNT_SYSTEM.md",
+      "area": "Experiencia Home",
+      "bytes": 2323,
+      "words": 279,
+      "sha256": "4fff99e39831237f19a4a6bf2ac6f2df20b68f1d466eae4ac1f6b19f43c346e3",
+      "related_documents": [
+        146,
+        148,
+        241
+      ]
+    },
+    {
+      "id": 234,
+      "file": "234_W4_OS_FAMILY_USER_MODEL.md",
+      "area": "Experiencia Home",
+      "bytes": 1775,
+      "words": 208,
+      "sha256": "69430493835058b66324d861e1d9354153327e66c54d5e7cc091aa54f22ab9bc",
+      "related_documents": [
+        146,
+        147,
+        155
+      ]
+    },
+    {
+      "id": 235,
+      "file": "235_W4_OS_HOME_BACKUP.md",
+      "area": "Experiencia Home",
+      "bytes": 1733,
+      "words": 205,
+      "sha256": "f42882e415545f54dba86d9f722c371bbf9357912405ffb3001b579edf4fae97",
+      "related_documents": [
+        193,
+        194,
+        195
+      ]
+    },
+    {
+      "id": 236,
+      "file": "236_W4_OS_HOME_RECOVERY.md",
+      "area": "Experiencia Home",
+      "bytes": 1745,
+      "words": 206,
+      "sha256": "dd6092d8c9cd5ad4f45e18b5d5d3fbc2c03fb095d6b77729f7e19426fb9816a7",
+      "related_documents": [
+        86,
+        89,
+        194
+      ]
+    },
+    {
+      "id": 237,
+      "file": "237_W4_OS_HOME_APPLICATION_PROFILE.md",
+      "area": "Experiencia Home",
+      "bytes": 1767,
+      "words": 206,
+      "sha256": "a7ae6e153ee6e02c43a315c11fa2cd6740f249952cc422b8703a1128a6a37a8d",
+      "related_documents": [
+        131,
+        132,
+        133,
+        136
+      ]
+    },
+    {
+      "id": 238,
+      "file": "238_W4_OS_HOME_GAMING_PROFILE.md",
+      "area": "Experiencia Home",
+      "bytes": 1749,
+      "words": 200,
+      "sha256": "ea6914f54841be1e3ec6dcbc9645931b086c447362372122f7b5484903c7499d",
+      "related_documents": [
+        141,
+        142,
+        145
+      ]
+    },
+    {
+      "id": 239,
+      "file": "239_W4_OS_HOME_MEDIA_PROFILE.md",
+      "area": "Experiencia Home",
+      "bytes": 2277,
+      "words": 280,
+      "sha256": "8b99e8a08738e16eb4589628207a9d5defe01080de294b97b9ad4f0fd6fd2e44",
+      "related_documents": [
+        136,
+        137,
+        180
+      ]
+    },
+    {
+      "id": 240,
+      "file": "240_W4_OS_HOME_PRIVACY_PROFILE.md",
+      "area": "Experiencia Home",
+      "bytes": 1763,
+      "words": 203,
+      "sha256": "4cc8c74334afe36f74b53edbada2abcd40a6a7191130d4e6de66c67549abf712",
+      "related_documents": [
+        207,
+        209,
+        233
+      ]
+    },
+    {
+      "id": 241,
+      "file": "241_W4_OS_W4_ACCOUNT_INTEGRATION.md",
+      "area": "Servicios W4 opcionales",
+      "bytes": 1805,
+      "words": 215,
+      "sha256": "437404bd81169bc1f632bbdbc0bb464a7aa63d377138fdec6719e9e197d7b48b",
+      "related_documents": [
+        163,
+        219,
+        233
+      ]
+    },
+    {
+      "id": 242,
+      "file": "242_W4_OS_W4_SERVICE_INTEGRATION.md",
+      "area": "Servicios W4 opcionales",
+      "bytes": 1778,
+      "words": 202,
+      "sha256": "5767a57a7fb6103dc737cd640409a2a3a5163d23dec9a986673fa4fde551285e",
+      "related_documents": [
+        241,
+        250,
+        366
+      ]
+    },
+    {
+      "id": 243,
+      "file": "243_W4_OS_W4_CLOUD_INTEGRATION.md",
+      "area": "Servicios W4 opcionales",
+      "bytes": 1902,
+      "words": 216,
+      "sha256": "960a7bbe9ec03a995278e28bdc3be12ee09e0bf0e6062ebc0be7fe10a2101926",
+      "related_documents": [
+        242,
+        244,
+        248,
+        351
+      ]
+    },
+    {
+      "id": 244,
+      "file": "244_W4_OS_W4_STORAGE_INTEGRATION.md",
+      "area": "Servicios W4 opcionales",
+      "bytes": 1777,
+      "words": 211,
+      "sha256": "a94027f68cdefd30379e18a47ac1a2add7f5e955429a7c03ea66bb1dfc5f1cfb",
+      "related_documents": [
+        140,
+        193,
+        243
+      ]
+    },
+    {
+      "id": 245,
+      "file": "245_W4_OS_W4_MAIL_INTEGRATION.md",
+      "area": "Servicios W4 opcionales",
+      "bytes": 1798,
+      "words": 201,
+      "sha256": "c9a2f42a2fa29f4c58240591b0e9ccd5d642af9ca0dd2b31fd1c21e29e99cf50",
+      "related_documents": [
+        134,
+        163,
+        242
+      ]
+    },
+    {
+      "id": 246,
+      "file": "246_W4_OS_W4_OFFICE_INTEGRATION.md",
+      "area": "Servicios W4 opcionales",
+      "bytes": 1807,
+      "words": 208,
+      "sha256": "264636936c268f861f772726e6e6dda277f8b0c4948702e1675b5f6cf64fee26",
+      "related_documents": [
+        133,
+        243,
+        244
+      ]
+    },
+    {
+      "id": 247,
+      "file": "247_W4_OS_W4_IDENTITY_INTEGRATION.md",
+      "area": "Servicios W4 opcionales",
+      "bytes": 1824,
+      "words": 208,
+      "sha256": "6f8d8774a6831cfd74a6527c87ed4ed53ef88527c420ba3b28d383bc51a4627e",
+      "related_documents": [
+        219,
+        241,
+        370
+      ]
+    },
+    {
+      "id": 248,
+      "file": "248_W4_OS_W4_BACKUP_INTEGRATION.md",
+      "area": "Servicios W4 opcionales",
+      "bytes": 1840,
+      "words": 213,
+      "sha256": "952049c652ea24d91c1b2857149775e6bc049cc4de9070277349b6074c420236",
+      "related_documents": [
+        193,
+        195,
+        243
+      ]
+    },
+    {
+      "id": 249,
+      "file": "249_W4_OS_W4_SUPPORT_INTEGRATION.md",
+      "area": "Servicios W4 opcionales",
+      "bytes": 1755,
+      "words": 207,
+      "sha256": "09695f148c67420b8e78b2cd0365cd919d8215d2d3195c320a30dfd67149aab9",
+      "related_documents": [
+        210,
+        225,
+        329
+      ]
+    },
+    {
+      "id": 250,
+      "file": "250_W4_OS_SERVICE_DISCOVERY.md",
+      "area": "Servicios W4 opcionales",
+      "bytes": 1837,
+      "words": 202,
+      "sha256": "1dc869bf63f7734014e26a9c791087319c5edc005043149d0a2d2b366fd604ee",
+      "related_documents": [
+        164,
+        242,
+        366
+      ]
+    },
+    {
+      "id": 251,
+      "file": "251_W4_OS_DEVELOPER_PLATFORM.md",
+      "area": "Desarrollo",
+      "bytes": 2371,
+      "words": 279,
+      "sha256": "253725aa2da09e671b8eb2275e3b49b61c4b36c678a636e712329d14a2bddbf7",
+      "related_documents": [
+        252,
+        253,
+        254
+      ]
+    },
+    {
+      "id": 252,
+      "file": "252_W4_OS_DEVELOPER_EDITION_PROFILE.md",
+      "area": "Desarrollo",
+      "bytes": 1781,
+      "words": 202,
+      "sha256": "6917049ad9acdfc31b6f8b2a6ec67b7cfa59284ffa94374b52d6b3cbd7d4c325",
+      "related_documents": [
+        14,
+        251,
+        255
+      ]
+    },
+    {
+      "id": 253,
+      "file": "253_W4_OS_DEVELOPMENT_TOOLCHAIN.md",
+      "area": "Desarrollo",
+      "bytes": 2317,
+      "words": 279,
+      "sha256": "c5537fc1b038f7357151996a4b860272b8ab76cba0121e7cd260411b89ef5ec1",
+      "related_documents": [
+        48,
+        251,
+        259
+      ]
+    },
+    {
+      "id": 254,
+      "file": "254_W4_OS_CONTAINER_STRATEGY.md",
+      "area": "Desarrollo",
+      "bytes": 1822,
+      "words": 211,
+      "sha256": "1a22d8abb7c70f949defe6385ce443790ec57e3d0450218515ef55ed3a2d1596",
+      "related_documents": [
+        255,
+        169,
+        258
+      ]
+    },
+    {
+      "id": 255,
+      "file": "255_W4_OS_PODMAN_DOCKER_SUPPORT.md",
+      "area": "Desarrollo",
+      "bytes": 2354,
+      "words": 284,
+      "sha256": "0d386b5e6f139930a7dc4469f83a1a36e4d73560c81ee581f72a2d06ca072cf9",
+      "related_documents": [
+        147,
+        159,
+        254
+      ]
+    },
+    {
+      "id": 256,
+      "file": "256_W4_OS_VIRTUALIZATION_ARCHITECTURE.md",
+      "area": "Desarrollo",
+      "bytes": 1792,
+      "words": 210,
+      "sha256": "bd65e81b5124f2dce3882b2a111dae59c25d993caf33a73ef03befcf88b66dad",
+      "related_documents": [
+        257,
+        263,
+        293
+      ]
+    },
+    {
+      "id": 257,
+      "file": "257_W4_OS_KVM_QEMU_INTEGRATION.md",
+      "area": "Desarrollo",
+      "bytes": 1768,
+      "words": 205,
+      "sha256": "b660e9f44dadaa04e78436403534369648d767975449ad33a1cb566170992305",
+      "related_documents": [
+        256,
+        179,
+        186
+      ]
+    },
+    {
+      "id": 258,
+      "file": "258_W4_OS_DEVELOPMENT_ENVIRONMENTS.md",
+      "area": "Desarrollo",
+      "bytes": 2382,
+      "words": 287,
+      "sha256": "b9a3ac371d21249512bf6c7439b32d3132d6d744144b2682a85f4b58426544b9",
+      "related_documents": [
+        251,
+        254,
+        259
+      ]
+    },
+    {
+      "id": 259,
+      "file": "259_W4_OS_SDK_MANAGEMENT.md",
+      "area": "Desarrollo",
+      "bytes": 1794,
+      "words": 210,
+      "sha256": "ee36f9005acdd8846567fe9a943917f20adcc83a035aae5bef73a556f4639b41",
+      "related_documents": [
+        253,
+        258,
+        274
+      ]
+    },
+    {
+      "id": 260,
+      "file": "260_W4_OS_DEVBOX_STRATEGY.md",
+      "area": "Desarrollo",
+      "bytes": 1800,
+      "words": 201,
+      "sha256": "e50fc0a8118bb00946e0ede3a4622231e2b61329ccddcf638492bd7052fd78fc",
+      "related_documents": [
+        254,
+        256,
+        258
+      ]
+    },
+    {
+      "id": 261,
+      "file": "261_W4_OS_WINDOWS_COMPATIBILITY_STRATEGY.md",
+      "area": "Compatibilidad Windows",
+      "bytes": 1866,
+      "words": 206,
+      "sha256": "e1e00262c812efe9dbaf47ae15657e9bb529aa40a9fb212ccba5dd24c6a5d071",
+      "related_documents": [
+        262,
+        263,
+        264,
+        341
+      ]
+    },
+    {
+      "id": 262,
+      "file": "262_W4_OS_WINE_INTEGRATION.md",
+      "area": "Compatibilidad Windows",
+      "bytes": 1866,
+      "words": 201,
+      "sha256": "b1f07b1fc6c11648b1f98cac69c44b36f72c96062f37bd9d16ee6f65d19f5d58",
+      "related_documents": [
+        143,
+        261,
+        264
+      ]
+    },
+    {
+      "id": 263,
+      "file": "263_W4_OS_WINDOWS_VM_STRATEGY.md",
+      "area": "Compatibilidad Windows",
+      "bytes": 2002,
+      "words": 232,
+      "sha256": "c83739912b2ba95944191ec6f475b6ee7167876e5d9a94f8db8023c395f1193a",
+      "related_documents": [
+        256,
+        257,
+        261
+      ]
+    },
+    {
+      "id": 264,
+      "file": "264_W4_OS_CROSS_PLATFORM_APPLICATION_SUPPORT.md",
+      "area": "Compatibilidad Windows",
+      "bytes": 1938,
+      "words": 210,
+      "sha256": "76dce8ae4f42ecf9bbfad7defd88a39c4a892b95a4b01f6f9b6ee0fb3b9b973d",
+      "related_documents": [
+        126,
+        133,
+        261,
+        288
+      ]
+    },
+    {
+      "id": 265,
+      "file": "265_W4_OS_RELEASE_MODEL.md",
+      "area": "Releases y soporte de versiones",
+      "bytes": 1855,
+      "words": 215,
+      "sha256": "02c202600c366f49f80f1fcc490753d6c751a6ffd5cf8b108ee685de6e15fe8d",
+      "related_documents": [
+        266,
+        267,
+        270,
+        274
+      ]
+    },
+    {
+      "id": 266,
+      "file": "266_W4_OS_VERSIONING_POLICY.md",
+      "area": "Releases y soporte de versiones",
+      "bytes": 1862,
+      "words": 213,
+      "sha256": "174654875e2ab40d455f37cf4e38b2fa812eb4394644def4958ce7330a31a5d2",
+      "related_documents": [
+        42,
+        70,
+        366,
+        398
+      ]
+    },
+    {
+      "id": 267,
+      "file": "267_W4_OS_LTS_STRATEGY.md",
+      "area": "Releases y soporte de versiones",
+      "bytes": 1919,
+      "words": 220,
+      "sha256": "1926929820c796fe67de282fdd92de2187bf4b3dd0fc4bc21ab9a8a8d44e8da2",
+      "related_documents": [
+        5,
+        274,
+        334,
+        400
+      ]
+    },
+    {
+      "id": 268,
+      "file": "268_W4_OS_RELEASE_CHANNELS.md",
+      "area": "Releases y soporte de versiones",
+      "bytes": 1768,
+      "words": 202,
+      "sha256": "01655d7f1c6cadfb5b3857f244bfee35913fbc4483431f9cc51541ead25d3f0f",
+      "related_documents": [
+        53,
+        79,
+        265
+      ]
+    },
+    {
+      "id": 269,
+      "file": "269_W4_OS_RELEASE_BRANCHING_MODEL.md",
+      "area": "Releases y soporte de versiones",
+      "bytes": 1772,
+      "words": 209,
+      "sha256": "04f5d02ab325610c84a2d3964b65833e402f46c53d2e4ff5a928e3205125eb44",
+      "related_documents": [
+        265,
+        270,
+        394
+      ]
+    },
+    {
+      "id": 270,
+      "file": "270_W4_OS_RELEASE_ENGINEERING.md",
+      "area": "Releases y soporte de versiones",
+      "bytes": 1877,
+      "words": 212,
+      "sha256": "4a7b8b2cf42204604856d2d8cefb6e47a668eba55661952ce3f5f450a1e51c41",
+      "related_documents": [
+        70,
+        271,
+        272,
+        321
+      ]
+    },
+    {
+      "id": 271,
+      "file": "271_W4_OS_RELEASE_QUALIFICATION.md",
+      "area": "Releases y soporte de versiones",
+      "bytes": 3435,
+      "words": 413,
+      "sha256": "0527a7782c93b571dc2418d021af91af43042792b7cf4250fc7a6c3e7f72b6f3",
+      "related_documents": [
+        275,
+        279,
+        280,
+        281
+      ]
+    },
+    {
+      "id": 272,
+      "file": "272_W4_OS_RELEASE_SIGNING.md",
+      "area": "Releases y soporte de versiones",
+      "bytes": 1791,
+      "words": 207,
+      "sha256": "c0be02e2e1600190c16fbaac6776f620591e991b7cb3f12c440d458c4d2f5882",
+      "related_documents": [
+        47,
+        168,
+        270
+      ]
+    },
+    {
+      "id": 273,
+      "file": "273_W4_OS_RELEASE_ROLLOUT.md",
+      "area": "Releases y soporte de versiones",
+      "bytes": 1859,
+      "words": 212,
+      "sha256": "996777e0125c295fa70454c167094b34cfed63ec62282f81c2e2213cf6c647b2",
+      "related_documents": [
+        60,
+        78,
+        221,
+        224
+      ]
+    },
+    {
+      "id": 274,
+      "file": "274_W4_OS_END_OF_LIFE_POLICY.md",
+      "area": "Releases y soporte de versiones",
+      "bytes": 1832,
+      "words": 218,
+      "sha256": "d37282ce81111b3c9f69bc39d42d227f958c58feffbe66aff7a07111005fb533",
+      "related_documents": [
+        267,
+        398,
+        400
+      ]
+    },
+    {
+      "id": 275,
+      "file": "275_W4_OS_TESTING_ARCHITECTURE.md",
+      "area": "Pruebas y calificación",
+      "bytes": 1819,
+      "words": 207,
+      "sha256": "29e3418d9552a962647758212b3a48fea6d95e23d560fe0920a3ce41de7c35ee",
+      "related_documents": [
+        276,
+        277,
+        278,
+        285
+      ]
+    },
+    {
+      "id": 276,
+      "file": "276_W4_OS_UNIT_TESTING.md",
+      "area": "Pruebas y calificación",
+      "bytes": 1807,
+      "words": 210,
+      "sha256": "8b5affd055e854c206c6b5a1607e68eaad95b3dbf9edb2665d09d487ac1dbffe",
+      "related_documents": [
+        72,
+        213,
+        378
+      ]
+    },
+    {
+      "id": 277,
+      "file": "277_W4_OS_INTEGRATION_TESTING.md",
+      "area": "Pruebas y calificación",
+      "bytes": 2259,
+      "words": 285,
+      "sha256": "af141c65a4f38c7769ef8002d62a10caccf713b883e469850343f6893f93e470",
+      "related_documents": [
+        71,
+        214,
+        366
+      ]
+    },
+    {
+      "id": 278,
+      "file": "278_W4_OS_SYSTEM_TESTING.md",
+      "area": "Pruebas y calificación",
+      "bytes": 1810,
+      "words": 203,
+      "sha256": "2b44d5a391c1d6d48bca2902b2dcf02a69d11041f98dc900cfb435061dc308e2",
+      "related_documents": [
+        31,
+        71,
+        193,
+        271
+      ]
+    },
+    {
+      "id": 279,
+      "file": "279_W4_OS_HARDWARE_TESTING.md",
+      "area": "Pruebas y calificación",
+      "bytes": 1782,
+      "words": 200,
+      "sha256": "ef6812aee0bda3019b2f6e0897a6bf1e9d2547a896988a9c61963385b7cee9d1",
+      "related_documents": [
+        24,
+        66,
+        67,
+        287
+      ]
+    },
+    {
+      "id": 280,
+      "file": "280_W4_OS_UPDATE_TESTING.md",
+      "area": "Pruebas y calificación",
+      "bytes": 1837,
+      "words": 212,
+      "sha256": "9fa3331a95951c9ff5313a7dd2a697befcdbbaaf7306eb350a1f9ac624d8c844",
+      "related_documents": [
+        71,
+        72,
+        75,
+        83
+      ]
+    },
+    {
+      "id": 281,
+      "file": "281_W4_OS_ROLLBACK_TESTING.md",
+      "area": "Pruebas y calificación",
+      "bytes": 1827,
+      "words": 206,
+      "sha256": "036591e8cb46ddb6d0c3033f2889f66ae6f41051f331ee14d5837b7abc61db6b",
+      "related_documents": [
+        77,
+        83,
+        85,
+        88
+      ]
+    },
+    {
+      "id": 282,
+      "file": "282_W4_OS_SECURITY_TESTING.md",
+      "area": "Pruebas y calificación",
+      "bytes": 1879,
+      "words": 211,
+      "sha256": "2f9c8af66c5c6aa09d7407df49b697d5bd14a2199210b1cea8bc46be1cbfbed8",
+      "related_documents": [
+        151,
+        156,
+        169,
+        326
+      ]
+    },
+    {
+      "id": 283,
+      "file": "283_W4_OS_DESKTOP_TESTING.md",
+      "area": "Pruebas y calificación",
+      "bytes": 1809,
+      "words": 206,
+      "sha256": "e1e411ad2c3d73c5dd1e6bd8156e2556b5a088c7658c020d1f6f84f2e329935e",
+      "related_documents": [
+        91,
+        104,
+        109,
+        271
+      ]
+    },
+    {
+      "id": 284,
+      "file": "284_W4_OS_ENTERPRISE_TESTING.md",
+      "area": "Pruebas y calificación",
+      "bytes": 1848,
+      "words": 205,
+      "sha256": "7023aedbd56ca403e1e3e65420d79795e0108ec3f0d5237894fc2a928e5d283c",
+      "related_documents": [
+        212,
+        218,
+        222,
+        224
+      ]
+    },
+    {
+      "id": 285,
+      "file": "285_W4_OS_QA_ARCHITECTURE.md",
+      "area": "Pruebas y calificación",
+      "bytes": 1816,
+      "words": 209,
+      "sha256": "95ce87897d3e723ee70aa29259764e358b84c9219970cbe67b9e815103c331f0",
+      "related_documents": [
+        49,
+        271,
+        275
+      ]
+    },
+    {
+      "id": 286,
+      "file": "286_W4_OS_AUTOMATED_QA.md",
+      "area": "Pruebas y calificación",
+      "bytes": 1774,
+      "words": 205,
+      "sha256": "9436a70778fd8148883d0b6d816b43fbd5abef74aff337bf56d76aca425facf6",
+      "related_documents": [
+        61,
+        275,
+        279
+      ]
+    },
+    {
+      "id": 287,
+      "file": "287_W4_OS_HARDWARE_CERTIFICATION.md",
+      "area": "Pruebas y calificación",
+      "bytes": 2397,
+      "words": 285,
+      "sha256": "b67f30d3c1b7e6b23ac91ab5b78a314b450cf9ebfed07341ccad2bdf31412b92",
+      "related_documents": [
+        24,
+        279,
+        339
+      ]
+    },
+    {
+      "id": 288,
+      "file": "288_W4_OS_COMPATIBILITY_CERTIFICATION.md",
+      "area": "Pruebas y calificación",
+      "bytes": 2340,
+      "words": 277,
+      "sha256": "89cb80b34284888bfe55dd5f805319dc948792f96b8d911a21512e84d022cdfc",
+      "related_documents": [
+        24,
+        264,
+        289
+      ]
+    },
+    {
+      "id": 289,
+      "file": "289_W4_OS_APPLICATION_CERTIFICATION.md",
+      "area": "Pruebas y calificación",
+      "bytes": 1828,
+      "words": 200,
+      "sha256": "1517816ff8ececdad34bd8a4c87ea6d290018de05856bd51a687da1c6a35e72f",
+      "related_documents": [
+        123,
+        130,
+        264
+      ]
+    },
+    {
+      "id": 290,
+      "file": "290_W4_OS_BUSINESS_CERTIFICATION.md",
+      "area": "Pruebas y calificación",
+      "bytes": 1927,
+      "words": 208,
+      "sha256": "df75aa9136c98bde3606c2abf59c3a7ce721e02004e04000dda411f172b86515",
+      "related_documents": [
+        228,
+        271,
+        284,
+        356
+      ]
+    },
+    {
+      "id": 291,
+      "file": "291_W4_OS_PERFORMANCE_ARCHITECTURE.md",
+      "area": "Rendimiento",
+      "bytes": 1868,
+      "words": 209,
+      "sha256": "87e5593181005d043c2ecf3086ff2c56c10893ef1f2351ea2eeaa3d99114d0e4",
+      "related_documents": [
+        292,
+        293,
+        299,
+        300
+      ]
+    },
+    {
+      "id": 292,
+      "file": "292_W4_OS_BOOT_PERFORMANCE.md",
+      "area": "Rendimiento",
+      "bytes": 2266,
+      "words": 279,
+      "sha256": "d0368969eedc9f01ffba246ea47b645529c15e5574ee90958778749ee3b56b5e",
+      "related_documents": [
+        25,
+        29,
+        291
+      ]
+    },
+    {
+      "id": 293,
+      "file": "293_W4_OS_MEMORY_MANAGEMENT.md",
+      "area": "Rendimiento",
+      "bytes": 1765,
+      "words": 204,
+      "sha256": "1fda6064288ce37246b01a21f6457d316249438705af9438a1d613b21c422b8c",
+      "related_documents": [
+        198,
+        200,
+        291
+      ]
+    },
+    {
+      "id": 294,
+      "file": "294_W4_OS_CPU_OPTIMIZATION.md",
+      "area": "Rendimiento",
+      "bytes": 1749,
+      "words": 200,
+      "sha256": "586fd289ff78525f6707d3e71c7df620bf99831fbe35664c125c2eed761e3713",
+      "related_documents": [
+        16,
+        199,
+        200
+      ]
+    },
+    {
+      "id": 295,
+      "file": "295_W4_OS_STORAGE_PERFORMANCE.md",
+      "area": "Rendimiento",
+      "bytes": 1723,
+      "words": 202,
+      "sha256": "1075cf2a417d63e15623f187c7c997f7ace12c83b0f3b022e28382ab92c20a35",
+      "related_documents": [
+        35,
+        160,
+        186
+      ]
+    },
+    {
+      "id": 296,
+      "file": "296_W4_OS_GRAPHICS_PERFORMANCE.md",
+      "area": "Rendimiento",
+      "bytes": 1775,
+      "words": 205,
+      "sha256": "a64e13df8aefaf956ccf29d45880b4a9ba1430ec9995196960cc94699a148ea9",
+      "related_documents": [
+        22,
+        95,
+        109,
+        145
+      ]
+    },
+    {
+      "id": 297,
+      "file": "297_W4_OS_APPLICATION_STARTUP_PERFORMANCE.md",
+      "area": "Rendimiento",
+      "bytes": 2341,
+      "words": 285,
+      "sha256": "8238c1ea0d0f692636910b55fd26859beb91b5b3657fa41f13c39a61a8f52c7b",
+      "related_documents": [
+        121,
+        131,
+        293
+      ]
+    },
+    {
+      "id": 298,
+      "file": "298_W4_OS_POWER_PERFORMANCE.md",
+      "area": "Rendimiento",
+      "bytes": 2412,
+      "words": 280,
+      "sha256": "0d30ed5c33953ae17c73b332e04f452c09bb58985763485a7e3e0d578b713419",
+      "related_documents": [
+        196,
+        197,
+        199,
+        299
+      ]
+    },
+    {
+      "id": 299,
+      "file": "299_W4_OS_PERFORMANCE_BENCHMARKS.md",
+      "area": "Rendimiento",
+      "bytes": 1815,
+      "words": 200,
+      "sha256": "47ab80a26b721ba9c632343e5a1d548f190cbdd748c509fcb74fbeb341fb6c7d",
+      "related_documents": [
+        291,
+        292,
+        295,
+        298
+      ]
+    },
+    {
+      "id": 300,
+      "file": "300_W4_OS_PERFORMANCE_BUDGETS.md",
+      "area": "Rendimiento",
+      "bytes": 1819,
+      "words": 207,
+      "sha256": "777c4cc9b88db18de2eb37f8be2000eb21daa2c6b8d7d45ff819411e6a5674b5",
+      "related_documents": [
+        10,
+        291,
+        299
+      ]
+    },
+    {
+      "id": 301,
+      "file": "301_W4_OS_BRANDING_ARCHITECTURE.md",
+      "area": "Identidad y nombres",
+      "bytes": 1834,
+      "words": 211,
+      "sha256": "51a9f78bf65bf82b1849bf9bc9ebbe495bce39483d437fec6da4b6429d9da112",
+      "related_documents": [
+        302,
+        303,
+        304,
+        305
+      ]
+    },
+    {
+      "id": 302,
+      "file": "302_W4_OS_VISUAL_IDENTITY.md",
+      "area": "Identidad y nombres",
+      "bytes": 1782,
+      "words": 206,
+      "sha256": "b2366b02c055e8c9bf46cb66191ce3ea6f7daa16ddb2dac1427b5db99a7262b4",
+      "related_documents": [
+        101,
+        102,
+        103,
+        104
+      ]
+    },
+    {
+      "id": 303,
+      "file": "303_W4_OS_BOOT_BRANDING.md",
+      "area": "Identidad y nombres",
+      "bytes": 1745,
+      "words": 204,
+      "sha256": "96e673dcad4065e0ba0f1df39cf6fd16878d77060c921810a584bc163d041ae5",
+      "related_documents": [
+        25,
+        37,
+        301
+      ]
+    },
+    {
+      "id": 304,
+      "file": "304_W4_OS_INSTALLER_BRANDING.md",
+      "area": "Identidad y nombres",
+      "bytes": 1853,
+      "words": 213,
+      "sha256": "e32c71a8f2119d48e66f4415e89e2e2fd6ff2f537304df0e2b8fa277d500b3a4",
+      "related_documents": [
+        31,
+        32,
+        104,
+        302
+      ]
+    },
+    {
+      "id": 305,
+      "file": "305_W4_OS_DESKTOP_BRANDING.md",
+      "area": "Identidad y nombres",
+      "bytes": 1766,
+      "words": 204,
+      "sha256": "50aa1985203ba49b0d5c4ae8cbc74c0afa43f5ad0fd02ae17c6697e2d8bf55de",
+      "related_documents": [
+        96,
+        100,
+        301
+      ]
+    },
+    {
+      "id": 306,
+      "file": "306_W4_OS_SYSTEM_NAMING.md",
+      "area": "Identidad y nombres",
+      "bytes": 1740,
+      "words": 204,
+      "sha256": "59156a850f9a471f248da53d8f67ce5aabadd2793d1d0659476a771b169f1142",
+      "related_documents": [
+        3,
+        266,
+        307
+      ]
+    },
+    {
+      "id": 307,
+      "file": "307_W4_OS_PACKAGE_NAMING.md",
+      "area": "Identidad y nombres",
+      "bytes": 1769,
+      "words": 207,
+      "sha256": "7b817d753895057d29a6ce478b9ac46f93e3434070f2861ac588d21a14bc54bf",
+      "related_documents": [
+        42,
+        45,
+        266
+      ]
+    },
+    {
+      "id": 308,
+      "file": "308_W4_OS_REPOSITORY_NAMING.md",
+      "area": "Identidad y nombres",
+      "bytes": 1805,
+      "words": 202,
+      "sha256": "392007115b14ed832ba27b79c188839d3022994c93b7bcd405a6db135ed2385c",
+      "related_documents": [
+        51,
+        52,
+        53
+      ]
+    },
+    {
+      "id": 309,
+      "file": "309_W4_OS_LICENSING_STRATEGY.md",
+      "area": "Licencias y distribución",
+      "bytes": 2340,
+      "words": 269,
+      "sha256": "625f8e51f94779481350ecd5b7842f93a7053bd20c6bb0a51b3e28904027596e",
+      "related_documents": [
+        310,
+        311,
+        312,
+        315
+      ]
+    },
+    {
+      "id": 310,
+      "file": "310_W4_OS_OPEN_SOURCE_COMPLIANCE.md",
+      "area": "Licencias y distribución",
+      "bytes": 1886,
+      "words": 214,
+      "sha256": "738a621fa5f39e3f3f365ba60baa109ef56d180b9c83bc5eb350a021e38c94a5",
+      "related_documents": [
+        309,
+        311,
+        313,
+        388
+      ]
+    },
+    {
+      "id": 311,
+      "file": "311_W4_OS_GPL_COMPLIANCE.md",
+      "area": "Licencias y distribución",
+      "bytes": 2325,
+      "words": 273,
+      "sha256": "14b99cd43aab4bc09005b5817e19176022d5adeb4ea68c1e94e4542e4dcc195d",
+      "related_documents": [
+        309,
+        310,
+        313
+      ]
+    },
+    {
+      "id": 312,
+      "file": "312_W4_OS_THIRD_PARTY_LICENSE_MANAGEMENT.md",
+      "area": "Licencias y distribución",
+      "bytes": 1843,
+      "words": 210,
+      "sha256": "1b759bbb2d4411b5520c4390b4cd20450c5201694b9f2f1c365f5bd6929076bb",
+      "related_documents": [
+        20,
+        137,
+        309
+      ]
+    },
+    {
+      "id": 313,
+      "file": "313_W4_OS_SOURCE_CODE_PUBLICATION_POLICY.md",
+      "area": "Licencias y distribución",
+      "bytes": 1945,
+      "words": 220,
+      "sha256": "8c2df0d7db5fecd950b5d733bb789b5260a5671b7288c08b2d5abb3d17ad4840",
+      "related_documents": [
+        48,
+        310,
+        311,
+        390
+      ]
+    },
+    {
+      "id": 314,
+      "file": "314_W4_OS_TRADEMARK_POLICY.md",
+      "area": "Licencias y distribución",
+      "bytes": 1804,
+      "words": 204,
+      "sha256": "4575a39cd279d0f92671e3091ecedfb3d6b3bd75caae58493c996268380264f1",
+      "related_documents": [
+        301,
+        309,
+        315
+      ]
+    },
+    {
+      "id": 315,
+      "file": "315_W4_OS_DISTRIBUTION_POLICY.md",
+      "area": "Licencias y distribución",
+      "bytes": 1941,
+      "words": 219,
+      "sha256": "c82febeb0cbf4fd41df6df4f3cda0c432abeacd084764dc3f2cd412605f51cd9",
+      "related_documents": [
+        70,
+        309,
+        312,
+        313
+      ]
+    },
+    {
+      "id": 316,
+      "file": "316_W4_OS_DOCUMENTATION_ARCHITECTURE.md",
+      "area": "Guías y documentación",
+      "bytes": 32826,
+      "words": 2827,
+      "sha256": "1b2c51988d2a7a7e998921f1ac91d5a2a398584adbf68bf850f0d36d1ed205ac",
+      "related_documents": [
+        1,
+        401,
+        414
+      ]
+    },
+    {
+      "id": 317,
+      "file": "317_W4_OS_USER_DOCUMENTATION.md",
+      "area": "Guías y documentación",
+      "bytes": 3260,
+      "words": 418,
+      "sha256": "4dced555e9b8ae74efe7a196bd5605f76ffa2fe3bb441de987b5518881f75bf2",
+      "related_documents": [
+        32,
+        235,
+        236,
+        322
+      ]
+    },
+    {
+      "id": 318,
+      "file": "318_W4_OS_ADMINISTRATOR_GUIDE.md",
+      "area": "Guías y documentación",
+      "bytes": 3115,
+      "words": 383,
+      "sha256": "2e33dd0d53ff6f4b0acb8747c4b5a8007a85f3bbd0f79af38dd9e819b5901384",
+      "related_documents": [
+        211,
+        222,
+        224,
+        333
+      ]
+    },
+    {
+      "id": 319,
+      "file": "319_W4_OS_DEVELOPER_GUIDE.md",
+      "area": "Guías y documentación",
+      "bytes": 3140,
+      "words": 384,
+      "sha256": "9a7fbe23e3e043c8dbc6c70bad1e1eb99af08fef001fe1f5e658434275d3f9b6",
+      "related_documents": [
+        48,
+        251,
+        366,
+        324
+      ]
+    },
+    {
+      "id": 320,
+      "file": "320_W4_OS_PACKAGE_MAINTAINER_GUIDE.md",
+      "area": "Guías y documentación",
+      "bytes": 3080,
+      "words": 374,
+      "sha256": "32fedbfb4c1cc7060057a9314382d4bfc1a6b6a64e4a29d513734067731bb353",
+      "related_documents": [
+        42,
+        48,
+        49,
+        327
+      ]
+    },
+    {
+      "id": 321,
+      "file": "321_W4_OS_RELEASE_ENGINEERING_GUIDE.md",
+      "area": "Guías y documentación",
+      "bytes": 3112,
+      "words": 384,
+      "sha256": "5fed99191effb337292ab9b9c24b7b7e86501b7c23b4c252a473e2b8a7c8bcd6",
+      "related_documents": [
+        70,
+        270,
+        271,
+        272
+      ]
+    },
+    {
+      "id": 322,
+      "file": "322_W4_OS_TROUBLESHOOTING_GUIDE.md",
+      "area": "Guías y documentación",
+      "bytes": 3267,
+      "words": 390,
+      "sha256": "908ae8f8d05880a6c74cba57d74522240fae5ca4d0176889131f086d4223026a",
+      "related_documents": [
+        90,
+        205,
+        210,
+        317
+      ]
+    },
+    {
+      "id": 323,
+      "file": "323_W4_OS_COMMUNITY_MODEL.md",
+      "area": "Comunidad y gobernanza",
+      "bytes": 1770,
+      "words": 201,
+      "sha256": "fa70d9e587a3c109e9d3384f1c5940833c529920554cc4580f8a77ed990026a8",
+      "related_documents": [
+        324,
+        325,
+        326
+      ]
+    },
+    {
+      "id": 324,
+      "file": "324_W4_OS_CONTRIBUTION_MODEL.md",
+      "area": "Comunidad y gobernanza",
+      "bytes": 1781,
+      "words": 201,
+      "sha256": "108719b0d9da17e0bcbf14e69872e4d2f97807e97a25193905b544d3e447741e",
+      "related_documents": [
+        319,
+        325,
+        327
+      ]
+    },
+    {
+      "id": 325,
+      "file": "325_W4_OS_GOVERNANCE_MODEL.md",
+      "area": "Comunidad y gobernanza",
+      "bytes": 1828,
+      "words": 207,
+      "sha256": "7edb684a93a0d20ae9849e19ae1957329e6caa6c7653191a4da03b4ed40866c2",
+      "related_documents": [
+        401,
+        402,
+        324
+      ]
+    },
+    {
+      "id": 326,
+      "file": "326_W4_OS_SECURITY_RESPONSE_TEAM.md",
+      "area": "Comunidad y gobernanza",
+      "bytes": 1873,
+      "words": 212,
+      "sha256": "fa3f501edaa56a040eed546924fbc5c576d815f46402a50c4a51e4335da8fe84",
+      "related_documents": [
+        165,
+        175,
+        334,
+        392
+      ]
+    },
+    {
+      "id": 327,
+      "file": "327_W4_OS_PACKAGE_MAINTAINER_MODEL.md",
+      "area": "Comunidad y gobernanza",
+      "bytes": 1881,
+      "words": 208,
+      "sha256": "5176c3fba2a5b53434df4b171a50ede7a29e70ff66c5e1c98ee0b0d8b84d85ec",
+      "related_documents": [
+        10,
+        50,
+        320,
+        394
+      ]
+    },
+    {
+      "id": 328,
+      "file": "328_W4_OS_COMMUNITY_REPOSITORY_MODEL.md",
+      "area": "Comunidad y gobernanza",
+      "bytes": 1805,
+      "words": 208,
+      "sha256": "adbf6cfd28853a251635f5b30906e6109a4f46abfde57f6cab54b1162934477c",
+      "related_documents": [
+        51,
+        56,
+        126
+      ]
+    },
+    {
+      "id": 329,
+      "file": "329_W4_OS_SUPPORT_MODEL.md",
+      "area": "Soporte",
+      "bytes": 1791,
+      "words": 205,
+      "sha256": "19c150b67b8f8ebdc329d442e3e161771fead3a9e1439f270e57baff47604167",
+      "related_documents": [
+        210,
+        330,
+        331,
+        332
+      ]
+    },
+    {
+      "id": 330,
+      "file": "330_W4_OS_HOME_SUPPORT.md",
+      "area": "Soporte",
+      "bytes": 1731,
+      "words": 201,
+      "sha256": "f8b6d542df70940eda74864516a2b1dd9962043bc71a8492fed3e0fd87e544f5",
+      "related_documents": [
+        317,
+        322,
+        329
+      ]
+    },
+    {
+      "id": 331,
+      "file": "331_W4_OS_BUSINESS_SUPPORT.md",
+      "area": "Soporte",
+      "bytes": 1830,
+      "words": 208,
+      "sha256": "c0f8832b6b9cc16a58dac38000f9835a298e678bbe174807cc587da5aa7bb1f0",
+      "related_documents": [
+        221,
+        329,
+        332,
+        333
+      ]
+    },
+    {
+      "id": 332,
+      "file": "332_W4_OS_ENTERPRISE_SLA_MODEL.md",
+      "area": "Soporte",
+      "bytes": 1872,
+      "words": 213,
+      "sha256": "b2be86007771f7f5f96fdd901daea762b30a5554c660152e6e964a5f9c160488",
+      "related_documents": [
+        267,
+        329,
+        331,
+        348
+      ]
+    },
+    {
+      "id": 333,
+      "file": "333_W4_OS_REMOTE_SUPPORT_POLICY.md",
+      "area": "Soporte",
+      "bytes": 1837,
+      "words": 204,
+      "sha256": "969f21110d396717bd31f42a3353a5ffd65f6e849613921c7b1a6258c711b949",
+      "related_documents": [
+        225,
+        229,
+        331
+      ]
+    },
+    {
+      "id": 334,
+      "file": "334_W4_OS_SECURITY_SUPPORT_POLICY.md",
+      "area": "Soporte",
+      "bytes": 1838,
+      "words": 208,
+      "sha256": "509d86a6026e64d8a5e893e73b59359cd750993ce5a5ec1b7995007ff5e3e7c3",
+      "related_documents": [
+        165,
+        267,
+        326,
+        392
+      ]
+    },
+    {
+      "id": 335,
+      "file": "335_W4_OS_BUSINESS_MODEL.md",
+      "area": "Modelo comercial",
+      "bytes": 1914,
+      "words": 214,
+      "sha256": "212e1333190caa6f7da4de0a3907794be5af274bab3af4b736f01143269a35cd",
+      "related_documents": [
+        309,
+        329,
+        336,
+        337
+      ]
+    },
+    {
+      "id": 336,
+      "file": "336_W4_OS_COMMERCIAL_EDITION_STRATEGY.md",
+      "area": "Modelo comercial",
+      "bytes": 1873,
+      "words": 209,
+      "sha256": "660a46439e5a332e88fa392b833d490a4eb3f4a0e5c093dca28c0b66557370f4",
+      "related_documents": [
+        12,
+        290,
+        335,
+        340
+      ]
+    },
+    {
+      "id": 337,
+      "file": "337_W4_OS_SUBSCRIPTION_MODEL.md",
+      "area": "Modelo comercial",
+      "bytes": 1808,
+      "words": 205,
+      "sha256": "d3611c204af2ee5eda66f03e606637fdb1a3da15a0e1eb550ec0c63a3d279d85",
+      "related_documents": [
+        59,
+        241,
+        335
+      ]
+    },
+    {
+      "id": 338,
+      "file": "338_W4_OS_OEM_PARTNERSHIP_MODEL.md",
+      "area": "Modelo comercial",
+      "bytes": 1838,
+      "words": 213,
+      "sha256": "b912b2fc2fd2da61c97028968de91aa977a10bb6c208edc56c2638337ab3c50b",
+      "related_documents": [
+        39,
+        287,
+        350,
+        376
+      ]
+    },
+    {
+      "id": 339,
+      "file": "339_W4_OS_HARDWARE_VENDOR_PROGRAM.md",
+      "area": "Modelo comercial",
+      "bytes": 1885,
+      "words": 208,
+      "sha256": "8a6cff8eafc5241fd68f5b2f3a9f1290d5acfa3df6714e04e80e4fc0eb1e0f89",
+      "related_documents": [
+        19,
+        24,
+        287,
+        338
+      ]
+    },
+    {
+      "id": 340,
+      "file": "340_W4_OS_ENTERPRISE_LICENSING_MODEL.md",
+      "area": "Modelo comercial",
+      "bytes": 1957,
+      "words": 217,
+      "sha256": "5dad2872bbd989ecbc6c14bbba6b56d6e6d1d6b862e3c44451bd3fee39c2969e",
+      "related_documents": [
+        309,
+        335,
+        336,
+        337
+      ]
+    },
+    {
+      "id": 341,
+      "file": "341_W4_OS_MIGRATION_FROM_WINDOWS.md",
+      "area": "Migración",
+      "bytes": 1894,
+      "words": 215,
+      "sha256": "7c941af85e4aa60ee73cc40ec0f44bfe99ae3f58ecb3a2b05801dc1803504566",
+      "related_documents": [
+        38,
+        261,
+        264,
+        345
+      ]
+    },
+    {
+      "id": 342,
+      "file": "342_W4_OS_MIGRATION_FROM_UBUNTU.md",
+      "area": "Migración",
+      "bytes": 1858,
+      "words": 210,
+      "sha256": "5b687271e7876bc8202134fe3870babfd2ac102bd0d1f873fbc4076c395888ff",
+      "related_documents": [
+        5,
+        193,
+        344,
+        345
+      ]
+    },
+    {
+      "id": 343,
+      "file": "343_W4_OS_MIGRATION_FROM_DEBIAN.md",
+      "area": "Migración",
+      "bytes": 1900,
+      "words": 214,
+      "sha256": "aebf89247ebe5d1498ead6b3f6b40385962b930594451c77c2fd8ce0ebcd2bae",
+      "related_documents": [
+        5,
+        14,
+        34,
+        344
+      ]
+    },
+    {
+      "id": 344,
+      "file": "344_W4_OS_MIGRATION_TOOLKIT.md",
+      "area": "Migración",
+      "bytes": 1831,
+      "words": 210,
+      "sha256": "90023f98724ce07c2dda6d46f4115a6e971fe795dd6b3448325de3a970d990bf",
+      "related_documents": [
+        341,
+        342,
+        343,
+        345
+      ]
+    },
+    {
+      "id": 345,
+      "file": "345_W4_OS_USER_DATA_MIGRATION.md",
+      "area": "Migración",
+      "bytes": 1805,
+      "words": 203,
+      "sha256": "8c94738360ff3f9c71d149335b1f95a0e348bc3ae385316a0c2a59bb4ccfa96e",
+      "related_documents": [
+        193,
+        194,
+        344
+      ]
+    },
+    {
+      "id": 346,
+      "file": "346_W4_OS_ENTERPRISE_MIGRATION.md",
+      "area": "Migración",
+      "bytes": 1856,
+      "words": 208,
+      "sha256": "c7688a15153eb427c611653ce5257d42c1332c2bf9aeff753b85563ac4bc906e",
+      "related_documents": [
+        40,
+        221,
+        264,
+        348
+      ]
+    },
+    {
+      "id": 347,
+      "file": "347_W4_OS_DISASTER_RECOVERY.md",
+      "area": "Continuidad y OEM",
+      "bytes": 1888,
+      "words": 213,
+      "sha256": "746360c2e7366cabbd923304feadb9bca2c48c21fc9142d6ae47d98f5967f1fb",
+      "related_documents": [
+        87,
+        193,
+        272,
+        348
+      ]
+    },
+    {
+      "id": 348,
+      "file": "348_W4_OS_BUSINESS_CONTINUITY.md",
+      "area": "Continuidad y OEM",
+      "bytes": 1887,
+      "words": 208,
+      "sha256": "641643444415f7811d3fa6078802f21ae7cb336a22c68144f4ec751087780c1c",
+      "related_documents": [
+        211,
+        267,
+        332,
+        347
+      ]
+    },
+    {
+      "id": 349,
+      "file": "349_W4_OS_FACTORY_IMAGE_STRATEGY.md",
+      "area": "Continuidad y OEM",
+      "bytes": 1895,
+      "words": 220,
+      "sha256": "33379f474bf664382e13b9b6c8bb3bd50d92ac057849424fbdad84cb6c33c371",
+      "related_documents": [
+        39,
+        68,
+        89,
+        350
+      ]
+    },
+    {
+      "id": 350,
+      "file": "350_W4_OS_OEM_IMAGE_STRATEGY.md",
+      "area": "Continuidad y OEM",
+      "bytes": 1869,
+      "words": 219,
+      "sha256": "da18a0a478fff3d15d9206b7f662618c44f779e0a68f4383c3a9fb6e3e1bcc32",
+      "related_documents": [
+        39,
+        338,
+        349,
+        376
+      ]
+    },
+    {
+      "id": 351,
+      "file": "351_W4_OS_PRIVACY_ARCHITECTURE.md",
+      "area": "Privacidad de datos",
+      "bytes": 1901,
+      "words": 215,
+      "sha256": "52910b7bd6cf560b6f87c257098e0be123d5ff312c55eaf4b8a07d79015e4d71",
+      "related_documents": [
+        207,
+        352,
+        353,
+        355
+      ]
+    },
+    {
+      "id": 352,
+      "file": "352_W4_OS_DATA_COLLECTION_POLICY.md",
+      "area": "Privacidad de datos",
+      "bytes": 1823,
+      "words": 211,
+      "sha256": "d80ccf9509ac6c8daf4b5fdacc44dddcdeb6bbc7f1e77d44626127e2eb7443a3",
+      "related_documents": [
+        201,
+        227,
+        351
+      ]
+    },
+    {
+      "id": 353,
+      "file": "353_W4_OS_DATA_RETENTION_POLICY.md",
+      "area": "Privacidad de datos",
+      "bytes": 1900,
+      "words": 220,
+      "sha256": "bdaa319bf11bad2a94a2252d76323dc89196031c0d3db26d90ee64e1c9a9ebba",
+      "related_documents": [
+        84,
+        202,
+        210,
+        351
+      ]
+    },
+    {
+      "id": 354,
+      "file": "354_W4_OS_USER_CONSENT_MODEL.md",
+      "area": "Privacidad de datos",
+      "bytes": 1859,
+      "words": 214,
+      "sha256": "382584b3ef345bc4f62aacaff6f1e5ba8482ba0b792a82c50325a41bcb9cea29",
+      "related_documents": [
+        209,
+        351,
+        352
+      ]
+    },
+    {
+      "id": 355,
+      "file": "355_W4_OS_ENTERPRISE_PRIVACY_CONTROLS.md",
+      "area": "Privacidad de datos",
+      "bytes": 1900,
+      "words": 213,
+      "sha256": "da77f9949abd83d29e9b4595cfd5234dd68f98344eaca914e0bb7879a83d6cd3",
+      "related_documents": [
+        174,
+        226,
+        229,
+        351
+      ]
+    },
+    {
+      "id": 356,
+      "file": "356_W4_OS_COMPLIANCE_ARCHITECTURE.md",
+      "area": "Alineación de controles",
+      "bytes": 1904,
+      "words": 211,
+      "sha256": "1a93d8f993f0bef1df8bf8ad9f658921548b508076b1fee57d2515db5d30640b",
+      "related_documents": [
+        228,
+        357,
+        358,
+        359
+      ]
+    },
+    {
+      "id": 357,
+      "file": "357_W4_OS_ISO_27001_ALIGNMENT.md",
+      "area": "Alineación de controles",
+      "bytes": 2237,
+      "words": 263,
+      "sha256": "26b97065efd6f33903f8c846ee89dd30e9d01c1b1f2855621f872ec4cb9e15c4",
+      "related_documents": [
+        170,
+        228,
+        356
+      ]
+    },
+    {
+      "id": 358,
+      "file": "358_W4_OS_NIST_ALIGNMENT.md",
+      "area": "Alineación de controles",
+      "bytes": 2241,
+      "words": 263,
+      "sha256": "64d4b58cb64e52b1199a1f65cedc8bf4a554df27cb3f4c1358953dab2d3abb87",
+      "related_documents": [
+        156,
+        175,
+        228,
+        356
+      ]
+    },
+    {
+      "id": 359,
+      "file": "359_W4_OS_CIS_BENCHMARK_STRATEGY.md",
+      "area": "Alineación de controles",
+      "bytes": 2414,
+      "words": 277,
+      "sha256": "0087e1ddce662a8da0e3a5e60f99a1d7af5b383e1376c82f4f21bd1221ec03a0",
+      "related_documents": [
+        157,
+        172,
+        356
+      ]
+    },
+    {
+      "id": 360,
+      "file": "360_W4_OS_ENTERPRISE_COMPLIANCE_PROFILES.md",
+      "area": "Alineación de controles",
+      "bytes": 1916,
+      "words": 206,
+      "sha256": "0c7ce229488f6561b7db8d8f3bda652c3ed08994f7a3aedc582554acf0743ea2",
+      "related_documents": [
+        174,
+        228,
+        356,
+        359
+      ]
+    },
+    {
+      "id": 361,
+      "file": "361_W4_OS_OBSERVABILITY_ARCHITECTURE.md",
+      "area": "Observabilidad",
+      "bytes": 2044,
+      "words": 226,
+      "sha256": "0600eb3155d0010415934720724a295cc291c0e23421da89df610cc039d13740",
+      "related_documents": [
+        202,
+        203,
+        362,
+        364
+      ]
+    },
+    {
+      "id": 362,
+      "file": "362_W4_OS_SYSTEM_EVENT_MODEL.md",
+      "area": "Observabilidad",
+      "bytes": 1811,
+      "words": 200,
+      "sha256": "36c5ffdb648e5529226d29f4ed45327a105de4e603ade2a03d3d7f85ddae7c3b",
+      "related_documents": [
+        171,
+        202,
+        361
+      ]
+    },
+    {
+      "id": 363,
+      "file": "363_W4_OS_AUDIT_LOG_ARCHITECTURE.md",
+      "area": "Observabilidad",
+      "bytes": 1815,
+      "words": 206,
+      "sha256": "f689d72f47becd55284c11c55286d32a808e67414fe74db96dbfed3762209375",
+      "related_documents": [
+        229,
+        353,
+        362
+      ]
+    },
+    {
+      "id": 364,
+      "file": "364_W4_OS_DIAGNOSTIC_EVENT_PIPELINE.md",
+      "area": "Observabilidad",
+      "bytes": 1868,
+      "words": 209,
+      "sha256": "745a1ac1ab1bf5d9174331bd0479aefcc471925327ce0064554b44a922782c88",
+      "related_documents": [
+        201,
+        210,
+        362,
+        363
+      ]
+    },
+    {
+      "id": 365,
+      "file": "365_W4_OS_HEALTH_SCORE_SYSTEM.md",
+      "area": "Observabilidad",
+      "bytes": 1878,
+      "words": 210,
+      "sha256": "14a3a33218a129d6d95b2b00c39f7db9c7975bc965e035597091b7f17221f009",
+      "related_documents": [
+        116,
+        191,
+        206,
+        361
+      ]
+    },
+    {
+      "id": 366,
+      "file": "366_W4_OS_API_ARCHITECTURE.md",
+      "area": "APIs y protocolos",
+      "bytes": 3324,
+      "words": 383,
+      "sha256": "58a746e61625e7378960a602fea79787c4c167aef5a75d125da80285184ddec7",
+      "related_documents": [
+        151,
+        367,
+        370,
+        399
+      ]
+    },
+    {
+      "id": 367,
+      "file": "367_W4_OS_SYSTEM_SERVICE_API.md",
+      "area": "APIs y protocolos",
+      "bytes": 1803,
+      "words": 209,
+      "sha256": "95b899cc2b11d3cccfe6f6a0c0035f82ba66ca06fbb5264715c407694e8f0100",
+      "related_documents": [
+        151,
+        214,
+        366
+      ]
+    },
+    {
+      "id": 368,
+      "file": "368_W4_OS_CONTROL_CENTER_API.md",
+      "area": "APIs y protocolos",
+      "bytes": 1855,
+      "words": 217,
+      "sha256": "9dd21c951bf2801d6470a3604ef802043381cc3146ba845eedc3f15549697fa2",
+      "related_documents": [
+        111,
+        120,
+        366,
+        367
+      ]
+    },
+    {
+      "id": 369,
+      "file": "369_W4_OS_UPDATE_API.md",
+      "area": "APIs y protocolos",
+      "bytes": 1902,
+      "words": 217,
+      "sha256": "8b5013bdfed67b1a416cb89feb615059cb06e47ec9a87d8a1d41aa40b961d3ab",
+      "related_documents": [
+        71,
+        72,
+        75,
+        366
+      ]
+    },
+    {
+      "id": 370,
+      "file": "370_W4_OS_DEVICE_MANAGEMENT_API.md",
+      "area": "APIs y protocolos",
+      "bytes": 1902,
+      "words": 210,
+      "sha256": "1d53127511cdd91fd87c5662dfce1def366c4d92e98e68c659f57e24175be59c",
+      "related_documents": [
+        212,
+        221,
+        222,
+        366
+      ]
+    },
+    {
+      "id": 371,
+      "file": "371_W4_OS_REMOTE_MANAGEMENT_PROTOCOL.md",
+      "area": "APIs y protocolos",
+      "bytes": 1939,
+      "words": 211,
+      "sha256": "e887fb0ac9d8f3b736cb7bc7cb29c4012b0db323197515bb7faac3bc79dca12d",
+      "related_documents": [
+        220,
+        223,
+        224,
+        370
+      ]
+    },
+    {
+      "id": 372,
+      "file": "372_W4_OS_EXTENSION_ARCHITECTURE.md",
+      "area": "Extensibilidad",
+      "bytes": 1930,
+      "words": 216,
+      "sha256": "76ecf8e623c7b24fbb50a1f31eb285739c67e520dc540c5c2f9821c0f9349b30",
+      "related_documents": [
+        366,
+        373,
+        374,
+        405
+      ]
+    },
+    {
+      "id": 373,
+      "file": "373_W4_OS_PLUGIN_SYSTEM.md",
+      "area": "Extensibilidad",
+      "bytes": 1837,
+      "words": 210,
+      "sha256": "f7452b00a8e49830abfec8c876cbc045856b2556be75b4719341c22549246c46",
+      "related_documents": [
+        167,
+        372,
+        399
+      ]
+    },
+    {
+      "id": 374,
+      "file": "374_W4_OS_SYSTEM_MODULES.md",
+      "area": "Extensibilidad",
+      "bytes": 1851,
+      "words": 211,
+      "sha256": "b9893cb49d875be01ba9331258be64a5952b37ae066fe16c187c528266b0abc3",
+      "related_documents": [
+        10,
+        28,
+        83,
+        372
+      ]
+    },
+    {
+      "id": 375,
+      "file": "375_W4_OS_VENDOR_EXTENSION_MODEL.md",
+      "area": "Extensibilidad",
+      "bytes": 1928,
+      "words": 213,
+      "sha256": "bbc701bacb78b6dbf49d1b26e5b7c99a2d84bcaf2b6c58f5c154a7922c2240d1",
+      "related_documents": [
+        21,
+        126,
+        372,
+        339
+      ]
+    },
+    {
+      "id": 376,
+      "file": "376_W4_OS_OEM_EXTENSION_MODEL.md",
+      "area": "Extensibilidad",
+      "bytes": 1879,
+      "words": 215,
+      "sha256": "ffc5039ef2809677ade593109b0a5829c27483db1aa02b81a09553660e4f0978",
+      "related_documents": [
+        39,
+        338,
+        350,
+        375
+      ]
+    },
+    {
+      "id": 377,
+      "file": "377_W4_OS_CONFIGURATION_ARCHITECTURE.md",
+      "area": "Configuración y políticas",
+      "bytes": 1900,
+      "words": 211,
+      "sha256": "e7d90b27c93eabc0e8f0d791cb8e34d9a5a7e265523812364d36a1e0c2343539",
+      "related_documents": [
+        9,
+        83,
+        214,
+        378
+      ]
+    },
+    {
+      "id": 378,
+      "file": "378_W4_OS_CONFIGURATION_SCHEMA.md",
+      "area": "Configuración y políticas",
+      "bytes": 1828,
+      "words": 206,
+      "sha256": "c4f740c81ce039367964e540d267293dbc5324cfe76f2e35fc004cbbbf09bc3b",
+      "related_documents": [
+        213,
+        366,
+        377
+      ]
+    },
+    {
+      "id": 379,
+      "file": "379_W4_OS_SYSTEM_DEFAULTS.md",
+      "area": "Configuración y políticas",
+      "bytes": 1914,
+      "words": 208,
+      "sha256": "b947e0fa2c23a8c8891bbb5139f0a34478e02a5d9fa8fda3156242d92f76ba85",
+      "related_documents": [
+        100,
+        157,
+        377,
+        380
+      ]
+    },
+    {
+      "id": 380,
+      "file": "380_W4_OS_CONFIGURATION_LAYERING.md",
+      "area": "Configuración y políticas",
+      "bytes": 1967,
+      "words": 220,
+      "sha256": "3b8fef3915b90fd2d43c7028ae02cad3743c8d0a842fa2d7e5b9824b83eadbd9",
+      "related_documents": [
+        9,
+        213,
+        377,
+        381
+      ]
+    },
+    {
+      "id": 381,
+      "file": "381_W4_OS_POLICY_OVERRIDE_MODEL.md",
+      "area": "Configuración y políticas",
+      "bytes": 1934,
+      "words": 212,
+      "sha256": "ebd61c86a0667b9787a4a471fbe5a9d30d06d07d11497ded79b7162a489c043f",
+      "related_documents": [
+        120,
+        213,
+        214,
+        380
+      ]
+    },
+    {
+      "id": 382,
+      "file": "382_W4_OS_FAILSAFE_ARCHITECTURE.md",
+      "area": "Rescate y fallos",
+      "bytes": 1849,
+      "words": 210,
+      "sha256": "6aede48cfdf494b8482f42c15335fa8d8f68e7829c40b2d86d836e8413b7d4cf",
+      "related_documents": [
+        76,
+        86,
+        383,
+        385
+      ]
+    },
+    {
+      "id": 383,
+      "file": "383_W4_OS_SAFE_MODE.md",
+      "area": "Rescate y fallos",
+      "bytes": 1823,
+      "words": 203,
+      "sha256": "7c02eda1a507a8f7cc93ceaf5fe687306164ebd3411522c94e1d839172a129d4",
+      "related_documents": [
+        86,
+        91,
+        382,
+        384
+      ]
+    },
+    {
+      "id": 384,
+      "file": "384_W4_OS_EMERGENCY_SHELL.md",
+      "area": "Rescate y fallos",
+      "bytes": 1791,
+      "words": 209,
+      "sha256": "c41bb06d08e724e3293ee5af9afa0216790d376f28a853496b567c38c13eac93",
+      "related_documents": [
+        87,
+        160,
+        383
+      ]
+    },
+    {
+      "id": 385,
+      "file": "385_W4_OS_BOOT_FAILURE_RECOVERY.md",
+      "area": "Rescate y fallos",
+      "bytes": 1866,
+      "words": 218,
+      "sha256": "9fb4bb1bfc14afaabe549db83f3b870db20f1633b7e2e7a062e717bc3db69f7e",
+      "related_documents": [
+        18,
+        25,
+        76,
+        88
+      ]
+    },
+    {
+      "id": 386,
+      "file": "386_W4_OS_FILESYSTEM_RECOVERY.md",
+      "area": "Rescate y fallos",
+      "bytes": 1951,
+      "words": 223,
+      "sha256": "9fad04fa4a21ba3a829203736b8a86cbdeebd98d255e29c98488efefa408b3fd",
+      "related_documents": [
+        35,
+        87,
+        191,
+        347
+      ]
+    },
+    {
+      "id": 387,
+      "file": "387_W4_OS_SECURE_UPDATE_SUPPLY_CHAIN.md",
+      "area": "Suministro verificable",
+      "bytes": 1961,
+      "words": 223,
+      "sha256": "634d8393b29536764031c7ad8877653464a8dee1ffb5c94cd52bd0ccb9034882",
+      "related_documents": [
+        47,
+        71,
+        169,
+        388,
+        390
+      ]
+    },
+    {
+      "id": 388,
+      "file": "388_W4_OS_SBOM_STRATEGY.md",
+      "area": "Suministro verificable",
+      "bytes": 3098,
+      "words": 367,
+      "sha256": "9cbf6b76c83f49bf2b7b2980cd56491706f3aace227ab20937163f0b01191127",
+      "related_documents": [
+        10,
+        70,
+        169,
+        387
+      ]
+    },
+    {
+      "id": 389,
+      "file": "389_W4_OS_REPRODUCIBLE_BUILDS.md",
+      "area": "Suministro verificable",
+      "bytes": 1906,
+      "words": 209,
+      "sha256": "dd722c31104abe6d7e9446e4c88baf55e0b9ceb0ed4cc465af542f52cc108f8a",
+      "related_documents": [
+        48,
+        64,
+        299,
+        390
+      ]
+    },
+    {
+      "id": 390,
+      "file": "390_W4_OS_BUILD_PROVENANCE.md",
+      "area": "Suministro verificable",
+      "bytes": 1881,
+      "words": 213,
+      "sha256": "a5e5a5932dd92929671f94131bfebabda2e92d09d4d8ded7ac78b70c19bd48a8",
+      "related_documents": [
+        63,
+        70,
+        169,
+        388
+      ]
+    },
+    {
+      "id": 391,
+      "file": "391_W4_OS_UPSTREAM_SYNC_PROCESS.md",
+      "area": "Integración Debian",
+      "bytes": 1883,
+      "words": 213,
+      "sha256": "ccffce0cb6b6e23376dc48125cf01eb7692e0d828dcbc27ab8c0a8e2b80d7ef8",
+      "related_documents": [
+        5,
+        6,
+        392,
+        393
+      ]
+    },
+    {
+      "id": 392,
+      "file": "392_W4_OS_DEBIAN_SECURITY_SYNC.md",
+      "area": "Integración Debian",
+      "bytes": 1867,
+      "words": 215,
+      "sha256": "7cdbc13c83d0b63c9f6e6d5d99052747186d332bcbbddb30dc28945e543261aa",
+      "related_documents": [
+        54,
+        165,
+        334,
+        391
+      ]
+    },
+    {
+      "id": 393,
+      "file": "393_W4_OS_DEBIAN_PACKAGE_SYNC.md",
+      "area": "Integración Debian",
+      "bytes": 1859,
+      "words": 208,
+      "sha256": "5d4c64c3ad90863fb49b9cb67468b17ac3d128e6a8e9b688384dc7e0d7aa27ba",
+      "related_documents": [
+        6,
+        46,
+        49,
+        391
+      ]
+    },
+    {
+      "id": 394,
+      "file": "394_W4_OS_PATCH_MANAGEMENT.md",
+      "area": "Integración Debian",
+      "bytes": 1870,
+      "words": 215,
+      "sha256": "9651a4a775b25ad1baa61a96fb00091fc0cbb019b8f7a8f9c9a6fa5c759f7dbf",
+      "related_documents": [
+        6,
+        7,
+        395,
+        396
+      ]
+    },
+    {
+      "id": 395,
+      "file": "395_W4_OS_W4_PATCH_QUEUE.md",
+      "area": "Integración Debian",
+      "bytes": 1797,
+      "words": 206,
+      "sha256": "e1eb1f0e5d98f435050a7f44e7ae0ae223a01f8a8fcf3618a6599453d7007d0f",
+      "related_documents": [
+        48,
+        313,
+        394
+      ]
+    },
+    {
+      "id": 396,
+      "file": "396_W4_OS_UPSTREAM_CONTRIBUTION_POLICY.md",
+      "area": "Integración Debian",
+      "bytes": 1954,
+      "words": 218,
+      "sha256": "76130941b989417b5fdd6593698fd58afdf8676372e0cfc9d5317c1cd8730bcc",
+      "related_documents": [
+        6,
+        324,
+        326,
+        394
+      ]
+    },
+    {
+      "id": 397,
+      "file": "397_W4_OS_DEBIAN_RELEASE_TRANSITION.md",
+      "area": "Evolución y mantenimiento",
+      "bytes": 1935,
+      "words": 222,
+      "sha256": "2a83a393fc4cc4b758dd898f03f3bd9ddd8deeab04b02ef7525c0f8c842ddfbc",
+      "related_documents": [
+        5,
+        65,
+        267,
+        398
+      ]
+    },
+    {
+      "id": 398,
+      "file": "398_W4_OS_MAJOR_VERSION_MIGRATION.md",
+      "area": "Evolución y mantenimiento",
+      "bytes": 1922,
+      "words": 219,
+      "sha256": "7568f98e0eb13dac1b4fb515f3f5c729373882d871deaa5ea1f42317671c0cd6",
+      "related_documents": [
+        83,
+        193,
+        274,
+        397
+      ]
+    },
+    {
+      "id": 399,
+      "file": "399_W4_OS_BACKWARD_COMPATIBILITY_POLICY.md",
+      "area": "Evolución y mantenimiento",
+      "bytes": 1959,
+      "words": 215,
+      "sha256": "3df19f3c672cd2d105af8c9ff4e5750cea760756ad1f6ac2823b062d8b11bd3e",
+      "related_documents": [
+        266,
+        366,
+        377,
+        404
+      ]
+    },
+    {
+      "id": 400,
+      "file": "400_W4_OS_LONG_TERM_MAINTENANCE.md",
+      "area": "Evolución y mantenimiento",
+      "bytes": 1911,
+      "words": 214,
+      "sha256": "6c12c152720aa6be2da02b6fb3cce8579fbaf6fe64b62da6e7d55df09ed2c56e",
+      "related_documents": [
+        267,
+        274,
+        327,
+        397
+      ]
+    },
+    {
+      "id": 401,
+      "file": "401_W4_OS_ARCHITECTURE_DECISION_RECORDS.md",
+      "area": "Decisiones y riesgos",
+      "bytes": 3330,
+      "words": 403,
+      "sha256": "7bfa6cd5dcc417535a9af44e3f58ddd763ee18e65e8c636899b42f333bfa5323",
+      "related_documents": [
+        1,
+        4,
+        325,
+        402
+      ]
+    },
+    {
+      "id": 402,
+      "file": "402_W4_OS_RISK_REGISTER.md",
+      "area": "Decisiones y riesgos",
+      "bytes": 3608,
+      "words": 443,
+      "sha256": "ffa96cb6dbb102f431e3221150577a817a4018b4cab6a44a17c4995cc00c7afe",
+      "related_documents": [
+        83,
+        169,
+        267,
+        271
+      ]
+    },
+    {
+      "id": 403,
+      "file": "403_W4_OS_TECHNICAL_DEBT_POLICY.md",
+      "area": "Decisiones y riesgos",
+      "bytes": 1816,
+      "words": 212,
+      "sha256": "ee43de7515bf1940d5d1f12c12142c53c878874a09fee726086dc462823e620a",
+      "related_documents": [
+        327,
+        394,
+        402,
+        414
+      ]
+    },
+    {
+      "id": 404,
+      "file": "404_W4_OS_DEPRECATION_POLICY.md",
+      "area": "Decisiones y riesgos",
+      "bytes": 1798,
+      "words": 202,
+      "sha256": "729fccb44b2432fe7d24f5a9bb78107a25c0dc0b624a87f075b13d70c4e7c215",
+      "related_documents": [
+        50,
+        274,
+        399
+      ]
+    },
+    {
+      "id": 405,
+      "file": "405_W4_OS_EXPERIMENTAL_FEATURE_POLICY.md",
+      "area": "Decisiones y riesgos",
+      "bytes": 1908,
+      "words": 212,
+      "sha256": "0b13a6b2ff0a7726114fd331eef07b3f1b2ea7d1be13315c9e9e0419896d11df",
+      "related_documents": [
+        73,
+        74,
+        372,
+        403
+      ]
+    },
+    {
+      "id": 406,
+      "file": "406_W4_OS_V1_SCOPE.md",
+      "area": "Alcance y roadmap",
+      "bytes": 1873,
+      "words": 225,
+      "sha256": "762fe91fb0a9deec19d2b84cc02b165447d9ea8606e6eff2cf8c6812d88834b3",
+      "related_documents": [
+        407,
+        408,
+        409,
+        410
+      ]
+    },
+    {
+      "id": 407,
+      "file": "407_W4_OS_V1_MVP.md",
+      "area": "Alcance y roadmap",
+      "bytes": 1897,
+      "words": 224,
+      "sha256": "bd33ee1a97664b3c7913e38244fcbc0772902c314ab97282ad25249bf96a1726",
+      "related_documents": [
+        31,
+        68,
+        71,
+        193,
+        406
+      ]
+    },
+    {
+      "id": 408,
+      "file": "408_W4_OS_V1_HOME_SCOPE.md",
+      "area": "Alcance y roadmap",
+      "bytes": 1808,
+      "words": 210,
+      "sha256": "56a62cee3049b28e0cd9e87b54bf5a56713e2300f5d825999ccc5ff3c3fc3f24",
+      "related_documents": [
+        11,
+        231,
+        237,
+        406
+      ]
+    },
+    {
+      "id": 409,
+      "file": "409_W4_OS_V1_BUSINESS_SCOPE.md",
+      "area": "Alcance y roadmap",
+      "bytes": 1990,
+      "words": 220,
+      "sha256": "a5bdb9484acb6b46cb4c084102b26c7bd5662034d6f1910cf18cd11d0a266517",
+      "related_documents": [
+        12,
+        211,
+        284,
+        290,
+        406
+      ]
+    },
+    {
+      "id": 410,
+      "file": "410_W4_OS_V1_RELEASE_PLAN.md",
+      "area": "Alcance y roadmap",
+      "bytes": 1827,
+      "words": 215,
+      "sha256": "0d4d4644f0faab8e4e4a4e67ebbbeed52413449c1191e6a299e78b6dc01d61f5",
+      "related_documents": [
+        270,
+        271,
+        406,
+        407,
+        414
+      ]
+    },
+    {
+      "id": 411,
+      "file": "411_W4_OS_V2_VISION.md",
+      "area": "Alcance y roadmap",
+      "bytes": 1860,
+      "words": 215,
+      "sha256": "7c8789ff21dad0a897a749d0b6f2ba19dcef4f6c8e7a07dd1ec17c39a6a35eea",
+      "related_documents": [
+        73,
+        74,
+        221,
+        397,
+        414
+      ]
+    },
+    {
+      "id": 412,
+      "file": "412_W4_OS_V3_VISION.md",
+      "area": "Alcance y roadmap",
+      "bytes": 1918,
+      "words": 217,
+      "sha256": "8e2089afc75a82dba3e1c10d15340a0ccea32a19012e46c7438ff9e443df3b67",
+      "related_documents": [
+        7,
+        67,
+        372,
+        400,
+        414
+      ]
+    },
+    {
+      "id": 413,
+      "file": "413_W4_OS_LONG_TERM_VISION.md",
+      "area": "Alcance y roadmap",
+      "bytes": 1951,
+      "words": 221,
+      "sha256": "1431f792fff8b66f761b528d0c7256b3d0a1b4170fd08ec7e90edba26447e185",
+      "related_documents": [
+        2,
+        335,
+        400,
+        411,
+        412
+      ]
+    },
+    {
+      "id": 414,
+      "file": "414_W4_OS_ROADMAP.md",
+      "area": "Alcance y roadmap",
+      "bytes": 3655,
+      "words": 435,
+      "sha256": "14a61462d2f802cd8c106c30fac06194dd26140e052d414f7d583402a92a4bc8",
+      "related_documents": [
+        401,
+        402,
+        406,
+        410,
+        415
+      ]
+    },
+    {
+      "id": 415,
+      "file": "415_W4_OS_FINAL_ARCHITECTURE_OVERVIEW.md",
+      "area": "Alcance y roadmap",
+      "bytes": 4046,
+      "words": 496,
+      "sha256": "7dc310ebdd9ad76b61248bf829ebb5e89913858aeff9842c8fd8cfeac64a7809",
+      "related_documents": [
+        1,
+        4,
+        83,
+        401,
+        406,
+        414
+      ]
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+# W4 OS · Executive Implementation Plan
+
+Plan ejecutivo para convertir la especificacion documental de W4 OS en una implementacion verificable, manteniendo separacion entre diseno, evidencia tecnica y estado de release.
+
+## Relacion con otros documentos
+
+- `DEVELOPMENT_TABLE.md`: prioridades y entregables por area.
+- `DEVELOPMENT_MATRIX.md`: seguimiento operativo del trabajo activo.
+- `DEVELOPMENT_VERSIONS.md`: registro de versiones documentales y tecnicas.
+- `DEVELOPMENT_GUIDELINES.md`: reglas de trabajo, evidencia y actualizacion.
+
+## Objetivo ejecutivo
+
+Entregar un V1 centrado en una imagen de escritorio instalable, actualizable y recuperable, con alcance controlado, evidencia verificable y capacidad de mantenimiento real.
+
+## Principios de implementacion
+
+1. No confundir documento aprobado con funcionalidad implementada.
+2. No ampliar alcance mientras exista un bloqueo P0 sin resolver.
+3. Cada capacidad pasa por la secuencia `decision -> artefacto -> prueba -> evidencia -> cierre`.
+4. La prioridad tecnica del proyecto es `instalar -> actualizar -> fallar -> recuperar`.
+5. Home y Business comparten base; Business no debe bloquear el MVP local.
+
+## Alcance ejecutivo V1
+
+Incluye:
+
+- Base Debian estable integrada como `W4 Linux Base`.
+- Referencia inicial `amd64 UEFI`.
+- Un escritorio oficial.
+- Instalacion funcional con cifrado por contrasena.
+- Build reproducible y artefactos firmados.
+- Actualizacion offline con coordinador durable y recuperacion probada.
+- Baseline minima de seguridad.
+- Perfil Home utilizable.
+- Piloto Business limitado, solo despues del MVP recuperable.
+
+Excluye del compromiso inicial:
+
+- Atomicidad integral no probada.
+- `arm64` general.
+- Compatibilidad universal con Windows.
+- Dependencia obligatoria de servicios cloud.
+- Certificaciones o SLA no acreditados.
+
+## Fases ejecutivas
+
+### Fase H0 · Decisiones base
+
+Objetivo:
+cerrar las decisiones que condicionan toda la implementacion.
+
+Salida obligatoria:
+
+- ADRs base aprobados.
+- Responsables por area definidos.
+- Alcance V1 congelado.
+
+Bloqueos tipicos:
+
+- Escritorio no elegido.
+- Bootloader no fijado.
+- Contrato de rollback ambiguo.
+
+### Fase H1 · Supply minimo
+
+Objetivo:
+obtener una cadena de build, firma y empaquetado trazable.
+
+Salida obligatoria:
+
+- Repositorio controlado.
+- Imagen `amd64` construida.
+- Firma y procedencia verificables.
+
+### Fase H2 · MVP recuperable
+
+Objetivo:
+demostrar el ciclo minimo del producto.
+
+Salida obligatoria:
+
+- Instalar en entorno limpio.
+- Actualizar sin corrupcion.
+- Simular fallo controlado.
+- Recuperar sin perder el archivo de prueba definido.
+
+Este es el hito tecnico mas importante del proyecto.
+
+### Fase H3 · Home utilizable
+
+Objetivo:
+convertir el MVP tecnico en una experiencia de escritorio minima aceptable.
+
+Salida obligatoria:
+
+- Escritorio oficial estabilizado.
+- Shell y branding minimos.
+- Apps base seleccionadas.
+- Accesibilidad y onboarding verificados.
+
+### Fase H4 · Business piloto
+
+Objetivo:
+validar gestion empresarial limitada sin comprometer la base local.
+
+Salida obligatoria:
+
+- Enrollment basico.
+- Politicas tipadas minimas.
+- Inventario.
+- Operacion offline con ultima politica valida.
+
+### Fase H5 · Candidato V1
+
+Objetivo:
+cerrar expediente tecnico y operativo para un release controlado.
+
+Salida obligatoria:
+
+- QA de release.
+- Fuentes y licencias trazables.
+- Runbooks.
+- Alcance de soporte definido.
+
+## Ruta priorizada
+
+1. ADRs y base de plataforma.
+2. Supply, build y repositorios.
+3. Instalacion.
+4. Update, estado y recovery.
+5. Seguridad baseline.
+6. Escritorio oficial.
+7. Shell, control center y Home.
+8. Business piloto.
+9. Compliance, soporte y release.
+
+## Criterio de gobernanza
+
+Una fase no se considera cerrada por redaccion adicional de documentos. Solo se cierra cuando existe:
+
+- artefacto tecnico identificable,
+- prueba ejecutada,
+- evidencia enlazada,
+- decision aprobada cuando aplique,
+- responsable visible.
+
+## Cadencia recomendada
+
+Por cada ciclo de desarrollo:
+
+1. ejecutar trabajo tecnico,
+2. actualizar `DEVELOPMENT_MATRIX.md`,
+3. registrar cambio de version en `DEVELOPMENT_VERSIONS.md`,
+4. ajustar `DEVELOPMENT_TABLE.md` si cambia prioridad o alcance,
+5. revisar `DEVELOPMENT_GUIDELINES.md` si se introduce una nueva regla de trabajo.
+
+## Decision de exito del proyecto
+
+W4 OS V1 se considera encaminado correctamente cuando el proyecto demuestra primero su capacidad de instalacion, actualizacion y recuperacion, y solo despues amplia funciones de experiencia, gestion empresarial o posicionamiento comercial.

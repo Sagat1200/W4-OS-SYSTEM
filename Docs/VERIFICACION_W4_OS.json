@@ -1,0 +1,23 @@
+{
+  "status": "passed",
+  "scope": "Verificación documental y de empaquetado; no pruebas de implementación de W4 OS",
+  "expected_documents": 415,
+  "actual_documents": 415,
+  "exact_original_names": true,
+  "continuous_numbering": true,
+  "utf8_readable": true,
+  "required_sections_present": true,
+  "unique_document_hashes": 415,
+  "local_links_checked": 3073,
+  "missing_local_links": 0,
+  "zip_entries": 415,
+  "zip_crc_valid": true,
+  "zip_bytes_match_folder": true,
+  "total_document_bytes": 856038,
+  "total_words_including_headings_and_navigation": 97913,
+  "min_document_words": 200,
+  "max_document_words": 2827,
+  "zip_bytes": 528573,
+  "zip_sha256": "46b28299bd668e8426091f6ac0423fc5a784b60400f7dfaf4c716818604f3ebf",
+  "technical_test_results": "No ejecutados: esta entrega es documentación de diseño, no implementación del sistema."
+}
