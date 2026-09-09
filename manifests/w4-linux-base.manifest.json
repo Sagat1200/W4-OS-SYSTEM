@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "kind": "base-manifest",
+  "id": "w4-linux-base",
+  "name": "W4 Linux Base",
+  "description": "Base comun para las ediciones W4 OS construida sobre Debian Stable.",
+  "upstream": {
+    "distribution": "debian",
+    "track": "stable",
+    "architectures": [
+      "amd64"
+    ],
+    "boot_modes": [
+      "uefi"
+    ]
+  },
+  "repositories": [
+    "debian-main",
+    "debian-security",
+    "w4-main"
+  ],
+  "meta_packages": {
+    "required": [
+      "w4-base-meta",
+      "w4-desktop-meta"
+    ],
+    "recommended": []
+  },
+  "packages": {
+    "required": [
+      "apt",
+      "base-files",
+      "bash",
+      "ca-certificates",
+      "grub-efi-amd64",
+      "linux-image-amd64",
+      "network-manager",
+      "os-prober",
+      "shim-signed",
+      "sudo",
+      "systemd"
+    ],
+    "recommended": [
+      "flatpak",
+      "fwupd",
+      "snapper"
+    ],
+    "conflicts": []
+  },
+  "artifacts": {
+    "image_formats": [
+      "iso"
+    ],
+    "release_channels": [
+      "testing",
+      "stable"
+    ]
+  },
+  "notes": [
+    "Este manifiesto define una base reusable para Home y Business.",
+    "Los paquetes w4-* representan contratos propuestos y podran materializarse como metapaquetes reales en fases posteriores."
+  ]
+}

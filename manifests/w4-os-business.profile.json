@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "edition-profile",
+  "id": "w4-os-business",
+  "name": "W4 OS Business",
+  "inherits": "w4-linux-base",
+  "meta_packages": {
+    "required": [
+      "w4-business-meta"
+    ],
+    "recommended": []
+  },
+  "packages": {
+    "required": [
+      "curl",
+      "jq",
+      "pipewire",
+      "xdg-desktop-portal"
+    ],
+    "recommended": [
+      "openvpn",
+      "wireguard-tools"
+    ],
+    "remove": []
+  },
+  "features": [
+    "business-policy-hooks",
+    "device-enrollment-ready",
+    "inventory-ready"
+  ],
+  "notes": [
+    "Perfil inicial para piloto Business.",
+    "No habilita gestion remota arbitraria; solo prepara la base para integraciones tipadas posteriores."
+  ]
+}

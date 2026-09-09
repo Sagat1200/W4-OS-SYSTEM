@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "edition-profile",
+  "id": "w4-os-home",
+  "name": "W4 OS Home",
+  "inherits": "w4-linux-base",
+  "meta_packages": {
+    "required": [
+      "w4-home-meta"
+    ],
+    "recommended": []
+  },
+  "packages": {
+    "required": [
+      "firefox-esr",
+      "libreoffice",
+      "pipewire",
+      "xdg-desktop-portal"
+    ],
+    "recommended": [
+      "evince",
+      "vlc"
+    ],
+    "remove": []
+  },
+  "features": [
+    "desktop-defaults",
+    "home-onboarding",
+    "local-backup-ready"
+  ],
+  "notes": [
+    "Perfil inicial para tareas domesticas y uso general.",
+    "Las selecciones podran cambiar cuando se cierre el escritorio oficial y el conjunto minimo de aplicaciones V1."
+  ]
+}
