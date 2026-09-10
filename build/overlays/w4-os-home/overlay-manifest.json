@@ -1,0 +1,44 @@
+{
+    "overlay_schema_version": 1,
+    "kind": "system-overlay",
+    "profile_id": "w4-os-home",
+    "profile_name": "W4 OS Home",
+    "base_manifest_id": "w4-linux-base",
+    "source_build_input": "w4-os-home.build-input.json",
+    "branding": {
+        "product_name": "W4 OS System",
+        "distribution_name": "W4 OS",
+        "edition": "Home",
+        "hostname": "w4-home",
+        "live_hostname": "w4-home-live",
+        "live_user": "w4live"
+    },
+    "features": [
+        "desktop-defaults",
+        "home-onboarding",
+        "local-backup-ready"
+    ],
+    "services": [
+        "w4-firstboot.service",
+        "w4-live-prep.service"
+    ],
+    "generated_files": [
+        "files\/etc\/hostname",
+        "files\/etc\/hosts",
+        "files\/etc\/motd",
+        "files\/etc\/default\/w4-live",
+        "files\/etc\/w4\/profile.env",
+        "files\/etc\/skel\/.config\/w4-os\/profile.env",
+        "files\/etc\/systemd\/system\/w4-firstboot.service",
+        "files\/etc\/systemd\/system\/w4-live-prep.service",
+        "files\/usr\/local\/lib\/w4\/w4-firstboot.sh",
+        "files\/usr\/local\/lib\/w4\/w4-live-prep.sh",
+        "apply-overlay.sh"
+    ],
+    "next_steps": [
+        "aplicar overlay al rootfs",
+        "verificar primer inicio",
+        "integrar entorno live con la imagen final",
+        "probar boot en VM"
+    ]
+}

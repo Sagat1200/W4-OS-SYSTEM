@@ -1,0 +1,12 @@
+[Unit]
+Description=W4 OS live session preparation (Home)
+After=local-fs.target systemd-machine-id-commit.service
+Before=display-manager.service getty@tty1.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/w4/w4-live-prep.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
