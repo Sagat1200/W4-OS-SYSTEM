@@ -24,7 +24,7 @@ Mantener trazabilidad entre:
 | --- | --- | --- | --- | --- |
 | DOC | DOC-0.2 | 2026-09-09 | Activa | Base de gestion creada y README introductorio inicial publicado |
 | PLAN | PLAN-0.1 | 2026-09-09 | Activa | Ruta ejecutiva inicial para V1 basada en la coleccion W4 OS |
-| TECH | TECH-1.1 | 2026-09-10 | Activa | ISOs UEFI Home y Business generadas con checksum y pipeline PHP ejecutable en WSL |
+| TECH | TECH-1.2 | 2026-09-10 | Activa | Home live corregido tras validacion Hyper-V con branding W4 en `os-release` y primer arranque limpio |
 | REL | REL-0.0 | 2026-09-09 | Base | Sin candidato de release registrado |
 
 ## Historial
@@ -45,6 +45,7 @@ Mantener trazabilidad entre:
 | 2026-09-10 | TECH | TECH-0.9 | Normalizacion de keyring Debian para rootfs y live | El pipeline ahora exporta un keyring OpenPGP valido desde `debian-archive-current.gpg`, reescribe `sources.list` hacia `debian-archive-keyring.gpg` y deja la composicion live de Home avanzando mas alla de `apt-get update` hasta `mksquashfs` | `scripts/generate_rootfs_bundle.php`, `scripts/generate_live_bundle.php`, `build/rootfs/w4-os-home/build-rootfs.sh`, `build/rootfs/w4-os-business/build-rootfs.sh`, `build/live/w4-os-home/compose-live.sh`, `build/live/w4-os-business/compose-live.sh` |
 | 2026-09-10 | TECH | TECH-1.0 | Cierre del bundle live reproducible para Home y Business | La composicion live ya produce `image-root`, `filesystem.squashfs`, `filesystem.manifest`, `filesystem.size`, `SHA256SUMS` y metadata final para ambos perfiles. El flujo ahora usa staging nativo WSL, desmonta pseudo-filesystems antes de comprimir y normaliza ownership del overlay a `root:root` | `scripts/generate_live_bundle.php`, `scripts/generate_system_overlay.php`, `scripts/run_live_bundle_in_wsl.php`, `scripts/run_overlay_in_wsl.php`, `build/live-output/w4-os-home`, `build/live-output/w4-os-business` |
 | 2026-09-10 | TECH | TECH-1.1 | Composicion ISO UEFI para Home y Business | El proyecto ya genera `w4-os-home-live-amd64.iso` y `w4-os-business-live-amd64.iso` con checksum final desde una nueva etapa PHP `iso bundle`, usando `xorriso` y `grub-mkrescue` en Ubuntu WSL | `scripts/generate_iso_bundle.php`, `scripts/run_iso_bundle_in_wsl.php`, `build/iso/w4-os-home`, `build/iso/w4-os-business`, `build/iso-output/w4-os-home`, `build/iso-output/w4-os-business` |
+| 2026-09-10 | TECH | TECH-1.2 | Correccion de identidad live tras validacion Hyper-V | La validacion de Home en Hyper-V permitio corregir dos detalles del pipeline live: la limpieza de `firstboot-complete` antes de empaquetar `filesystem.squashfs` y la publicacion de branding W4 en `/etc/os-release`. La ISO Home fue regenerada con ambos ajustes aplicados | `scripts/generate_system_overlay.php`, `scripts/generate_live_bundle.php`, `build/overlays/w4-os-home`, `build/live-output/w4-os-home`, `build/iso-output/w4-os-home/w4-os-home-live-amd64.iso` |
 
 ## Regla de versionado
 

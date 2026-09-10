@@ -28,6 +28,7 @@
         "files\/etc\/motd",
         "files\/etc\/default\/w4-live",
         "files\/etc\/w4\/profile.env",
+        "files\/etc\/w4\/os-release.env",
         "files\/etc\/skel\/.config\/w4-os\/profile.env",
         "files\/etc\/systemd\/system\/w4-firstboot.service",
         "files\/etc\/systemd\/system\/w4-live-prep.service",

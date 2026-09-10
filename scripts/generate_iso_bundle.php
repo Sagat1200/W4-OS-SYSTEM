@@ -209,7 +209,7 @@ EOF
 fi
 
 echo "==> Generando metadata ISO"
-sha256sum "${ISO_STAGE_DIR}/${ISO_FILENAME}" > "${ISO_STAGE_DIR}/metadata/SHA256SUMS"
+( cd "${ISO_STAGE_DIR}" && sha256sum "${ISO_FILENAME}" ) > "${ISO_STAGE_DIR}/metadata/SHA256SUMS"
 
 cat > "${ISO_STAGE_DIR}/metadata/iso-summary.env" <<EOF
 W4_PROFILE_ID="${PROFILE_ID}"

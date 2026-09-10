@@ -105,6 +105,20 @@ ENV);
 /**
  * @param array<string, string> $vars
  */
+function buildOsReleaseOverlay(array $vars): string
+{
+    return str_replace(["\r\n", "\r"], "\n", <<<TXT
+W4_OS_ID="{$vars['profile_id']}"
+W4_OS_PRETTY_NAME="{$vars['profile_name']}"
+W4_OS_NAME="{$vars['distribution_name']}"
+W4_OS_VENDOR="{$vars['product_name']}"
+W4_OS_EDITION="{$vars['edition']}"
+TXT);
+}
+
+/**
+ * @param array<string, string> $vars
+ */
 function buildMotd(array $vars): string
 {
     return str_replace(["\r\n", "\r"], "\n", <<<TXT
@@ -350,6 +364,18 @@ fi
 mkdir -p "${ROOTFS_DIR}/etc/w4" "${ROOTFS_DIR}/usr/local/lib/w4" "${ROOTFS_DIR}/var/lib/w4"
 cp -a "${OVERLAY_DIR}/." "${ROOTFS_DIR}/"
 
+chown root:root "${ROOTFS_DIR}" "${ROOTFS_DIR}/etc" "${ROOTFS_DIR}/usr" "${ROOTFS_DIR}/usr/local" "${ROOTFS_DIR}/usr/local/lib" || true
+chown -R root:root \
+  "${ROOTFS_DIR}/etc/hostname" \
+  "${ROOTFS_DIR}/etc/hosts" \
+  "${ROOTFS_DIR}/etc/motd" \
+  "${ROOTFS_DIR}/etc/w4" \
+  "${ROOTFS_DIR}/etc/default" \
+  "${ROOTFS_DIR}/etc/systemd" \
+  "${ROOTFS_DIR}/etc/skel" \
+  "${ROOTFS_DIR}/usr/local/lib/w4" \
+  "${ROOTFS_DIR}/var/lib/w4" || true
+
 chmod 0755 "${ROOTFS_DIR}/usr/local/lib/w4/w4-firstboot.sh"
 chmod 0755 "${ROOTFS_DIR}/usr/local/lib/w4/w4-live-prep.sh"
 
@@ -387,6 +413,7 @@ function buildOverlayFiles(array $buildInput, array $vars): array
         'files/etc/motd' => buildMotd($vars) . "\n",
         'files/etc/default/w4-live' => sprintf("W4_LIVE_USER=%s\nW4_LIVE_HOSTNAME=%s\n", $vars['live_user'], $vars['live_hostname']),
         'files/etc/w4/profile.env' => buildProfileEnv($vars, $features) . "\n",
+        'files/etc/w4/os-release.env' => buildOsReleaseOverlay($vars) . "\n",
         'files/etc/skel/.config/w4-os/profile.env' => buildSkelProfile($vars) . "\n",
         'files/etc/systemd/system/w4-firstboot.service' => buildFirstbootService($vars) . "\n",
         'files/etc/systemd/system/w4-live-prep.service' => buildLivePrepService($vars) . "\n",
