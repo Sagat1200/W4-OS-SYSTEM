@@ -10,4 +10,4 @@ ya compuesto por la etapa live.
 
 Requiere en el host Linux:
 - xorriso
-- grub-mkrescue o, en su defecto, grub-mkstandalone + mtools + dosfstools
+- grub-mkrescue o, en su defecto, grub-mkstandalone + mtools + dosfstools
