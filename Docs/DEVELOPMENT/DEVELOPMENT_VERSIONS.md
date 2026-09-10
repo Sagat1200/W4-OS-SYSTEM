@@ -24,7 +24,7 @@ Mantener trazabilidad entre:
 | --- | --- | --- | --- | --- |
 | DOC | DOC-0.2 | 2026-09-09 | Activa | Base de gestion creada y README introductorio inicial publicado |
 | PLAN | PLAN-0.1 | 2026-09-09 | Activa | Ruta ejecutiva inicial para V1 basada en la coleccion W4 OS |
-| TECH | TECH-0.9 | 2026-09-10 | En validacion | Pipeline rootfs/live corregido con keyring Debian OpenPGP reproducible y composicion live Home relanzada hasta `mksquashfs` |
+| TECH | TECH-1.1 | 2026-09-10 | Activa | ISOs UEFI Home y Business generadas con checksum y pipeline PHP ejecutable en WSL |
 | REL | REL-0.0 | 2026-09-09 | Base | Sin candidato de release registrado |
 
 ## Historial
@@ -43,6 +43,8 @@ Mantener trazabilidad entre:
 | 2026-09-09 | TECH | TECH-0.7 | Finalizacion del ciclo de rootfs para Home y Business | Ambas ediciones ya se ensamblan realmente en Ubuntu WSL2: Home validado con `452` paquetes y Business con `298`, incluyendo kernel, GRUB y paquetes base de cada perfil | `scripts/generate_rootfs_bundle.php`, `scripts/run_rootfs_in_wsl.php` |
 | 2026-09-10 | TECH | TECH-0.8 | Integracion de overlay de sistema y primer inicio | Home y Business ya cuentan con overlay reproducible de identidad, `w4-firstboot.service`, `w4-live-prep.service`, scripts validados y estado de primer inicio ejecutado dentro del rootfs | `scripts/generate_system_overlay.php`, `scripts/run_overlay_in_wsl.php`, `build/overlays/w4-os-home/overlay-manifest.json`, `build/overlays/w4-os-business/overlay-manifest.json` |
 | 2026-09-10 | TECH | TECH-0.9 | Normalizacion de keyring Debian para rootfs y live | El pipeline ahora exporta un keyring OpenPGP valido desde `debian-archive-current.gpg`, reescribe `sources.list` hacia `debian-archive-keyring.gpg` y deja la composicion live de Home avanzando mas alla de `apt-get update` hasta `mksquashfs` | `scripts/generate_rootfs_bundle.php`, `scripts/generate_live_bundle.php`, `build/rootfs/w4-os-home/build-rootfs.sh`, `build/rootfs/w4-os-business/build-rootfs.sh`, `build/live/w4-os-home/compose-live.sh`, `build/live/w4-os-business/compose-live.sh` |
+| 2026-09-10 | TECH | TECH-1.0 | Cierre del bundle live reproducible para Home y Business | La composicion live ya produce `image-root`, `filesystem.squashfs`, `filesystem.manifest`, `filesystem.size`, `SHA256SUMS` y metadata final para ambos perfiles. El flujo ahora usa staging nativo WSL, desmonta pseudo-filesystems antes de comprimir y normaliza ownership del overlay a `root:root` | `scripts/generate_live_bundle.php`, `scripts/generate_system_overlay.php`, `scripts/run_live_bundle_in_wsl.php`, `scripts/run_overlay_in_wsl.php`, `build/live-output/w4-os-home`, `build/live-output/w4-os-business` |
+| 2026-09-10 | TECH | TECH-1.1 | Composicion ISO UEFI para Home y Business | El proyecto ya genera `w4-os-home-live-amd64.iso` y `w4-os-business-live-amd64.iso` con checksum final desde una nueva etapa PHP `iso bundle`, usando `xorriso` y `grub-mkrescue` en Ubuntu WSL | `scripts/generate_iso_bundle.php`, `scripts/run_iso_bundle_in_wsl.php`, `build/iso/w4-os-home`, `build/iso/w4-os-business`, `build/iso-output/w4-os-home`, `build/iso-output/w4-os-business` |
 
 ## Regla de versionado
 
