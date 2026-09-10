@@ -1,0 +1,41 @@
+{
+    "live_bundle_schema_version": 1,
+    "kind": "live-bundle",
+    "profile_id": "w4-os-business",
+    "profile_name": "W4 OS Business",
+    "base_manifest_id": "w4-linux-base",
+    "source_build_input": "w4-os-business.build-input.json",
+    "source_overlay_manifest": "overlay-manifest.json",
+    "branding": {
+        "profile_id": "w4-os-business",
+        "profile_name": "W4 OS Business",
+        "edition": "Business",
+        "live_user": "w4live",
+        "live_hostname": "w4-business-live",
+        "distribution_name": "W4 OS",
+        "volume_id": "W4_OS_BUSINESS_LIVE"
+    },
+    "live_stack": {
+        "packages": [
+            "live-boot",
+            "live-config"
+        ],
+        "bootloader_ready": false,
+        "iso_tooling_required": [
+            "xorriso",
+            "grub-mkstandalone"
+        ]
+    },
+    "generated_files": [
+        "files\/.disk\/info",
+        "files\/README-LIVE.txt",
+        "files\/boot\/grub\/grub.cfg",
+        "compose-live.sh"
+    ],
+    "next_steps": [
+        "componer image-root y filesystem.squashfs",
+        "validar live-boot en VM",
+        "instalar tooling de ISO si aplica",
+        "empaquetar ISO arrancable"
+    ]
+}

@@ -111,6 +111,7 @@ Cuando exista conflicto, prevalece siempre:
 - Todo servicio privilegiado debe explicitar su frontera de confianza.
 - Toda funcionalidad Business debe probar aislamiento entre organizaciones.
 - Todo cambio de UX que afecte seguridad o recovery requiere prueba negativa.
+- Todo rootfs o bundle live basado en Debian debe incluir un keyring OpenPGP compatible con APT y `sqv`, evitando depender de keyboxes del host o de rutas `signed-by` no reproducibles.
 
 ## Regla de bloqueo
 

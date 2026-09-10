@@ -24,7 +24,7 @@ Mantener trazabilidad entre:
 | --- | --- | --- | --- | --- |
 | DOC | DOC-0.2 | 2026-09-09 | Activa | Base de gestion creada y README introductorio inicial publicado |
 | PLAN | PLAN-0.1 | 2026-09-09 | Activa | Ruta ejecutiva inicial para V1 basada en la coleccion W4 OS |
-| TECH | TECH-0.8 | 2026-09-10 | Activa | Rootfs Home y Business extendidos con overlay de sistema, primer inicio y preparacion live |
+| TECH | TECH-0.9 | 2026-09-10 | En validacion | Pipeline rootfs/live corregido con keyring Debian OpenPGP reproducible y composicion live Home relanzada hasta `mksquashfs` |
 | REL | REL-0.0 | 2026-09-09 | Base | Sin candidato de release registrado |
 
 ## Historial
@@ -42,6 +42,7 @@ Mantener trazabilidad entre:
 | 2026-09-09 | TECH | TECH-0.6 | Finalizacion del primer rootfs Home y arranque de Business | `w4-os-home` ya completo con Debian 13, kernel, GRUB y paquetes clave; el mismo flujo corregido ya se relanza para `w4-os-business` | `scripts/generate_rootfs_bundle.php`, `scripts/run_rootfs_in_wsl.php` |
 | 2026-09-09 | TECH | TECH-0.7 | Finalizacion del ciclo de rootfs para Home y Business | Ambas ediciones ya se ensamblan realmente en Ubuntu WSL2: Home validado con `452` paquetes y Business con `298`, incluyendo kernel, GRUB y paquetes base de cada perfil | `scripts/generate_rootfs_bundle.php`, `scripts/run_rootfs_in_wsl.php` |
 | 2026-09-10 | TECH | TECH-0.8 | Integracion de overlay de sistema y primer inicio | Home y Business ya cuentan con overlay reproducible de identidad, `w4-firstboot.service`, `w4-live-prep.service`, scripts validados y estado de primer inicio ejecutado dentro del rootfs | `scripts/generate_system_overlay.php`, `scripts/run_overlay_in_wsl.php`, `build/overlays/w4-os-home/overlay-manifest.json`, `build/overlays/w4-os-business/overlay-manifest.json` |
+| 2026-09-10 | TECH | TECH-0.9 | Normalizacion de keyring Debian para rootfs y live | El pipeline ahora exporta un keyring OpenPGP valido desde `debian-archive-current.gpg`, reescribe `sources.list` hacia `debian-archive-keyring.gpg` y deja la composicion live de Home avanzando mas alla de `apt-get update` hasta `mksquashfs` | `scripts/generate_rootfs_bundle.php`, `scripts/generate_live_bundle.php`, `build/rootfs/w4-os-home/build-rootfs.sh`, `build/rootfs/w4-os-business/build-rootfs.sh`, `build/live/w4-os-home/compose-live.sh`, `build/live/w4-os-business/compose-live.sh` |
 
 ## Regla de versionado
 
