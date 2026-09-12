@@ -1,0 +1,30 @@
+{
+    "installation_executor_schema_version": 1,
+    "kind": "installation-executor",
+    "profile_id": "w4-os-home",
+    "selected_disk": "\/dev\/sda",
+    "default_mode": "check-only",
+    "required_env": [
+        "W4_INSTALL_EXECUTE",
+        "W4_INSTALL_SOURCE_ROOTFS or W4_INSTALL_SOURCE_SQUASHFS",
+        "W4_DISK_PASSPHRASE_FILE",
+        "W4_LOCAL_USER_PASSWORD_FILE"
+    ],
+    "required_commands": [
+        "lsblk",
+        "udevadm",
+        "wipefs",
+        "sgdisk",
+        "partprobe",
+        "mkfs.vfat",
+        "mkfs.ext4",
+        "cryptsetup",
+        "mkfs.btrfs",
+        "rsync",
+        "chroot"
+    ],
+    "generated_scripts": [
+        "apply-installation.sh",
+        "verify-installation.sh"
+    ]
+}

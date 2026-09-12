@@ -6,9 +6,13 @@
     "inventory_id": "hyperv-home-empty-disk",
     "plan_kind": "installation-plan",
     "generated_artifacts": [
-        "installation-profile.json",
+        "INSTALLATION_EXECUTOR_README.txt",
+        "INSTALLATION_SUMMARY.txt",
+        "apply-installation.sh",
         "disk-inventory.json",
+        "installation-executor.json",
         "installation-plan.json",
-        "INSTALLATION_SUMMARY.txt"
+        "installation-profile.json",
+        "verify-installation.sh"
     ]
 }

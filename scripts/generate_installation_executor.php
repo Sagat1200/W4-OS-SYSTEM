@@ -1,0 +1,848 @@
+<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/lib/InstallerToolkit.php';
+
+$rootDir = dirname(__DIR__);
+$defaultBundleRoot = $rootDir . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'install';
+
+/**
+ * @return array<string, mixed>
+ */
+function readJsonFile(string $path): array
+{
+    $raw = file_get_contents($path);
+    if ($raw === false) {
+        throw new ValidationError(sprintf('No se pudo leer el archivo JSON: %s', $path));
+    }
+
+    try {
+        /** @var array<string, mixed> $data */
+        $data = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('JSON invalido en %s: %s', $path, $exception->getMessage()));
+    }
+
+    return $data;
+}
+
+/**
+ * @param array<string, mixed> $data
+ */
+function writeJsonFile(string $path, array $data): void
+{
+    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    if ($json === false) {
+        throw new ValidationError(sprintf('No se pudo serializar JSON para %s', $path));
+    }
+
+    if (file_put_contents($path, $json . PHP_EOL) === false) {
+        throw new ValidationError(sprintf('No se pudo escribir el archivo %s', $path));
+    }
+}
+
+function shellLiteral(string $value): string
+{
+    return "'" . str_replace("'", "'\"'\"'", $value) . "'";
+}
+
+function normalizeLf(string $content): string
+{
+    return str_replace(["\r\n", "\r"], "\n", $content);
+}
+
+/**
+ * @param array<string, mixed> $plan
+ */
+function validateInstallationPlan(array $plan, string $sourcePath): void
+{
+    if (($plan['installation_plan_schema_version'] ?? null) !== 1) {
+        throw new ValidationError(sprintf('%s: installation_plan_schema_version debe ser 1', basename($sourcePath)));
+    }
+
+    if (($plan['kind'] ?? null) !== 'installation-plan') {
+        throw new ValidationError(sprintf('%s: kind debe ser installation-plan', basename($sourcePath)));
+    }
+
+    foreach (['profile_id', 'profile_name', 'base_manifest_id'] as $field) {
+        $value = $plan[$field] ?? null;
+        if (!is_string($value) || $value === '') {
+            throw new ValidationError(sprintf('%s: falta el campo %s', basename($sourcePath), $field));
+        }
+    }
+
+    foreach (['plan_binding', 'identity', 'security', 'storage', 'execution'] as $field) {
+        if (!is_array($plan[$field] ?? null)) {
+            throw new ValidationError(sprintf('%s: %s debe ser un objeto', basename($sourcePath), $field));
+        }
+    }
+}
+
+/**
+ * @param array<string, mixed> $bundleManifest
+ */
+function validateInstallationBundle(array $bundleManifest, string $sourcePath): void
+{
+    if (($bundleManifest['installation_bundle_schema_version'] ?? null) !== 1) {
+        throw new ValidationError(sprintf('%s: installation_bundle_schema_version debe ser 1', basename($sourcePath)));
+    }
+
+    if (($bundleManifest['kind'] ?? null) !== 'installation-bundle') {
+        throw new ValidationError(sprintf('%s: kind debe ser installation-bundle', basename($sourcePath)));
+    }
+}
+
+/**
+ * @param array<string, mixed> $plan
+ * @return array{name:string,mountpoint:string}
+ */
+function rootSubvolume(array $plan): array
+{
+    $subvolumes = $plan['storage']['btrfs']['subvolumes'] ?? null;
+    if (!is_array($subvolumes)) {
+        throw new ValidationError('El plan no contiene storage.btrfs.subvolumes');
+    }
+
+    foreach ($subvolumes as $subvolume) {
+        if (is_array($subvolume) && (($subvolume['mountpoint'] ?? null) === '/')) {
+            return [
+                'name' => (string) $subvolume['name'],
+                'mountpoint' => '/',
+            ];
+        }
+    }
+
+    throw new ValidationError('El plan no contiene un subvolumen raiz con mountpoint "/"');
+}
+
+/**
+ * @param array<string, mixed> $plan
+ */
+function buildApplyScript(array $plan): string
+{
+    $disk = $plan['plan_binding']['selected_disk'];
+    $selector = $plan['plan_binding']['selector'];
+    $identity = $plan['identity'];
+    $user = $identity['user'];
+    $storage = $plan['storage'];
+    $encryption = $plan['security']['encryption'];
+    $btrfs = $storage['btrfs'];
+    $rootSubvolume = rootSubvolume($plan);
+
+    $espSizeMib = (int) round(((int) $storage['partitions'][0]['size_bytes']) / 1048576);
+    $bootSizeMib = (int) round(((int) $storage['partitions'][1]['size_bytes']) / 1048576);
+
+    $subvolumeCreateLines = [];
+    $subvolumeMountLines = [];
+    $fstabLines = [];
+
+    foreach ($btrfs['subvolumes'] as $subvolume) {
+        if (!is_array($subvolume)) {
+            continue;
+        }
+
+        $name = (string) ($subvolume['name'] ?? '');
+        $mountpoint = (string) ($subvolume['mountpoint'] ?? '');
+        if ($name === '' || $mountpoint === '') {
+            continue;
+        }
+
+        $subvolumeCreateLines[] = sprintf('btrfs subvolume create "${STAGING_MOUNT}/%s"', $name);
+
+        $fstabLines[] = sprintf(
+            'UUID=${BTRFS_UUID} %s btrfs defaults,%s,subvol=%s 0 0',
+            $mountpoint,
+            implode(',', $btrfs['mount_options']),
+            $name
+        );
+
+        if ($mountpoint === '/') {
+            continue;
+        }
+
+        $targetDirectory = rtrim('${TARGET_ROOT}' . $mountpoint, '/');
+        if ($targetDirectory === '') {
+            $targetDirectory = '${TARGET_ROOT}';
+        }
+
+        $subvolumeMountLines[] = sprintf('mkdir -p "%s"', $targetDirectory);
+        $subvolumeMountLines[] = sprintf(
+            'mount -o %s,subvol=%s "/dev/mapper/${CRYPT_NAME}" "%s"',
+            implode(',', $btrfs['mount_options']),
+            $name,
+            $targetDirectory
+        );
+    }
+
+    $fstabBody = implode("\n", array_map(
+        static fn (string $line): string => $line,
+        array_merge(
+            $fstabLines,
+            [
+                'UUID=${BOOT_UUID} /boot ext4 defaults 0 2',
+                'UUID=${ESP_UUID} /boot/efi vfat umask=0077 0 1',
+            ]
+        )
+    ));
+
+    $script = <<<'BASH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLAN_JSON="${SCRIPT_DIR}/installation-plan.json"
+PROFILE_NAME=%PROFILE_NAME%
+TARGET_DISK=%TARGET_DISK%
+EXPECTED_SERIAL=%EXPECTED_SERIAL%
+EXPECTED_WWID=%EXPECTED_WWID%
+EXPECTED_BY_PATH=%EXPECTED_BY_PATH%
+EXPECTED_SIZE_BYTES=%EXPECTED_SIZE_BYTES%
+HOSTNAME_VALUE=%HOSTNAME%
+LOCALE_VALUE=%LOCALE%
+KEYBOARD_VALUE=%KEYBOARD%
+USERNAME_VALUE=%USERNAME%
+DISPLAY_NAME_VALUE=%DISPLAY_NAME%
+PASSWORD_SOURCE=%PASSWORD_SOURCE%
+PASSPHRASE_SOURCE=%PASSPHRASE_SOURCE%
+CRYPT_NAME=%CRYPT_NAME%
+ROOT_LABEL=%ROOT_LABEL%
+ESP_LABEL=%ESP_LABEL%
+BOOT_LABEL=%BOOT_LABEL%
+ROOT_SUBVOLUME=%ROOT_SUBVOLUME%
+ESP_SIZE_MIB=%ESP_SIZE_MIB%
+BOOT_SIZE_MIB=%BOOT_SIZE_MIB%
+TARGET_ROOT="${W4_TARGET_ROOT:-/mnt/w4-install-target}"
+STAGING_ROOT="${W4_STAGING_ROOT:-/mnt/w4-install-staging}"
+STAGING_MOUNT="${W4_STAGING_MOUNT:-/mnt/w4-install-staging-subvol}"
+EXECUTE_MODE="${W4_INSTALL_EXECUTE:-0}"
+SOURCE_ROOTFS="${W4_INSTALL_SOURCE_ROOTFS:-}"
+SOURCE_SQUASHFS="${W4_INSTALL_SOURCE_SQUASHFS:-}"
+DISK_PASSPHRASE_FILE="${W4_DISK_PASSPHRASE_FILE:-}"
+LOCAL_USER_PASSWORD_FILE="${W4_LOCAL_USER_PASSWORD_FILE:-}"
+
+log() {
+  echo "[w4-install] $*"
+}
+
+fail() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+require_command() {
+  if ! command -v "${1}" >/dev/null 2>&1; then
+    fail "falta el comando requerido: ${1}"
+  fi
+}
+
+part_path() {
+  local disk="${1}"
+  local number="${2}"
+
+  if [[ "${disk}" == *"nvme"* || "${disk}" == *"mmcblk"* || "${disk}" == *"loop"* ]]; then
+    printf '%sp%s' "${disk}" "${number}"
+    return 0
+  fi
+
+  printf '%s%s' "${disk}" "${number}"
+}
+
+udev_value() {
+  local device="${1}"
+  local key="${2}"
+
+  udevadm info --query=property --name="${device}" | awk -F= -v key="${key}" '$1 == key { print $2; exit }'
+}
+
+assert_selector() {
+  local device="${1}"
+  local current_serial current_wwid current_by_path current_size
+
+  current_serial="$(udev_value "${device}" "ID_SERIAL_SHORT")"
+  if [[ -z "${current_serial}" ]]; then
+    current_serial="$(udev_value "${device}" "ID_SERIAL")"
+  fi
+
+  current_wwid="$(udev_value "${device}" "ID_WWN")"
+  if [[ -z "${current_wwid}" ]]; then
+    current_wwid="$(udev_value "${device}" "ID_WWN_WITH_EXTENSION")"
+  fi
+
+  current_by_path="$(udev_value "${device}" "ID_PATH")"
+  current_size="$(lsblk -bndo SIZE "${device}")"
+
+  if [[ -n "${EXPECTED_SERIAL}" && "${EXPECTED_SERIAL}" != "${current_serial}" ]]; then
+    fail "el disco ya no coincide con el serial esperado"
+  fi
+
+  if [[ -n "${EXPECTED_WWID}" && "${EXPECTED_WWID}" != "${current_wwid}" ]]; then
+    fail "el disco ya no coincide con el WWID esperado"
+  fi
+
+  if [[ -n "${EXPECTED_BY_PATH}" && "${EXPECTED_BY_PATH}" != "${current_by_path}" ]]; then
+    fail "el disco ya no coincide con el path esperado"
+  fi
+
+  if [[ "${EXPECTED_SIZE_BYTES}" != "${current_size}" ]]; then
+    fail "el disco ya no coincide con el tamaño esperado"
+  fi
+}
+
+assert_empty_target() {
+  local device="${1}"
+  local ro
+
+  ro="$(lsblk -dn -o RO "${device}")"
+  if [[ "${ro}" == "1" ]]; then
+    fail "el disco seleccionado es de solo lectura"
+  fi
+
+  if lsblk -nr -o NAME "${device}" | tail -n +2 | grep -q .; then
+    fail "el disco seleccionado ya contiene particiones"
+  fi
+
+  if wipefs -n "${device}" 2>/dev/null | tail -n +2 | grep -q .; then
+    fail "el disco seleccionado contiene firmas de filesystem"
+  fi
+}
+
+cleanup() {
+  set +e
+
+  for path in \
+    "${TARGET_ROOT}/boot/efi" \
+    "${TARGET_ROOT}/boot" \
+    "${TARGET_ROOT}/home" \
+    "${TARGET_ROOT}/var/log" \
+    "${TARGET_ROOT}/var/cache" \
+    "${TARGET_ROOT}/var/lib/w4" \
+    "${TARGET_ROOT}/run" \
+    "${TARGET_ROOT}/sys" \
+    "${TARGET_ROOT}/proc" \
+    "${TARGET_ROOT}/dev"; do
+    if mountpoint -q "${path}"; then
+      umount "${path}"
+    fi
+  done
+
+  if mountpoint -q "${TARGET_ROOT}"; then
+    umount "${TARGET_ROOT}"
+  fi
+
+  if mountpoint -q "${STAGING_MOUNT}"; then
+    umount "${STAGING_MOUNT}"
+  fi
+
+  if [[ -e "/dev/mapper/${CRYPT_NAME}" ]]; then
+    cryptsetup close "${CRYPT_NAME}" >/dev/null 2>&1 || true
+  fi
+}
+
+prepare_source_root() {
+  if [[ -n "${SOURCE_ROOTFS}" ]]; then
+    [[ -d "${SOURCE_ROOTFS}" ]] || fail "W4_INSTALL_SOURCE_ROOTFS no apunta a una carpeta valida"
+    printf '%s' "${SOURCE_ROOTFS}"
+    return 0
+  fi
+
+  [[ -n "${SOURCE_SQUASHFS}" ]] || fail "debe indicar W4_INSTALL_SOURCE_ROOTFS o W4_INSTALL_SOURCE_SQUASHFS"
+  [[ -f "${SOURCE_SQUASHFS}" ]] || fail "W4_INSTALL_SOURCE_SQUASHFS no existe"
+
+  require_command unsquashfs
+  rm -rf "${STAGING_ROOT}"
+  mkdir -p "${STAGING_ROOT}"
+  log "Extrayendo squashfs fuente"
+  unsquashfs -f -d "${STAGING_ROOT}" "${SOURCE_SQUASHFS}" >/dev/null
+  printf '%s' "${STAGING_ROOT}"
+}
+
+mount_chroot_support() {
+  mount --bind /dev "${TARGET_ROOT}/dev"
+  mount --bind /proc "${TARGET_ROOT}/proc"
+  mount --bind /sys "${TARGET_ROOT}/sys"
+  mount --bind /run "${TARGET_ROOT}/run"
+}
+
+ensure_directories() {
+  mkdir -p \
+    "${TARGET_ROOT}" \
+    "${TARGET_ROOT}/boot" \
+    "${TARGET_ROOT}/boot/efi" \
+    "${TARGET_ROOT}/home" \
+    "${TARGET_ROOT}/var/log" \
+    "${TARGET_ROOT}/var/cache" \
+    "${TARGET_ROOT}/var/lib/w4"
+}
+
+print_plan() {
+  cat <<EOF
+W4 OS Executor
+
+Perfil: ${PROFILE_NAME}
+Disco destino: ${TARGET_DISK}
+Modo por defecto: check-only
+Para ejecutar de verdad:
+  export W4_INSTALL_EXECUTE=1
+  export W4_INSTALL_SOURCE_ROOTFS=/ruta/rootfs   o W4_INSTALL_SOURCE_SQUASHFS=/ruta/filesystem.squashfs
+  export W4_DISK_PASSPHRASE_FILE=/ruta/passphrase.txt
+  export W4_LOCAL_USER_PASSWORD_FILE=/ruta/password.txt
+  bash "${0}"
+EOF
+}
+
+for cmd in lsblk udevadm wipefs sgdisk partprobe blkid mkfs.vfat mkfs.ext4 cryptsetup mkfs.btrfs rsync mount umount chroot awk grep sed; do
+  require_command "${cmd}"
+done
+
+[[ -b "${TARGET_DISK}" ]] || fail "el disco objetivo no existe: ${TARGET_DISK}"
+
+assert_selector "${TARGET_DISK}"
+assert_empty_target "${TARGET_DISK}"
+
+if [[ "${EXECUTE_MODE}" != "1" ]]; then
+  print_plan
+  exit 0
+fi
+
+[[ -n "${DISK_PASSPHRASE_FILE}" && -f "${DISK_PASSPHRASE_FILE}" ]] || fail "debe indicar W4_DISK_PASSPHRASE_FILE"
+[[ -n "${LOCAL_USER_PASSWORD_FILE}" && -f "${LOCAL_USER_PASSWORD_FILE}" ]] || fail "debe indicar W4_LOCAL_USER_PASSWORD_FILE"
+
+SOURCE_ROOT="$(prepare_source_root)"
+trap cleanup EXIT
+
+ESP_PART="$(part_path "${TARGET_DISK}" 1)"
+BOOT_PART="$(part_path "${TARGET_DISK}" 2)"
+ROOT_PART="$(part_path "${TARGET_DISK}" 3)"
+
+log "Aplicando esquema GPT en ${TARGET_DISK}"
+sgdisk --zap-all "${TARGET_DISK}"
+wipefs -af "${TARGET_DISK}"
+sgdisk -og "${TARGET_DISK}"
+sgdisk -n 1:1MiB:+"${ESP_SIZE_MIB}"MiB -t 1:ef00 -c 1:"${ESP_LABEL}" "${TARGET_DISK}"
+sgdisk -n 2:0:+"${BOOT_SIZE_MIB}"MiB -t 2:8300 -c 2:"${BOOT_LABEL}" "${TARGET_DISK}"
+sgdisk -n 3:0:0 -t 3:8309 -c 3:"W4-CRYPTROOT" "${TARGET_DISK}"
+partprobe "${TARGET_DISK}"
+udevadm settle
+sleep 1
+
+log "Formateando particiones"
+mkfs.vfat -F 32 -n "${ESP_LABEL}" "${ESP_PART}"
+mkfs.ext4 -F -L "${BOOT_LABEL}" "${BOOT_PART}"
+cryptsetup luksFormat --batch-mode --type luks2 "${ROOT_PART}" "${DISK_PASSPHRASE_FILE}"
+cryptsetup open "${ROOT_PART}" "${CRYPT_NAME}" --key-file "${DISK_PASSPHRASE_FILE}"
+mkfs.btrfs -f -L "${ROOT_LABEL}" "/dev/mapper/${CRYPT_NAME}"
+
+log "Creando subvolumenes Btrfs"
+mkdir -p "${STAGING_MOUNT}"
+mount "/dev/mapper/${CRYPT_NAME}" "${STAGING_MOUNT}"
+%SUBVOLUME_CREATE_LINES%
+umount "${STAGING_MOUNT}"
+
+log "Montando layout destino"
+ensure_directories
+mount -o %ROOT_MOUNT_OPTIONS%,subvol="${ROOT_SUBVOLUME}" "/dev/mapper/${CRYPT_NAME}" "${TARGET_ROOT}"
+%SUBVOLUME_MOUNT_LINES%
+mount "${BOOT_PART}" "${TARGET_ROOT}/boot"
+mount "${ESP_PART}" "${TARGET_ROOT}/boot/efi"
+
+log "Sincronizando sistema fuente"
+rsync -aHAX --numeric-ids \
+  --exclude=/dev/* \
+  --exclude=/proc/* \
+  --exclude=/sys/* \
+  --exclude=/run/* \
+  --exclude=/tmp/* \
+  --exclude=/mnt/* \
+  --exclude=/media/* \
+  --exclude=lost+found \
+  "${SOURCE_ROOT}/" "${TARGET_ROOT}/"
+
+echo "${HOSTNAME_VALUE}" > "${TARGET_ROOT}/etc/hostname"
+cat > "${TARGET_ROOT}/etc/hosts" <<EOF
+127.0.0.1 localhost
+127.0.1.1 ${HOSTNAME_VALUE}
+EOF
+
+mkdir -p "${TARGET_ROOT}/etc/default"
+cat > "${TARGET_ROOT}/etc/default/keyboard" <<EOF
+XKBLAYOUT="${KEYBOARD_VALUE}"
+EOF
+echo "LANG=${LOCALE_VALUE}" > "${TARGET_ROOT}/etc/default/locale"
+
+ESP_UUID="$(blkid -s UUID -o value "${ESP_PART}")"
+BOOT_UUID="$(blkid -s UUID -o value "${BOOT_PART}")"
+ROOT_UUID="$(blkid -s UUID -o value "${ROOT_PART}")"
+BTRFS_UUID="$(blkid -s UUID -o value "/dev/mapper/${CRYPT_NAME}")"
+
+cat > "${TARGET_ROOT}/etc/crypttab" <<EOF
+${CRYPT_NAME} UUID=${ROOT_UUID} none luks,discard
+EOF
+
+cat > "${TARGET_ROOT}/etc/fstab" <<EOF
+%FSTAB_BODY%
+EOF
+
+if [[ -f "${TARGET_ROOT}/etc/locale.gen" ]]; then
+  sed -i "s/^# *${LOCALE_VALUE} UTF-8/${LOCALE_VALUE} UTF-8/" "${TARGET_ROOT}/etc/locale.gen" || true
+fi
+
+mkdir -p "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants"
+if [[ -f "${TARGET_ROOT}/lib/systemd/system/w4-firstboot.service" ]]; then
+  ln -sf /lib/systemd/system/w4-firstboot.service "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants/w4-firstboot.service"
+fi
+
+if [[ -f "${TARGET_ROOT}/lib/systemd/system/w4-live-prep.service" ]]; then
+  rm -f "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants/w4-live-prep.service"
+fi
+
+mount_chroot_support
+
+if ! chroot "${TARGET_ROOT}" id -u "${USERNAME_VALUE}" >/dev/null 2>&1; then
+  chroot "${TARGET_ROOT}" useradd -m -s /bin/bash -c "${DISPLAY_NAME_VALUE}" "${USERNAME_VALUE}"
+fi
+
+if chroot "${TARGET_ROOT}" getent group sudo >/dev/null 2>&1; then
+  chroot "${TARGET_ROOT}" usermod -aG sudo "${USERNAME_VALUE}"
+fi
+
+LOCAL_USER_PASSWORD="$(cat "${LOCAL_USER_PASSWORD_FILE}")"
+printf '%s:%s\n' "${USERNAME_VALUE}" "${LOCAL_USER_PASSWORD}" | chroot "${TARGET_ROOT}" chpasswd
+
+if chroot "${TARGET_ROOT}" command -v locale-gen >/dev/null 2>&1; then
+  chroot "${TARGET_ROOT}" locale-gen || true
+fi
+
+if chroot "${TARGET_ROOT}" command -v grub-install >/dev/null 2>&1; then
+  chroot "${TARGET_ROOT}" grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id="W4 OS" --recheck
+fi
+
+if chroot "${TARGET_ROOT}" command -v update-initramfs >/dev/null 2>&1; then
+  chroot "${TARGET_ROOT}" update-initramfs -u -k all
+fi
+
+if chroot "${TARGET_ROOT}" command -v update-grub >/dev/null 2>&1; then
+  chroot "${TARGET_ROOT}" update-grub
+fi
+
+log "Instalacion preparada. Ejecute verify-installation.sh antes de reiniciar."
+BASH;
+
+    return str_replace(
+        [
+            '%PROFILE_NAME%',
+            '%TARGET_DISK%',
+            '%EXPECTED_SERIAL%',
+            '%EXPECTED_WWID%',
+            '%EXPECTED_BY_PATH%',
+            '%EXPECTED_SIZE_BYTES%',
+            '%HOSTNAME%',
+            '%LOCALE%',
+            '%KEYBOARD%',
+            '%USERNAME%',
+            '%DISPLAY_NAME%',
+            '%PASSWORD_SOURCE%',
+            '%PASSPHRASE_SOURCE%',
+            '%CRYPT_NAME%',
+            '%ROOT_LABEL%',
+            '%ESP_LABEL%',
+            '%BOOT_LABEL%',
+            '%ROOT_SUBVOLUME%',
+            '%ESP_SIZE_MIB%',
+            '%BOOT_SIZE_MIB%',
+            '%SUBVOLUME_CREATE_LINES%',
+            '%ROOT_MOUNT_OPTIONS%',
+            '%SUBVOLUME_MOUNT_LINES%',
+            '%FSTAB_BODY%',
+        ],
+        [
+            shellLiteral((string) $plan['profile_name']),
+            shellLiteral((string) $disk['device']),
+            shellLiteral((string) ($selector['serial'] ?? '')),
+            shellLiteral((string) ($selector['wwid'] ?? '')),
+            shellLiteral((string) ($selector['by_path'] ?? '')),
+            shellLiteral((string) $disk['size_bytes']),
+            shellLiteral((string) $identity['hostname']),
+            shellLiteral((string) $identity['locale']),
+            shellLiteral((string) $identity['keyboard']),
+            shellLiteral((string) $user['username']),
+            shellLiteral((string) $user['display_name']),
+            shellLiteral((string) $user['password_source']),
+            shellLiteral((string) $encryption['passphrase_source']),
+            shellLiteral((string) $storage['encryption']['mapping_name']),
+            shellLiteral((string) $btrfs['label']),
+            shellLiteral((string) $storage['partitions'][0]['label']),
+            shellLiteral((string) $storage['partitions'][1]['label']),
+            shellLiteral($rootSubvolume['name']),
+            shellLiteral((string) $espSizeMib),
+            shellLiteral((string) $bootSizeMib),
+            implode("\n", $subvolumeCreateLines),
+            implode(',', $btrfs['mount_options']),
+            implode("\n", $subvolumeMountLines),
+            $fstabBody,
+        ],
+        $script
+    ) . "\n";
+}
+
+/**
+ * @param array<string, mixed> $plan
+ */
+function buildVerificationScript(array $plan): string
+{
+    $disk = $plan['plan_binding']['selected_disk'];
+    $user = $plan['identity']['user'];
+    $identity = $plan['identity'];
+
+    $script = <<<'BASH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+TARGET_ROOT="${W4_TARGET_ROOT:-/mnt/w4-install-target}"
+TARGET_DISK=%TARGET_DISK%
+EXPECTED_HOSTNAME=%HOSTNAME%
+EXPECTED_USER=%USERNAME%
+CRYPT_NAME=%CRYPT_NAME%
+
+fail() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+part_path() {
+  local disk="${1}"
+  local number="${2}"
+
+  if [[ "${disk}" == *"nvme"* || "${disk}" == *"mmcblk"* || "${disk}" == *"loop"* ]]; then
+    printf '%sp%s' "${disk}" "${number}"
+    return 0
+  fi
+
+  printf '%s%s' "${disk}" "${number}"
+}
+
+ESP_PART="$(part_path "${TARGET_DISK}" 1)"
+BOOT_PART="$(part_path "${TARGET_DISK}" 2)"
+ROOT_PART="$(part_path "${TARGET_DISK}" 3)"
+
+[[ -d "${TARGET_ROOT}" ]] || fail "no existe el rootfs montado en ${TARGET_ROOT}"
+[[ -b "${ESP_PART}" ]] || fail "falta la particion ESP"
+[[ -b "${BOOT_PART}" ]] || fail "falta la particion /boot"
+[[ -b "${ROOT_PART}" ]] || fail "falta la particion cifrada"
+[[ -f "${TARGET_ROOT}/etc/fstab" ]] || fail "falta /etc/fstab"
+[[ -f "${TARGET_ROOT}/etc/crypttab" ]] || fail "falta /etc/crypttab"
+grep -q "${CRYPT_NAME}" "${TARGET_ROOT}/etc/crypttab" || fail "crypttab no referencia ${CRYPT_NAME}"
+grep -q "${EXPECTED_HOSTNAME}" "${TARGET_ROOT}/etc/hostname" || fail "hostname no coincide"
+grep -q "^${EXPECTED_USER}:" "${TARGET_ROOT}/etc/passwd" || fail "el usuario esperado no existe"
+test -d "${TARGET_ROOT}/home" || fail "falta /home en el target"
+test -d "${TARGET_ROOT}/boot/efi" || fail "falta /boot/efi en el target"
+test -e "${TARGET_ROOT}/boot" || fail "falta /boot en el target"
+
+echo "Verificacion local completada para ${TARGET_ROOT}"
+BASH;
+
+    return str_replace(
+        ['%TARGET_DISK%', '%HOSTNAME%', '%USERNAME%', '%CRYPT_NAME%'],
+        [
+            shellLiteral((string) $disk['device']),
+            shellLiteral((string) $identity['hostname']),
+            shellLiteral((string) $user['username']),
+            shellLiteral((string) $plan['storage']['encryption']['mapping_name']),
+        ],
+        $script
+    ) . "\n";
+}
+
+/**
+ * @param array<string, mixed> $plan
+ */
+function buildExecutorReadme(array $plan): string
+{
+    return str_replace(["\r\n", "\r"], "\n", sprintf(
+        "W4 OS Installation Executor\n\n".
+        "Perfil: %s\n".
+        "Disco objetivo: %s\n".
+        "Modo por defecto: verificacion sin escritura\n\n".
+        "Archivos generados:\n".
+        "- apply-installation.sh\n".
+        "- verify-installation.sh\n".
+        "- installation-executor.json\n\n".
+        "Variables requeridas para ejecutar de verdad:\n".
+        "- W4_INSTALL_EXECUTE=1\n".
+        "- W4_INSTALL_SOURCE_ROOTFS=/ruta/rootfs   o   W4_INSTALL_SOURCE_SQUASHFS=/ruta/filesystem.squashfs\n".
+        "- W4_DISK_PASSPHRASE_FILE=/ruta/passphrase.txt\n".
+        "- W4_LOCAL_USER_PASSWORD_FILE=/ruta/password.txt\n\n".
+        "El script revalida el disco antes de escribir, rechaza particiones o firmas existentes y esta pensado para disco vacio en una sesion live.\n",
+        $plan['profile_name'],
+        $plan['plan_binding']['selected_disk']['device']
+    ));
+}
+
+/**
+ * @param array<string, mixed> $plan
+ * @return array<string, mixed>
+ */
+function createExecutorManifest(array $plan): array
+{
+    return [
+        'installation_executor_schema_version' => 1,
+        'kind' => 'installation-executor',
+        'profile_id' => $plan['profile_id'],
+        'selected_disk' => $plan['plan_binding']['selected_disk']['device'],
+        'default_mode' => 'check-only',
+        'required_env' => [
+            'W4_INSTALL_EXECUTE',
+            'W4_INSTALL_SOURCE_ROOTFS or W4_INSTALL_SOURCE_SQUASHFS',
+            'W4_DISK_PASSPHRASE_FILE',
+            'W4_LOCAL_USER_PASSWORD_FILE',
+        ],
+        'required_commands' => [
+            'lsblk',
+            'udevadm',
+            'wipefs',
+            'sgdisk',
+            'partprobe',
+            'mkfs.vfat',
+            'mkfs.ext4',
+            'cryptsetup',
+            'mkfs.btrfs',
+            'rsync',
+            'chroot',
+        ],
+        'generated_scripts' => [
+            'apply-installation.sh',
+            'verify-installation.sh',
+        ],
+    ];
+}
+
+/**
+ * @param array<string, mixed> $bundleManifest
+ * @return array<string, mixed>
+ */
+function mergeExecutorArtifacts(array $bundleManifest): array
+{
+    $generatedArtifacts = $bundleManifest['generated_artifacts'] ?? [];
+    if (!is_array($generatedArtifacts)) {
+        $generatedArtifacts = [];
+    }
+
+    $generatedArtifacts = array_values(array_unique(array_merge(
+        $generatedArtifacts,
+        [
+            'apply-installation.sh',
+            'verify-installation.sh',
+            'installation-executor.json',
+            'INSTALLATION_EXECUTOR_README.txt',
+        ]
+    )));
+
+    sort($generatedArtifacts);
+    $bundleManifest['generated_artifacts'] = $generatedArtifacts;
+
+    return $bundleManifest;
+}
+
+try {
+    $arguments = $argv ?? [];
+    $profileId = null;
+    $bundleDir = null;
+    $planPath = null;
+    $bundleManifestPath = null;
+
+    for ($index = 1, $count = count($arguments); $index < $count; $index++) {
+        $argument = $arguments[$index];
+
+        if (!isset($arguments[$index + 1]) || $arguments[$index + 1] === '') {
+            throw new ValidationError(sprintf('Falta el valor para %s', $argument));
+        }
+
+        $value = $arguments[++$index];
+
+        switch ($argument) {
+            case '--profile':
+                $profileId = $value;
+                break;
+
+            case '--bundle-dir':
+                $bundleDir = $value;
+                break;
+
+            case '--plan':
+                $planPath = $value;
+                break;
+
+            case '--bundle-manifest':
+                $bundleManifestPath = $value;
+                break;
+
+            default:
+                throw new ValidationError(sprintf('Argumento no soportado: %s', $argument));
+        }
+    }
+
+    if ($profileId === null && $bundleDir === null && $planPath === null) {
+        throw new ValidationError('Debe indicar --profile, --bundle-dir o --plan');
+    }
+
+    if ($bundleDir === null) {
+        if ($planPath !== null) {
+            $bundleDir = dirname($planPath);
+        } else {
+            $bundleDir = $defaultBundleRoot . DIRECTORY_SEPARATOR . $profileId;
+        }
+    }
+
+    $planPath ??= $bundleDir . DIRECTORY_SEPARATOR . 'installation-plan.json';
+    $bundleManifestPath ??= $bundleDir . DIRECTORY_SEPARATOR . 'installation-bundle.json';
+
+    if (!is_file($planPath)) {
+        throw new ValidationError(sprintf('No existe el plan de instalacion: %s', $planPath));
+    }
+
+    if (!is_file($bundleManifestPath)) {
+        throw new ValidationError(sprintf('No existe el installation-bundle.json: %s', $bundleManifestPath));
+    }
+
+    $plan = readJsonFile($planPath);
+    validateInstallationPlan($plan, $planPath);
+
+    $bundleManifest = readJsonFile($bundleManifestPath);
+    validateInstallationBundle($bundleManifest, $bundleManifestPath);
+
+    $applyScriptPath = $bundleDir . DIRECTORY_SEPARATOR . 'apply-installation.sh';
+    $verifyScriptPath = $bundleDir . DIRECTORY_SEPARATOR . 'verify-installation.sh';
+    $executorManifestPath = $bundleDir . DIRECTORY_SEPARATOR . 'installation-executor.json';
+    $executorReadmePath = $bundleDir . DIRECTORY_SEPARATOR . 'INSTALLATION_EXECUTOR_README.txt';
+
+    if (file_put_contents($applyScriptPath, normalizeLf(buildApplyScript($plan))) === false) {
+        throw new ValidationError(sprintf('No se pudo escribir %s', $applyScriptPath));
+    }
+
+    if (file_put_contents($verifyScriptPath, normalizeLf(buildVerificationScript($plan))) === false) {
+        throw new ValidationError(sprintf('No se pudo escribir %s', $verifyScriptPath));
+    }
+
+    if (file_put_contents($executorReadmePath, normalizeLf(buildExecutorReadme($plan))) === false) {
+        throw new ValidationError(sprintf('No se pudo escribir %s', $executorReadmePath));
+    }
+
+    @chmod($applyScriptPath, 0755);
+    @chmod($verifyScriptPath, 0755);
+
+    writeJsonFile($executorManifestPath, createExecutorManifest($plan));
+    writeJsonFile($bundleManifestPath, mergeExecutorArtifacts($bundleManifest));
+
+    printJson([
+        'status' => 'ok',
+        'bundle_dir' => $bundleDir,
+        'plan' => $planPath,
+        'apply_script' => $applyScriptPath,
+        'verify_script' => $verifyScriptPath,
+        'executor_manifest' => $executorManifestPath,
+    ]);
+    exit(0);
+} catch (ValidationError $exception) {
+    fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));
+    exit(1);
+}
