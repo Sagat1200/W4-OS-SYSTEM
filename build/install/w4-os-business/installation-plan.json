@@ -5,14 +5,15 @@
     "profile_name": "W4 OS Business",
     "base_manifest_id": "w4-linux-base",
     "installation_profile": {
-        "id": "w4-os-business-vm-empty-disk",
-        "name": "W4 OS Business VM Empty Disk",
+        "id": "w4-os-business-vm-empty-disk-dev-sda",
+        "name": "W4 OS Business VM Empty Disk (\/dev\/sda)",
         "edition": "business"
     },
     "plan_binding": {
         "selector": {
             "serial": "hyperv-vm-disk-business-001",
-            "wwid": "wwid-hyperv-vm-disk-business-001"
+            "wwid": "wwid-hyperv-vm-disk-business-001",
+            "by_path": "pci-0000:00:07.0-scsi-0:0:0:0"
         },
         "selected_disk": {
             "device": "\/dev\/sda",

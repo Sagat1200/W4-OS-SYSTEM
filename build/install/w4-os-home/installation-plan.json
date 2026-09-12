@@ -5,14 +5,15 @@
     "profile_name": "W4 OS Home",
     "base_manifest_id": "w4-linux-base",
     "installation_profile": {
-        "id": "w4-os-home-vm-empty-disk",
-        "name": "W4 OS Home VM Empty Disk",
+        "id": "w4-os-home-vm-empty-disk-dev-sda",
+        "name": "W4 OS Home VM Empty Disk (\/dev\/sda)",
         "edition": "home"
     },
     "plan_binding": {
         "selector": {
             "serial": "hyperv-vm-disk-home-001",
-            "wwid": "wwid-hyperv-vm-disk-home-001"
+            "wwid": "wwid-hyperv-vm-disk-home-001",
+            "by_path": "pci-0000:00:07.0-scsi-0:0:0:0"
         },
         "selected_disk": {
             "device": "\/dev\/sda",

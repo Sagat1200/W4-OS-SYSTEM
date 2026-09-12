@@ -2,16 +2,18 @@
     "installation_bundle_schema_version": 1,
     "kind": "installation-bundle",
     "profile_id": "w4-os-home",
-    "installation_profile_id": "w4-os-home-vm-empty-disk",
+    "installation_profile_id": "w4-os-home-vm-empty-disk-dev-sda",
     "inventory_id": "hyperv-home-empty-disk",
     "plan_kind": "installation-plan",
     "generated_artifacts": [
+        "CHECK_ONLY_PREPARATION.txt",
         "INSTALLATION_EXECUTOR_README.txt",
         "INSTALLATION_SUMMARY.txt",
         "apply-installation.sh",
         "disk-inventory.json",
         "installation-executor.json",
         "installation-plan.json",
+        "installation-profile.derived.json",
         "installation-profile.json",
         "verify-installation.sh"
     ]
