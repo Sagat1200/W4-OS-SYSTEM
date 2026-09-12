@@ -11,19 +11,18 @@
     },
     "plan_binding": {
         "selector": {
-            "serial": "hyperv-vm-disk-home-001",
-            "wwid": "wwid-hyperv-vm-disk-home-001",
-            "by_path": "pci-0000:00:07.0-scsi-0:0:0:0"
+            "wwid": "0x6002248099080de9321158c4eb060873",
+            "by_path": "acpi-MFST1000:00-scsi-0:0:0:0"
         },
         "selected_disk": {
             "device": "\/dev\/sda",
-            "serial": "hyperv-vm-disk-home-001",
-            "wwid": "wwid-hyperv-vm-disk-home-001",
-            "by_path": "pci-0000:00:07.0-scsi-0:0:0:0",
-            "size_bytes": 68719476736
+            "serial": "",
+            "wwid": "0x6002248099080de9321158c4eb060873",
+            "by_path": "acpi-MFST1000:00-scsi-0:0:0:0",
+            "size_bytes": 21474836480
         },
         "expected_state": "empty",
-        "binding_hash": "67397b7b0543b7e279eceb6bd3c2043e89623c868c46191cdd94993bc70da1a2",
+        "binding_hash": "3868864baa071c27649f06519704a0215225491227d8a1bb3138fd294c6b3351",
         "revalidate_before_write": true
     },
     "identity": {
@@ -66,7 +65,7 @@
             {
                 "number": 3,
                 "role": "root-crypt",
-                "size_bytes": 66018344960,
+                "size_bytes": 18773704704,
                 "container": "luks2",
                 "label": "W4-CRYPTROOT"
             }
@@ -126,10 +125,10 @@
     "summary": {
         "edition": "home",
         "disk_device": "\/dev\/sda",
-        "disk_size_bytes": 68719476736,
+        "disk_size_bytes": 21474836480,
         "destructive": true,
         "expected_state": "empty",
-        "encrypted_root_bytes": 66018344960,
+        "encrypted_root_bytes": 18773704704,
         "subvolume_count": 5,
         "requires_post_install_validation": [
             "efi-entry",

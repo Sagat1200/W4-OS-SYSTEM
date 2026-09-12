@@ -7,9 +7,8 @@
     "build_profile_id": "w4-os-home",
     "target": {
         "disk_selector": {
-            "serial": "hyperv-vm-disk-home-001",
-            "wwid": "wwid-hyperv-vm-disk-home-001",
-            "by_path": "pci-0000:00:07.0-scsi-0:0:0:0"
+            "wwid": "0x6002248099080de9321158c4eb060873",
+            "by_path": "acpi-MFST1000:00-scsi-0:0:0:0"
         },
         "expected_state": "empty",
         "confirm_destroy": true
@@ -73,7 +72,7 @@
     "notes": [
         "Perfil MVP para VM vacia en Hyper-V.",
         "No admite redimensionamiento ni preservacion de particiones en esta fase.",
-        "Perfil reorientado automaticamente desde el inventario hyperv-home-empty-disk.",
+        "Perfil reorientado automaticamente desde el inventario hyperv-live-home.",
         "Disco objetivo detectado: \/dev\/sda."
     ]
 }

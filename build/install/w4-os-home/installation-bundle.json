@@ -3,7 +3,7 @@
     "kind": "installation-bundle",
     "profile_id": "w4-os-home",
     "installation_profile_id": "w4-os-home-vm-empty-disk-dev-sda",
-    "inventory_id": "hyperv-home-empty-disk",
+    "inventory_id": "hyperv-live-home",
     "plan_kind": "installation-plan",
     "generated_artifacts": [
         "CHECK_ONLY_PREPARATION.txt",

@@ -120,6 +120,7 @@ Cuando exista conflicto, prevalece siempre:
 - Todo inventario real de discos usado por la fase de instalacion debe conservar evidencia de solo lectura, firmas detectadas y, cuando exista, al menos un identificador estable reutilizable por el selector unattended; si el entorno no expone esa identidad, el plan destructivo debe bloquearse y volver a recolectarse desde la sesion live objetivo.
 - Todo ejecutor privilegiado generado para instalacion debe arrancar en modo `check-only` por defecto, exigir secretos por archivo externo y declarar de forma explicita la fuente del sistema a desplegar antes de permitir escritura en disco.
 - Todo bundle preparado desde inventario real debe conservar tanto el perfil base como un perfil derivado con el selector efectivo del disco objetivo, para que la evidencia de deteccion y la evidencia de ejecucion sigan siendo auditables por separado.
+- Toda prueba `check-only` del instalador sobre la ISO live debe tolerar entornos minimos sin `wipefs` o `blkid`, degradando la deteccion de firmas a `lsblk` y ausencia de particiones; una corrida destructiva real sigue requiriendo utilidades suficientes para revalidar y materializar el layout completo.
 
 ## Regla de bloqueo
 

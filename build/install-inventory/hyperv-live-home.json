@@ -1,0 +1,30 @@
+{
+  "inventory_schema_version": 1,
+  "kind": "disk-inventory",
+  "id": "hyperv-live-home",
+  "generated_by": "manual-live-capture",
+  "disks": [
+    {
+      "device": "/dev/sda",
+      "serial": null,
+      "wwid": "0x6002248099080de9321158c4eb060873",
+      "by_path": "acpi-MFST1000:00-scsi-0:0:0:0",
+      "size_bytes": 21474836480,
+      "is_installation_media": false,
+      "has_partitions": false,
+      "has_filesystem_signatures": false,
+      "read_only": false
+    },
+    {
+      "device": "/dev/sr0",
+      "serial": "scsi-1d4534654202020207305e3437703544694957d7ced624a7d",
+      "wwid": null,
+      "by_path": "acpi-MFST1000:00-scsi-0:0:0:1",
+      "size_bytes": 579186688,
+      "is_installation_media": true,
+      "has_partitions": true,
+      "has_filesystem_signatures": true,
+      "read_only": true
+    }
+  ]
+}
