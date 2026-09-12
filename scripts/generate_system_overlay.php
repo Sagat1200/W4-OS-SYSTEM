@@ -132,6 +132,26 @@ TXT);
 /**
  * @param array<string, string> $vars
  */
+function buildIssue(array $vars): string
+{
+    return str_replace(["\r\n", "\r"], "\n", <<<TXT
+{$vars['profile_name']} \n \l
+TXT);
+}
+
+/**
+ * @param array<string, string> $vars
+ */
+function buildIssueNet(array $vars): string
+{
+    return str_replace(["\r\n", "\r"], "\n", <<<TXT
+{$vars['profile_name']}
+TXT);
+}
+
+/**
+ * @param array<string, string> $vars
+ */
 function buildHosts(array $vars): string
 {
     return str_replace(["\r\n", "\r"], "\n", <<<TXT
@@ -368,6 +388,8 @@ chown root:root "${ROOTFS_DIR}" "${ROOTFS_DIR}/etc" "${ROOTFS_DIR}/usr" "${ROOTF
 chown -R root:root \
   "${ROOTFS_DIR}/etc/hostname" \
   "${ROOTFS_DIR}/etc/hosts" \
+  "${ROOTFS_DIR}/etc/issue" \
+  "${ROOTFS_DIR}/etc/issue.net" \
   "${ROOTFS_DIR}/etc/motd" \
   "${ROOTFS_DIR}/etc/w4" \
   "${ROOTFS_DIR}/etc/default" \
@@ -410,6 +432,8 @@ function buildOverlayFiles(array $buildInput, array $vars): array
     return [
         'files/etc/hostname' => $vars['hostname'] . "\n",
         'files/etc/hosts' => buildHosts($vars) . "\n",
+        'files/etc/issue' => buildIssue($vars) . "\n",
+        'files/etc/issue.net' => buildIssueNet($vars) . "\n",
         'files/etc/motd' => buildMotd($vars) . "\n",
         'files/etc/default/w4-live' => sprintf("W4_LIVE_USER=%s\nW4_LIVE_HOSTNAME=%s\n", $vars['live_user'], $vars['live_hostname']),
         'files/etc/w4/profile.env' => buildProfileEnv($vars, $features) . "\n",

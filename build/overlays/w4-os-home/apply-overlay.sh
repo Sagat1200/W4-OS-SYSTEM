@@ -22,6 +22,8 @@ chown root:root "${ROOTFS_DIR}" "${ROOTFS_DIR}/etc" "${ROOTFS_DIR}/usr" "${ROOTF
 chown -R root:root \
   "${ROOTFS_DIR}/etc/hostname" \
   "${ROOTFS_DIR}/etc/hosts" \
+  "${ROOTFS_DIR}/etc/issue" \
+  "${ROOTFS_DIR}/etc/issue.net" \
   "${ROOTFS_DIR}/etc/motd" \
   "${ROOTFS_DIR}/etc/w4" \
   "${ROOTFS_DIR}/etc/default" \

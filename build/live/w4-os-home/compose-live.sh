@@ -65,6 +65,53 @@ normalize_debian_sources_keyring() {
   fi
 }
 
+refresh_apt_indices() {
+  local rootfs_dir="${1}"
+  local attempt=1
+  local max_attempts=3
+
+  while (( attempt <= max_attempts )); do
+    echo "==> apt-get update (intento ${attempt}/${max_attempts})"
+    chroot "${rootfs_dir}" env DEBIAN_FRONTEND=noninteractive apt-get clean
+    rm -rf "${rootfs_dir}/var/lib/apt/lists/"*
+    mkdir -p "${rootfs_dir}/var/lib/apt/lists/partial"
+
+    if chroot "${rootfs_dir}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 update; then
+      return 0
+    fi
+
+    attempt=$((attempt + 1))
+  done
+
+  echo "ERROR: apt-get update fallo despues de varios intentos." >&2
+  exit 1
+}
+
+install_live_stack() {
+  local rootfs_dir="${1}"
+  local attempt=1
+  local max_attempts=3
+
+  refresh_apt_indices "${rootfs_dir}"
+
+  while (( attempt <= max_attempts )); do
+    echo "==> apt-get install live-boot/live-config (intento ${attempt}/${max_attempts})"
+    chroot "${rootfs_dir}" env DEBIAN_FRONTEND=noninteractive apt-get clean
+    rm -f "${rootfs_dir}/var/cache/apt/archives/"*.deb
+    mkdir -p "${rootfs_dir}/var/cache/apt/archives/partial"
+
+    if chroot "${rootfs_dir}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 install -y live-boot live-config; then
+      return 0
+    fi
+
+    refresh_apt_indices "${rootfs_dir}"
+    attempt=$((attempt + 1))
+  done
+
+  echo "ERROR: la instalacion de live-boot/live-config fallo despues de varios intentos." >&2
+  exit 1
+}
+
 cleanup() {
   umount -lf "${WORK_ROOTFS}/proc" 2>/dev/null || true
   umount -lf "${WORK_ROOTFS}/sys" 2>/dev/null || true
@@ -191,8 +238,7 @@ if [[ "${PREPARE_LIVE_STACK}" == "1" ]]; then
   mount -t proc proc "${WORK_ROOTFS}/proc"
   mount -t sysfs sysfs "${WORK_ROOTFS}/sys"
 
-  chroot "${WORK_ROOTFS}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 update
-  chroot "${WORK_ROOTFS}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 install -y live-boot live-config
+  install_live_stack "${WORK_ROOTFS}"
 fi
 
 echo "==> Ajustando identidad live y estado de primer arranque"

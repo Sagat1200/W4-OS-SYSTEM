@@ -25,6 +25,8 @@
     "generated_files": [
         "files\/etc\/hostname",
         "files\/etc\/hosts",
+        "files\/etc\/issue",
+        "files\/etc\/issue.net",
         "files\/etc\/motd",
         "files\/etc\/default\/w4-live",
         "files\/etc\/w4\/profile.env",

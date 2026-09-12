@@ -114,6 +114,7 @@ Cuando exista conflicto, prevalece siempre:
 - Todo rootfs o bundle live basado en Debian debe incluir un keyring OpenPGP compatible con APT y `sqv`, evitando depender de keyboxes del host o de rutas `signed-by` no reproducibles.
 - Toda composicion pesada en WSL debe ejecutarse preferentemente sobre almacenamiento nativo Linux y sincronizar el resultado final al workspace solo al cierre del proceso.
 - Toda imagen live debe limpiar marcadores de primer arranque persistentes antes de generar `filesystem.squashfs` y exponer branding coherente en `/etc/os-release`.
+- Toda validacion UEFI en Hyper-V debe registrar explicitamente si la ISO arranca con Secure Boot activado o requiere desactivarlo; por ahora las ISOs W4 se validan con Secure Boot desactivado.
 
 ## Regla de bloqueo
 
