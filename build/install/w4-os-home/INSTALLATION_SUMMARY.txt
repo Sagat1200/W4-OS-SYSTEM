@@ -1,0 +1,16 @@
+W4 OS Installation Summary
+
+Perfil: W4 OS Home
+Destino: /dev/sda (64.00 GiB)
+Layout: GPT + ESP + /boot + LUKS2 + Btrfs
+Usuario inicial: w4
+Hostname: w4-home-vm
+Resumen destructivo: si
+Espacio estimado para root cifrada: 61.48 GiB
+
+Subvolumenes declarados:
+- @ -> /
+- @home -> /home
+- @log -> /var/log
+- @cache -> /var/cache
+- @data -> /var/lib/w4

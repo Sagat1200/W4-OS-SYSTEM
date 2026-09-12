@@ -1,0 +1,145 @@
+{
+    "installation_plan_schema_version": 1,
+    "kind": "installation-plan",
+    "profile_id": "w4-os-home",
+    "profile_name": "W4 OS Home",
+    "base_manifest_id": "w4-linux-base",
+    "installation_profile": {
+        "id": "w4-os-home-vm-empty-disk",
+        "name": "W4 OS Home VM Empty Disk",
+        "edition": "home"
+    },
+    "plan_binding": {
+        "selector": {
+            "serial": "hyperv-vm-disk-home-001",
+            "wwid": "wwid-hyperv-vm-disk-home-001"
+        },
+        "selected_disk": {
+            "device": "\/dev\/sda",
+            "serial": "hyperv-vm-disk-home-001",
+            "wwid": "wwid-hyperv-vm-disk-home-001",
+            "by_path": "pci-0000:00:07.0-scsi-0:0:0:0",
+            "size_bytes": 68719476736
+        },
+        "expected_state": "empty",
+        "binding_hash": "67397b7b0543b7e279eceb6bd3c2043e89623c868c46191cdd94993bc70da1a2",
+        "revalidate_before_write": true
+    },
+    "identity": {
+        "locale": "es_DO.UTF-8",
+        "keyboard": "latam",
+        "hostname": "w4-home-vm",
+        "user": {
+            "username": "w4",
+            "display_name": "W4 User",
+            "password_source": "secret:\/\/install\/local-user-password"
+        }
+    },
+    "security": {
+        "encryption": {
+            "enabled": true,
+            "type": "luks2-passphrase",
+            "passphrase_source": "secret:\/\/install\/disk-passphrase"
+        }
+    },
+    "storage": {
+        "table": "gpt",
+        "wipe_strategy": "full-disk-for-empty-target",
+        "partitions": [
+            {
+                "number": 1,
+                "role": "esp",
+                "size_bytes": 536870912,
+                "filesystem": "vfat",
+                "label": "W4-ESP",
+                "mountpoint": "\/boot\/efi"
+            },
+            {
+                "number": 2,
+                "role": "boot",
+                "size_bytes": 2147483648,
+                "filesystem": "ext4",
+                "label": "W4-BOOT",
+                "mountpoint": "\/boot"
+            },
+            {
+                "number": 3,
+                "role": "root-crypt",
+                "size_bytes": 66018344960,
+                "container": "luks2",
+                "label": "W4-CRYPTROOT"
+            }
+        ],
+        "encryption": {
+            "type": "luks2-passphrase",
+            "mapping_name": "cryptroot",
+            "passphrase_source": "secret:\/\/install\/disk-passphrase"
+        },
+        "btrfs": {
+            "label": "W4-SYSTEM",
+            "mount_options": [
+                "compress=zstd",
+                "noatime"
+            ],
+            "subvolumes": [
+                {
+                    "name": "@",
+                    "mountpoint": "\/"
+                },
+                {
+                    "name": "@home",
+                    "mountpoint": "\/home"
+                },
+                {
+                    "name": "@log",
+                    "mountpoint": "\/var\/log"
+                },
+                {
+                    "name": "@cache",
+                    "mountpoint": "\/var\/cache"
+                },
+                {
+                    "name": "@data",
+                    "mountpoint": "\/var\/lib\/w4"
+                }
+            ]
+        }
+    },
+    "execution": {
+        "engine": "debian-compatible-mvp",
+        "stages": [
+            "revalidate-disk",
+            "partition-gpt",
+            "format-esp",
+            "format-boot",
+            "open-luks-root",
+            "create-btrfs",
+            "create-subvolumes",
+            "mount-layout",
+            "bootstrap-system",
+            "install-bootloader",
+            "write-fstab-and-crypttab",
+            "verify-first-boot"
+        ]
+    },
+    "summary": {
+        "edition": "home",
+        "disk_device": "\/dev\/sda",
+        "disk_size_bytes": 68719476736,
+        "destructive": true,
+        "expected_state": "empty",
+        "encrypted_root_bytes": 66018344960,
+        "subvolume_count": 5,
+        "requires_post_install_validation": [
+            "efi-entry",
+            "cryptroot-unlock",
+            "btrfs-mounts",
+            "first-boot"
+        ]
+    },
+    "notes": [
+        "Este plan es destructivo y esta limitado a discos vacios.",
+        "La ejecucion real debe revalidar el binding_hash antes de escribir en disco.",
+        "El perfil unattended versiona solo referencias a secretos; no material secreto persistido."
+    ]
+}

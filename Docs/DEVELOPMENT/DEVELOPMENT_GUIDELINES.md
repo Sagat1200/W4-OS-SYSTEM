@@ -115,6 +115,8 @@ Cuando exista conflicto, prevalece siempre:
 - Toda composicion pesada en WSL debe ejecutarse preferentemente sobre almacenamiento nativo Linux y sincronizar el resultado final al workspace solo al cierre del proceso.
 - Toda imagen live debe limpiar marcadores de primer arranque persistentes antes de generar `filesystem.squashfs` y exponer branding coherente en `/etc/os-release`.
 - Toda validacion UEFI en Hyper-V debe registrar explicitamente si la ISO arranca con Secure Boot activado o requiere desactivarlo; por ahora las ISOs W4 se validan con Secure Boot desactivado.
+- Todo perfil de instalacion unattended debe usar un selector de disco estable e inequívoco, referenciar secretos por origen externo en vez de persistirlos y revalidar el destino justo antes de escribir en disco.
+- Mientras no exista un ejecutor privilegiado validado, el MVP de instalacion solo puede generar y probar planes declarativos para discos vacios; redimensionamiento, preservacion y ejecucion destructiva quedan fuera de alcance.
 
 ## Regla de bloqueo
 

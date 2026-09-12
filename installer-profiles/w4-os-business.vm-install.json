@@ -1,0 +1,76 @@
+{
+  "installation_schema_version": 1,
+  "kind": "installation-profile",
+  "id": "w4-os-business-vm-empty-disk",
+  "name": "W4 OS Business VM Empty Disk",
+  "edition": "business",
+  "build_profile_id": "w4-os-business",
+  "target": {
+    "disk_selector": {
+      "serial": "hyperv-vm-disk-business-001",
+      "wwid": "wwid-hyperv-vm-disk-business-001"
+    },
+    "expected_state": "empty",
+    "confirm_destroy": true
+  },
+  "storage": {
+    "table": "gpt",
+    "layout": "btrfs-luks2",
+    "esp": {
+      "size_mib": 512
+    },
+    "boot": {
+      "size_mib": 2048
+    },
+    "root": {
+      "luks_name": "cryptroot",
+      "subvolumes": [
+        {
+          "name": "@",
+          "mountpoint": "/"
+        },
+        {
+          "name": "@home",
+          "mountpoint": "/home"
+        },
+        {
+          "name": "@log",
+          "mountpoint": "/var/log"
+        },
+        {
+          "name": "@cache",
+          "mountpoint": "/var/cache"
+        },
+        {
+          "name": "@inventory",
+          "mountpoint": "/var/lib/w4"
+        }
+      ]
+    }
+  },
+  "identity": {
+    "locale": "es_DO.UTF-8",
+    "keyboard": "latam",
+    "hostname": "w4-business-vm",
+    "account": {
+      "username": "w4admin",
+      "display_name": "W4 Administrator",
+      "password_source": "secret://install/business-local-password"
+    }
+  },
+  "security": {
+    "encryption": {
+      "enabled": true,
+      "type": "luks2-passphrase",
+      "passphrase_source": "secret://install/business-disk-passphrase"
+    }
+  },
+  "installer": {
+    "engine": "debian-compatible-mvp",
+    "revalidate_before_write": true
+  },
+  "notes": [
+    "Perfil MVP para VM vacia en Hyper-V.",
+    "Prepara una base Business, pero no implementa aun enrollment ni politicas remotas."
+  ]
+}

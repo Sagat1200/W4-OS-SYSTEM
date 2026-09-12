@@ -1,0 +1,14 @@
+{
+    "installation_bundle_schema_version": 1,
+    "kind": "installation-bundle",
+    "profile_id": "w4-os-home",
+    "installation_profile_id": "w4-os-home-vm-empty-disk",
+    "inventory_id": "hyperv-home-empty-disk",
+    "plan_kind": "installation-plan",
+    "generated_artifacts": [
+        "installation-profile.json",
+        "disk-inventory.json",
+        "installation-plan.json",
+        "INSTALLATION_SUMMARY.txt"
+    ]
+}
