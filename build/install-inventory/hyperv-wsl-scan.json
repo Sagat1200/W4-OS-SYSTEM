@@ -1,0 +1,66 @@
+{
+    "inventory_schema_version": 1,
+    "kind": "disk-inventory",
+    "id": "hyperv-wsl-scan",
+    "generated_by": "generate_disk_inventory.php",
+    "generated_at": "2026-09-12T06:07:22+00:00",
+    "host": "Ubuntu",
+    "disks": [
+        {
+            "device": "\/dev\/sda",
+            "serial": null,
+            "wwid": null,
+            "by_path": null,
+            "size_bytes": 374251520,
+            "is_installation_media": false,
+            "has_partitions": false,
+            "has_filesystem_signatures": true,
+            "model": "Virtual Disk    ",
+            "transport": "",
+            "read_only": true,
+            "removable": false
+        },
+        {
+            "device": "\/dev\/sdb",
+            "serial": null,
+            "wwid": null,
+            "by_path": null,
+            "size_bytes": 167149568,
+            "is_installation_media": false,
+            "has_partitions": false,
+            "has_filesystem_signatures": true,
+            "model": "Virtual Disk    ",
+            "transport": "",
+            "read_only": true,
+            "removable": false
+        },
+        {
+            "device": "\/dev\/sdc",
+            "serial": null,
+            "wwid": null,
+            "by_path": null,
+            "size_bytes": 4294971392,
+            "is_installation_media": false,
+            "has_partitions": false,
+            "has_filesystem_signatures": true,
+            "model": "Virtual Disk    ",
+            "transport": "",
+            "read_only": false,
+            "removable": false
+        },
+        {
+            "device": "\/dev\/sdd",
+            "serial": null,
+            "wwid": null,
+            "by_path": null,
+            "size_bytes": 274877906944,
+            "is_installation_media": false,
+            "has_partitions": false,
+            "has_filesystem_signatures": true,
+            "model": "Virtual Disk    ",
+            "transport": "",
+            "read_only": false,
+            "removable": false
+        }
+    ]
+}

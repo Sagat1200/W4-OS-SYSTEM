@@ -117,6 +117,7 @@ Cuando exista conflicto, prevalece siempre:
 - Toda validacion UEFI en Hyper-V debe registrar explicitamente si la ISO arranca con Secure Boot activado o requiere desactivarlo; por ahora las ISOs W4 se validan con Secure Boot desactivado.
 - Todo perfil de instalacion unattended debe usar un selector de disco estable e inequívoco, referenciar secretos por origen externo en vez de persistirlos y revalidar el destino justo antes de escribir en disco.
 - Mientras no exista un ejecutor privilegiado validado, el MVP de instalacion solo puede generar y probar planes declarativos para discos vacios; redimensionamiento, preservacion y ejecucion destructiva quedan fuera de alcance.
+- Todo inventario real de discos usado por la fase de instalacion debe conservar evidencia de solo lectura, firmas detectadas y, cuando exista, al menos un identificador estable reutilizable por el selector unattended; si el entorno no expone esa identidad, el plan destructivo debe bloquearse y volver a recolectarse desde la sesion live objetivo.
 
 ## Regla de bloqueo
 
