@@ -11,19 +11,18 @@
     },
     "plan_binding": {
         "selector": {
-            "serial": "hyperv-vm-disk-business-001",
-            "wwid": "wwid-hyperv-vm-disk-business-001",
-            "by_path": "pci-0000:00:07.0-scsi-0:0:0:0"
+            "serial": "VBOX_HARDDISK_VBf47232ae-1187d276",
+            "by_path": "pci-0000:00:0d.0-ata-1.0"
         },
         "selected_disk": {
             "device": "\/dev\/sda",
-            "serial": "hyperv-vm-disk-business-001",
-            "wwid": "wwid-hyperv-vm-disk-business-001",
-            "by_path": "pci-0000:00:07.0-scsi-0:0:0:0",
-            "size_bytes": 68719476736
+            "serial": "VBOX_HARDDISK_VBf47232ae-1187d276",
+            "wwid": "",
+            "by_path": "pci-0000:00:0d.0-ata-1.0",
+            "size_bytes": 34184129536
         },
         "expected_state": "empty",
-        "binding_hash": "5d5ca3dcdaecd1dc44b5084b1c1701007f88f5c816aa893d23a902f0e962bd54",
+        "binding_hash": "e5823f1b9f3e7f039ba22bd6300d8e5cd5c5c1ed90b7d2ad3abb00f53dab3c35",
         "revalidate_before_write": true
     },
     "identity": {
@@ -66,7 +65,7 @@
             {
                 "number": 3,
                 "role": "root-crypt",
-                "size_bytes": 66018344960,
+                "size_bytes": 31482997760,
                 "container": "luks2",
                 "label": "W4-CRYPTROOT"
             }
@@ -126,10 +125,10 @@
     "summary": {
         "edition": "business",
         "disk_device": "\/dev\/sda",
-        "disk_size_bytes": 68719476736,
+        "disk_size_bytes": 34184129536,
         "destructive": true,
         "expected_state": "empty",
-        "encrypted_root_bytes": 66018344960,
+        "encrypted_root_bytes": 31482997760,
         "subvolume_count": 5,
         "requires_post_install_validation": [
             "efi-entry",

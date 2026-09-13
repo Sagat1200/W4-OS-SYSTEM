@@ -5,10 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLAN_JSON="${SCRIPT_DIR}/installation-plan.json"
 PROFILE_NAME='W4 OS Business'
 TARGET_DISK='/dev/sda'
-EXPECTED_SERIAL='hyperv-vm-disk-business-001'
-EXPECTED_WWID='wwid-hyperv-vm-disk-business-001'
-EXPECTED_BY_PATH='pci-0000:00:07.0-scsi-0:0:0:0'
-EXPECTED_SIZE_BYTES='68719476736'
+EXPECTED_SERIAL='VBOX_HARDDISK_VBf47232ae-1187d276'
+EXPECTED_WWID=''
+EXPECTED_BY_PATH='pci-0000:00:0d.0-ata-1.0'
+EXPECTED_SIZE_BYTES='34184129536'
 HOSTNAME_VALUE='w4-business-vm'
 LOCALE_VALUE='es_DO.UTF-8'
 KEYBOARD_VALUE='latam'
@@ -36,6 +36,10 @@ log() {
   echo "[w4-install] $*"
 }
 
+warn() {
+  echo "WARN: $*" >&2
+}
+
 fail() {
   echo "ERROR: $*" >&2
   exit 1
@@ -45,6 +49,10 @@ require_command() {
   if ! command -v "${1}" >/dev/null 2>&1; then
     fail "falta el comando requerido: ${1}"
   fi
+}
+
+has_command() {
+  command -v "${1}" >/dev/null 2>&1
 }
 
 part_path() {
@@ -68,11 +76,13 @@ udev_value() {
 
 assert_selector() {
   local device="${1}"
-  local current_serial current_wwid current_by_path current_size
+  local current_serial current_serial_short current_serial_full current_wwid current_by_path current_size
 
-  current_serial="$(udev_value "${device}" "ID_SERIAL_SHORT")"
+  current_serial_short="$(udev_value "${device}" "ID_SERIAL_SHORT")"
+  current_serial_full="$(udev_value "${device}" "ID_SERIAL")"
+  current_serial="${current_serial_short}"
   if [[ -z "${current_serial}" ]]; then
-    current_serial="$(udev_value "${device}" "ID_SERIAL")"
+    current_serial="${current_serial_full}"
   fi
 
   current_wwid="$(udev_value "${device}" "ID_WWN")"
@@ -83,7 +93,10 @@ assert_selector() {
   current_by_path="$(udev_value "${device}" "ID_PATH")"
   current_size="$(lsblk -bndo SIZE "${device}")"
 
-  if [[ -n "${EXPECTED_SERIAL}" && "${EXPECTED_SERIAL}" != "${current_serial}" ]]; then
+  if [[ -n "${EXPECTED_SERIAL}" \
+    && "${EXPECTED_SERIAL}" != "${current_serial}" \
+    && "${EXPECTED_SERIAL}" != "${current_serial_short}" \
+    && "${EXPECTED_SERIAL}" != "${current_serial_full}" ]]; then
     fail "el disco ya no coincide con el serial esperado"
   fi
 
@@ -100,6 +113,34 @@ assert_selector() {
   fi
 }
 
+disk_has_signatures() {
+  local device="${1}"
+  local fstype
+
+  if has_command wipefs; then
+    if wipefs -n "${device}" 2>/dev/null | tail -n +2 | grep -q .; then
+      return 0
+    fi
+
+    return 1
+  fi
+
+  if has_command blkid; then
+    if blkid "${device}" >/dev/null 2>&1; then
+      return 0
+    fi
+
+    return 1
+  fi
+
+  fstype="$(lsblk -dn -o FSTYPE "${device}" 2>/dev/null | tr -d '[:space:]')"
+  if [[ -n "${fstype}" ]]; then
+    return 0
+  fi
+
+  return 1
+}
+
 assert_empty_target() {
   local device="${1}"
   local ro
@@ -113,8 +154,12 @@ assert_empty_target() {
     fail "el disco seleccionado ya contiene particiones"
   fi
 
-  if wipefs -n "${device}" 2>/dev/null | tail -n +2 | grep -q .; then
+  if disk_has_signatures "${device}"; then
     fail "el disco seleccionado contiene firmas de filesystem"
+  fi
+
+  if [[ "${EXECUTE_MODE}" != "1" ]] && ! has_command wipefs && ! has_command blkid; then
+    warn "sin wipefs ni blkid; la validacion check-only se apoyo en lsblk/FSTYPE y ausencia de particiones"
   fi
 }
 
@@ -202,7 +247,7 @@ Para ejecutar de verdad:
 EOF
 }
 
-for cmd in lsblk udevadm wipefs sgdisk partprobe blkid mkfs.vfat mkfs.ext4 cryptsetup mkfs.btrfs rsync mount umount chroot awk grep sed; do
+for cmd in lsblk udevadm awk grep sed tr tail; do
   require_command "${cmd}"
 done
 
@@ -216,6 +261,10 @@ if [[ "${EXECUTE_MODE}" != "1" ]]; then
   exit 0
 fi
 
+for cmd in sgdisk partprobe blkid mkfs.vfat mkfs.ext4 cryptsetup mkfs.btrfs rsync mount umount chroot awk grep sed; do
+  require_command "${cmd}"
+done
+
 [[ -n "${DISK_PASSPHRASE_FILE}" && -f "${DISK_PASSPHRASE_FILE}" ]] || fail "debe indicar W4_DISK_PASSPHRASE_FILE"
 [[ -n "${LOCAL_USER_PASSWORD_FILE}" && -f "${LOCAL_USER_PASSWORD_FILE}" ]] || fail "debe indicar W4_LOCAL_USER_PASSWORD_FILE"
 
@@ -228,7 +277,11 @@ ROOT_PART="$(part_path "${TARGET_DISK}" 3)"
 
 log "Aplicando esquema GPT en ${TARGET_DISK}"
 sgdisk --zap-all "${TARGET_DISK}"
-wipefs -af "${TARGET_DISK}"
+if has_command wipefs; then
+  wipefs -af "${TARGET_DISK}"
+else
+  warn "wipefs no esta disponible; se continua con sgdisk y recreacion completa del layout"
+fi
 sgdisk -og "${TARGET_DISK}"
 sgdisk -n 1:1MiB:+"${ESP_SIZE_MIB}"MiB -t 1:ef00 -c 1:"${ESP_LABEL}" "${TARGET_DISK}"
 sgdisk -n 2:0:+"${BOOT_SIZE_MIB}"MiB -t 2:8300 -c 2:"${BOOT_LABEL}" "${TARGET_DISK}"

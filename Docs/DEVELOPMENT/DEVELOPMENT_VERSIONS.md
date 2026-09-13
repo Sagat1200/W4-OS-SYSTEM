@@ -24,7 +24,7 @@ Mantener trazabilidad entre:
 | --- | --- | --- | --- | --- |
 | DOC | DOC-0.2 | 2026-09-09 | Activa | Base de gestion creada y README introductorio inicial publicado |
 | PLAN | PLAN-0.1 | 2026-09-09 | Activa | Ruta ejecutiva inicial para V1 basada en la coleccion W4 OS |
-| TECH | TECH-1.10 | 2026-09-13 | Activa | `Check-only` corregido para aceptar `ID_SERIAL` e `ID_SERIAL_SHORT` en VirtualBox y bundle de Home regenerado para reintento real |
+| TECH | TECH-1.11 | 2026-09-13 | Activa | Inventario real de VirtualBox materializado para Business y bundle listo para validar `check-only` con selector estable sobre `/dev/sda` |
 | REL | REL-0.0 | 2026-09-09 | Base | Sin candidato de release registrado |
 
 ## Historial
@@ -54,6 +54,7 @@ Mantener trazabilidad entre:
 | 2026-09-12 | TECH | TECH-1.8 | Adaptacion de `check-only` a la ISO live minima y captura real de Hyper-V | El ejecutor ahora permite validar el binding del disco en modo `check-only` aunque la ISO live no incluya `wipefs` ni `blkid`, degradando la verificacion de firmas a `lsblk` y ausencia de particiones. Ademas, el repo ya conserva un inventario real manual de Hyper-V para Home con `/dev/sda` como destino y `/dev/sr0` como medio live, listo para regenerar el bundle con el selector efectivo de esa VM | `scripts/generate_installation_executor.php`, `build/install-inventory/hyperv-live-home.json`, evidencia de consola Hyper-V Home |
 | 2026-09-12 | TECH | TECH-1.9 | Captura real de VirtualBox y reorientacion del flujo `check-only` | La validacion en VirtualBox confirmo un entorno live mas operable para la fase de instalacion y proporciono un selector estable reutilizable para `/dev/sda` mediante `ID_SERIAL` e `ID_PATH`. El repo ya conserva ese inventario real manual de Home, listo para regenerar el bundle derivado y ejecutar la validacion `check-only` sobre la VM de VirtualBox | `build/install-inventory/virtualbox-live-home.json`, evidencia de consola VirtualBox Home |
 | 2026-09-13 | TECH | TECH-1.10 | Correccion del selector serial tras la primera prueba `check-only` real | La primera corrida `check-only` desde la VM de VirtualBox alcanzo la validacion real del disco pero revelo una incompatibilidad entre `ID_SERIAL` e `ID_SERIAL_SHORT`. El generador del ejecutor fue corregido para aceptar ambos formatos, y el bundle de Home fue regenerado para repetir la prueba sin cambiar el selector estable del inventario | `scripts/generate_installation_executor.php`, `build/install/w4-os-home/apply-installation.sh`, evidencia de `check-only` fallando con serial en VirtualBox |
+| 2026-09-13 | TECH | TECH-1.11 | Captura real de VirtualBox para Business | La validacion en VirtualBox para Business confirmo un entorno live operable y proporciono un selector estable reutilizable para `/dev/sda` mediante `ID_SERIAL` e `ID_PATH`. El repo ya conserva ese inventario real manual de Business, listo para regenerar el bundle derivado y ejecutar la validacion `check-only` sobre la VM de VirtualBox | `build/install-inventory/virtualbox-live-business.json`, evidencia de consola VirtualBox Business |
 
 ## Regla de versionado
 

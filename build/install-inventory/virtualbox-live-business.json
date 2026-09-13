@@ -1,0 +1,30 @@
+{
+  "inventory_schema_version": 1,
+  "kind": "disk-inventory",
+  "id": "virtualbox-live-business",
+  "generated_by": "manual-live-capture",
+  "disks": [
+    {
+      "device": "/dev/sda",
+      "serial": "VBOX_HARDDISK_VBf47232ae-1187d276",
+      "wwid": null,
+      "by_path": "pci-0000:00:0d.0-ata-1.0",
+      "size_bytes": 34184129536,
+      "is_installation_media": false,
+      "has_partitions": false,
+      "has_filesystem_signatures": false,
+      "read_only": false
+    },
+    {
+      "device": "/dev/sr0",
+      "serial": "VBOX_CD-ROM_VB0-01f003f6",
+      "wwid": null,
+      "by_path": null,
+      "size_bytes": 323069952,
+      "is_installation_media": true,
+      "has_partitions": true,
+      "has_filesystem_signatures": true,
+      "read_only": true
+    }
+  ]
+}

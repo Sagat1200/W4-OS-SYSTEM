@@ -7,9 +7,8 @@
     "build_profile_id": "w4-os-business",
     "target": {
         "disk_selector": {
-            "serial": "hyperv-vm-disk-business-001",
-            "wwid": "wwid-hyperv-vm-disk-business-001",
-            "by_path": "pci-0000:00:07.0-scsi-0:0:0:0"
+            "serial": "VBOX_HARDDISK_VBf47232ae-1187d276",
+            "by_path": "pci-0000:00:0d.0-ata-1.0"
         },
         "expected_state": "empty",
         "confirm_destroy": true
@@ -73,7 +72,7 @@
     "notes": [
         "Perfil MVP para VM vacia en Hyper-V.",
         "Prepara una base Business, pero no implementa aun enrollment ni politicas remotas.",
-        "Perfil reorientado automaticamente desde el inventario hyperv-business-empty-disk.",
+        "Perfil reorientado automaticamente desde el inventario virtualbox-live-business.",
         "Disco objetivo detectado: \/dev\/sda."
     ]
 }

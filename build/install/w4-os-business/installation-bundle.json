@@ -3,7 +3,7 @@
     "kind": "installation-bundle",
     "profile_id": "w4-os-business",
     "installation_profile_id": "w4-os-business-vm-empty-disk-dev-sda",
-    "inventory_id": "hyperv-business-empty-disk",
+    "inventory_id": "virtualbox-live-business",
     "plan_kind": "installation-plan",
     "generated_artifacts": [
         "CHECK_ONLY_PREPARATION.txt",

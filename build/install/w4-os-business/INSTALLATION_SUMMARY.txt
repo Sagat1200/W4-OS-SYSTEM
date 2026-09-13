@@ -1,12 +1,12 @@
 W4 OS Installation Summary
 
 Perfil: W4 OS Business
-Destino: /dev/sda (64.00 GiB)
+Destino: /dev/sda (31.84 GiB)
 Layout: GPT + ESP + /boot + LUKS2 + Btrfs
 Usuario inicial: w4admin
 Hostname: w4-business-vm
 Resumen destructivo: si
-Espacio estimado para root cifrada: 61.48 GiB
+Espacio estimado para root cifrada: 29.32 GiB
 
 Subvolumenes declarados:
 - @ -> /
