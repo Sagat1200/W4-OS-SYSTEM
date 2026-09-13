@@ -11,18 +11,18 @@
     },
     "plan_binding": {
         "selector": {
-            "wwid": "0x6002248099080de9321158c4eb060873",
-            "by_path": "acpi-MFST1000:00-scsi-0:0:0:0"
+            "serial": "VBOX_HARDDISK_VB85d286f4-23d1ffff",
+            "by_path": "pci-0000:00:0d.0-ata-1.0"
         },
         "selected_disk": {
             "device": "\/dev\/sda",
-            "serial": "",
-            "wwid": "0x6002248099080de9321158c4eb060873",
-            "by_path": "acpi-MFST1000:00-scsi-0:0:0:0",
-            "size_bytes": 21474836480
+            "serial": "VBOX_HARDDISK_VB85d286f4-23d1ffff",
+            "wwid": "",
+            "by_path": "pci-0000:00:0d.0-ata-1.0",
+            "size_bytes": 35218731520
         },
         "expected_state": "empty",
-        "binding_hash": "3868864baa071c27649f06519704a0215225491227d8a1bb3138fd294c6b3351",
+        "binding_hash": "9e3d1757c737f407ea6cf458ce1036cc34d907325ce119ad7c571de125a72955",
         "revalidate_before_write": true
     },
     "identity": {
@@ -65,7 +65,7 @@
             {
                 "number": 3,
                 "role": "root-crypt",
-                "size_bytes": 18773704704,
+                "size_bytes": 32517599744,
                 "container": "luks2",
                 "label": "W4-CRYPTROOT"
             }
@@ -125,10 +125,10 @@
     "summary": {
         "edition": "home",
         "disk_device": "\/dev\/sda",
-        "disk_size_bytes": 21474836480,
+        "disk_size_bytes": 35218731520,
         "destructive": true,
         "expected_state": "empty",
-        "encrypted_root_bytes": 18773704704,
+        "encrypted_root_bytes": 32517599744,
         "subvolume_count": 5,
         "requires_post_install_validation": [
             "efi-entry",

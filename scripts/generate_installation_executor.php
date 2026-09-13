@@ -265,11 +265,13 @@ udev_value() {
 
 assert_selector() {
   local device="${1}"
-  local current_serial current_wwid current_by_path current_size
+  local current_serial current_serial_short current_serial_full current_wwid current_by_path current_size
 
-  current_serial="$(udev_value "${device}" "ID_SERIAL_SHORT")"
+  current_serial_short="$(udev_value "${device}" "ID_SERIAL_SHORT")"
+  current_serial_full="$(udev_value "${device}" "ID_SERIAL")"
+  current_serial="${current_serial_short}"
   if [[ -z "${current_serial}" ]]; then
-    current_serial="$(udev_value "${device}" "ID_SERIAL")"
+    current_serial="${current_serial_full}"
   fi
 
   current_wwid="$(udev_value "${device}" "ID_WWN")"
@@ -280,7 +282,10 @@ assert_selector() {
   current_by_path="$(udev_value "${device}" "ID_PATH")"
   current_size="$(lsblk -bndo SIZE "${device}")"
 
-  if [[ -n "${EXPECTED_SERIAL}" && "${EXPECTED_SERIAL}" != "${current_serial}" ]]; then
+  if [[ -n "${EXPECTED_SERIAL}" \
+    && "${EXPECTED_SERIAL}" != "${current_serial}" \
+    && "${EXPECTED_SERIAL}" != "${current_serial_short}" \
+    && "${EXPECTED_SERIAL}" != "${current_serial_full}" ]]; then
     fail "el disco ya no coincide con el serial esperado"
   fi
 

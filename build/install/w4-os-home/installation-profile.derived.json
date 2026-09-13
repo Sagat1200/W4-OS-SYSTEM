@@ -7,8 +7,8 @@
     "build_profile_id": "w4-os-home",
     "target": {
         "disk_selector": {
-            "wwid": "0x6002248099080de9321158c4eb060873",
-            "by_path": "acpi-MFST1000:00-scsi-0:0:0:0"
+            "serial": "VBOX_HARDDISK_VB85d286f4-23d1ffff",
+            "by_path": "pci-0000:00:0d.0-ata-1.0"
         },
         "expected_state": "empty",
         "confirm_destroy": true
@@ -72,7 +72,7 @@
     "notes": [
         "Perfil MVP para VM vacia en Hyper-V.",
         "No admite redimensionamiento ni preservacion de particiones en esta fase.",
-        "Perfil reorientado automaticamente desde el inventario hyperv-live-home.",
+        "Perfil reorientado automaticamente desde el inventario virtualbox-live-home.",
         "Disco objetivo detectado: \/dev\/sda."
     ]
 }

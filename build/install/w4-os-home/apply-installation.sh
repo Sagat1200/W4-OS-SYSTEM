@@ -5,10 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLAN_JSON="${SCRIPT_DIR}/installation-plan.json"
 PROFILE_NAME='W4 OS Home'
 TARGET_DISK='/dev/sda'
-EXPECTED_SERIAL=''
-EXPECTED_WWID='0x6002248099080de9321158c4eb060873'
-EXPECTED_BY_PATH='acpi-MFST1000:00-scsi-0:0:0:0'
-EXPECTED_SIZE_BYTES='21474836480'
+EXPECTED_SERIAL='VBOX_HARDDISK_VB85d286f4-23d1ffff'
+EXPECTED_WWID=''
+EXPECTED_BY_PATH='pci-0000:00:0d.0-ata-1.0'
+EXPECTED_SIZE_BYTES='35218731520'
 HOSTNAME_VALUE='w4-home-vm'
 LOCALE_VALUE='es_DO.UTF-8'
 KEYBOARD_VALUE='latam'
@@ -76,11 +76,13 @@ udev_value() {
 
 assert_selector() {
   local device="${1}"
-  local current_serial current_wwid current_by_path current_size
+  local current_serial current_serial_short current_serial_full current_wwid current_by_path current_size
 
-  current_serial="$(udev_value "${device}" "ID_SERIAL_SHORT")"
+  current_serial_short="$(udev_value "${device}" "ID_SERIAL_SHORT")"
+  current_serial_full="$(udev_value "${device}" "ID_SERIAL")"
+  current_serial="${current_serial_short}"
   if [[ -z "${current_serial}" ]]; then
-    current_serial="$(udev_value "${device}" "ID_SERIAL")"
+    current_serial="${current_serial_full}"
   fi
 
   current_wwid="$(udev_value "${device}" "ID_WWN")"
@@ -91,7 +93,10 @@ assert_selector() {
   current_by_path="$(udev_value "${device}" "ID_PATH")"
   current_size="$(lsblk -bndo SIZE "${device}")"
 
-  if [[ -n "${EXPECTED_SERIAL}" && "${EXPECTED_SERIAL}" != "${current_serial}" ]]; then
+  if [[ -n "${EXPECTED_SERIAL}" \
+    && "${EXPECTED_SERIAL}" != "${current_serial}" \
+    && "${EXPECTED_SERIAL}" != "${current_serial_short}" \
+    && "${EXPECTED_SERIAL}" != "${current_serial_full}" ]]; then
     fail "el disco ya no coincide con el serial esperado"
   fi
 
