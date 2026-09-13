@@ -27,5 +27,6 @@
 6- Ejecuta el comando sudo apt update para actualizar el repositorio de paquetes.
 7- Ejecuta el comando sudo apt install -y openssh-server para instalar el servidor SSH
 8- Levanta el servidor ssh ejecutando el comando sudo systemctl enable --now ssh
-9- En la terminal PowerShell ejecuta el comando ssh tu_usuario@TU_DIRECCION_IP para conectarte a la maquina virtual VB.
-10- Ingresa la contraseña para poder conectarte desde power shell a la maquina virtual.
+9- Ejecuta el comando ip addr para obtener la dirección IP de la maquina virtual VB.
+10- En la terminal PowerShell ejecuta el comando ssh tu_usuario@TU_DIRECCION_IP para conectarte a la maquina virtual VB.
+11- Ingresa la contraseña para poder conectarte desde power shell a la maquina virtual.
