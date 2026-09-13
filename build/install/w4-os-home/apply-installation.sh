@@ -9,6 +9,7 @@ EXPECTED_SERIAL='VBOX_HARDDISK_VB85d286f4-23d1ffff'
 EXPECTED_WWID=''
 EXPECTED_BY_PATH='pci-0000:00:0d.0-ata-1.0'
 EXPECTED_SIZE_BYTES='35218731520'
+SIZE_TOLERANCE_BYTES='1048576'
 HOSTNAME_VALUE='w4-home-vm'
 LOCALE_VALUE='es_DO.UTF-8'
 KEYBOARD_VALUE='latam'
@@ -76,7 +77,7 @@ udev_value() {
 
 assert_selector() {
   local device="${1}"
-  local current_serial current_serial_short current_serial_full current_wwid current_by_path current_size
+  local current_serial current_serial_short current_serial_full current_wwid current_by_path current_size size_delta
 
   current_serial_short="$(udev_value "${device}" "ID_SERIAL_SHORT")"
   current_serial_full="$(udev_value "${device}" "ID_SERIAL")"
@@ -91,7 +92,7 @@ assert_selector() {
   fi
 
   current_by_path="$(udev_value "${device}" "ID_PATH")"
-  current_size="$(lsblk -bndo SIZE "${device}")"
+  current_size="$(lsblk -bndo SIZE "${device}" | tr -d '[:space:]')"
 
   if [[ -n "${EXPECTED_SERIAL}" \
     && "${EXPECTED_SERIAL}" != "${current_serial}" \
@@ -108,7 +109,16 @@ assert_selector() {
     fail "el disco ya no coincide con el path esperado"
   fi
 
-  if [[ "${EXPECTED_SIZE_BYTES}" != "${current_size}" ]]; then
+  if [[ -z "${current_size}" || ! "${current_size}" =~ ^[0-9]+$ ]]; then
+    fail "no se pudo determinar el tamaño actual del disco"
+  fi
+
+  size_delta=$(( EXPECTED_SIZE_BYTES - current_size ))
+  if (( size_delta < 0 )); then
+    size_delta=$(( -size_delta ))
+  fi
+
+  if (( size_delta > SIZE_TOLERANCE_BYTES )); then
     fail "el disco ya no coincide con el tamaño esperado"
   fi
 }
