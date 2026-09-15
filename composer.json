@@ -23,7 +23,8 @@
         "scripts/generate_build_input.php",
         "scripts/generate_installation_plan.php",
         "scripts/generate_installation_executor.php",
-        "scripts/prepare_installation_bundle.php"
+        "scripts/prepare_installation_bundle.php",
+        "scripts/prepare_installation_runtime.php"
     ],
     "scripts": {
         "test": "phpunit"

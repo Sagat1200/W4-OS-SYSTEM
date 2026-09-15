@@ -1,0 +1,21 @@
+W4 OS Installation Runtime
+
+Perfil: W4 OS Business
+Disco objetivo: /dev/sda
+Fuente detectada: squashfs
+Ruta de fuente: C:\W4\Packages\W4-OS SYSTEM\build\live-output\w4-os-business\image-root\live\filesystem.squashfs
+Deteccion automatica: si
+Secretos efimeros generados: si
+
+Archivos runtime:
+- install.env
+- run-check-only.sh
+- run-installation.sh
+- disk-passphrase.txt.template
+- local-user-password.txt.template
+
+Uso recomendado en la sesion live:
+1. Revise install.env y confirme la fuente W4_INSTALL_SOURCE_SQUASHFS.
+2. Si no se generaron secretos, cree disk-passphrase.txt y local-user-password.txt a partir de los templates.
+3. Ejecute bash run-check-only.sh para una validacion final.
+4. Ejecute bash run-installation.sh solo cuando quiera escribir en disco.

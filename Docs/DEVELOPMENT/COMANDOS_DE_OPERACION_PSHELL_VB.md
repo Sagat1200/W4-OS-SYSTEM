@@ -30,3 +30,39 @@
 9- Ejecuta el comando ip addr para obtener la dirección IP de la maquina virtual VB.
 10- En la terminal PowerShell ejecuta el comando ssh tu_usuario@TU_DIRECCION_IP para conectarte a la maquina virtual VB.
 11- Ingresa la contraseña para poder conectarte desde power shell a la maquina virtual.
+
+## Flujo de instalacion W4 OS en VirtualBox
+
+### Home por NAT con port forwarding 2222
+
+```powershell
+ssh -p 2222 w4live@127.0.0.1
+scp -P 2222 "c:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-home\apply-installation.sh" "w4live@127.0.0.1:/home/w4live/w4/apply-installation.sh"
+scp -P 2222 "c:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-home\installation-plan.json" "w4live@127.0.0.1:/home/w4live/w4/installation-plan.json"
+scp -P 2222 -r "c:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-home\runtime" "w4live@127.0.0.1:/home/w4live/w4/runtime"
+```
+
+Dentro de la VM:
+
+```bash
+cd ~/w4/runtime
+bash run-check-only.sh
+bash run-installation.sh
+```
+
+### Business por NAT con port forwarding 2223
+
+```powershell
+ssh -p 2223 w4live@127.0.0.1
+scp -P 2223 "c:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-business\apply-installation.sh" "w4live@127.0.0.1:/home/w4live/w4/apply-installation.sh"
+scp -P 2223 "c:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-business\installation-plan.json" "w4live@127.0.0.1:/home/w4live/w4/installation-plan.json"
+scp -P 2223 -r "c:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-business\runtime" "w4live@127.0.0.1:/home/w4live/w4/runtime"
+```
+
+Dentro de la VM:
+
+```bash
+cd ~/w4/runtime
+bash run-check-only.sh
+bash run-installation.sh
+```

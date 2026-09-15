@@ -1,0 +1,24 @@
+{
+    "installation_runtime_schema_version": 1,
+    "kind": "installation-runtime",
+    "profile_id": "w4-os-business",
+    "bundle_dir": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\install\\w4-os-business",
+    "runtime_dir": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\install\\w4-os-business\\runtime",
+    "selected_disk": "\/dev\/sda",
+    "source": {
+        "type": "squashfs",
+        "path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\live-output\\w4-os-business\\image-root\\live\\filesystem.squashfs",
+        "auto_detected": true
+    },
+    "generated_secrets": {
+        "enabled": true,
+        "files": [
+            "disk-passphrase.txt",
+            "local-user-password.txt"
+        ]
+    },
+    "commands": {
+        "check_only": "bash run-check-only.sh",
+        "install": "bash run-installation.sh"
+    }
+}
