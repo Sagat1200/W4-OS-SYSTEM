@@ -125,6 +125,7 @@ Cuando exista conflicto, prevalece siempre:
 - Toda logica PHP reutilizable del sistema de build, instalacion y automatizacion debe residir en `src/` bajo namespace `W4\\OS\\...` y quedar alineada con `composer.json`; los archivos en `scripts/` deben actuar como entrypoints delgados compatibles con Composer y no como ubicacion primaria de librerias compartidas.
 - Todo cambio relevante en clases bajo `src/` debe ir acompañado por pruebas PHPUnit en `tests/` y ejecutarse con `composer test` o `vendor/bin/phpunit` como parte de la verificacion local del ciclo.
 - Toda preparacion de ejecucion destructiva del instalador debe materializarse en `build/install/<perfil>/runtime/` mediante tooling versionado, con fuente del sistema explicitada en `install.env`, runners separados para `check-only` y ejecucion real, y secretos efimeros (`disk-passphrase.txt`, `local-user-password.txt`) fuera del seguimiento de Git.
+- Toda transferencia del instalador hacia una VM live debe generarse como un payload autocontenido en `build/install-transfer/<perfil>/`, reescribiendo `runtime/install.env` para rutas internas del paquete y evitando declarar secretos que no hayan sido copiados efectivamente.
 
 ## Regla de bloqueo
 

@@ -36,16 +36,15 @@
 ### Home por NAT con port forwarding 2222
 
 ```powershell
+php .\scripts\prepare_installation_transfer.php --profile w4-os-home
 ssh -p 2222 w4live@127.0.0.1
-scp -P 2222 "c:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-home\apply-installation.sh" "w4live@127.0.0.1:/home/w4live/w4/apply-installation.sh"
-scp -P 2222 "c:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-home\installation-plan.json" "w4live@127.0.0.1:/home/w4live/w4/installation-plan.json"
-scp -P 2222 -r "c:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-home\runtime" "w4live@127.0.0.1:/home/w4live/w4/runtime"
+scp -P 2222 -r "c:\W4\Packages\W4-OS SYSTEM\build\install-transfer\w4-os-home" "w4live@127.0.0.1:/home/w4live/w4-transfer"
 ```
 
 Dentro de la VM:
 
 ```bash
-cd ~/w4/runtime
+cd ~/w4-transfer/runtime
 bash run-check-only.sh
 bash run-installation.sh
 ```
@@ -53,16 +52,15 @@ bash run-installation.sh
 ### Business por NAT con port forwarding 2223
 
 ```powershell
+php .\scripts\prepare_installation_transfer.php --profile w4-os-business
 ssh -p 2223 w4live@127.0.0.1
-scp -P 2223 "c:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-business\apply-installation.sh" "w4live@127.0.0.1:/home/w4live/w4/apply-installation.sh"
-scp -P 2223 "c:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-business\installation-plan.json" "w4live@127.0.0.1:/home/w4live/w4/installation-plan.json"
-scp -P 2223 -r "c:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-business\runtime" "w4live@127.0.0.1:/home/w4live/w4/runtime"
+scp -P 2223 -r "c:\W4\Packages\W4-OS SYSTEM\build\install-transfer\w4-os-business" "w4live@127.0.0.1:/home/w4live/w4-transfer"
 ```
 
 Dentro de la VM:
 
 ```bash
-cd ~/w4/runtime
+cd ~/w4-transfer/runtime
 bash run-check-only.sh
 bash run-installation.sh
 ```
