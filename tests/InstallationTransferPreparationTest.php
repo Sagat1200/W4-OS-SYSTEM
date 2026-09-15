@@ -62,6 +62,11 @@ final class InstallationTransferPreparationTest extends TestCase
         self::assertStringContainsString('# export W4_DISK_PASSPHRASE_FILE="disk-passphrase.txt"', $installEnv);
         self::assertStringContainsString('# export W4_LOCAL_USER_PASSWORD_FILE="local-user-password.txt"', $installEnv);
 
+        $installRunner = file_get_contents($transferDir . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'run-installation.sh');
+        self::assertNotFalse($installRunner);
+        self::assertStringContainsString('ENV_FILE="${SCRIPT_DIR}/install.env"', $installRunner);
+        self::assertStringNotContainsString('\${SCRIPT_DIR}/install.env', $installRunner);
+
         $runtimeManifest = $this->decodeJsonFile($transferDir . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'installation-runtime.json');
         self::assertSame('squashfs', $runtimeManifest['source']['type']);
         self::assertSame('../source/filesystem.squashfs', $runtimeManifest['source']['path']);
@@ -115,6 +120,11 @@ final class InstallationTransferPreparationTest extends TestCase
         self::assertStringContainsString('export W4_INSTALL_SOURCE_ROOTFS="../source/rootfs"', $installEnv);
         self::assertStringContainsString('export W4_DISK_PASSPHRASE_FILE="disk-passphrase.txt"', $installEnv);
         self::assertStringContainsString('export W4_LOCAL_USER_PASSWORD_FILE="local-user-password.txt"', $installEnv);
+
+        $installRunner = file_get_contents($transferDir . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'run-installation.sh');
+        self::assertNotFalse($installRunner);
+        self::assertStringContainsString('ENV_FILE="${SCRIPT_DIR}/install.env"', $installRunner);
+        self::assertStringNotContainsString('\${SCRIPT_DIR}/install.env', $installRunner);
 
         self::assertFileExists($transferDir . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'disk-passphrase.txt');
         self::assertFileExists($transferDir . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'local-user-password.txt');

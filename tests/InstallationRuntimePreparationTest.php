@@ -76,6 +76,11 @@ final class InstallationRuntimePreparationTest extends TestCase
         self::assertFileExists($runtimeDir . DIRECTORY_SEPARATOR . 'RUNTIME_PREPARATION.txt');
         self::assertFileExists($runtimeDir . DIRECTORY_SEPARATOR . 'installation-runtime.json');
 
+        $installRunner = file_get_contents($runtimeDir . DIRECTORY_SEPARATOR . 'run-installation.sh');
+        self::assertNotFalse($installRunner);
+        self::assertStringContainsString('ENV_FILE="${SCRIPT_DIR}/install.env"', $installRunner);
+        self::assertStringNotContainsString('\${SCRIPT_DIR}/install.env', $installRunner);
+
         $bundleManifest = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-bundle.json');
         self::assertContains('runtime/install.env', $bundleManifest['generated_artifacts']);
         self::assertContains('runtime/run-installation.sh', $bundleManifest['generated_artifacts']);

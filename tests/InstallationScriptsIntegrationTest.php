@@ -99,6 +99,9 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('W4_INSTALL_EXECUTE=1', $applyScript);
         self::assertStringContainsString("SIZE_TOLERANCE_BYTES='1048576'", $applyScript);
         self::assertStringContainsString("TARGET_DISK='/dev/sda'", $applyScript);
+        self::assertStringContainsString('mkdir -p "${TARGET_ROOT}/boot/efi"', $applyScript);
+        self::assertStringContainsString('mount "${BOOT_PART}" "${TARGET_ROOT}/boot"', $applyScript);
+        self::assertStringContainsString('mount "${ESP_PART}" "${TARGET_ROOT}/boot/efi"', $applyScript);
 
         $bundleManifest = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-bundle.json');
         self::assertContains('apply-installation.sh', $bundleManifest['generated_artifacts']);

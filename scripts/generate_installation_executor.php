@@ -505,6 +505,7 @@ umount "${STAGING_MOUNT}"
 log "Montando layout destino"
 ensure_directories
 mount -o %ROOT_MOUNT_OPTIONS%,subvol="${ROOT_SUBVOLUME}" "/dev/mapper/${CRYPT_NAME}" "${TARGET_ROOT}"
+mkdir -p "${TARGET_ROOT}/boot/efi"
 %SUBVOLUME_MOUNT_LINES%
 mount "${BOOT_PART}" "${TARGET_ROOT}/boot"
 mount "${ESP_PART}" "${TARGET_ROOT}/boot/efi"

@@ -320,6 +320,7 @@ umount "${STAGING_MOUNT}"
 log "Montando layout destino"
 ensure_directories
 mount -o compress=zstd,noatime,subvol="${ROOT_SUBVOLUME}" "/dev/mapper/${CRYPT_NAME}" "${TARGET_ROOT}"
+mkdir -p "${TARGET_ROOT}/boot/efi"
 mkdir -p "${TARGET_ROOT}/home"
 mount -o compress=zstd,noatime,subvol=@home "/dev/mapper/${CRYPT_NAME}" "${TARGET_ROOT}/home"
 mkdir -p "${TARGET_ROOT}/var/log"
