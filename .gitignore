@@ -1,2 +1,7 @@
 /build/live-output/
 /build/iso-output/
+
+/vendor/
+/.phpunit.cache/
+/.composer-cache/
+/.composer-home/
