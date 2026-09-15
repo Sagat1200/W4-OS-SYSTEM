@@ -123,6 +123,7 @@ Cuando exista conflicto, prevalece siempre:
 - Toda prueba `check-only` del instalador sobre la ISO live debe tolerar entornos minimos sin `wipefs` o `blkid`, degradando la deteccion de firmas a `lsblk` y ausencia de particiones; una corrida destructiva real sigue requiriendo utilidades suficientes para revalidar y materializar el layout completo.
 - Toda revalidacion de tamaño de disco en `check-only` debe normalizar la salida del host y aceptar solo una tolerancia minima de hasta `1 MiB`, manteniendo obligatoria la coincidencia por identificador estable (`serial`, `wwid` o `by_path`) antes de permitir cualquier etapa posterior.
 - Toda logica PHP reutilizable del sistema de build, instalacion y automatizacion debe residir en `src/` bajo namespace `W4\\OS\\...` y quedar alineada con `composer.json`; los archivos en `scripts/` deben actuar como entrypoints delgados compatibles con Composer y no como ubicacion primaria de librerias compartidas.
+- Todo cambio relevante en clases bajo `src/` debe ir acompañado por pruebas PHPUnit en `tests/` y ejecutarse con `composer test` o `vendor/bin/phpunit` como parte de la verificacion local del ciclo.
 
 ## Regla de bloqueo
 

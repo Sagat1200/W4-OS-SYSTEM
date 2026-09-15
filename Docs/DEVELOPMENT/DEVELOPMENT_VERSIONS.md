@@ -24,7 +24,7 @@ Mantener trazabilidad entre:
 | --- | --- | --- | --- | --- |
 | DOC | DOC-0.2 | 2026-09-09 | Activa | Base de gestion creada y README introductorio inicial publicado |
 | PLAN | PLAN-0.1 | 2026-09-09 | Activa | Ruta ejecutiva inicial para V1 basada en la coleccion W4 OS |
-| TECH | TECH-1.13 | 2026-09-15 | Activa | Pipeline PHP reestructurado como paquete Composer: clases reutilizables en `src/`, bootstrap compatible para scripts y entrypoints CLI declarados en `composer.json` |
+| TECH | TECH-1.14 | 2026-09-15 | Activa | PHPUnit instalado y suite inicial agregada para la base Composer, con cobertura sobre manifiestos, instalacion y compatibilidad de autoload |
 | REL | REL-0.0 | 2026-09-09 | Base | Sin candidato de release registrado |
 
 ## Historial
@@ -57,6 +57,7 @@ Mantener trazabilidad entre:
 | 2026-09-13 | TECH | TECH-1.11 | Captura real de VirtualBox para Business | La validacion en VirtualBox para Business confirmo un entorno live operable y proporciono un selector estable reutilizable para `/dev/sda` mediante `ID_SERIAL` e `ID_PATH`. El repo ya conserva ese inventario real manual de Business, listo para regenerar el bundle derivado y ejecutar la validacion `check-only` sobre la VM de VirtualBox | `build/install-inventory/virtualbox-live-business.json`, evidencia de consola VirtualBox Business |
 | 2026-09-13 | TECH | TECH-1.12 | Revalidacion robusta del tamaño de disco en `check-only` | La primera corrida `check-only` de Business detecto un falso negativo al comparar el tamaño del disco con igualdad estricta. El generador del ejecutor ahora normaliza la salida de `lsblk` y acepta una tolerancia minima de `1 MiB`, manteniendo obligatoria la coincidencia por identificador estable; los bundles de Home y Business fueron regenerados con esta correccion | `scripts/generate_installation_executor.php`, `build/install/w4-os-home/apply-installation.sh`, `build/install/w4-os-business/apply-installation.sh` |
 | 2026-09-15 | TECH | TECH-1.13 | Reestructuracion Composer del pipeline PHP | La logica reusable del sistema de build e instalacion ahora vive en `src/` bajo namespace `W4\\OS\\...`, con `composer.json` como contrato del paquete y `scripts/bootstrap.php` como puente de autoload para Composer o fallback local. Los wrappers en `scripts/lib` conservan compatibilidad con los CLI existentes mientras la base de codigo pasa a una estructura de paquete mantenible y testeable | `composer.json`, `src/Manifest/ManifestToolkit.php`, `src/Installer/InstallerToolkit.php`, `src/Support/ValidationError.php`, `src/Support/JsonPrinter.php`, `scripts/bootstrap.php`, `tests/ComposerPackageStructureTest.php` |
+| 2026-09-15 | TECH | TECH-1.14 | Adopcion de PHPUnit para la base Composer | Se instalo PHPUnit mediante Composer con `composer.lock` y `vendor/`, se agrego `phpunit.xml.dist` y se incorporaron pruebas sobre `ManifestToolkit` e `InstallerToolkit` usando fixtures reales del repositorio. La suite ahora cubre autoload PSR-4, resolucion de manifiestos, fusion de paquetes, generacion de planes de instalacion y rechazo de selectores ambiguos | `composer.lock`, `vendor/bin/phpunit`, `phpunit.xml.dist`, `tests/ComposerPackageStructureTest.php`, `tests/ManifestToolkitTest.php`, `tests/InstallerToolkitTest.php` |
 
 ## Regla de versionado
 
