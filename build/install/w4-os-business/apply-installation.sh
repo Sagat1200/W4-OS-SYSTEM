@@ -34,7 +34,7 @@ DISK_PASSPHRASE_FILE="${W4_DISK_PASSPHRASE_FILE:-}"
 LOCAL_USER_PASSWORD_FILE="${W4_LOCAL_USER_PASSWORD_FILE:-}"
 
 log() {
-  echo "[w4-install] $*"
+  echo "[w4-install] $*" >&2
 }
 
 warn() {
@@ -183,6 +183,7 @@ cleanup() {
     "${TARGET_ROOT}/var/log" \
     "${TARGET_ROOT}/var/cache" \
     "${TARGET_ROOT}/var/lib/w4" \
+    "${TARGET_ROOT}/sys/firmware/efi/efivars" \
     "${TARGET_ROOT}/run" \
     "${TARGET_ROOT}/sys" \
     "${TARGET_ROOT}/proc" \
@@ -228,6 +229,11 @@ mount_chroot_support() {
   mount --bind /proc "${TARGET_ROOT}/proc"
   mount --bind /sys "${TARGET_ROOT}/sys"
   mount --bind /run "${TARGET_ROOT}/run"
+
+  if [[ -d /sys/firmware/efi/efivars ]]; then
+    mkdir -p "${TARGET_ROOT}/sys/firmware/efi/efivars"
+    mount --bind /sys/firmware/efi/efivars "${TARGET_ROOT}/sys/firmware/efi/efivars"
+  fi
 }
 
 ensure_directories() {
@@ -320,7 +326,6 @@ umount "${STAGING_MOUNT}"
 log "Montando layout destino"
 ensure_directories
 mount -o compress=zstd,noatime,subvol="${ROOT_SUBVOLUME}" "/dev/mapper/${CRYPT_NAME}" "${TARGET_ROOT}"
-mkdir -p "${TARGET_ROOT}/boot/efi"
 mkdir -p "${TARGET_ROOT}/home"
 mount -o compress=zstd,noatime,subvol=@home "/dev/mapper/${CRYPT_NAME}" "${TARGET_ROOT}/home"
 mkdir -p "${TARGET_ROOT}/var/log"
@@ -329,7 +334,9 @@ mkdir -p "${TARGET_ROOT}/var/cache"
 mount -o compress=zstd,noatime,subvol=@cache "/dev/mapper/${CRYPT_NAME}" "${TARGET_ROOT}/var/cache"
 mkdir -p "${TARGET_ROOT}/var/lib/w4"
 mount -o compress=zstd,noatime,subvol=@inventory "/dev/mapper/${CRYPT_NAME}" "${TARGET_ROOT}/var/lib/w4"
+mkdir -p "${TARGET_ROOT}/boot"
 mount "${BOOT_PART}" "${TARGET_ROOT}/boot"
+mkdir -p "${TARGET_ROOT}/boot/efi"
 mount "${ESP_PART}" "${TARGET_ROOT}/boot/efi"
 
 log "Sincronizando sistema fuente"
@@ -405,9 +412,13 @@ if chroot "${TARGET_ROOT}" command -v locale-gen >/dev/null 2>&1; then
   chroot "${TARGET_ROOT}" locale-gen || true
 fi
 
-if chroot "${TARGET_ROOT}" command -v grub-install >/dev/null 2>&1; then
-  chroot "${TARGET_ROOT}" grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id="W4 OS" --recheck
-fi
+chroot "${TARGET_ROOT}" command -v grub-install >/dev/null 2>&1 || fail "grub-install no esta disponible en el sistema destino"
+log "Instalando GRUB EFI"
+chroot "${TARGET_ROOT}" grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id="W4 OS" --recheck
+log "Instalando ruta UEFI de fallback"
+chroot "${TARGET_ROOT}" grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable --recheck
+
+[[ -e "${TARGET_ROOT}/boot/efi/EFI/BOOT/BOOTX64.EFI" ]] || fail "no se genero la ruta UEFI de fallback BOOTX64.EFI"
 
 if chroot "${TARGET_ROOT}" command -v update-initramfs >/dev/null 2>&1; then
   chroot "${TARGET_ROOT}" update-initramfs -u -k all

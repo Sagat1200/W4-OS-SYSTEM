@@ -40,5 +40,7 @@ grep -q "^${EXPECTED_USER}:" "${TARGET_ROOT}/etc/passwd" || fail "el usuario esp
 test -d "${TARGET_ROOT}/home" || fail "falta /home en el target"
 test -d "${TARGET_ROOT}/boot/efi" || fail "falta /boot/efi en el target"
 test -e "${TARGET_ROOT}/boot" || fail "falta /boot en el target"
+test -f "${TARGET_ROOT}/boot/grub/grub.cfg" || fail "falta /boot/grub/grub.cfg"
+test -e "${TARGET_ROOT}/boot/efi/EFI/BOOT/BOOTX64.EFI" || fail "falta la ruta UEFI de fallback BOOTX64.EFI"
 
 echo "Verificacion local completada para ${TARGET_ROOT}"

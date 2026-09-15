@@ -99,15 +99,36 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('W4_INSTALL_EXECUTE=1', $applyScript);
         self::assertStringContainsString("SIZE_TOLERANCE_BYTES='1048576'", $applyScript);
         self::assertStringContainsString("TARGET_DISK='/dev/sda'", $applyScript);
+        self::assertStringContainsString('echo "[w4-install] $*" >&2', $applyScript);
+        self::assertStringContainsString('mount --bind /sys/firmware/efi/efivars "${TARGET_ROOT}/sys/firmware/efi/efivars"', $applyScript);
+        self::assertStringContainsString('grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id="W4 OS" --recheck', $applyScript);
+        self::assertStringContainsString('grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable --recheck', $applyScript);
+        self::assertStringContainsString('BOOTX64.EFI', $applyScript);
+        self::assertStringContainsString('mkdir -p "${TARGET_ROOT}/boot"', $applyScript);
         self::assertStringContainsString('mkdir -p "${TARGET_ROOT}/boot/efi"', $applyScript);
         self::assertStringContainsString('mount "${BOOT_PART}" "${TARGET_ROOT}/boot"', $applyScript);
         self::assertStringContainsString('mount "${ESP_PART}" "${TARGET_ROOT}/boot/efi"', $applyScript);
+        $bootMkdirPosition = strpos($applyScript, 'mkdir -p "${TARGET_ROOT}/boot"');
+        $bootMountPosition = strpos($applyScript, 'mount "${BOOT_PART}" "${TARGET_ROOT}/boot"');
+        $efiMkdirPosition = strpos($applyScript, 'mkdir -p "${TARGET_ROOT}/boot/efi"');
+        $efiMountPosition = strpos($applyScript, 'mount "${ESP_PART}" "${TARGET_ROOT}/boot/efi"');
+        self::assertIsInt($bootMkdirPosition);
+        self::assertIsInt($bootMountPosition);
+        self::assertIsInt($efiMkdirPosition);
+        self::assertIsInt($efiMountPosition);
+        self::assertLessThan($bootMountPosition, $bootMkdirPosition);
+        self::assertLessThan($efiMountPosition, $efiMkdirPosition);
 
         $bundleManifest = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-bundle.json');
         self::assertContains('apply-installation.sh', $bundleManifest['generated_artifacts']);
         self::assertContains('verify-installation.sh', $bundleManifest['generated_artifacts']);
         self::assertContains('installation-executor.json', $bundleManifest['generated_artifacts']);
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'INSTALLATION_EXECUTOR_README.txt');
+
+        $verifyScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'verify-installation.sh');
+        self::assertNotFalse($verifyScript);
+        self::assertStringContainsString('falta /boot/grub/grub.cfg', $verifyScript);
+        self::assertStringContainsString('falta la ruta UEFI de fallback BOOTX64.EFI', $verifyScript);
     }
 
     /**
