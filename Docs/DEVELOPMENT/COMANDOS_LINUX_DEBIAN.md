@@ -1,6 +1,17 @@
 
 # Comandos de Terminal Linux Debian
 
+## Comandos Basicos
+
+| Comando | Función | Ejemplo |
+| --- | --- | --- |
+| `ls` | Muestra archivos y directorios | `ls` |
+| `cd` | Cambia de directorio | `cd /home/w4` |
+| `mkdir` | Crea directorios | `mkdir /home/w4/Documentos` |
+| `rm` | Elimina archivos | `rm /home/w4/Documentos/Archivo.txt` |
+| `mv` | Mueve archivos y directorios | `mv /home/w4/Documentos/Archivo.txt /home/w4/Documentos/Archivo2.txt` |
+| `cp` | Copia archivos y directorios | `cp /home/w4/Documentos/Archivo.txt /home/w4/Documentos/Archivo3.txt` |
+
 ## Comandos de gestion de paquetes
 
 | Comando | Función | Ejemplo |
@@ -73,3 +84,17 @@
 | `iptables` | Configura firewall | `iptables -L` |
 | `iptables -A` | Agrega regla de firewall | `iptables -A INPUT -s 192.168.1.100 -j DROP` |
 | `iptables -D` | Elimina regla de firewall | `iptables -D INPUT 1` |
+
+## Gestion de Usuarios y Permisos
+
+| Comando | Función | Ejemplo |
+| --- | --- | --- |
+| `useradd` | Crea usuarios usuario | `useradd w4` |
+| `userdel` | Elimina usuarios | `userdel w4` |
+| `passwd` | Cambia contraseña de usuarios | `passwd w4` |
+| `usermod` | Modifica configuración de usuarios | `usermod -s /bin/bash w4` |
+| `usermod -a` | Agrega usuario a un grupo | `usermod -aG sudo w4` |
+| `usermod -G` | Modifica grupos de usuarios | `usermod -G sudo w4` |
+| `usermod -u` | Modifica UID de usuarios | `usermod -u 1000 w4` |
+| `usermod -g` | Modifica GID de usuarios | `usermod -g 1000 w4` |
+| `usermod -s` | Modifica shell de usuarios | `usermod -s /bin/bash w4` |
