@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ValidationError;
+use JsonException;
+
 require_once __DIR__ . '/lib/InstallerToolkit.php';
 
 $rootDir = dirname(__DIR__);
@@ -434,6 +437,8 @@ chroot_has_command() {
 ensure_kernel_boot_artifacts() {
   local preferred_kernel_package=""
   local kernel_package_names=()
+  local kernel_versions=()
+  local kernel_version=""
 
   if compgen -G "${TARGET_ROOT}/boot/vmlinuz-*" >/dev/null 2>&1 \
     && compgen -G "${TARGET_ROOT}/boot/initrd.img-*" >/dev/null 2>&1; then
@@ -472,6 +477,24 @@ ensure_kernel_boot_artifacts() {
 
   if ! compgen -G "${TARGET_ROOT}/boot/vmlinuz-*" >/dev/null 2>&1; then
     fail "la reinstalacion del kernel no genero vmlinuz en /boot"
+  fi
+
+  if ! compgen -G "${TARGET_ROOT}/boot/initrd.img-*" >/dev/null 2>&1; then
+    chroot_has_command mkinitramfs || fail "la reinstalacion del kernel no genero initrd.img en /boot y mkinitramfs no existe en el sistema destino"
+    mapfile -t kernel_versions < <(
+      find "${TARGET_ROOT}/boot" -maxdepth 1 -type f -name 'vmlinuz-*' -printf '%f\n' | sed 's/^vmlinuz-//' | sort
+    )
+
+    if [[ "${#kernel_versions[@]}" -eq 0 ]]; then
+      fail "no se encontraron versiones de kernel en /boot para regenerar initrd"
+    fi
+
+    for kernel_version in "${kernel_versions[@]}"; do
+      if [[ ! -e "${TARGET_ROOT}/boot/initrd.img-${kernel_version}" ]]; then
+        log "Generando initrd manual para ${kernel_version}"
+        chroot "${TARGET_ROOT}" mkinitramfs -o "/boot/initrd.img-${kernel_version}" "${kernel_version}"
+      fi
+    done
   fi
 
   if ! compgen -G "${TARGET_ROOT}/boot/initrd.img-*" >/dev/null 2>&1; then
@@ -659,7 +682,7 @@ chroot "${TARGET_ROOT}" grub-install --target=x86_64-efi --efi-directory=/boot/e
 [[ -e "${TARGET_ROOT}/boot/efi/EFI/BOOT/BOOTX64.EFI" ]] || fail "no se genero la ruta UEFI de fallback BOOTX64.EFI"
 
 if chroot_has_command update-initramfs; then
-  chroot "${TARGET_ROOT}" update-initramfs -u -k all
+  chroot "${TARGET_ROOT}" update-initramfs -u -k all || warn "update-initramfs devolvio un error; se conserva el initrd ya generado en /boot"
 fi
 
 if chroot_has_command update-grub; then

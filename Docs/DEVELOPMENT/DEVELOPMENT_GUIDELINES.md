@@ -129,6 +129,7 @@ Cuando exista conflicto, prevalece siempre:
 - Toda comprobacion de binarios dentro del sistema destino debe ejecutarse con un shell real dentro del `chroot` (por ejemplo `chroot ... /bin/bash -lc "command -v ..."`) y nunca con `chroot ... command -v`, porque `command` es un builtin del shell y genera falsos negativos en la validacion de dependencias del instalador.
 - Cuando un instalador necesite repoblar `/boot`, debe preferir reinstalar el metapaquete del kernel del perfil (por ejemplo `linux-image-amd64`) y solo recurrir a paquetes `linux-image-*` especificos si el metapaquete no existe; esto evita conflictos entre variantes firmadas y `-unsigned`.
 - El `chroot` del instalador no debe heredar `/run` completo desde la live, porque puede contaminar la deteccion de entorno y desactivar la generacion de `initramfs`; para scripts que necesiten pseudo-terminales o APT dentro del target, montar `devpts` en `${TARGET_ROOT}/dev/pts` es el soporte minimo preferido.
+- Si `update-initramfs` dentro del `chroot` detecta un contexto `live` heredado por `/proc/cmdline` y se desactiva, el instalador debe regenerar los `initrd.img-*` faltantes con `mkinitramfs` directamente y tratar `update-initramfs` posterior como una actualizacion oportunista, no como un punto de fallo obligatorio.
 
 ## Regla de bloqueo
 

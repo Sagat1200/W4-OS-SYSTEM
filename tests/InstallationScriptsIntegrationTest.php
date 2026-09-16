@@ -112,6 +112,10 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString("dpkg-query -W -f='\\\${db:Status-Abbrev} \\\${Package}\\n' 'linux-image-[0-9]*'", $applyScript);
         self::assertStringContainsString("grep -v -- '-unsigned$' || true", $applyScript);
         self::assertStringContainsString('Reinstalando paquetes kernel especificos: ${kernel_package_names[*]}', $applyScript);
+        self::assertStringContainsString('la reinstalacion del kernel no genero initrd.img en /boot y mkinitramfs no existe en el sistema destino', $applyScript);
+        self::assertStringContainsString("find \"\${TARGET_ROOT}/boot\" -maxdepth 1 -type f -name 'vmlinuz-*' -printf '%f\\n' | sed 's/^vmlinuz-//' | sort", $applyScript);
+        self::assertStringContainsString('Generando initrd manual para ${kernel_version}', $applyScript);
+        self::assertStringContainsString('chroot "${TARGET_ROOT}" mkinitramfs -o "/boot/initrd.img-${kernel_version}" "${kernel_version}"', $applyScript);
         self::assertStringContainsString('la reinstalacion del kernel no genero vmlinuz en /boot', $applyScript);
         self::assertStringContainsString('la reinstalacion del kernel no genero initrd.img en /boot', $applyScript);
         self::assertStringContainsString('grub-install no esta disponible; instalando paquetes EFI requeridos', $applyScript);
@@ -119,6 +123,7 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('grub-install sigue sin estar disponible en el sistema destino', $applyScript);
         self::assertStringContainsString('grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id="W4 OS" --recheck', $applyScript);
         self::assertStringContainsString('grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable --recheck', $applyScript);
+        self::assertStringContainsString('update-initramfs devolvio un error; se conserva el initrd ya generado en /boot', $applyScript);
         self::assertStringContainsString('BOOTX64.EFI', $applyScript);
         self::assertStringContainsString('mkdir -p "${TARGET_ROOT}/boot"', $applyScript);
         self::assertStringContainsString('mkdir -p "${TARGET_ROOT}/boot/efi"', $applyScript);
