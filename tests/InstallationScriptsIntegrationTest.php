@@ -101,6 +101,8 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString("TARGET_DISK='/dev/sda'", $applyScript);
         self::assertStringContainsString('echo "[w4-install] $*" >&2', $applyScript);
         self::assertStringContainsString('mount --bind /sys/firmware/efi/efivars "${TARGET_ROOT}/sys/firmware/efi/efivars"', $applyScript);
+        self::assertStringContainsString('chroot_has_command() {', $applyScript);
+        self::assertStringContainsString('chroot "${TARGET_ROOT}" /bin/bash -lc "command -v', $applyScript);
         self::assertStringContainsString('cp -L /etc/resolv.conf "${TARGET_ROOT}/etc/resolv.conf"', $applyScript);
         self::assertStringContainsString('No se encontraron artefactos de kernel en /boot; reinstalando paquetes linux-image', $applyScript);
         self::assertStringContainsString("dpkg-query -W -f='\\\${Package}\\n' 'linux-image*' 2>/dev/null | grep '^linux-image' || true", $applyScript);

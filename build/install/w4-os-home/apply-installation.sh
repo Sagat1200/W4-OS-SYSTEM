@@ -236,6 +236,11 @@ mount_chroot_support() {
   fi
 }
 
+chroot_has_command() {
+  local command_name="${1}"
+  chroot "${TARGET_ROOT}" /bin/bash -lc "command -v '${command_name}' >/dev/null 2>&1"
+}
+
 ensure_kernel_boot_artifacts() {
   if compgen -G "${TARGET_ROOT}/boot/vmlinuz-*" >/dev/null 2>&1 \
     && compgen -G "${TARGET_ROOT}/boot/initrd.img-*" >/dev/null 2>&1; then
@@ -243,7 +248,7 @@ ensure_kernel_boot_artifacts() {
   fi
 
   log "No se encontraron artefactos de kernel en /boot; reinstalando paquetes linux-image"
-  chroot "${TARGET_ROOT}" command -v apt-get >/dev/null 2>&1 || fail "faltan artefactos de kernel en /boot y apt-get no existe en el sistema destino"
+  chroot_has_command apt-get || fail "faltan artefactos de kernel en /boot y apt-get no existe en el sistema destino"
   chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get update || true
 
   mapfile -t kernel_packages < <(
@@ -442,18 +447,18 @@ fi
 LOCAL_USER_PASSWORD="$(cat "${LOCAL_USER_PASSWORD_FILE}")"
 printf '%s:%s\n' "${USERNAME_VALUE}" "${LOCAL_USER_PASSWORD}" | chroot "${TARGET_ROOT}" chpasswd
 
-if chroot "${TARGET_ROOT}" command -v locale-gen >/dev/null 2>&1; then
+if chroot_has_command locale-gen; then
   chroot "${TARGET_ROOT}" locale-gen || true
 fi
 
-if ! chroot "${TARGET_ROOT}" command -v grub-install >/dev/null 2>&1; then
+if ! chroot_has_command grub-install; then
   log "grub-install no esta disponible; instalando paquetes EFI requeridos"
-  chroot "${TARGET_ROOT}" command -v apt-get >/dev/null 2>&1 || fail "grub-install no esta disponible y apt-get tampoco existe en el sistema destino"
+  chroot_has_command apt-get || fail "grub-install no esta disponible y apt-get tampoco existe en el sistema destino"
   chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get update
   chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get install -y grub-efi-amd64 grub-efi-amd64-bin grub2-common shim-signed efibootmgr
 fi
 
-chroot "${TARGET_ROOT}" command -v grub-install >/dev/null 2>&1 || fail "grub-install sigue sin estar disponible en el sistema destino"
+chroot_has_command grub-install || fail "grub-install sigue sin estar disponible en el sistema destino"
 log "Instalando GRUB EFI"
 chroot "${TARGET_ROOT}" grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id="W4 OS" --recheck
 log "Instalando ruta UEFI de fallback"
@@ -461,11 +466,11 @@ chroot "${TARGET_ROOT}" grub-install --target=x86_64-efi --efi-directory=/boot/e
 
 [[ -e "${TARGET_ROOT}/boot/efi/EFI/BOOT/BOOTX64.EFI" ]] || fail "no se genero la ruta UEFI de fallback BOOTX64.EFI"
 
-if chroot "${TARGET_ROOT}" command -v update-initramfs >/dev/null 2>&1; then
+if chroot_has_command update-initramfs; then
   chroot "${TARGET_ROOT}" update-initramfs -u -k all
 fi
 
-if chroot "${TARGET_ROOT}" command -v update-grub >/dev/null 2>&1; then
+if chroot_has_command update-grub; then
   chroot "${TARGET_ROOT}" update-grub
 fi
 

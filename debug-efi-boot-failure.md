@@ -60,3 +60,11 @@
 - Verificaciones finales:
   - `grub.cfg: OK`
   - `BOOTX64.EFI: OK`
+
+### Evidencia adicional
+- La nueva corrida completa con el payload reforzado ya detecta correctamente cuando `/boot` queda sin `vmlinuz/initrd`.
+- El bloqueo actual ocurre en:
+  - `[w4-install] No se encontraron artefactos de kernel en /boot; reinstalando paquetes linux-image`
+  - `ERROR: faltan artefactos de kernel en /boot y apt-get no existe en el sistema destino`
+- Al inspeccionar el script generado, la comprobacion de binarios dentro del `chroot` usa `chroot "${TARGET_ROOT}" command -v ...`, pero `command` es un builtin del shell y no un ejecutable invocable directamente con `chroot`.
+- Esto explica falsos negativos previos tanto para `apt-get` como para `grub-install`.

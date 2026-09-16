@@ -126,6 +126,7 @@ Cuando exista conflicto, prevalece siempre:
 - Todo cambio relevante en clases bajo `src/` debe ir acompañado por pruebas PHPUnit en `tests/` y ejecutarse con `composer test` o `vendor/bin/phpunit` como parte de la verificacion local del ciclo.
 - Toda preparacion de ejecucion destructiva del instalador debe materializarse en `build/install/<perfil>/runtime/` mediante tooling versionado, con fuente del sistema explicitada en `install.env`, runners separados para `check-only` y ejecucion real, y secretos efimeros (`disk-passphrase.txt`, `local-user-password.txt`) fuera del seguimiento de Git.
 - Toda transferencia del instalador hacia una VM live debe generarse como un payload autocontenido en `build/install-transfer/<perfil>/`, reescribiendo `runtime/install.env` para rutas internas del paquete y evitando declarar secretos que no hayan sido copiados efectivamente.
+- Toda comprobacion de binarios dentro del sistema destino debe ejecutarse con un shell real dentro del `chroot` (por ejemplo `chroot ... /bin/bash -lc "command -v ..."`) y nunca con `chroot ... command -v`, porque `command` es un builtin del shell y genera falsos negativos en la validacion de dependencias del instalador.
 
 ## Regla de bloqueo
 
