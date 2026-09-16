@@ -584,7 +584,14 @@ if chroot "${TARGET_ROOT}" command -v locale-gen >/dev/null 2>&1; then
   chroot "${TARGET_ROOT}" locale-gen || true
 fi
 
-chroot "${TARGET_ROOT}" command -v grub-install >/dev/null 2>&1 || fail "grub-install no esta disponible en el sistema destino"
+if ! chroot "${TARGET_ROOT}" command -v grub-install >/dev/null 2>&1; then
+  log "grub-install no esta disponible; instalando paquetes EFI requeridos"
+  chroot "${TARGET_ROOT}" command -v apt-get >/dev/null 2>&1 || fail "grub-install no esta disponible y apt-get tampoco existe en el sistema destino"
+  chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get update
+  chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get install -y grub-efi-amd64 grub-efi-amd64-bin grub2-common shim-signed efibootmgr
+fi
+
+chroot "${TARGET_ROOT}" command -v grub-install >/dev/null 2>&1 || fail "grub-install sigue sin estar disponible en el sistema destino"
 log "Instalando GRUB EFI"
 chroot "${TARGET_ROOT}" grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id="W4 OS" --recheck
 log "Instalando ruta UEFI de fallback"

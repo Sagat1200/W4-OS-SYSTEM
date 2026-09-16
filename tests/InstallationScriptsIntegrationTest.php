@@ -101,6 +101,9 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString("TARGET_DISK='/dev/sda'", $applyScript);
         self::assertStringContainsString('echo "[w4-install] $*" >&2', $applyScript);
         self::assertStringContainsString('mount --bind /sys/firmware/efi/efivars "${TARGET_ROOT}/sys/firmware/efi/efivars"', $applyScript);
+        self::assertStringContainsString('grub-install no esta disponible; instalando paquetes EFI requeridos', $applyScript);
+        self::assertStringContainsString('apt-get install -y grub-efi-amd64 grub-efi-amd64-bin grub2-common shim-signed efibootmgr', $applyScript);
+        self::assertStringContainsString('grub-install sigue sin estar disponible en el sistema destino', $applyScript);
         self::assertStringContainsString('grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id="W4 OS" --recheck', $applyScript);
         self::assertStringContainsString('grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable --recheck', $applyScript);
         self::assertStringContainsString('BOOTX64.EFI', $applyScript);
