@@ -101,11 +101,17 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString("TARGET_DISK='/dev/sda'", $applyScript);
         self::assertStringContainsString('echo "[w4-install] $*" >&2', $applyScript);
         self::assertStringContainsString('mount --bind /sys/firmware/efi/efivars "${TARGET_ROOT}/sys/firmware/efi/efivars"', $applyScript);
+        self::assertStringContainsString('mount --bind /dev/pts "${TARGET_ROOT}/dev/pts"', $applyScript);
+        self::assertStringNotContainsString('mount --bind /run "${TARGET_ROOT}/run"', $applyScript);
         self::assertStringContainsString('chroot_has_command() {', $applyScript);
         self::assertStringContainsString('chroot "${TARGET_ROOT}" /bin/bash -lc "command -v', $applyScript);
         self::assertStringContainsString('cp -L /etc/resolv.conf "${TARGET_ROOT}/etc/resolv.conf"', $applyScript);
         self::assertStringContainsString('No se encontraron artefactos de kernel en /boot; reinstalando paquetes linux-image', $applyScript);
-        self::assertStringContainsString("dpkg-query -W -f='\\\${Package}\\n' 'linux-image*' 2>/dev/null | grep '^linux-image' || true", $applyScript);
+        self::assertStringContainsString('preferred_kernel_package="linux-image-amd64"', $applyScript);
+        self::assertStringContainsString('Reinstalando metapaquete ${preferred_kernel_package}', $applyScript);
+        self::assertStringContainsString("dpkg-query -W -f='\\\${db:Status-Abbrev} \\\${Package}\\n' 'linux-image-[0-9]*'", $applyScript);
+        self::assertStringContainsString("grep -v -- '-unsigned$' || true", $applyScript);
+        self::assertStringContainsString('Reinstalando paquetes kernel especificos: ${kernel_package_names[*]}', $applyScript);
         self::assertStringContainsString('la reinstalacion del kernel no genero vmlinuz en /boot', $applyScript);
         self::assertStringContainsString('la reinstalacion del kernel no genero initrd.img en /boot', $applyScript);
         self::assertStringContainsString('grub-install no esta disponible; instalando paquetes EFI requeridos', $applyScript);

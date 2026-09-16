@@ -373,9 +373,9 @@ cleanup() {
     "${TARGET_ROOT}/var/cache" \
     "${TARGET_ROOT}/var/lib/w4" \
     "${TARGET_ROOT}/sys/firmware/efi/efivars" \
-    "${TARGET_ROOT}/run" \
     "${TARGET_ROOT}/sys" \
     "${TARGET_ROOT}/proc" \
+    "${TARGET_ROOT}/dev/pts" \
     "${TARGET_ROOT}/dev"; do
     if mountpoint -q "${path}"; then
       umount "${path}"
@@ -414,10 +414,11 @@ prepare_source_root() {
 }
 
 mount_chroot_support() {
+  mkdir -p "${TARGET_ROOT}/dev/pts" "${TARGET_ROOT}/run" "${TARGET_ROOT}/run/lock"
   mount --bind /dev "${TARGET_ROOT}/dev"
+  mount --bind /dev/pts "${TARGET_ROOT}/dev/pts"
   mount --bind /proc "${TARGET_ROOT}/proc"
   mount --bind /sys "${TARGET_ROOT}/sys"
-  mount --bind /run "${TARGET_ROOT}/run"
 
   if [[ -d /sys/firmware/efi/efivars ]]; then
     mkdir -p "${TARGET_ROOT}/sys/firmware/efi/efivars"
@@ -431,6 +432,9 @@ chroot_has_command() {
 }
 
 ensure_kernel_boot_artifacts() {
+  local preferred_kernel_package=""
+  local kernel_package_names=()
+
   if compgen -G "${TARGET_ROOT}/boot/vmlinuz-*" >/dev/null 2>&1 \
     && compgen -G "${TARGET_ROOT}/boot/initrd.img-*" >/dev/null 2>&1; then
     return 0
@@ -440,15 +444,31 @@ ensure_kernel_boot_artifacts() {
   chroot_has_command apt-get || fail "faltan artefactos de kernel en /boot y apt-get no existe en el sistema destino"
   chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get update || true
 
-  mapfile -t kernel_packages < <(
-    chroot "${TARGET_ROOT}" bash -lc "dpkg-query -W -f='\${Package}\n' 'linux-image*' 2>/dev/null | grep '^linux-image' || true"
-  )
-
-  if [[ "${#kernel_packages[@]}" -eq 0 ]]; then
-    fail "faltan artefactos de kernel en /boot y no se encontraron paquetes linux-image instalados"
+  if chroot "${TARGET_ROOT}" /bin/bash -lc "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' linux-image-amd64 2>/dev/null | grep '^ii ' >/dev/null 2>&1"; then
+    preferred_kernel_package="linux-image-amd64"
   fi
 
-  chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get install -y --reinstall "${kernel_packages[@]}"
+  if [[ -n "${preferred_kernel_package}" ]]; then
+    log "Reinstalando metapaquete ${preferred_kernel_package}"
+    chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get install -y --reinstall "${preferred_kernel_package}"
+  else
+    mapfile -t kernel_package_names < <(
+      chroot "${TARGET_ROOT}" /bin/bash -lc "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' 'linux-image-[0-9]*' 2>/dev/null | awk '\$1 == \"ii\" { print \$2 }' | grep -v -- '-unsigned$' || true"
+    )
+
+    if [[ "${#kernel_package_names[@]}" -eq 0 ]]; then
+      mapfile -t kernel_package_names < <(
+        chroot "${TARGET_ROOT}" /bin/bash -lc "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' 'linux-image-[0-9]*' 2>/dev/null | awk '\$1 == \"ii\" { print \$2 }' || true"
+      )
+    fi
+
+    if [[ "${#kernel_package_names[@]}" -eq 0 ]]; then
+      fail "faltan artefactos de kernel en /boot y no se encontraron paquetes linux-image instalados"
+    fi
+
+    log "Reinstalando paquetes kernel especificos: ${kernel_package_names[*]}"
+    chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get install -y --reinstall "${kernel_package_names[@]}"
+  fi
 
   if ! compgen -G "${TARGET_ROOT}/boot/vmlinuz-*" >/dev/null 2>&1; then
     fail "la reinstalacion del kernel no genero vmlinuz en /boot"

@@ -127,6 +127,8 @@ Cuando exista conflicto, prevalece siempre:
 - Toda preparacion de ejecucion destructiva del instalador debe materializarse en `build/install/<perfil>/runtime/` mediante tooling versionado, con fuente del sistema explicitada en `install.env`, runners separados para `check-only` y ejecucion real, y secretos efimeros (`disk-passphrase.txt`, `local-user-password.txt`) fuera del seguimiento de Git.
 - Toda transferencia del instalador hacia una VM live debe generarse como un payload autocontenido en `build/install-transfer/<perfil>/`, reescribiendo `runtime/install.env` para rutas internas del paquete y evitando declarar secretos que no hayan sido copiados efectivamente.
 - Toda comprobacion de binarios dentro del sistema destino debe ejecutarse con un shell real dentro del `chroot` (por ejemplo `chroot ... /bin/bash -lc "command -v ..."`) y nunca con `chroot ... command -v`, porque `command` es un builtin del shell y genera falsos negativos en la validacion de dependencias del instalador.
+- Cuando un instalador necesite repoblar `/boot`, debe preferir reinstalar el metapaquete del kernel del perfil (por ejemplo `linux-image-amd64`) y solo recurrir a paquetes `linux-image-*` especificos si el metapaquete no existe; esto evita conflictos entre variantes firmadas y `-unsigned`.
+- El `chroot` del instalador no debe heredar `/run` completo desde la live, porque puede contaminar la deteccion de entorno y desactivar la generacion de `initramfs`; para scripts que necesiten pseudo-terminales o APT dentro del target, montar `devpts` en `${TARGET_ROOT}/dev/pts` es el soporte minimo preferido.
 
 ## Regla de bloqueo
 
