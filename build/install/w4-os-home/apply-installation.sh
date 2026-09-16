@@ -236,6 +236,35 @@ mount_chroot_support() {
   fi
 }
 
+ensure_kernel_boot_artifacts() {
+  if compgen -G "${TARGET_ROOT}/boot/vmlinuz-*" >/dev/null 2>&1 \
+    && compgen -G "${TARGET_ROOT}/boot/initrd.img-*" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  log "No se encontraron artefactos de kernel en /boot; reinstalando paquetes linux-image"
+  chroot "${TARGET_ROOT}" command -v apt-get >/dev/null 2>&1 || fail "faltan artefactos de kernel en /boot y apt-get no existe en el sistema destino"
+  chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get update || true
+
+  mapfile -t kernel_packages < <(
+    chroot "${TARGET_ROOT}" bash -lc "dpkg-query -W -f='\${Package}\n' 'linux-image*' 2>/dev/null | grep '^linux-image' || true"
+  )
+
+  if [[ "${#kernel_packages[@]}" -eq 0 ]]; then
+    fail "faltan artefactos de kernel en /boot y no se encontraron paquetes linux-image instalados"
+  fi
+
+  chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get install -y --reinstall "${kernel_packages[@]}"
+
+  if ! compgen -G "${TARGET_ROOT}/boot/vmlinuz-*" >/dev/null 2>&1; then
+    fail "la reinstalacion del kernel no genero vmlinuz en /boot"
+  fi
+
+  if ! compgen -G "${TARGET_ROOT}/boot/initrd.img-*" >/dev/null 2>&1; then
+    fail "la reinstalacion del kernel no genero initrd.img en /boot"
+  fi
+}
+
 ensure_directories() {
   mkdir -p \
     "${TARGET_ROOT}" \
@@ -363,6 +392,10 @@ XKBLAYOUT="${KEYBOARD_VALUE}"
 EOF
 echo "LANG=${LOCALE_VALUE}" > "${TARGET_ROOT}/etc/default/locale"
 
+if [[ -e /etc/resolv.conf ]]; then
+  cp -L /etc/resolv.conf "${TARGET_ROOT}/etc/resolv.conf"
+fi
+
 ESP_UUID="$(blkid -s UUID -o value "${ESP_PART}")"
 BOOT_UUID="$(blkid -s UUID -o value "${BOOT_PART}")"
 ROOT_UUID="$(blkid -s UUID -o value "${ROOT_PART}")"
@@ -396,6 +429,7 @@ if [[ -f "${TARGET_ROOT}/lib/systemd/system/w4-live-prep.service" ]]; then
 fi
 
 mount_chroot_support
+ensure_kernel_boot_artifacts
 
 if ! chroot "${TARGET_ROOT}" id -u "${USERNAME_VALUE}" >/dev/null 2>&1; then
   chroot "${TARGET_ROOT}" useradd -m -s /bin/bash -c "${DISPLAY_NAME_VALUE}" "${USERNAME_VALUE}"

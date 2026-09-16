@@ -101,6 +101,11 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString("TARGET_DISK='/dev/sda'", $applyScript);
         self::assertStringContainsString('echo "[w4-install] $*" >&2', $applyScript);
         self::assertStringContainsString('mount --bind /sys/firmware/efi/efivars "${TARGET_ROOT}/sys/firmware/efi/efivars"', $applyScript);
+        self::assertStringContainsString('cp -L /etc/resolv.conf "${TARGET_ROOT}/etc/resolv.conf"', $applyScript);
+        self::assertStringContainsString('No se encontraron artefactos de kernel en /boot; reinstalando paquetes linux-image', $applyScript);
+        self::assertStringContainsString("dpkg-query -W -f='\\\${Package}\\n' 'linux-image*' 2>/dev/null | grep '^linux-image' || true", $applyScript);
+        self::assertStringContainsString('la reinstalacion del kernel no genero vmlinuz en /boot', $applyScript);
+        self::assertStringContainsString('la reinstalacion del kernel no genero initrd.img en /boot', $applyScript);
         self::assertStringContainsString('grub-install no esta disponible; instalando paquetes EFI requeridos', $applyScript);
         self::assertStringContainsString('apt-get install -y grub-efi-amd64 grub-efi-amd64-bin grub2-common shim-signed efibootmgr', $applyScript);
         self::assertStringContainsString('grub-install sigue sin estar disponible en el sistema destino', $applyScript);
