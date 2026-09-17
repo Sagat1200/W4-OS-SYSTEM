@@ -128,6 +128,14 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('mkdir -p "${TARGET_ROOT}/boot"', $applyScript);
         self::assertStringContainsString('mkdir -p "${TARGET_ROOT}/boot/efi"', $applyScript);
         self::assertStringContainsString('mount "${BOOT_PART}" "${TARGET_ROOT}/boot"', $applyScript);
+        $verifyScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'verify-installation.sh');
+        self::assertNotFalse($verifyScript);
+
+        self::assertStringContainsString('PASSPHRASE_FILE="${W4_DISK_PASSPHRASE_FILE:-${SCRIPT_DIR}/runtime/disk-passphrase.txt}"', $verifyScript);
+        self::assertStringContainsString('mount_target_if_needed() {', $verifyScript);
+        self::assertStringContainsString('cryptsetup open "${ROOT_PART}" "${CRYPT_NAME}" --key-file "${PASSPHRASE_FILE}"', $verifyScript);
+        self::assertStringContainsString('mount -o subvol="${ROOT_SUBVOLUME}" "/dev/mapper/${CRYPT_NAME}" "${TARGET_ROOT}"', $verifyScript);
+        self::assertStringContainsString('Verificacion local completada para ${TARGET_ROOT}', $verifyScript);
         self::assertStringContainsString('mount "${ESP_PART}" "${TARGET_ROOT}/boot/efi"', $applyScript);
         $bootMkdirPosition = strpos($applyScript, 'mkdir -p "${TARGET_ROOT}/boot"');
         $bootMountPosition = strpos($applyScript, 'mount "${BOOT_PART}" "${TARGET_ROOT}/boot"');
@@ -146,8 +154,6 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertContains('installation-executor.json', $bundleManifest['generated_artifacts']);
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'INSTALLATION_EXECUTOR_README.txt');
 
-        $verifyScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'verify-installation.sh');
-        self::assertNotFalse($verifyScript);
         self::assertStringContainsString('falta /boot/grub/grub.cfg', $verifyScript);
         self::assertStringContainsString('falta la ruta UEFI de fallback BOOTX64.EFI', $verifyScript);
     }
