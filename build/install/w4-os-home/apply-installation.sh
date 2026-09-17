@@ -256,6 +256,8 @@ ensure_kernel_boot_artifacts() {
   log "No se encontraron artefactos de kernel en /boot; reinstalando paquetes linux-image"
   chroot_has_command apt-get || fail "faltan artefactos de kernel en /boot y apt-get no existe en el sistema destino"
   chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get update || true
+  log "Asegurando soporte initramfs para cryptroot"
+  chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get install -y cryptsetup-initramfs
 
   if chroot "${TARGET_ROOT}" /bin/bash -lc "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' linux-image-amd64 2>/dev/null | grep '^ii ' >/dev/null 2>&1"; then
     preferred_kernel_package="linux-image-amd64"

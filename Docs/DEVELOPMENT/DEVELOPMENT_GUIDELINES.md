@@ -130,6 +130,7 @@ Cuando exista conflicto, prevalece siempre:
 - Cuando un instalador necesite repoblar `/boot`, debe preferir reinstalar el metapaquete del kernel del perfil (por ejemplo `linux-image-amd64`) y solo recurrir a paquetes `linux-image-*` especificos si el metapaquete no existe; esto evita conflictos entre variantes firmadas y `-unsigned`.
 - El `chroot` del instalador no debe heredar `/run` completo desde la live, porque puede contaminar la deteccion de entorno y desactivar la generacion de `initramfs`; para scripts que necesiten pseudo-terminales o APT dentro del target, montar `devpts` en `${TARGET_ROOT}/dev/pts` es el soporte minimo preferido.
 - Si `update-initramfs` dentro del `chroot` detecta un contexto `live` heredado por `/proc/cmdline` y se desactiva, el instalador debe regenerar los `initrd.img-*` faltantes con `mkinitramfs` directamente y tratar `update-initramfs` posterior como una actualizacion oportunista, no como un punto de fallo obligatorio.
+- Cuando el root del sistema instalado use LUKS, el instalador debe asegurar `cryptsetup-initramfs` en el target antes de regenerar `initrd`, para que el arranque pueda desbloquear `cryptroot` antes de montar el Btrfs raiz.
 
 ## Regla de bloqueo
 

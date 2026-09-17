@@ -108,6 +108,8 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('cp -L /etc/resolv.conf "${TARGET_ROOT}/etc/resolv.conf"', $applyScript);
         self::assertStringContainsString('No se encontraron artefactos de kernel en /boot; reinstalando paquetes linux-image', $applyScript);
         self::assertStringContainsString('preferred_kernel_package="linux-image-amd64"', $applyScript);
+        self::assertStringContainsString('Asegurando soporte initramfs para cryptroot', $applyScript);
+        self::assertStringContainsString('apt-get install -y cryptsetup-initramfs', $applyScript);
         self::assertStringContainsString('Reinstalando metapaquete ${preferred_kernel_package}', $applyScript);
         self::assertStringContainsString("dpkg-query -W -f='\\\${db:Status-Abbrev} \\\${Package}\\n' 'linux-image-[0-9]*'", $applyScript);
         self::assertStringContainsString("grep -v -- '-unsigned$' || true", $applyScript);

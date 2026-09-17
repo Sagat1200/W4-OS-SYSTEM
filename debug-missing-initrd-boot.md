@@ -18,6 +18,7 @@
 | B | El kernel se instala, pero el script valida `/boot` demasiado pronto, antes de generar manualmente el `initrd` porque `update-initramfs` se desactiva en contexto live | High | Low | Confirmed |
 | C | `/boot` está montado correctamente, pero la generación del `initrd` escribe en otra ruta del target por enlaces o layout incorrecto | Medium | Medium | Rejected |
 | D | Falta una dependencia del target para generar initramfs durante la reinstalación del kernel | Low | Medium | Rejected |
+| E | El `initrd` se genera, pero no incluye el hook de `cryptsetup-initramfs`, por lo que el primer boot no desbloquea `cryptroot` y el root Btrfs nunca aparece | High | Low | Confirmed |
 
 ## Log Evidence
 - Evidencia actual del usuario: la reinstalación del kernel dentro del `chroot` sí instala `linux-image-6.12.107+deb13-amd64`, crea los symlinks `/initrd.img` y `/vmlinuz`, pero el instalador falla inmediatamente después con `la reinstalacion del kernel no genero initrd.img en /boot`.
@@ -25,6 +26,7 @@
 - El generador fue ajustado para montar `${TARGET_ROOT}/dev/pts`, dejar `run` local del target y no bindear `/run` desde la live antes de volver a validar.
 - Evidencia post-fix: tras esa corrección, la reinstalación del kernel ya no muestra el error de `posix_openpt`, instala `linux-image-6.12.107+deb13-amd64` y crea los symlinks `/vmlinuz` e `/initrd.img`, pero el instalador sigue fallando con `la reinstalacion del kernel no genero initrd.img en /boot`.
 - Verificación manual en el target: `/boot` contiene `vmlinuz-6.12.107+deb13-amd64`, `config-*` y `System.map-*`, `update-initramfs` existe, pero responde `update-initramfs is disabled (live system is running without media mounted on /run/live/medium)`, confirmando que la regeneración automática del initrd no ocurrirá en ese contexto.
+- Primer boot desde disco: el sistema ya pasa GRUB e `initrd`, pero cae a BusyBox con `ALERT! UUID=... does not exist` sin solicitar passphrase, lo que apunta a un `initrd` sin soporte para abrir el root LUKS. En la evidencia previa del target figuraban `initramfs-tools` y `cryptsetup`, pero no `cryptsetup-initramfs`.
 
 ## Verification Conclusion
-Hipótesis B confirmada con evidencia manual: en este flujo live el instalador no puede depender de `update-initramfs` para poblar `/boot`. El fix correcto es generar los `initrd.img-*` faltantes con `mkinitramfs` y dejar `update-initramfs` como actualización no bloqueante.
+Hipótesis B y E confirmadas con evidencia manual y del primer boot: en este flujo live el instalador no puede depender de `update-initramfs` para poblar `/boot`, y el `initrd` debe regenerarse con `cryptsetup-initramfs` ya presente para soportar el desbloqueo de `cryptroot`.
