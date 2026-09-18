@@ -28,7 +28,7 @@
 7- Ejecuta el comando sudo apt install -y openssh-server para instalar el servidor SSH
 8- Levanta el servidor ssh ejecutando el comando sudo systemctl enable --now ssh
 9- Ejecuta el comando ip addr para obtener la dirección IP de la maquina virtual VB.
-10- En la terminal PowerShell ejecuta el comando ssh -p tu_usuario@TU_DIRECCION_IP para conectarte a la maquina virtual VB.
+10- En la terminal PowerShell ejecuta el comando ssh -p 2222 w4live@127.0.0.1 para conectarte a la maquina virtual VB.
 11- Ingresa la contraseña para poder conectarte desde power shell a la maquina virtual.
 12- Si llega a fallar la conexion con la maquina virtual en Power Shell ejecuta en Power Shell ssh-keygen -R "[127.0.0.1]:2222" para eliminar la clave del host en la terminal PowerShell.
 
