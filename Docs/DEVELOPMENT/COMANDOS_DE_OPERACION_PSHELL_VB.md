@@ -89,4 +89,18 @@ cd ~/w4-transfer/runtime
 bash run-check-only.sh
 sudo bash run-installation.sh
 sudo bash ../verify-installation.sh
+sudo poweroff
 ```
+
+En PowerShell tras la verificacion:
+
+```powershell
+& "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" storageattach "W4-OS-Business-Test" --storagectl "IDE" --port 0 --device 0 --type dvddrive --medium none
+& "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" modifyvm "W4-OS-Business-Test" --boot1 disk --boot2 dvd --boot3 none --boot4 none
+& "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" startvm "W4-OS-Business-Test"
+```
+
+Notas operativas validadas en Business:
+
+- La instalacion destructiva y `verify-installation.sh` ya quedaron validados en `W4-OS-Business-Test`; el siguiente cierre pendiente es el primer boot cifrado desde disco y el login local de `w4admin`.
+- El payload regenerado de instalacion ya exporta un `PATH` con rutas `sbin`, evitando falsos negativos de `sgdisk` y `partprobe` en sesiones live minimales.

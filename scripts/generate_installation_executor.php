@@ -193,6 +193,9 @@ function buildApplyScript(array $plan): string
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Algunas live sessions no incluyen rutas sbin en PATH.
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLAN_JSON="${SCRIPT_DIR}/installation-plan.json"
 PROFILE_NAME=%PROFILE_NAME%

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Algunas live sessions no incluyen rutas sbin en PATH.
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLAN_JSON="${SCRIPT_DIR}/installation-plan.json"
 PROFILE_NAME='W4 OS Business'
@@ -184,9 +187,9 @@ cleanup() {
     "${TARGET_ROOT}/var/cache" \
     "${TARGET_ROOT}/var/lib/w4" \
     "${TARGET_ROOT}/sys/firmware/efi/efivars" \
-    "${TARGET_ROOT}/run" \
     "${TARGET_ROOT}/sys" \
     "${TARGET_ROOT}/proc" \
+    "${TARGET_ROOT}/dev/pts" \
     "${TARGET_ROOT}/dev"; do
     if mountpoint -q "${path}"; then
       umount "${path}"
@@ -225,14 +228,90 @@ prepare_source_root() {
 }
 
 mount_chroot_support() {
+  mkdir -p "${TARGET_ROOT}/dev/pts" "${TARGET_ROOT}/run" "${TARGET_ROOT}/run/lock"
   mount --bind /dev "${TARGET_ROOT}/dev"
+  mount --bind /dev/pts "${TARGET_ROOT}/dev/pts"
   mount --bind /proc "${TARGET_ROOT}/proc"
   mount --bind /sys "${TARGET_ROOT}/sys"
-  mount --bind /run "${TARGET_ROOT}/run"
 
   if [[ -d /sys/firmware/efi/efivars ]]; then
     mkdir -p "${TARGET_ROOT}/sys/firmware/efi/efivars"
     mount --bind /sys/firmware/efi/efivars "${TARGET_ROOT}/sys/firmware/efi/efivars"
+  fi
+}
+
+chroot_has_command() {
+  local command_name="${1}"
+  chroot "${TARGET_ROOT}" /bin/bash -lc "command -v '${command_name}' >/dev/null 2>&1"
+}
+
+ensure_kernel_boot_artifacts() {
+  local preferred_kernel_package=""
+  local kernel_package_names=()
+  local kernel_versions=()
+  local kernel_version=""
+
+  if compgen -G "${TARGET_ROOT}/boot/vmlinuz-*" >/dev/null 2>&1 \
+    && compgen -G "${TARGET_ROOT}/boot/initrd.img-*" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  log "No se encontraron artefactos de kernel en /boot; reinstalando paquetes linux-image"
+  chroot_has_command apt-get || fail "faltan artefactos de kernel en /boot y apt-get no existe en el sistema destino"
+  chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get update || true
+  log "Asegurando soporte initramfs para cryptroot"
+  chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get install -y cryptsetup-initramfs
+
+  if chroot "${TARGET_ROOT}" /bin/bash -lc "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' linux-image-amd64 2>/dev/null | grep '^ii ' >/dev/null 2>&1"; then
+    preferred_kernel_package="linux-image-amd64"
+  fi
+
+  if [[ -n "${preferred_kernel_package}" ]]; then
+    log "Reinstalando metapaquete ${preferred_kernel_package}"
+    chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get install -y --reinstall "${preferred_kernel_package}"
+  else
+    mapfile -t kernel_package_names < <(
+      chroot "${TARGET_ROOT}" /bin/bash -lc "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' 'linux-image-[0-9]*' 2>/dev/null | awk '\$1 == \"ii\" { print \$2 }' | grep -v -- '-unsigned$' || true"
+    )
+
+    if [[ "${#kernel_package_names[@]}" -eq 0 ]]; then
+      mapfile -t kernel_package_names < <(
+        chroot "${TARGET_ROOT}" /bin/bash -lc "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' 'linux-image-[0-9]*' 2>/dev/null | awk '\$1 == \"ii\" { print \$2 }' || true"
+      )
+    fi
+
+    if [[ "${#kernel_package_names[@]}" -eq 0 ]]; then
+      fail "faltan artefactos de kernel en /boot y no se encontraron paquetes linux-image instalados"
+    fi
+
+    log "Reinstalando paquetes kernel especificos: ${kernel_package_names[*]}"
+    chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get install -y --reinstall "${kernel_package_names[@]}"
+  fi
+
+  if ! compgen -G "${TARGET_ROOT}/boot/vmlinuz-*" >/dev/null 2>&1; then
+    fail "la reinstalacion del kernel no genero vmlinuz en /boot"
+  fi
+
+  if ! compgen -G "${TARGET_ROOT}/boot/initrd.img-*" >/dev/null 2>&1; then
+    chroot_has_command mkinitramfs || fail "la reinstalacion del kernel no genero initrd.img en /boot y mkinitramfs no existe en el sistema destino"
+    mapfile -t kernel_versions < <(
+      find "${TARGET_ROOT}/boot" -maxdepth 1 -type f -name 'vmlinuz-*' -printf '%f\n' | sed 's/^vmlinuz-//' | sort
+    )
+
+    if [[ "${#kernel_versions[@]}" -eq 0 ]]; then
+      fail "no se encontraron versiones de kernel en /boot para regenerar initrd"
+    fi
+
+    for kernel_version in "${kernel_versions[@]}"; do
+      if [[ ! -e "${TARGET_ROOT}/boot/initrd.img-${kernel_version}" ]]; then
+        log "Generando initrd manual para ${kernel_version}"
+        chroot "${TARGET_ROOT}" mkinitramfs -o "/boot/initrd.img-${kernel_version}" "${kernel_version}"
+      fi
+    done
+  fi
+
+  if ! compgen -G "${TARGET_ROOT}/boot/initrd.img-*" >/dev/null 2>&1; then
+    fail "la reinstalacion del kernel no genero initrd.img en /boot"
   fi
 }
 
@@ -363,6 +442,10 @@ XKBLAYOUT="${KEYBOARD_VALUE}"
 EOF
 echo "LANG=${LOCALE_VALUE}" > "${TARGET_ROOT}/etc/default/locale"
 
+if [[ -e /etc/resolv.conf ]]; then
+  cp -L /etc/resolv.conf "${TARGET_ROOT}/etc/resolv.conf"
+fi
+
 ESP_UUID="$(blkid -s UUID -o value "${ESP_PART}")"
 BOOT_UUID="$(blkid -s UUID -o value "${BOOT_PART}")"
 ROOT_UUID="$(blkid -s UUID -o value "${ROOT_PART}")"
@@ -396,6 +479,7 @@ if [[ -f "${TARGET_ROOT}/lib/systemd/system/w4-live-prep.service" ]]; then
 fi
 
 mount_chroot_support
+ensure_kernel_boot_artifacts
 
 if ! chroot "${TARGET_ROOT}" id -u "${USERNAME_VALUE}" >/dev/null 2>&1; then
   chroot "${TARGET_ROOT}" useradd -m -s /bin/bash -c "${DISPLAY_NAME_VALUE}" "${USERNAME_VALUE}"
@@ -408,11 +492,18 @@ fi
 LOCAL_USER_PASSWORD="$(cat "${LOCAL_USER_PASSWORD_FILE}")"
 printf '%s:%s\n' "${USERNAME_VALUE}" "${LOCAL_USER_PASSWORD}" | chroot "${TARGET_ROOT}" chpasswd
 
-if chroot "${TARGET_ROOT}" command -v locale-gen >/dev/null 2>&1; then
+if chroot_has_command locale-gen; then
   chroot "${TARGET_ROOT}" locale-gen || true
 fi
 
-chroot "${TARGET_ROOT}" command -v grub-install >/dev/null 2>&1 || fail "grub-install no esta disponible en el sistema destino"
+if ! chroot_has_command grub-install; then
+  log "grub-install no esta disponible; instalando paquetes EFI requeridos"
+  chroot_has_command apt-get || fail "grub-install no esta disponible y apt-get tampoco existe en el sistema destino"
+  chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get update
+  chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get install -y grub-efi-amd64 grub-efi-amd64-bin grub2-common shim-signed efibootmgr
+fi
+
+chroot_has_command grub-install || fail "grub-install sigue sin estar disponible en el sistema destino"
 log "Instalando GRUB EFI"
 chroot "${TARGET_ROOT}" grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id="W4 OS" --recheck
 log "Instalando ruta UEFI de fallback"
@@ -420,11 +511,11 @@ chroot "${TARGET_ROOT}" grub-install --target=x86_64-efi --efi-directory=/boot/e
 
 [[ -e "${TARGET_ROOT}/boot/efi/EFI/BOOT/BOOTX64.EFI" ]] || fail "no se genero la ruta UEFI de fallback BOOTX64.EFI"
 
-if chroot "${TARGET_ROOT}" command -v update-initramfs >/dev/null 2>&1; then
-  chroot "${TARGET_ROOT}" update-initramfs -u -k all
+if chroot_has_command update-initramfs; then
+  chroot "${TARGET_ROOT}" update-initramfs -u -k all || warn "update-initramfs devolvio un error; se conserva el initrd ya generado en /boot"
 fi
 
-if chroot "${TARGET_ROOT}" command -v update-grub >/dev/null 2>&1; then
+if chroot_has_command update-grub; then
   chroot "${TARGET_ROOT}" update-grub
 fi
 

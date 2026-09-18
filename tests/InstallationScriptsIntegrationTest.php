@@ -99,6 +99,7 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('W4_INSTALL_EXECUTE=1', $applyScript);
         self::assertStringContainsString("SIZE_TOLERANCE_BYTES='1048576'", $applyScript);
         self::assertStringContainsString("TARGET_DISK='/dev/sda'", $applyScript);
+        self::assertStringContainsString('export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"', $applyScript);
         self::assertStringContainsString('echo "[w4-install] $*" >&2', $applyScript);
         self::assertStringContainsString('mount --bind /sys/firmware/efi/efivars "${TARGET_ROOT}/sys/firmware/efi/efivars"', $applyScript);
         self::assertStringContainsString('mount --bind /dev/pts "${TARGET_ROOT}/dev/pts"', $applyScript);

@@ -2,7 +2,7 @@ W4 OS Check-Only Preparation
 
 Perfil: W4 OS Business
 Disco objetivo: /dev/sda
-Inventario usado: c:\W4\Packages\W4-OS SYSTEM\build\install-inventory\virtualbox-live-business.json
+Inventario usado: .\build\install\w4-os-business\disk-inventory.json
 Perfil derivado: C:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-business\installation-profile.derived.json
 Bundle: C:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-business
 
