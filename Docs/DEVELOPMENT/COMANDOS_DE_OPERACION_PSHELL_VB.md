@@ -45,10 +45,32 @@ scp -P 2222 -r "c:\W4\Packages\W4-OS SYSTEM\build\install-transfer\w4-os-home" "
 Dentro de la VM:
 
 ```bash
+sudo apt update
+sudo apt install -y openssh-server gdisk parted util-linux dosfstools e2fsprogs cryptsetup btrfs-progs rsync squashfs-tools
 cd ~/w4-transfer/runtime
 bash run-check-only.sh
-bash run-installation.sh
+sudo bash run-installation.sh
+sudo cryptsetup open /dev/sda3 cryptroot --key-file ./disk-passphrase.txt
+sudo mkdir -p /mnt/w4-install-target/boot/efi
+sudo mount -o subvol=@ /dev/mapper/cryptroot /mnt/w4-install-target
+sudo mount /dev/sda2 /mnt/w4-install-target/boot
+sudo mount /dev/sda1 /mnt/w4-install-target/boot/efi
+sudo bash ../verify-installation.sh
+sudo poweroff
 ```
+
+En PowerShell tras la verificacion:
+
+```powershell
+& "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" storageattach "W4-OS-Home-Test" --storagectl "IDE" --port 0 --device 0 --type dvddrive --medium none
+& "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" modifyvm "W4-OS-Home-Test" --boot1 disk --boot2 dvd --boot3 none --boot4 none
+& "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" startvm "W4-OS-Home-Test"
+```
+
+Notas operativas validadas en Home:
+
+- El primer arranque instalado ya fue validado en `W4-OS-Home-Test` con `LUKS2 + Btrfs`, login local y mounts finales correctos.
+- Si la consola de `initramfs` o `tty1` interpreta mal caracteres del teclado, anadir temporalmente una passphrase LUKS y/o password de login simples en ASCII desde la live antes de reintentar el boot.
 
 ### Business por NAT con port forwarding 2223
 
@@ -61,7 +83,10 @@ scp -P 2223 -r "c:\W4\Packages\W4-OS SYSTEM\build\install-transfer\w4-os-busines
 Dentro de la VM:
 
 ```bash
+sudo apt update
+sudo apt install -y openssh-server gdisk parted util-linux dosfstools e2fsprogs cryptsetup btrfs-progs rsync squashfs-tools
 cd ~/w4-transfer/runtime
 bash run-check-only.sh
-bash run-installation.sh
+sudo bash run-installation.sh
+sudo bash ../verify-installation.sh
 ```
