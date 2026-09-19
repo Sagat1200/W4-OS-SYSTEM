@@ -102,5 +102,6 @@ En PowerShell tras la verificacion:
 
 Notas operativas validadas en Business:
 
-- La instalacion destructiva y `verify-installation.sh` ya quedaron validados en `W4-OS-Business-Test`; el siguiente cierre pendiente es el primer boot cifrado desde disco y el login local de `w4admin`.
+- `W4-OS-Business-Test` ya quedo validado de punta a punta: instalacion destructiva, `verify-installation.sh`, primer boot cifrado, login local de `w4admin` y layout final correcto.
 - El payload regenerado de instalacion ya exporta un `PATH` con rutas `sbin`, evitando falsos negativos de `sgdisk` y `partprobe` en sesiones live minimales.
+- Si el layout de teclado en `initramfs` o `tty1` impide escribir correctamente las credenciales complejas, se puede repetir el workaround validado: agregar temporalmente una passphrase LUKS ASCII simple y/o cambiar temporalmente la password de login desde la live antes de reintentar el arranque desde disco.
