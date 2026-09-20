@@ -1,0 +1,56 @@
+Package: w4-base-meta
+Version: 1.0.1-lab
+Architecture: all
+Maintainer: W4 OS System <w4@example.invalid>
+Depends: apt, bash, ca-certificates, php-cli
+Filename: pool/main/w4/w4-base-meta_1.0.1-lab_all.deb
+Size: 968
+MD5sum: 5267fc3b4d7bd6140b92cae6f614bd33
+SHA1: 51574c860fb6b13b386189f0ebdc77b96a6eb485
+SHA256: 17eb27f567df0e40a74de32b57d7d867c07ee7f3af5ec648d33ee9ae4c9cff9e
+Section: metapackages
+Priority: optional
+Description: W4 OS base metapackage for update validation
+
+Package: w4-business-meta
+Version: 1.0.1-lab
+Architecture: all
+Maintainer: W4 OS System <w4@example.invalid>
+Depends: w4-base-meta
+Filename: pool/main/w4/w4-business-meta_1.0.1-lab_all.deb
+Size: 952
+MD5sum: faa0bb1cc1dea79fee77db674b28286f
+SHA1: 007844fa745928beb35fa646e5ff05cef63f5828
+SHA256: 6e3a1e1dd2696108f7eb8b8e604dc5c29be495b28e8bc1cedd4ce9198ebc8dbc
+Section: metapackages
+Priority: optional
+Description: W4 OS Business metapackage for update validation
+
+Package: w4-home-meta
+Version: 1.0.1-lab
+Architecture: all
+Maintainer: W4 OS System <w4@example.invalid>
+Depends: w4-base-meta
+Filename: pool/main/w4/w4-home-meta_1.0.1-lab_all.deb
+Size: 944
+MD5sum: 7bd74e3c0e3298e0e58ac981d716d4f3
+SHA1: 67a8ba6a25ae1b439959534c2d35dc91682bba6b
+SHA256: c59ed6e915d40738e0d5453f9ff008d995c8c95b2be4013e0d9ef87fe8ba0bb2
+Section: metapackages
+Priority: optional
+Description: W4 OS Home metapackage for update validation
+
+Package: w4-recovery-tools
+Version: 1.0.1-lab
+Architecture: all
+Maintainer: W4 OS System <w4@example.invalid>
+Depends: bash
+Filename: pool/main/w4/w4-recovery-tools_1.0.1-lab_all.deb
+Size: 956
+MD5sum: eec75815afa77ecf6a2f679096edc9a5
+SHA1: b1b174254510cddcd4c6f6573c6258241f05ceb3
+SHA256: 7f15b0b7b648c84fa085c3ff2a9d2e8a75ceb576b847049eae85e83a4b345411
+Section: metapackages
+Priority: optional
+Description: W4 OS recovery tools package for update validation
+

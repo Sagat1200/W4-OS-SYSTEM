@@ -1,0 +1,50 @@
+{
+    "repository_bundle_schema_version": 1,
+    "kind": "update-repository-bundle",
+    "repository_snapshot": {
+        "id": "w4-main-2026-09-20T120000Z",
+        "channel": "testing"
+    },
+    "target_version": "1.0.1-lab",
+    "package_set": "both",
+    "packages": [
+        {
+            "name": "w4-base-meta",
+            "version": "1.0.1-lab",
+            "architecture": "all",
+            "depends": "apt, bash, ca-certificates, php-cli",
+            "description": "W4 OS base metapackage for update validation",
+            "profile_scope": "base"
+        },
+        {
+            "name": "w4-recovery-tools",
+            "version": "1.0.1-lab",
+            "architecture": "all",
+            "depends": "bash",
+            "description": "W4 OS recovery tools package for update validation",
+            "profile_scope": "base"
+        },
+        {
+            "name": "w4-home-meta",
+            "version": "1.0.1-lab",
+            "architecture": "all",
+            "depends": "w4-base-meta",
+            "description": "W4 OS Home metapackage for update validation",
+            "profile_scope": "home"
+        },
+        {
+            "name": "w4-business-meta",
+            "version": "1.0.1-lab",
+            "architecture": "all",
+            "depends": "w4-base-meta",
+            "description": "W4 OS Business metapackage for update validation",
+            "profile_scope": "business"
+        }
+    ],
+    "generated_artifacts": [
+        "build-repo.sh",
+        "repository-manifest.json",
+        "apt-source.list.template",
+        "REPOSITORY_BUNDLE_README.txt"
+    ]
+}

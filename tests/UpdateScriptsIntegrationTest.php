@@ -223,6 +223,8 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('advance_update_operation.php', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_ENGINE_ROOT', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_EXECUTE', $offlineScript);
+        self::assertStringContainsString('W4_UPDATE_APT_SOURCE_LINE', $offlineScript);
+        self::assertStringContainsString('W4_UPDATE_APT_SOURCE_FILE', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_FAIL_STAGE', $offlineScript);
         self::assertStringContainsString('pending_health', $offlineScript);
         self::assertStringContainsString('snapshot-manifest.json', $offlineScript);
@@ -239,6 +241,59 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('reconcile_update_operation.php', $reconcileScript);
         self::assertStringContainsString('W4_UPDATE_OBSERVED_STAGE', $reconcileScript);
         self::assertStringContainsString('run-health-checks.sh', $reconcileScript);
+    }
+
+    public function testGenerateUpdateRepositoryBundleWritesLabRepoArtifacts(): void
+    {
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'repo-bundle';
+
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/generate_update_repository_bundle.php'),
+            [
+                '--snapshot-id',
+                'w4-main-2026-09-20T120000Z',
+                '--channel',
+                'testing',
+                '--target-version',
+                '1.0.1-lab',
+                '--package-set',
+                'both',
+                '--output-dir',
+                $bundleDir,
+            ]
+        );
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('ok', $payload['status']);
+        self::assertSame($bundleDir, $payload['bundle_dir']);
+        self::assertSame('w4-main-2026-09-20T120000Z', $payload['snapshot_id']);
+        self::assertSame('testing', $payload['channel']);
+        self::assertSame(4, $payload['package_count']);
+
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'build-repo.sh');
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'repository-manifest.json');
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'apt-source.list.template');
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'REPOSITORY_BUNDLE_README.txt');
+
+        $manifest = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'repository-manifest.json');
+        self::assertSame('update-repository-bundle', $manifest['kind']);
+        self::assertSame('w4-main-2026-09-20T120000Z', $manifest['repository_snapshot']['id']);
+        self::assertSame('testing', $manifest['repository_snapshot']['channel']);
+        self::assertSame('1.0.1-lab', $manifest['target_version']);
+        self::assertSame('both', $manifest['package_set']);
+        self::assertCount(4, $manifest['packages']);
+
+        $buildScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'build-repo.sh');
+        self::assertNotFalse($buildScript);
+        self::assertStringContainsString('dpkg-deb --build', $buildScript);
+        self::assertStringContainsString('dpkg-scanpackages --multiversion', $buildScript);
+        self::assertStringContainsString('w4-base-meta', $buildScript);
+        self::assertStringContainsString('w4-home-meta', $buildScript);
+        self::assertStringContainsString('w4-business-meta', $buildScript);
+        self::assertStringContainsString('w4-recovery-tools', $buildScript);
+        self::assertStringContainsString('deb [trusted=yes] file:__W4_REPO_ROOT__ ./', $buildScript);
     }
 
     /**

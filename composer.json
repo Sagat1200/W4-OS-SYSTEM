@@ -24,10 +24,12 @@
         "scripts/advance_update_operation.php",
         "scripts/generate_update_plan.php",
         "scripts/generate_update_executor.php",
+        "scripts/generate_update_repository_bundle.php",
         "scripts/generate_installation_plan.php",
         "scripts/generate_installation_executor.php",
         "scripts/prepare_update_operation.php",
         "scripts/reconcile_update_operation.php",
+        "scripts/run_update_repository_bundle_in_wsl.php",
         "scripts/prepare_installation_bundle.php",
         "scripts/prepare_installation_runtime.php",
         "scripts/prepare_installation_transfer.php"
