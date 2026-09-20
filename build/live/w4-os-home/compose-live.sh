@@ -57,11 +57,14 @@ normalize_debian_sources_keyring() {
 
   if [[ -f "${rootfs_dir}/etc/apt/sources.list" ]]; then
     sed -i 's|/usr/share/keyrings/debian-archive-current.gpg|/usr/share/keyrings/debian-archive-keyring.gpg|g' "${rootfs_dir}/etc/apt/sources.list"
+    sed -E -i 's|/var/tmp/w4-os-system/[^ ]*/bootstrap-keyring/debian-host-bootstrap-keyring.gpg|/usr/share/keyrings/debian-archive-keyring.gpg|g' "${rootfs_dir}/etc/apt/sources.list"
   fi
 
   if [[ -d "${rootfs_dir}/etc/apt/sources.list.d" ]]; then
     find "${rootfs_dir}/etc/apt/sources.list.d" -maxdepth 1 -type f -name '*.list' -exec \
       sed -i 's|/usr/share/keyrings/debian-archive-current.gpg|/usr/share/keyrings/debian-archive-keyring.gpg|g' {} +
+    find "${rootfs_dir}/etc/apt/sources.list.d" -maxdepth 1 -type f -name '*.list' -exec \
+      sed -E -i 's|/var/tmp/w4-os-system/[^ ]*/bootstrap-keyring/debian-host-bootstrap-keyring.gpg|/usr/share/keyrings/debian-archive-keyring.gpg|g' {} +
   fi
 }
 

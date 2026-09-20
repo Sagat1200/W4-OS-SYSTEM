@@ -87,7 +87,7 @@ La segunda capa ya incorpora `scripts/advance_update_operation.php`, `scripts/re
 
 La tercera capa ya genera un bundle offline con `run-update-offline.sh`, `run-health-checks.sh` y `reconcile-after-reboot.sh`, incluyendo `staging`, snapshot previo y checks locales verificables antes de confirmar la operacion.
 
-Las ejecuciones reales en VM ya confirmaron la persistencia correcta del fallo cuando APT no encuentra `w4-recovery-tools`, `w4-base-meta`, `w4-home-meta` o `w4-business-meta`; ademas, el prerequisito de `php-cli` ya fue absorbido por el baseline base y propagado a los artefactos derivados inmediatos (`build-input` y `rootfs-bundle`) para futuras imagenes. El siguiente paso directo es regenerar live/ISO con esa base y resolver una fuente de paquetes W4 accesible para completar el recorrido hasta snapshot, reboot y reconciliacion final.
+Las ejecuciones reales en VM ya confirmaron la persistencia correcta del fallo cuando APT no encuentra `w4-recovery-tools`, `w4-base-meta`, `w4-home-meta` o `w4-business-meta`; ademas, el prerequisito de `php-cli` ya fue absorbido por el baseline base y propagado a los artefactos derivados del pipeline (`build-input`, `rootfs-bundle`, `live-output` e `iso-output`). En esta ultima etapa ya se confirmo `php-cli 2:8.4+96` dentro de `filesystem.manifest` para Home y Business, junto con nuevas ISOs y `SHA256SUMS`. El siguiente paso directo es resolver una fuente de paquetes W4 accesible para completar el recorrido de `MX-004` hasta snapshot, reboot y reconciliacion final sobre sistemas ya instalables con el baseline actualizado.
 
 ## Documentacion clave
 
