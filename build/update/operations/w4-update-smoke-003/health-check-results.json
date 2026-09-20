@@ -1,0 +1,11 @@
+{
+  "health_check_result_schema_version": 1,
+  "kind": "health-check-results",
+  "status": "ok",
+  "results": {
+    "boot-entry-present": "ok",
+    "cryptroot-unlock": "ok",
+    "root-subvolume-mounted": "ok",
+    "test-file-present": "ok"
+  }
+}

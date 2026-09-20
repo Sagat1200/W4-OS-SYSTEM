@@ -1,6 +1,7 @@
 apt
 base-files
 bash
+btrfs-progs
 ca-certificates
 curl
 grub-efi-amd64

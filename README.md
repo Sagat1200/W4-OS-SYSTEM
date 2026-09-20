@@ -52,7 +52,7 @@ Actualmente, **W4 OS System** ya supero la fase puramente documental inicial y c
 - instalacion destructiva end-to-end validada en VirtualBox para Home y Business con `GPT + ESP + /boot + LUKS2 + Btrfs`,
 - primera base ejecutable para `Update y recovery` con `update-plan`, almacen durable, transiciones persistidas, reconciliacion post-reinicio y bundle offline con health checks,
 - laboratorios reales de `Update y recovery` en `W4-OS-Home-Test` y `W4-OS-Business-Test`, ya capaces de persistir `failed`, `last_error` y eventos durables cuando APT no resuelve los paquetes W4 esperados,
-- primer recorrido exitoso end-to-end de `Update y recovery` ya validado en `W4-OS-Business-Test` hasta `pending_health`, reboot, health checks y `confirmed`,
+- recorridos exitosos end-to-end de `Update y recovery` ya validados en `W4-OS-Business-Test` y `W4-OS-Home-Test` hasta `pending_health`, reboot, health checks y `confirmed`,
 - `php-cli` formalizado en el baseline base para sostener el runtime actual del coordinador de `Update y recovery`,
 - `btrfs-progs` formalizado en el baseline base para sostener snapshots Btrfs durante `MX-004`,
 - base PHP estructurada como paquete Composer,
@@ -89,7 +89,7 @@ La segunda capa ya incorpora `scripts/advance_update_operation.php`, `scripts/re
 
 La tercera capa ya genera un bundle offline con `run-update-offline.sh`, `run-health-checks.sh` y `reconcile-after-reboot.sh`, incluyendo `staging`, snapshot previo y checks locales verificables antes de confirmar la operacion.
 
-Las ejecuciones reales en VM ya confirmaron primero la persistencia correcta del fallo cuando APT no encontraba `w4-recovery-tools`, `w4-base-meta`, `w4-home-meta` o `w4-business-meta`; despues, con el repositorio APT W4 de laboratorio, `W4-OS-Business-Test` ya completo el recorrido de `MX-004` hasta `pending_health`, reboot, health checks y `confirmed`. El laboratorio tambien expuso que el sistema instalado necesitaba `btrfs-progs` para materializar snapshots Btrfs, por lo que ese prerequisito ya fue absorbido en el baseline base junto con `php-cli` y regenerado en `build-input` de Home y Business. El siguiente paso directo es propagar `btrfs-progs` a `rootfs`/`live`/`iso` y repetir la validacion end-to-end en Home con el mismo repositorio W4 de laboratorio o con una fuente real ya publicada.
+Las ejecuciones reales en VM ya confirmaron primero la persistencia correcta del fallo cuando APT no encontraba `w4-recovery-tools`, `w4-base-meta`, `w4-home-meta` o `w4-business-meta`; despues, con el repositorio APT W4 de laboratorio, tanto `W4-OS-Business-Test` como `W4-OS-Home-Test` ya completaron el recorrido de `MX-004` hasta `pending_health`, reboot, health checks y `confirmed`. El laboratorio tambien expuso que el sistema instalado necesitaba `btrfs-progs` para materializar snapshots Btrfs, por lo que ese prerequisito ya fue absorbido en el baseline base junto con `php-cli` y regenerado en `build-input` de Home y Business. El siguiente paso directo es terminar de propagar `btrfs-progs` a `rootfs`/`live`/`iso` y, con eso, dejar futuras instalaciones listas para repetir el mismo recorrido sin hotfixes manuales.
 
 ## Documentacion clave
 

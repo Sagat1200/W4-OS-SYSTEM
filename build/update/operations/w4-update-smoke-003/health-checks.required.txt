@@ -1,0 +1,4 @@
+boot-entry-present
+cryptroot-unlock
+root-subvolume-mounted
+test-file-present

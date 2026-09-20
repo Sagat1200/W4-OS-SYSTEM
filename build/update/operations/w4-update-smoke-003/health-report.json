@@ -2,13 +2,15 @@
     "health_report_schema_version": 1,
     "kind": "health-report",
     "operation_id": "w4-update-smoke-003",
-    "stage": "pending_health",
-    "status": "pending",
+    "stage": "confirmed",
+    "status": "ok",
     "required_checks": [
         "boot-entry-present",
         "cryptroot-unlock",
         "root-subvolume-mounted",
         "test-file-present"
     ],
-    "test_file_path": "\/home\/w4\/update-proof.txt"
+    "test_file_path": "\/home\/w4\/update-proof.txt",
+    "last_error": null,
+    "updated_at": "2026-09-20T10:46:05+00:00"
 }
