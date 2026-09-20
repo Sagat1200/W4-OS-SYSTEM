@@ -1,0 +1,1 @@
+{"event_schema_version":1,"event_type":"operation-created","operation_id":"w4-update-smoke-001","stage":"planned","component":"update-engine","outcome":"ok","details":{"profile_id":"w4-os-home","target_version":"1.0.1-lab"},"timestamp":"2026-09-20T05:15:11+00:00"}

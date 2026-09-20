@@ -36,6 +36,10 @@ if (!class_exists('InstallerToolkit', false)) {
     class_alias(\W4\OS\Installer\InstallerToolkit::class, 'InstallerToolkit');
 }
 
+if (!class_exists('UpdateToolkit', false)) {
+    class_alias(\W4\OS\Update\UpdateToolkit::class, 'UpdateToolkit');
+}
+
 if (!function_exists('printJson')) {
     /**
      * @param array<string, mixed> $data

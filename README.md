@@ -50,6 +50,7 @@ Actualmente, **W4 OS System** ya supero la fase puramente documental inicial y c
 - ensamblado de `rootfs`, `live` e `iso`,
 - validacion de arranque UEFI en VM para Home y Business,
 - instalacion destructiva end-to-end validada en VirtualBox para Home y Business con `GPT + ESP + /boot + LUKS2 + Btrfs`,
+- primera base ejecutable para `Update y recovery` con `update-plan` y almacen durable de operacion,
 - base PHP estructurada como paquete Composer,
 - y suite PHPUnit para toolkits y scripts principales.
 
@@ -77,6 +78,8 @@ El siguiente ciclo tecnico recomendado corresponde a `MX-004 · Update y recover
 - ejecucion offline con registro de estados,
 - health check post-arranque,
 - y recovery manual probado con evidencia.
+
+La base inicial de este frente ya existe en el repositorio mediante `src/Update/UpdateToolkit.php`, `scripts/generate_update_plan.php` y `scripts/prepare_update_operation.php`.
 
 ## Documentacion clave
 
