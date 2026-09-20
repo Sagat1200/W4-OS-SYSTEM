@@ -1,0 +1,14 @@
+{
+    "health_report_schema_version": 1,
+    "kind": "health-report",
+    "operation_id": "w4-update-business-smoke-001",
+    "stage": "pending_health",
+    "status": "pending",
+    "required_checks": [
+        "boot-entry-present",
+        "cryptroot-unlock",
+        "root-subvolume-mounted",
+        "test-file-present"
+    ],
+    "test_file_path": "\/home\/w4admin\/update-proof.txt"
+}

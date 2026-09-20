@@ -1,0 +1,1 @@
+{"event_schema_version":1,"event_type":"operation-created","operation_id":"w4-update-business-smoke-001","stage":"planned","component":"update-engine","outcome":"ok","details":{"profile_id":"w4-os-business","target_version":"1.0.1-lab"},"sequence":1,"timestamp":"2026-09-20T06:50:17+00:00"}

@@ -1,0 +1,39 @@
+{
+    "update_request_schema_version": 1,
+    "kind": "update-request",
+    "profile_id": "w4-os-business",
+    "source_version": "1.0.0-lab",
+    "target_version": "1.0.1-lab",
+    "repository_snapshot": {
+        "id": "w4-main-2026-09-19T120000Z",
+        "channel": "testing"
+    },
+    "package_changes": {
+        "install": [
+            "w4-recovery-tools"
+        ],
+        "upgrade": [
+            "w4-base-meta",
+            "w4-business-meta",
+            "linux-image-amd64"
+        ],
+        "remove": []
+    },
+    "operation": {
+        "mode": "apt-offline-snapshot",
+        "snapshot_root": "@",
+        "test_file_path": "/home/w4admin/update-proof.txt",
+        "reboot_required": true
+    },
+    "boot_manifest": {
+        "kernel_package": "linux-image-amd64",
+        "boot_mode": "uefi",
+        "initramfs_strategy": "update-initramfs"
+    },
+    "health_checks": [
+        "boot-entry-present",
+        "cryptroot-unlock",
+        "root-subvolume-mounted",
+        "test-file-present"
+    ]
+}

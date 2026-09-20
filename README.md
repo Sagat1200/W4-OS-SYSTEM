@@ -51,7 +51,7 @@ Actualmente, **W4 OS System** ya supero la fase puramente documental inicial y c
 - validacion de arranque UEFI en VM para Home y Business,
 - instalacion destructiva end-to-end validada en VirtualBox para Home y Business con `GPT + ESP + /boot + LUKS2 + Btrfs`,
 - primera base ejecutable para `Update y recovery` con `update-plan`, almacen durable, transiciones persistidas, reconciliacion post-reinicio y bundle offline con health checks,
-- primer laboratorio real de `Update y recovery` en `W4-OS-Home-Test`, ya capaz de persistir `failed`, `last_error` y eventos durables cuando APT no resuelve los paquetes W4 esperados,
+- laboratorios reales de `Update y recovery` en `W4-OS-Home-Test` y `W4-OS-Business-Test`, ya capaces de persistir `failed`, `last_error` y eventos durables cuando APT no resuelve los paquetes W4 esperados,
 - base PHP estructurada como paquete Composer,
 - y suite PHPUnit para toolkits y scripts principales.
 
@@ -86,7 +86,7 @@ La segunda capa ya incorpora `scripts/advance_update_operation.php`, `scripts/re
 
 La tercera capa ya genera un bundle offline con `run-update-offline.sh`, `run-health-checks.sh` y `reconcile-after-reboot.sh`, incluyendo `staging`, snapshot previo y checks locales verificables antes de confirmar la operacion.
 
-La primera ejecucion real en VM ya confirmo la persistencia correcta del fallo cuando APT no encuentra `w4-recovery-tools`, `w4-base-meta` y `w4-home-meta`; el siguiente paso directo es resolver una fuente de paquetes W4 accesible o adaptar el smoke para completar el recorrido hasta snapshot, reboot y reconciliacion final.
+Las ejecuciones reales en VM ya confirmaron la persistencia correcta del fallo cuando APT no encuentra `w4-recovery-tools`, `w4-base-meta`, `w4-home-meta` o `w4-business-meta`; en Business tambien quedo expuesto que el runtime actual requiere `php` presente en el sistema destino. El siguiente paso directo es resolver una fuente de paquetes W4 accesible y decidir si `php-cli` sera prerequisito del runtime o si el coordinador debe volverse autocontenido para completar el recorrido hasta snapshot, reboot y reconciliacion final.
 
 ## Documentacion clave
 
