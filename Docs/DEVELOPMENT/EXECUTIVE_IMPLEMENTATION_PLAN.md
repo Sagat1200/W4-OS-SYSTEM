@@ -135,6 +135,67 @@ Salida obligatoria:
 8. Business piloto.
 9. Compliance, soporte y release.
 
+## Siguiente ciclo recomendado · MX-004
+
+Objetivo del ciclo:
+materializar el primer tramo verificable de `Update y recovery` sobre la base ya validada de instalacion, sin reabrir alcance de escritorio ni gestion Business.
+
+Resultado ejecutivo esperado:
+
+- coordinador durable de actualizacion con `operation_id`,
+- registro persistente de estado y ultimo error tipado,
+- preparacion de snapshot previo a aplicar cambios,
+- flujo offline de aplicacion y verificacion post-arranque,
+- recuperacion manual probada con evidencia repetible en VM.
+
+Entregables tecnicos obligatorios:
+
+1. `update plan generator` que resuelva una operacion versionada sobre una fuente controlada.
+2. `operation store` durable fuera del estado revertible, con esquema minimo:
+   - `operation_id`
+   - etapa actual
+   - origen y destino
+   - snapshot previo
+   - manifiesto de arranque
+   - ultimo error tipado
+3. `update executor` capaz de:
+   - validar precondiciones,
+   - crear snapshot,
+   - preparar aplicacion offline,
+   - registrar transiciones de estado,
+   - dejar diagnostico legible si falla.
+4. `health check` post-arranque con decision explicita:
+   - confirmar,
+   - marcar `failed`,
+   - o indicar recuperacion.
+5. `recovery playbook` operativo para VM con procedimiento de retorno al ultimo estado util.
+
+Pruebas minimas del ciclo:
+
+1. actualizacion nominal de paquete de prueba sin corrupcion del sistema,
+2. reinicio con operacion en estado `pending_health`,
+3. fallo inducido antes de confirmar salud,
+4. recuperacion al snapshot previo con arranque util,
+5. verificacion de que el archivo de prueba definido sigue accesible tras recovery,
+6. reintento idempotente de una misma operacion sin crear duplicados inconsistentes.
+
+Evidencia esperada:
+
+- artefactos versionados del plan y del estado de operacion,
+- logs de transicion por etapa,
+- identificador de snapshot previo y criterio de seleccion,
+- evidencia de arranque posterior a update,
+- evidencia de fallo controlado,
+- evidencia de recovery y de preservacion del archivo de prueba,
+- actualizacion de `DEVELOPMENT_MATRIX.md` y `DEVELOPMENT_VERSIONS.md`.
+
+Fuera de alcance de este ciclo:
+
+- atomicidad integral por generaciones,
+- UI final de usuario para update,
+- orquestacion de flota Business,
+- promesas de rollback universal sobre firmware o datos externos al snapshot.
+
 ## Criterio de gobernanza
 
 Una fase no se considera cerrada por redaccion adicional de documentos. Solo se cierra cuando existe:

@@ -22,8 +22,8 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
-| DOC | DOC-0.2 | 2026-09-09 | Activa | Base de gestion creada y README introductorio inicial publicado |
-| PLAN | PLAN-0.1 | 2026-09-09 | Activa | Ruta ejecutiva inicial para V1 basada en la coleccion W4 OS |
+| DOC | DOC-0.3 | 2026-09-19 | Activa | README actualizado al estado tecnico real del repositorio tras validar Supply, Build e Instalacion |
+| PLAN | PLAN-0.2 | 2026-09-19 | Activa | Siguiente ciclo ejecutivo definido para `MX-004` con entregables, pruebas y evidencia esperada |
 | TECH | TECH-1.21 | 2026-09-15 | Activa | Endurecimiento del arranque UEFI instalado: `efivars` en chroot, instalacion GRUB EFI de fallback y verificacion explicita de `BOOTX64.EFI` |
 | TECH | TECH-1.22 | 2026-09-16 | Activa | Reforzamiento del instalador para auto-instalar GRUB EFI en el target si `grub-install` no existe tras sincronizar el sistema fuente |
 | TECH | TECH-1.23 | 2026-09-16 | Activa | Reforzamiento del instalador para repoblar `/boot` si el squashfs live no aporta kernel/initrd y para copiar `resolv.conf` al chroot antes de usar APT |
@@ -43,6 +43,8 @@ Mantener trazabilidad entre:
 | 2026-09-09 | DOC | DOC-0.1 | Alta inicial de documentos `DEVELOPMENT_*` y `EXECUTIVE_IMPLEMENTATION_PLAN` | Se establece la base operativa del proyecto para seguimiento de desarrollo | `DEVELOPMENT_TABLE.md`, `DEVELOPMENT_MATRIX.md`, `DEVELOPMENT_VERSIONS.md`, `DEVELOPMENT_GUIDELINES.md`, `EXECUTIVE_IMPLEMENTATION_PLAN.md` |
 | 2026-09-09 | DOC | DOC-0.2 | Creacion del `README.md` introductorio del proyecto `W4 OS System` | Se define una presentacion base del repositorio con vision, familia de productos y documentos clave | `README.md` |
 | 2026-09-09 | PLAN | PLAN-0.1 | Definicion inicial del orden de implementacion V1 | Se prioriza H0-H5 con foco en MVP recuperable | `DEVELOPMENT_TABLE.md`, `EXECUTIVE_IMPLEMENTATION_PLAN.md` |
+| 2026-09-19 | DOC | DOC-0.3 | Actualizacion del `README.md` al estado tecnico actual del repositorio | La presentacion del proyecto ya refleja validacion real en Supply, Build e Instalacion, la presencia del pipeline PHP versionado y el siguiente frente prioritario `MX-004` | `README.md` |
+| 2026-09-19 | PLAN | PLAN-0.2 | Definicion del siguiente ciclo tecnico para `MX-004` | El plan ejecutivo ya concreta entregables, pruebas minimas y evidencia esperada para iniciar `Update y recovery` sobre la base instalada ya validada | `Docs/DEVELOPMENT/EXECUTIVE_IMPLEMENTATION_PLAN.md`, `Docs/DEVELOPMENT/DEVELOPMENT_MATRIX.md` |
 | 2026-09-09 | TECH | TECH-0.1 | Creacion del sistema inicial de manifiestos y validador | El proyecto dispone ya de una fuente versionada para base, Home y Business, y de una verificacion automatica de consistencia | `manifests/w4-linux-base.manifest.json`, `manifests/w4-os-home.profile.json`, `manifests/w4-os-business.profile.json`, `scripts/validate_manifests.php` |
 | 2026-09-09 | TECH | TECH-0.2 | Creacion del pipeline minimo de exportacion de build | El proyecto ya puede validar perfiles y generar artefactos `build-input` consumibles por la siguiente etapa del sistema de build | `scripts/lib/ManifestToolkit.php`, `scripts/generate_build_input.php`, `build/inputs/w4-os-home.build-input.json`, `build/inputs/w4-os-business.build-input.json` |
 | 2026-09-09 | TECH | TECH-0.3 | Creacion de la etapa de ensamblado de raiz | El proyecto ya puede generar bundles de `rootfs` con metadata, listas de paquetes y script de ejecucion Linux preparado para `debootstrap` | `scripts/generate_rootfs_bundle.php`, `build/rootfs/w4-os-home/rootfs-manifest.json`, `build/rootfs/w4-os-home/build-rootfs.sh`, `build/rootfs/w4-os-business/rootfs-manifest.json`, `build/rootfs/w4-os-business/build-rootfs.sh` |

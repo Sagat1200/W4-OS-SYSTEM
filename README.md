@@ -24,12 +24,14 @@ La arquitectura documental actual del proyecto plantea una familia construida so
 
 ## Que contiene este repositorio
 
-Este repositorio concentra la base conceptual y de direccion del proyecto:
+Este repositorio ya combina base conceptual, tooling tecnico y artefactos de trabajo:
 
 - documentacion de arquitectura,
 - decisiones tecnicas y de producto,
-- roadmap de implementacion,
-- lineamientos de desarrollo,
+- pipeline PHP versionado para manifiestos, build e instalacion,
+- perfiles de edicion e instalacion,
+- pruebas PHPUnit sobre la base reusable y los scripts CLI,
+- artefactos generados de `build`, `live`, `iso` e instalacion,
 - y documentos de seguimiento para llevar el proyecto de diseno a implementacion real.
 
 ## Principios del proyecto
@@ -42,20 +44,39 @@ Este repositorio concentra la base conceptual y de direccion del proyecto:
 
 ## Estado actual
 
-Actualmente, **W4 OS System** se encuentra en una fase de definicion y estructuracion tecnica. La coleccion documental del proyecto describe la arquitectura objetivo, las decisiones base y la ruta de implementacion, pero no debe interpretarse automaticamente como evidencia de funcionalidades ya terminadas o calificadas.
+Actualmente, **W4 OS System** ya supero la fase puramente documental inicial y cuenta con evidencia tecnica real en varias capas del pipeline:
+
+- manifiestos versionados y resolucion de perfiles,
+- ensamblado de `rootfs`, `live` e `iso`,
+- validacion de arranque UEFI en VM para Home y Business,
+- instalacion destructiva end-to-end validada en VirtualBox para Home y Business con `GPT + ESP + /boot + LUKS2 + Btrfs`,
+- base PHP estructurada como paquete Composer,
+- y suite PHPUnit para toolkits y scripts principales.
+
+La documentacion sigue siendo el contrato rector del proyecto, pero el repositorio ya contiene implementacion verificable y evidencia operativa para `Supply`, `Build` e `Instalacion`.
 
 ## Ruta inicial
 
 La prioridad del proyecto es construir, en este orden:
 
 1. decisiones base de plataforma,
-2. supply, build y repositorios,
-3. instalacion funcional,
-4. update y recovery,
+2. supply, build y repositorios, ya materializados con artefactos reproducibles de trabajo,
+3. instalacion funcional, ya validada de punta a punta en VM para Home y Business,
+4. update y recovery, siguiente frente prioritario del proyecto,
 5. baseline minima de seguridad,
 6. experiencia de escritorio V1,
 7. edicion Home utilizable,
 8. piloto Business controlado.
+
+## Siguiente ciclo
+
+El siguiente ciclo tecnico recomendado corresponde a `MX-004 · Update y recovery` y se centra en:
+
+- coordinador durable de actualizacion con `operation_id`,
+- snapshot previo a aplicar cambios,
+- ejecucion offline con registro de estados,
+- health check post-arranque,
+- y recovery manual probado con evidencia.
 
 ## Documentacion clave
 
@@ -65,6 +86,8 @@ La prioridad del proyecto es construir, en este orden:
 - `Docs/W4-OS/414_W4_OS_ROADMAP.md`
 - `Docs/W4-OS/415_W4_OS_FINAL_ARCHITECTURE_OVERVIEW.md`
 - `Docs/DEVELOPMENT/EXECUTIVE_IMPLEMENTATION_PLAN.md`
+- `Docs/DEVELOPMENT/DEVELOPMENT_MATRIX.md`
+- `Docs/DEVELOPMENT/DEVELOPMENT_VERSIONS.md`
 
 ## Enfoque
 
