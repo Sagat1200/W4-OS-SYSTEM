@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_ENGINE_ROOT="$(cd -- "${SCRIPT_DIR}/../../../.." 2>/dev/null && pwd || true)"
@@ -26,6 +26,8 @@ BOOT_MODE="uefi"
 KERNEL_PACKAGE="linux-image-amd64"
 TEST_FILE_PATH="/home/w4/update-proof.txt"
 REQUIRED_SPACE_KIB="524288"
+CURRENT_STAGE="planned"
+FAILURE_PERSISTED="0"
 
 declare -a INSTALL_PACKAGES=('w4-recovery-tools')
 declare -a UPGRADE_PACKAGES=('w4-base-meta' 'w4-home-meta' 'linux-image-amd64')
@@ -51,8 +53,43 @@ ensure_engine_scripts() {
   [[ -f "${ADVANCE_SCRIPT}" ]] || die "no se encontro ${ADVANCE_SCRIPT}; defina W4_UPDATE_ENGINE_ROOT o ejecute dentro del repo"
 }
 
+persist_failure() {
+  local exit_code="$1"
+  local failed_stage="${CURRENT_STAGE:-unknown}"
+
+  if [[ "${FAILURE_PERSISTED}" == "1" ]]; then
+    return
+  fi
+
+  FAILURE_PERSISTED="1"
+
+  if [[ ! -f "${STORE_DIR}/operation.json" ]]; then
+    log "No se pudo persistir el fallo porque falta ${STORE_DIR}/operation.json"
+    return
+  fi
+
+  php "${ADVANCE_SCRIPT}" \
+    --store-dir "${STORE_DIR}" \
+    --stage failed \
+    --component "update-offline-executor" \
+    --error-code "command-failed" \
+    --error-message "La etapa ${failed_stage} fallo con exit_code=${exit_code}" \
+    --detail "failed_stage=${failed_stage}" \
+    --detail "exit_code=${exit_code}" \
+    || true
+}
+
+handle_error() {
+  local exit_code="$1"
+  local line_number="$2"
+  log "La etapa ${CURRENT_STAGE} fallo en la linea ${line_number} con exit_code=${exit_code}"
+  persist_failure "${exit_code}"
+  exit "${exit_code}"
+}
+
 advance_stage() {
   local next_stage="$1"
+  CURRENT_STAGE="${next_stage}"
   php "${ADVANCE_SCRIPT}" --store-dir "${STORE_DIR}" --stage "${next_stage}" --component "update-offline-executor"
 }
 
@@ -197,6 +234,8 @@ EOF
   printf '%s
 ' "${REQUIRED_HEALTH_CHECKS[@]}" > "${HEALTH_CHECK_PATH}"
 }
+
+trap 'handle_error $? $LINENO' ERR
 
 ensure_engine_scripts
 require_command php

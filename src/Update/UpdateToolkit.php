@@ -581,7 +581,7 @@ final class UpdateToolkit
 
         return <<<BASH
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
 SCRIPT_DIR="\$(cd -- "\$(dirname -- "\${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_ENGINE_ROOT="\$(cd -- "\${SCRIPT_DIR}/../../../.." 2>/dev/null && pwd || true)"
@@ -608,6 +608,8 @@ BOOT_MODE="${bootMode}"
 KERNEL_PACKAGE="${kernelPackage}"
 TEST_FILE_PATH="${testFilePath}"
 REQUIRED_SPACE_KIB="${estimatedSpaceKib}"
+CURRENT_STAGE="planned"
+FAILURE_PERSISTED="0"
 
 declare -a INSTALL_PACKAGES=(${installList})
 declare -a UPGRADE_PACKAGES=(${upgradeList})
@@ -633,8 +635,43 @@ ensure_engine_scripts() {
   [[ -f "\${ADVANCE_SCRIPT}" ]] || die "no se encontro \${ADVANCE_SCRIPT}; defina W4_UPDATE_ENGINE_ROOT o ejecute dentro del repo"
 }
 
+persist_failure() {
+  local exit_code="\$1"
+  local failed_stage="\${CURRENT_STAGE:-unknown}"
+
+  if [[ "\${FAILURE_PERSISTED}" == "1" ]]; then
+    return
+  fi
+
+  FAILURE_PERSISTED="1"
+
+  if [[ ! -f "\${STORE_DIR}/operation.json" ]]; then
+    log "No se pudo persistir el fallo porque falta \${STORE_DIR}/operation.json"
+    return
+  fi
+
+  php "\${ADVANCE_SCRIPT}" \
+    --store-dir "\${STORE_DIR}" \
+    --stage failed \
+    --component "update-offline-executor" \
+    --error-code "command-failed" \
+    --error-message "La etapa \${failed_stage} fallo con exit_code=\${exit_code}" \
+    --detail "failed_stage=\${failed_stage}" \
+    --detail "exit_code=\${exit_code}" \
+    || true
+}
+
+handle_error() {
+  local exit_code="\$1"
+  local line_number="\$2"
+  log "La etapa \${CURRENT_STAGE} fallo en la linea \${line_number} con exit_code=\${exit_code}"
+  persist_failure "\${exit_code}"
+  exit "\${exit_code}"
+}
+
 advance_stage() {
   local next_stage="\$1"
+  CURRENT_STAGE="\${next_stage}"
   php "\${ADVANCE_SCRIPT}" --store-dir "\${STORE_DIR}" --stage "\${next_stage}" --component "update-offline-executor"
 }
 
@@ -778,6 +815,8 @@ EOF
 
   printf '%s\n' "\${REQUIRED_HEALTH_CHECKS[@]}" > "\${HEALTH_CHECK_PATH}"
 }
+
+trap 'handle_error $? \$LINENO' ERR
 
 ensure_engine_scripts
 require_command php
@@ -1075,7 +1114,7 @@ BASH;
             'health_report_schema_version' => 1,
             'kind' => 'health-report',
             'operation_id' => $operation['operation_id'],
-            'stage' => $stage === 'confirmed' || $stage === 'failed' ? $stage : 'pending_health',
+            'stage' => $stage,
             'status' => $status,
             'required_checks' => $plan['health_check_manifest']['required'],
             'test_file_path' => $plan['health_check_manifest']['test_file_path'],

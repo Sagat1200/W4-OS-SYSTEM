@@ -137,7 +137,7 @@ final class UpdateToolkitTest extends TestCase
 
         $healthReport = $this->decodeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'health-report.json');
         self::assertSame('pending', $healthReport['status']);
-        self::assertSame('pending_health', $healthReport['stage']);
+        self::assertSame('downloading', $healthReport['stage']);
 
         $events = file($storeDir . DIRECTORY_SEPARATOR . 'events.ndjson', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         self::assertIsArray($events);
@@ -206,6 +206,8 @@ final class UpdateToolkitTest extends TestCase
         self::assertStringContainsString('apt-get -o Dir::Cache::Archives', $script);
         self::assertStringContainsString('snapshot-manifest.json', $script);
         self::assertStringContainsString('staging-manifest.json', $script);
+        self::assertStringContainsString('trap \'handle_error $? $LINENO\' ERR', $script);
+        self::assertStringContainsString('--stage failed', $script);
         self::assertStringContainsString('W4_UPDATE_FAIL_STAGE', $script);
         self::assertStringContainsString('offline-application.json', $script);
         self::assertStringContainsString('pending_health', $script);

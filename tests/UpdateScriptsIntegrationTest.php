@@ -226,6 +226,8 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('W4_UPDATE_FAIL_STAGE', $offlineScript);
         self::assertStringContainsString('pending_health', $offlineScript);
         self::assertStringContainsString('snapshot-manifest.json', $offlineScript);
+        self::assertStringContainsString('trap \'handle_error $? $LINENO\' ERR', $offlineScript);
+        self::assertStringContainsString('--stage failed', $offlineScript);
 
         $healthScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'run-health-checks.sh');
         self::assertNotFalse($healthScript);

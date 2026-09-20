@@ -28,15 +28,15 @@ if (!class_exists('ValidationError', false)) {
     class_alias(\W4\OS\Support\ValidationError::class, 'ValidationError');
 }
 
-if (!class_exists('ManifestToolkit', false)) {
+if (!class_exists('ManifestToolkit', false) && class_exists(\W4\OS\Manifest\ManifestToolkit::class)) {
     class_alias(\W4\OS\Manifest\ManifestToolkit::class, 'ManifestToolkit');
 }
 
-if (!class_exists('InstallerToolkit', false)) {
+if (!class_exists('InstallerToolkit', false) && class_exists(\W4\OS\Installer\InstallerToolkit::class)) {
     class_alias(\W4\OS\Installer\InstallerToolkit::class, 'InstallerToolkit');
 }
 
-if (!class_exists('UpdateToolkit', false)) {
+if (!class_exists('UpdateToolkit', false) && class_exists(\W4\OS\Update\UpdateToolkit::class)) {
     class_alias(\W4\OS\Update\UpdateToolkit::class, 'UpdateToolkit');
 }
 

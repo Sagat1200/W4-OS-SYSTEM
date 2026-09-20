@@ -5,6 +5,7 @@
 /.phpunit.cache/
 /.composer-cache/
 /.composer-home/
+/.tools/
 /build/install-transfer/
 /build/install/**/runtime/disk-passphrase.txt
 /build/install/**/runtime/local-user-password.txt
