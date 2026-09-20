@@ -2,13 +2,18 @@
     "health_report_schema_version": 1,
     "kind": "health-report",
     "operation_id": "w4-update-smoke-001",
-    "stage": "pending_health",
-    "status": "pending",
+    "stage": "failed",
+    "status": "failed",
     "required_checks": [
         "boot-entry-present",
         "cryptroot-unlock",
         "root-subvolume-mounted",
         "test-file-present"
     ],
-    "test_file_path": "\/home\/w4\/update-proof.txt"
+    "test_file_path": "\/home\/w4\/update-proof.txt",
+    "last_error": {
+        "code": "smoke-failure",
+        "message": "Fallo controlado de reconciliacion"
+    },
+    "updated_at": "2026-09-20T05:22:19+00:00"
 }

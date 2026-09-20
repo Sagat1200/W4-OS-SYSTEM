@@ -9,6 +9,17 @@ use W4\OS\Support\ValidationError;
 
 final class UpdateToolkit
 {
+    private const OPERATION_STAGES = [
+        'planned',
+        'downloading',
+        'ready',
+        'prepared',
+        'applying_offline',
+        'pending_health',
+        'confirmed',
+        'failed',
+    ];
+
     /**
      * @return array<string, mixed>
      */
@@ -135,6 +146,11 @@ final class UpdateToolkit
         if ($stages === [] || $stages[0] !== 'planned') {
             throw new ValidationError(sprintf('%s: execution.stages debe iniciar en planned', basename($sourcePath)));
         }
+        foreach ($stages as $stage) {
+            if (!in_array($stage, self::OPERATION_STAGES, true)) {
+                throw new ValidationError(sprintf('%s: execution.stages contiene un estado no soportado: %s', basename($sourcePath), $stage));
+            }
+        }
 
         /** @var array<string, mixed> $snapshot */
         $snapshot = $this->requireAssocArray($plan, 'snapshot', $plan['snapshot'] ?? null, $sourcePath);
@@ -147,6 +163,32 @@ final class UpdateToolkit
         foreach (['kernel_package', 'boot_mode', 'initramfs_strategy'] as $field) {
             $this->requireNonEmptyString($bootManifest, sprintf('boot_manifest.%s', $field), $bootManifest[$field] ?? null, $sourcePath);
         }
+    }
+
+    /**
+     * @param array<string, mixed> $operation
+     */
+    public function validateOperation(array $operation, string $sourcePath): void
+    {
+        if (($operation['update_operation_schema_version'] ?? null) !== 1) {
+            throw new ValidationError(sprintf('%s: update_operation_schema_version debe ser 1', basename($sourcePath)));
+        }
+
+        if (($operation['kind'] ?? null) !== 'update-operation') {
+            throw new ValidationError(sprintf('%s: kind debe ser update-operation', basename($sourcePath)));
+        }
+
+        foreach (['operation_id', 'profile_id', 'source_version', 'target_version', 'stage'] as $field) {
+            $this->requireNonEmptyString($operation, $field, $operation[$field] ?? null, $sourcePath);
+        }
+
+        $stage = (string) $operation['stage'];
+        if (!in_array($stage, self::OPERATION_STAGES, true)) {
+            throw new ValidationError(sprintf('%s: stage no soportado: %s', basename($sourcePath), $stage));
+        }
+
+        $this->requireAssocArray($operation, 'snapshot', $operation['snapshot'] ?? null, $sourcePath);
+        $this->requireAssocArray($operation, 'boot_manifest', $operation['boot_manifest'] ?? null, $sourcePath);
     }
 
     /**
@@ -316,6 +358,327 @@ final class UpdateToolkit
     }
 
     /**
+     * @return array{plan: array<string, mixed>, operation: array<string, mixed>, healthReport: array<string, mixed>, storeDir: string}
+     */
+    public function loadOperationStore(string $storeDir): array
+    {
+        $planPath = $storeDir . DIRECTORY_SEPARATOR . 'update-plan.json';
+        $operationPath = $storeDir . DIRECTORY_SEPARATOR . 'operation.json';
+        $healthReportPath = $storeDir . DIRECTORY_SEPARATOR . 'health-report.json';
+
+        $plan = $this->readJsonFile($planPath);
+        $this->validateUpdatePlan($plan, $planPath);
+
+        $operation = $this->readJsonFile($operationPath);
+        $this->validateOperation($operation, $operationPath);
+
+        $healthReport = $this->readJsonFile($healthReportPath);
+
+        return [
+            'plan' => $plan,
+            'operation' => $operation,
+            'healthReport' => $healthReport,
+            'storeDir' => $storeDir,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $details
+     * @param array<string, mixed>|null $lastError
+     * @return array<string, mixed>
+     */
+    public function persistOperationTransition(
+        string $storeDir,
+        string $nextStage,
+        string $component,
+        array $details = [],
+        ?array $lastError = null
+    ): array {
+        $store = $this->loadOperationStore($storeDir);
+        $plan = $store['plan'];
+        $operation = $store['operation'];
+
+        $updatedOperation = $this->transitionOperation($operation, $nextStage, $lastError);
+
+        $operationPath = $storeDir . DIRECTORY_SEPARATOR . 'operation.json';
+        $eventsPath = $storeDir . DIRECTORY_SEPARATOR . 'events.ndjson';
+        $healthReportPath = $storeDir . DIRECTORY_SEPARATOR . 'health-report.json';
+
+        $this->writeJsonFile($operationPath, $updatedOperation);
+        $this->writeJsonFile($healthReportPath, $this->buildHealthReport($plan, $updatedOperation, $lastError));
+        $this->appendEvent(
+            $eventsPath,
+            [
+                'event_schema_version' => 1,
+                'event_type' => 'operation-transitioned',
+                'operation_id' => $updatedOperation['operation_id'],
+                'stage' => $updatedOperation['stage'],
+                'component' => $component,
+                'outcome' => $updatedOperation['stage'] === 'failed' ? 'error' : 'ok',
+                'details' => $details,
+                'last_error' => $lastError,
+            ]
+        );
+
+        return $updatedOperation;
+    }
+
+    /**
+     * @param array<string, mixed> $details
+     * @param array<string, mixed>|null $observedError
+     * @return array<string, mixed>
+     */
+    public function reconcileOperationStore(
+        string $storeDir,
+        string $observedStage,
+        string $component,
+        array $details = [],
+        ?array $observedError = null
+    ): array {
+        $store = $this->loadOperationStore($storeDir);
+        $plan = $store['plan'];
+        $operation = $store['operation'];
+
+        if (!in_array($observedStage, self::OPERATION_STAGES, true)) {
+            throw new ValidationError(sprintf('observed_stage no soportado: %s', $observedStage));
+        }
+
+        $targetStage = $this->resolveReconciledStage((string) $operation['stage'], $observedStage);
+        $lastError = $targetStage === 'failed' ? $observedError : null;
+
+        if ($targetStage === (string) $operation['stage']) {
+            $this->appendEvent(
+                $storeDir . DIRECTORY_SEPARATOR . 'events.ndjson',
+                [
+                    'event_schema_version' => 1,
+                    'event_type' => 'operation-reconciled',
+                    'operation_id' => $operation['operation_id'],
+                    'stage' => $operation['stage'],
+                    'component' => $component,
+                    'outcome' => $targetStage === 'failed' ? 'error' : 'ok',
+                    'details' => array_merge(
+                        $details,
+                        [
+                            'observed_stage' => $observedStage,
+                            'reconciled' => false,
+                        ]
+                    ),
+                    'last_error' => $lastError,
+                ]
+            );
+
+            return [
+                'reconciled' => false,
+                'operation' => $operation,
+                'health_report' => $store['healthReport'],
+            ];
+        }
+
+        $updatedOperation = $this->transitionOperation($operation, $targetStage, $lastError);
+        $healthReport = $this->buildHealthReport($plan, $updatedOperation, $lastError);
+
+        $this->writeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'operation.json', $updatedOperation);
+        $this->writeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'health-report.json', $healthReport);
+        $this->appendEvent(
+            $storeDir . DIRECTORY_SEPARATOR . 'events.ndjson',
+            [
+                'event_schema_version' => 1,
+                'event_type' => 'operation-reconciled',
+                'operation_id' => $updatedOperation['operation_id'],
+                'stage' => $updatedOperation['stage'],
+                'component' => $component,
+                'outcome' => $updatedOperation['stage'] === 'failed' ? 'error' : 'ok',
+                'details' => array_merge(
+                    $details,
+                    [
+                        'observed_stage' => $observedStage,
+                        'reconciled' => true,
+                    ]
+                ),
+                'last_error' => $lastError,
+            ]
+        );
+
+        return [
+            'reconciled' => true,
+            'operation' => $updatedOperation,
+            'health_report' => $healthReport,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     * @return array<string, mixed>
+     */
+    public function createUpdateExecutorManifest(array $plan): array
+    {
+        return [
+            'update_executor_schema_version' => 1,
+            'kind' => 'update-executor',
+            'operation_id' => $plan['operation_id'],
+            'engine' => $plan['execution']['engine'],
+            'generated_artifacts' => [
+                'run-update-offline.sh',
+                'reconcile-after-reboot.sh',
+                'update-executor.json',
+                'UPDATE_EXECUTOR_README.txt',
+            ],
+            'failure_injection' => [
+                'environment_variable' => 'W4_UPDATE_FAIL_STAGE',
+                'allowed_values' => [
+                    'downloading',
+                    'ready',
+                    'prepared',
+                    'applying_offline',
+                    'pending_health',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     */
+    public function renderOfflineExecutorScript(array $plan, string $rootDir): string
+    {
+        $engineRoot = $this->escapeShellDoubleQuoted($rootDir);
+        $operationId = $this->escapeShellDoubleQuoted((string) $plan['operation_id']);
+        $targetVersion = $this->escapeShellDoubleQuoted((string) $plan['target_version']);
+        $snapshotName = $this->escapeShellDoubleQuoted((string) $plan['snapshot']['snapshot_name']);
+        $bootMode = $this->escapeShellDoubleQuoted((string) $plan['boot_manifest']['boot_mode']);
+        $kernelPackage = $this->escapeShellDoubleQuoted((string) $plan['boot_manifest']['kernel_package']);
+
+        $installList = $this->renderShellArray($plan['package_changes']['install']);
+        $upgradeList = $this->renderShellArray($plan['package_changes']['upgrade']);
+        $removeList = $this->renderShellArray($plan['package_changes']['remove']);
+        $healthChecks = $this->renderShellArray($plan['health_check_manifest']['required']);
+
+        return <<<BASH
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="\$(cd -- "\$(dirname -- "\${BASH_SOURCE[0]}")" && pwd)"
+ENGINE_ROOT="${engineRoot}"
+STORE_DIR="\${W4_UPDATE_STORE_DIR:-\${SCRIPT_DIR}/store}"
+FAIL_STAGE="\${W4_UPDATE_FAIL_STAGE:-}"
+ADVANCE_SCRIPT="\${ENGINE_ROOT}/scripts/advance_update_operation.php"
+RECONCILE_SCRIPT="\${ENGINE_ROOT}/scripts/reconcile_update_operation.php"
+ARTIFACT_PATH="\${STORE_DIR}/offline-application.json"
+HEALTH_CHECK_PATH="\${STORE_DIR}/health-checks.required.txt"
+
+OPERATION_ID="${operationId}"
+TARGET_VERSION="${targetVersion}"
+SNAPSHOT_NAME="${snapshotName}"
+BOOT_MODE="${bootMode}"
+KERNEL_PACKAGE="${kernelPackage}"
+
+declare -a INSTALL_PACKAGES=(${installList})
+declare -a UPGRADE_PACKAGES=(${upgradeList})
+declare -a REMOVE_PACKAGES=(${removeList})
+declare -a REQUIRED_HEALTH_CHECKS=(${healthChecks})
+
+log() {
+  echo "[w4-update] \$*" >&2
+}
+
+advance_stage() {
+  local next_stage="\$1"
+  php "\${ADVANCE_SCRIPT}" --store-dir "\${STORE_DIR}" --stage "\${next_stage}" --component "update-offline-executor"
+}
+
+fail_stage() {
+  local failed_stage="\$1"
+  php "\${ADVANCE_SCRIPT}" --store-dir "\${STORE_DIR}" --stage "failed" --component "update-offline-executor" --error-code "injected-failure" --error-message "Fallo inyectado en la etapa \${failed_stage}" --detail "failed_stage=\${failed_stage}"
+}
+
+maybe_fail() {
+  local stage_name="\$1"
+  if [[ -n "\${FAIL_STAGE}" && "\${FAIL_STAGE}" == "\${stage_name}" ]]; then
+    log "Inyectando fallo en \${stage_name}"
+    fail_stage "\${stage_name}"
+    exit 1
+  fi
+}
+
+write_offline_artifact() {
+  mkdir -p "\${STORE_DIR}"
+  cat > "\${ARTIFACT_PATH}" <<'EOF'
+{
+  "offline_application_schema_version": 1,
+  "kind": "offline-application",
+  "operation_id": "${operationId}",
+  "target_version": "${targetVersion}",
+  "snapshot_name": "${snapshotName}",
+  "boot_mode": "${bootMode}",
+  "kernel_package": "${kernelPackage}"
+}
+EOF
+
+  printf '%s\n' "\${REQUIRED_HEALTH_CHECKS[@]}" > "\${HEALTH_CHECK_PATH}"
+}
+
+log "Iniciando aplicacion offline para \${OPERATION_ID}"
+advance_stage "downloading"
+maybe_fail "downloading"
+
+advance_stage "ready"
+maybe_fail "ready"
+
+advance_stage "prepared"
+maybe_fail "prepared"
+
+write_offline_artifact
+
+advance_stage "applying_offline"
+maybe_fail "applying_offline"
+
+advance_stage "pending_health"
+maybe_fail "pending_health"
+
+log "Aplicacion offline completada; la operacion queda en pending_health"
+log "Tras reiniciar, ejecutar reconcile-after-reboot.sh con la salud observada"
+BASH;
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     */
+    public function renderReconcileScript(array $plan, string $rootDir): string
+    {
+        $engineRoot = $this->escapeShellDoubleQuoted($rootDir);
+
+        return <<<BASH
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="\$(cd -- "\$(dirname -- "\${BASH_SOURCE[0]}")" && pwd)"
+ENGINE_ROOT="${engineRoot}"
+STORE_DIR="\${W4_UPDATE_STORE_DIR:-\${SCRIPT_DIR}/store}"
+OBSERVED_STAGE="\${W4_UPDATE_OBSERVED_STAGE:-confirmed}"
+DETAIL="\${W4_UPDATE_RECONCILE_DETAIL:-post-reboot-check}"
+ERROR_CODE="\${W4_UPDATE_ERROR_CODE:-health-check-failed}"
+ERROR_MESSAGE="\${W4_UPDATE_ERROR_MESSAGE:-La validacion post-arranque fallo}"
+
+COMMAND=(
+  php "\${ENGINE_ROOT}/scripts/reconcile_update_operation.php"
+  --store-dir "\${STORE_DIR}"
+  --observed-stage "\${OBSERVED_STAGE}"
+  --component "update-post-boot-check"
+  --detail "\${DETAIL}"
+)
+
+if [[ "\${OBSERVED_STAGE}" == "failed" ]]; then
+  COMMAND+=(
+    --error-code "\${ERROR_CODE}"
+    --error-message "\${ERROR_MESSAGE}"
+  )
+fi
+
+"\${COMMAND[@]}"
+BASH;
+    }
+
+    /**
      * @param array<string, mixed> $operation
      * @param array<string, mixed>|null $lastError
      * @return array<string, mixed>
@@ -394,6 +757,7 @@ final class UpdateToolkit
      */
     private function appendEvent(string $path, array $event): void
     {
+        $event['sequence'] = $this->nextEventSequence($path);
         $event['timestamp'] = gmdate('c');
         $json = json_encode($event, JSON_UNESCAPED_UNICODE);
         if ($json === false) {
@@ -404,6 +768,79 @@ final class UpdateToolkit
         if ($written === false) {
             throw new ValidationError(sprintf('No se pudo escribir el log de eventos: %s', $path));
         }
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     * @param array<string, mixed> $operation
+     * @param array<string, mixed>|null $lastError
+     * @return array<string, mixed>
+     */
+    private function buildHealthReport(array $plan, array $operation, ?array $lastError = null): array
+    {
+        $stage = (string) $operation['stage'];
+
+        $status = 'pending';
+        if ($stage === 'confirmed') {
+            $status = 'ok';
+        } elseif ($stage === 'failed') {
+            $status = 'failed';
+        }
+
+        return [
+            'health_report_schema_version' => 1,
+            'kind' => 'health-report',
+            'operation_id' => $operation['operation_id'],
+            'stage' => $stage === 'confirmed' || $stage === 'failed' ? $stage : 'pending_health',
+            'status' => $status,
+            'required_checks' => $plan['health_check_manifest']['required'],
+            'test_file_path' => $plan['health_check_manifest']['test_file_path'],
+            'last_error' => $lastError,
+            'updated_at' => gmdate('c'),
+        ];
+    }
+
+    private function resolveReconciledStage(string $currentStage, string $observedStage): string
+    {
+        if ($observedStage === 'failed') {
+            return 'failed';
+        }
+
+        if ($observedStage === $currentStage) {
+            return $currentStage;
+        }
+
+        $reconcilable = [
+            'applying_offline' => ['pending_health', 'failed'],
+            'pending_health' => ['confirmed', 'failed'],
+            'confirmed' => ['confirmed'],
+            'failed' => ['failed'],
+        ];
+
+        $allowed = $reconcilable[$currentStage] ?? [];
+        if (!in_array($observedStage, $allowed, true)) {
+            throw new ValidationError(sprintf(
+                'No se puede reconciliar %s con observed_stage=%s',
+                $currentStage,
+                $observedStage
+            ));
+        }
+
+        return $observedStage;
+    }
+
+    private function nextEventSequence(string $path): int
+    {
+        if (!is_file($path)) {
+            return 1;
+        }
+
+        $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if ($lines === false) {
+            throw new ValidationError(sprintf('No se pudo leer el log de eventos: %s', $path));
+        }
+
+        return count($lines) + 1;
     }
 
     private function ensureDirectory(string $path): void
@@ -461,5 +898,35 @@ final class UpdateToolkit
         }
 
         return array_values(array_unique($result));
+    }
+
+    /**
+     * @param mixed $values
+     */
+    private function renderShellArray(mixed $values): string
+    {
+        if (!is_array($values)) {
+            return '';
+        }
+
+        $items = [];
+        foreach ($values as $value) {
+            if (!is_string($value) || $value === '') {
+                continue;
+            }
+
+            $items[] = "'" . str_replace("'", "'\"'\"'", $value) . "'";
+        }
+
+        return implode(' ', $items);
+    }
+
+    private function escapeShellDoubleQuoted(string $value): string
+    {
+        return str_replace(
+            ['\\', '"', '$', '`'],
+            ['\\\\', '\\"', '\\$', '\\`'],
+            $value
+        );
     }
 }

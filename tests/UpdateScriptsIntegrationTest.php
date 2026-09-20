@@ -96,6 +96,139 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertFileExists($storeDir . DIRECTORY_SEPARATOR . 'health-report.json');
     }
 
+    public function testAdvanceAndReconcileUpdateOperationFlow(): void
+    {
+        $planPath = $this->tempDir . DIRECTORY_SEPARATOR . 'advance.update-plan.json';
+        $storeDir = $this->tempDir . DIRECTORY_SEPARATOR . 'advance-store';
+
+        $generate = $this->runPhpScript(
+            $this->fixturePath('scripts/generate_update_plan.php'),
+            [
+                '--request',
+                $this->fixturePath('examples/update/home-lab-to-1.0.1.update-request.json'),
+                '--operation-id',
+                'w4-update-cli-003',
+                '--output',
+                $planPath,
+            ]
+        );
+        self::assertSame(0, $generate['exitCode'], $generate['stderr']);
+
+        $prepare = $this->runPhpScript(
+            $this->fixturePath('scripts/prepare_update_operation.php'),
+            [
+                '--plan',
+                $planPath,
+                '--store-dir',
+                $storeDir,
+            ]
+        );
+        self::assertSame(0, $prepare['exitCode'], $prepare['stderr']);
+
+        foreach (['downloading', 'ready', 'prepared', 'applying_offline'] as $stage) {
+            $advance = $this->runPhpScript(
+                $this->fixturePath('scripts/advance_update_operation.php'),
+                [
+                    '--store-dir',
+                    $storeDir,
+                    '--stage',
+                    $stage,
+                    '--component',
+                    'phpunit-cli',
+                    '--detail',
+                    'stage=' . $stage,
+                ]
+            );
+            self::assertSame(0, $advance['exitCode'], $advance['stderr']);
+        }
+
+        $pendingHealth = $this->runPhpScript(
+            $this->fixturePath('scripts/reconcile_update_operation.php'),
+            [
+                '--store-dir',
+                $storeDir,
+                '--observed-stage',
+                'pending_health',
+                '--component',
+                'phpunit-reconcile',
+                '--detail',
+                'boot=first',
+            ]
+        );
+        self::assertSame(0, $pendingHealth['exitCode'], $pendingHealth['stderr']);
+        $pendingPayload = $this->decodeJson($pendingHealth['stdout']);
+        self::assertTrue($pendingPayload['reconciled']);
+        self::assertSame('pending_health', $pendingPayload['stage']);
+
+        $confirmed = $this->runPhpScript(
+            $this->fixturePath('scripts/reconcile_update_operation.php'),
+            [
+                '--store-dir',
+                $storeDir,
+                '--observed-stage',
+                'confirmed',
+                '--component',
+                'phpunit-reconcile',
+                '--detail',
+                'boot=second',
+            ]
+        );
+        self::assertSame(0, $confirmed['exitCode'], $confirmed['stderr']);
+        $confirmedPayload = $this->decodeJson($confirmed['stdout']);
+        self::assertSame('confirmed', $confirmedPayload['stage']);
+        self::assertSame('ok', $confirmedPayload['health_status']);
+    }
+
+    public function testGenerateUpdateExecutorWritesCoordinatorScripts(): void
+    {
+        $planPath = $this->tempDir . DIRECTORY_SEPARATOR . 'executor.update-plan.json';
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'executor-bundle';
+
+        $generatePlan = $this->runPhpScript(
+            $this->fixturePath('scripts/generate_update_plan.php'),
+            [
+                '--request',
+                $this->fixturePath('examples/update/home-lab-to-1.0.1.update-request.json'),
+                '--operation-id',
+                'w4-update-cli-004',
+                '--output',
+                $planPath,
+            ]
+        );
+        self::assertSame(0, $generatePlan['exitCode'], $generatePlan['stderr']);
+
+        $generateExecutor = $this->runPhpScript(
+            $this->fixturePath('scripts/generate_update_executor.php'),
+            [
+                '--plan',
+                $planPath,
+                '--bundle-dir',
+                $bundleDir,
+            ]
+        );
+        self::assertSame(0, $generateExecutor['exitCode'], $generateExecutor['stderr']);
+
+        $payload = $this->decodeJson($generateExecutor['stdout']);
+        self::assertSame('ok', $payload['status']);
+        self::assertSame($bundleDir, $payload['bundle_dir']);
+
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'run-update-offline.sh');
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'reconcile-after-reboot.sh');
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'update-executor.json');
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'UPDATE_EXECUTOR_README.txt');
+
+        $offlineScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'run-update-offline.sh');
+        self::assertNotFalse($offlineScript);
+        self::assertStringContainsString('advance_update_operation.php', $offlineScript);
+        self::assertStringContainsString('W4_UPDATE_FAIL_STAGE', $offlineScript);
+        self::assertStringContainsString('pending_health', $offlineScript);
+
+        $reconcileScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'reconcile-after-reboot.sh');
+        self::assertNotFalse($reconcileScript);
+        self::assertStringContainsString('reconcile_update_operation.php', $reconcileScript);
+        self::assertStringContainsString('W4_UPDATE_OBSERVED_STAGE', $reconcileScript);
+    }
+
     /**
      * @param list<string> $arguments
      * @return array{exitCode:int,stdout:string,stderr:string}

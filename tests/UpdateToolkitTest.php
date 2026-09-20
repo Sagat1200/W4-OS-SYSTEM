@@ -111,6 +111,104 @@ final class UpdateToolkitTest extends TestCase
         self::assertSame('network-unavailable', $failed['last_error']['code']);
     }
 
+    public function testPersistOperationTransitionUpdatesStoreAndHealthReport(): void
+    {
+        $toolkit = new UpdateToolkit();
+        $requestPath = $this->fixturePath('examples/update/home-lab-to-1.0.1.update-request.json');
+
+        $request = $toolkit->readJsonFile($requestPath);
+        $toolkit->validateUpdateRequest($request, $requestPath);
+        $plan = $toolkit->createUpdatePlan($request, 'w4-update-fixed-003');
+
+        $storeDir = $this->tempDir . DIRECTORY_SEPARATOR . 'transition-store';
+        $toolkit->initializeOperationStore($plan, $storeDir);
+
+        $operation = $toolkit->persistOperationTransition(
+            $storeDir,
+            'downloading',
+            'phpunit',
+            ['attempt' => '1']
+        );
+
+        self::assertSame('downloading', $operation['stage']);
+
+        $storedOperation = $this->decodeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'operation.json');
+        self::assertSame('downloading', $storedOperation['stage']);
+
+        $healthReport = $this->decodeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'health-report.json');
+        self::assertSame('pending', $healthReport['status']);
+        self::assertSame('pending_health', $healthReport['stage']);
+
+        $events = file($storeDir . DIRECTORY_SEPARATOR . 'events.ndjson', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        self::assertIsArray($events);
+        self::assertCount(2, $events);
+        /** @var array<string, mixed> $event */
+        $event = json_decode($events[1], true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(2, $event['sequence']);
+        self::assertSame('operation-transitioned', $event['event_type']);
+        self::assertSame('downloading', $event['stage']);
+    }
+
+    public function testReconcileOperationStoreMovesPendingHealthToConfirmed(): void
+    {
+        $toolkit = new UpdateToolkit();
+        $requestPath = $this->fixturePath('examples/update/home-lab-to-1.0.1.update-request.json');
+
+        $request = $toolkit->readJsonFile($requestPath);
+        $toolkit->validateUpdateRequest($request, $requestPath);
+        $plan = $toolkit->createUpdatePlan($request, 'w4-update-fixed-004');
+
+        $storeDir = $this->tempDir . DIRECTORY_SEPARATOR . 'reconcile-store';
+        $toolkit->initializeOperationStore($plan, $storeDir);
+        $toolkit->persistOperationTransition($storeDir, 'downloading', 'phpunit');
+        $toolkit->persistOperationTransition($storeDir, 'ready', 'phpunit');
+        $toolkit->persistOperationTransition($storeDir, 'prepared', 'phpunit');
+        $toolkit->persistOperationTransition($storeDir, 'applying_offline', 'phpunit');
+
+        $pending = $toolkit->reconcileOperationStore(
+            $storeDir,
+            'pending_health',
+            'post-reboot-check',
+            ['boot_id' => 'boot-1']
+        );
+        self::assertTrue($pending['reconciled']);
+        self::assertSame('pending_health', $pending['operation']['stage']);
+
+        $confirmed = $toolkit->reconcileOperationStore(
+            $storeDir,
+            'confirmed',
+            'post-reboot-check',
+            ['boot_id' => 'boot-2']
+        );
+        self::assertTrue($confirmed['reconciled']);
+        self::assertSame('confirmed', $confirmed['operation']['stage']);
+        self::assertSame('ok', $confirmed['health_report']['status']);
+        self::assertSame('confirmed', $confirmed['health_report']['stage']);
+    }
+
+    public function testRenderOfflineExecutorScriptContainsCoordinatorEntryPoints(): void
+    {
+        $toolkit = new UpdateToolkit();
+        $requestPath = $this->fixturePath('examples/update/home-lab-to-1.0.1.update-request.json');
+
+        $request = $toolkit->readJsonFile($requestPath);
+        $toolkit->validateUpdateRequest($request, $requestPath);
+        $plan = $toolkit->createUpdatePlan($request, 'w4-update-fixed-005');
+
+        $script = $toolkit->renderOfflineExecutorScript($plan, $this->rootDir);
+        $reconcileScript = $toolkit->renderReconcileScript($plan, $this->rootDir);
+        $manifest = $toolkit->createUpdateExecutorManifest($plan);
+
+        self::assertStringContainsString('scripts/advance_update_operation.php', $script);
+        self::assertStringContainsString('scripts/reconcile_update_operation.php', $script);
+        self::assertStringContainsString('W4_UPDATE_FAIL_STAGE', $script);
+        self::assertStringContainsString('offline-application.json', $script);
+        self::assertStringContainsString('pending_health', $script);
+        self::assertStringContainsString('W4_UPDATE_OBSERVED_STAGE', $reconcileScript);
+        self::assertContains('run-update-offline.sh', $manifest['generated_artifacts']);
+        self::assertContains('reconcile-after-reboot.sh', $manifest['generated_artifacts']);
+    }
+
     public function testRejectInvalidTransition(): void
     {
         $toolkit = new UpdateToolkit();
