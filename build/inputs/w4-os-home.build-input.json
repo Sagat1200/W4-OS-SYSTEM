@@ -36,6 +36,7 @@
             "apt",
             "base-files",
             "bash",
+            "btrfs-progs",
             "ca-certificates",
             "firefox-esr",
             "grub-efi-amd64",
@@ -70,7 +71,7 @@
     "counts": {
         "required_meta_packages": 3,
         "recommended_meta_packages": 0,
-        "required_packages": 16,
+        "required_packages": 17,
         "recommended_packages": 5
     }
 }

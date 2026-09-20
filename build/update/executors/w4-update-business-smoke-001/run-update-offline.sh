@@ -12,6 +12,10 @@ ROOT_SUBVOLUME="${W4_UPDATE_ROOT_SUBVOLUME:-@}"
 EXECUTE_MODE="${W4_UPDATE_EXECUTE:-0}"
 APPLY_MODE="${W4_UPDATE_APPLY_MODE:-live-apt}"
 FAIL_STAGE="${W4_UPDATE_FAIL_STAGE:-}"
+APT_SOURCE_LINE="${W4_UPDATE_APT_SOURCE_LINE:-}"
+APT_SOURCE_FILE="${W4_UPDATE_APT_SOURCE_FILE:-}"
+APT_SOURCE_TARGET=""
+APT_SOURCE_INSTALLED="0"
 ADVANCE_SCRIPT="${ENGINE_ROOT}/scripts/advance_update_operation.php"
 ARTIFACT_PATH="${STORE_DIR}/offline-application.json"
 SNAPSHOT_MANIFEST_PATH="${STORE_DIR}/snapshot-manifest.json"
@@ -28,6 +32,7 @@ TEST_FILE_PATH="/home/w4admin/update-proof.txt"
 REQUIRED_SPACE_KIB="524288"
 CURRENT_STAGE="planned"
 FAILURE_PERSISTED="0"
+APT_SOURCE_TARGET="/etc/apt/sources.list.d/w4-update-${OPERATION_ID}.list"
 
 declare -a INSTALL_PACKAGES=('w4-recovery-tools')
 declare -a UPGRADE_PACKAGES=('w4-base-meta' 'w4-business-meta' 'linux-image-amd64')
@@ -51,6 +56,31 @@ require_command() {
 ensure_engine_scripts() {
   [[ -n "${ENGINE_ROOT}" ]] || die "ENGINE_ROOT no resolvio una ruta valida; defina W4_UPDATE_ENGINE_ROOT"
   [[ -f "${ADVANCE_SCRIPT}" ]] || die "no se encontro ${ADVANCE_SCRIPT}; defina W4_UPDATE_ENGINE_ROOT o ejecute dentro del repo"
+}
+
+cleanup_temporary_apt_source() {
+  if [[ "${APT_SOURCE_INSTALLED}" == "1" && -f "${APT_SOURCE_TARGET}" ]]; then
+    rm -f "${APT_SOURCE_TARGET}"
+  fi
+}
+
+configure_temporary_apt_source() {
+  local source_content=""
+
+  if [[ -n "${APT_SOURCE_FILE}" ]]; then
+    [[ -f "${APT_SOURCE_FILE}" ]] || die "no se encontro el archivo de source APT temporal: ${APT_SOURCE_FILE}"
+    source_content="$(<"${APT_SOURCE_FILE}")"
+  elif [[ -n "${APT_SOURCE_LINE}" ]]; then
+    source_content="${APT_SOURCE_LINE}"
+  else
+    return
+  fi
+
+  [[ -n "${source_content}" ]] || die "la source APT temporal esta vacia"
+  printf '%s
+' "${source_content}" > "${APT_SOURCE_TARGET}"
+  APT_SOURCE_INSTALLED="1"
+  log "Source APT temporal instalada en ${APT_SOURCE_TARGET}"
 }
 
 persist_failure() {
@@ -143,12 +173,16 @@ stage_packages() {
 EOF
 
   if [[ "${EXECUTE_MODE}" != "1" ]]; then
+    if [[ -n "${APT_SOURCE_LINE}" || -n "${APT_SOURCE_FILE}" ]]; then
+      log "Modo check-only: se detecto una source APT temporal pero no se aplicara"
+    fi
     log "Modo check-only: se omite apt-get update y descarga de paquetes"
     return
   fi
 
   require_command apt-get
   export DEBIAN_FRONTEND=noninteractive
+  configure_temporary_apt_source
   apt-get update
 
   local packages_to_stage=()
@@ -236,6 +270,7 @@ EOF
 }
 
 trap 'handle_error $? $LINENO' ERR
+trap cleanup_temporary_apt_source EXIT
 
 ensure_engine_scripts
 require_command php
