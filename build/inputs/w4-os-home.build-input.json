@@ -43,6 +43,7 @@
             "linux-image-amd64",
             "network-manager",
             "os-prober",
+            "php-cli",
             "pipewire",
             "shim-signed",
             "sudo",
@@ -69,7 +70,7 @@
     "counts": {
         "required_meta_packages": 3,
         "recommended_meta_packages": 0,
-        "required_packages": 15,
+        "required_packages": 16,
         "recommended_packages": 5
     }
 }

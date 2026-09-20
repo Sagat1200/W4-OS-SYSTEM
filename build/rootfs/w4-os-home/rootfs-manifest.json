@@ -36,6 +36,7 @@
             "linux-image-amd64",
             "network-manager",
             "os-prober",
+            "php-cli",
             "pipewire",
             "shim-signed",
             "sudo",

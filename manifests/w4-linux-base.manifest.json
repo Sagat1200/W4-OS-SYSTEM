@@ -35,7 +35,8 @@
       "grub-efi-amd64",
       "linux-image-amd64",
       "network-manager",
-      "os-prober",
+        "os-prober",
+        "php-cli",
       "shim-signed",
       "sudo",
       "systemd"
