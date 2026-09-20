@@ -2,6 +2,41 @@
 set -euo pipefail
 
 ROOTFS_DIR="${1:-./rootfs}"
+BOOTSTRAP_KEYRING_DIR="/var/tmp/w4-os-system/w4-os-business/bootstrap-keyring"
+
+prepare_host_debian_bootstrap_keyring() {
+  local work_dir="${1}"
+  local output_keyring="${work_dir}/debian-host-bootstrap-keyring.gpg"
+
+  mkdir -p "${work_dir}"
+  rm -f "${output_keyring}"
+
+  if [[ -f /usr/share/keyrings/debian-archive-current.gpg ]] && command -v gpg >/dev/null 2>&1; then
+    gpg --batch --no-default-keyring --keyring /usr/share/keyrings/debian-archive-current.gpg --export > "${output_keyring}"
+    if [[ -s "${output_keyring}" ]]; then
+      printf '%s
+' "${output_keyring}"
+      return 0
+    fi
+  fi
+
+  if [[ -f /usr/share/keyrings/debian-archive-current.gpg ]]; then
+    install -m 0644 /usr/share/keyrings/debian-archive-current.gpg "${output_keyring}"
+    printf '%s
+' "${output_keyring}"
+    return 0
+  fi
+
+  if [[ -f /usr/share/keyrings/debian-archive-keyring.gpg ]]; then
+    install -m 0644 /usr/share/keyrings/debian-archive-keyring.gpg "${output_keyring}"
+    printf '%s
+' "${output_keyring}"
+    return 0
+  fi
+
+  echo "ERROR: no se encontro un keyring Debian utilizable para bootstrap en el host Linux." >&2
+  exit 1
+}
 
 ensure_debian_keyring_in_rootfs() {
   local rootfs_dir="${1}"
@@ -71,11 +106,13 @@ if ! command -v mmdebstrap >/dev/null 2>&1 && ! command -v debootstrap >/dev/nul
 fi
 
 mkdir -p "${ROOTFS_DIR}"
+HOST_BOOTSTRAP_KEYRING="$(prepare_host_debian_bootstrap_keyring "${BOOTSTRAP_KEYRING_DIR}")"
 
 echo "==> Repositorios declarados"
 echo "  - debian-main"
 echo "  - debian-security"
 echo "  - w4-main"
+echo "==> Keyring bootstrap: ${HOST_BOOTSTRAP_KEYRING}"
 
 if command -v mmdebstrap >/dev/null 2>&1; then
   echo "==> Bootstrap base Debian con mmdebstrap"
@@ -84,10 +121,10 @@ if command -v mmdebstrap >/dev/null 2>&1; then
     --include=apt,base-files,bash,ca-certificates,curl,grub-efi-amd64,jq,linux-image-amd64,network-manager,os-prober,php-cli,pipewire,shim-signed,sudo,systemd,xdg-desktop-portal \
     --aptopt='Acquire::Retries "3"' \
     stable "${ROOTFS_DIR}" \
-    "deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] http://deb.debian.org/debian stable main"
+    "deb [signed-by=${HOST_BOOTSTRAP_KEYRING}] http://deb.debian.org/debian stable main"
 else
   echo "==> Bootstrap base Debian con debootstrap"
-  debootstrap --merged-usr --variant=minbase stable "${ROOTFS_DIR}" http://deb.debian.org/debian/
+  debootstrap --keyring="${HOST_BOOTSTRAP_KEYRING}" --merged-usr --variant=minbase stable "${ROOTFS_DIR}" http://deb.debian.org/debian/
 
   echo "==> Asegurando keyring Debian dentro del rootfs"
   ensure_debian_keyring_in_rootfs "${ROOTFS_DIR}"
