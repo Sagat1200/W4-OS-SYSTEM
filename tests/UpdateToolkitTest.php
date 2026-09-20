@@ -196,16 +196,26 @@ final class UpdateToolkitTest extends TestCase
         $plan = $toolkit->createUpdatePlan($request, 'w4-update-fixed-005');
 
         $script = $toolkit->renderOfflineExecutorScript($plan, $this->rootDir);
+        $healthScript = $toolkit->renderHealthCheckScript($plan);
         $reconcileScript = $toolkit->renderReconcileScript($plan, $this->rootDir);
         $manifest = $toolkit->createUpdateExecutorManifest($plan);
 
         self::assertStringContainsString('scripts/advance_update_operation.php', $script);
-        self::assertStringContainsString('scripts/reconcile_update_operation.php', $script);
+        self::assertStringContainsString('W4_UPDATE_ENGINE_ROOT', $script);
+        self::assertStringContainsString('W4_UPDATE_EXECUTE', $script);
+        self::assertStringContainsString('apt-get -o Dir::Cache::Archives', $script);
+        self::assertStringContainsString('snapshot-manifest.json', $script);
+        self::assertStringContainsString('staging-manifest.json', $script);
         self::assertStringContainsString('W4_UPDATE_FAIL_STAGE', $script);
         self::assertStringContainsString('offline-application.json', $script);
         self::assertStringContainsString('pending_health', $script);
+        self::assertStringContainsString('dpkg --audit', $healthScript);
+        self::assertStringContainsString('health-check-results.json', $healthScript);
+        self::assertStringContainsString('scripts/reconcile_update_operation.php', $reconcileScript);
         self::assertStringContainsString('W4_UPDATE_OBSERVED_STAGE', $reconcileScript);
+        self::assertStringContainsString('run-health-checks.sh', $reconcileScript);
         self::assertContains('run-update-offline.sh', $manifest['generated_artifacts']);
+        self::assertContains('run-health-checks.sh', $manifest['generated_artifacts']);
         self::assertContains('reconcile-after-reboot.sh', $manifest['generated_artifacts']);
     }
 

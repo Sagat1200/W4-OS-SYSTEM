@@ -53,10 +53,12 @@ try {
 
     $manifest = $toolkit->createUpdateExecutorManifest($plan);
     $offlineScript = $toolkit->renderOfflineExecutorScript($plan, $rootDir);
+    $healthCheckScript = $toolkit->renderHealthCheckScript($plan);
     $reconcileScript = $toolkit->renderReconcileScript($plan, $rootDir);
 
     $manifestPath = $bundleDir . DIRECTORY_SEPARATOR . 'update-executor.json';
     $offlinePath = $bundleDir . DIRECTORY_SEPARATOR . 'run-update-offline.sh';
+    $healthCheckPath = $bundleDir . DIRECTORY_SEPARATOR . 'run-health-checks.sh';
     $reconcilePath = $bundleDir . DIRECTORY_SEPARATOR . 'reconcile-after-reboot.sh';
     $readmePath = $bundleDir . DIRECTORY_SEPARATOR . 'UPDATE_EXECUTOR_README.txt';
 
@@ -73,6 +75,10 @@ try {
         throw new ValidationError(sprintf('No se pudo escribir %s', $offlinePath));
     }
 
+    if (file_put_contents($healthCheckPath, $healthCheckScript . PHP_EOL) === false) {
+        throw new ValidationError(sprintf('No se pudo escribir %s', $healthCheckPath));
+    }
+
     if (file_put_contents($reconcilePath, $reconcileScript . PHP_EOL) === false) {
         throw new ValidationError(sprintf('No se pudo escribir %s', $reconcilePath));
     }
@@ -82,16 +88,21 @@ W4 OS Update Executor
 
 Archivos generados:
 - run-update-offline.sh
+- run-health-checks.sh
 - reconcile-after-reboot.sh
 - update-executor.json
 
 Uso previsto:
 1. preparar primero el store durable con prepare_update_operation.php
 2. ejecutar run-update-offline.sh hasta dejar la operacion en pending_health
-3. tras el reinicio, ejecutar reconcile-after-reboot.sh con la salud observada
+3. tras el reinicio, ejecutar run-health-checks.sh
+4. ejecutar reconcile-after-reboot.sh para confirmar o fallar la operacion
 
 Variables utiles:
 - W4_UPDATE_STORE_DIR: carpeta del store durable
+- W4_UPDATE_ENGINE_ROOT: raiz del repo cuando el bundle se mueve fuera del arbol local
+- W4_UPDATE_EXECUTE: usar 1 para habilitar apt-get y snapshot reales
+- W4_UPDATE_APPLY_MODE: estrategia de aplicacion, por ahora `live-apt`
 - W4_UPDATE_FAIL_STAGE: inyeccion de fallo para laboratorio
 - W4_UPDATE_OBSERVED_STAGE: estado observado tras reinicio
 TEXT;

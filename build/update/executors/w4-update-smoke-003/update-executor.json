@@ -1,0 +1,23 @@
+{
+    "update_executor_schema_version": 1,
+    "kind": "update-executor",
+    "operation_id": "w4-update-smoke-003",
+    "engine": "apt-offline-snapshot",
+    "generated_artifacts": [
+        "run-update-offline.sh",
+        "run-health-checks.sh",
+        "reconcile-after-reboot.sh",
+        "update-executor.json",
+        "UPDATE_EXECUTOR_README.txt"
+    ],
+    "failure_injection": {
+        "environment_variable": "W4_UPDATE_FAIL_STAGE",
+        "allowed_values": [
+            "downloading",
+            "ready",
+            "prepared",
+            "applying_offline",
+            "pending_health"
+        ]
+    }
+}

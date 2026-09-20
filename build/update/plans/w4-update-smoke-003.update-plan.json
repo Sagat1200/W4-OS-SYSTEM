@@ -1,0 +1,93 @@
+{
+    "update_plan_schema_version": 1,
+    "kind": "update-plan",
+    "operation_id": "w4-update-smoke-003",
+    "profile_id": "w4-os-home",
+    "source_version": "1.0.0-lab",
+    "target_version": "1.0.1-lab",
+    "repository_snapshot": {
+        "id": "w4-main-2026-09-19T120000Z",
+        "channel": "testing"
+    },
+    "package_changes": {
+        "install": [
+            "w4-recovery-tools"
+        ],
+        "upgrade": [
+            "w4-base-meta",
+            "w4-home-meta",
+            "linux-image-amd64"
+        ],
+        "remove": [],
+        "counts": {
+            "install": 1,
+            "upgrade": 3,
+            "remove": 0,
+            "total": 4
+        }
+    },
+    "execution": {
+        "engine": "apt-offline-snapshot",
+        "apply_mode": "live-apt-maintenance-window",
+        "reboot_required": true,
+        "stages": [
+            "planned",
+            "downloading",
+            "ready",
+            "prepared",
+            "applying_offline",
+            "pending_health",
+            "confirmed"
+        ],
+        "failure_state": "failed"
+    },
+    "snapshot": {
+        "root_subvolume": "@",
+        "snapshot_name": "pre-update-w4-update-smoke-003",
+        "snapshot_path": "\/.snapshots\/pre-update-w4-update-smoke-003",
+        "retention": "protected-until-confirmed"
+    },
+    "staging": {
+        "directory": "\/var\/lib\/w4-update\/staging\/w4-update-smoke-003",
+        "estimated_space_kib": 524288,
+        "cache_policy": "protected-until-confirmed"
+    },
+    "boot_manifest": {
+        "kernel_package": "linux-image-amd64",
+        "boot_mode": "uefi",
+        "initramfs_strategy": "update-initramfs"
+    },
+    "health_check_manifest": {
+        "required": [
+            "boot-entry-present",
+            "cryptroot-unlock",
+            "root-subvolume-mounted",
+            "test-file-present"
+        ],
+        "test_file_path": "\/home\/w4\/update-proof.txt",
+        "pending_state": "pending_health",
+        "success_state": "confirmed",
+        "failure_state": "failed"
+    },
+    "durable_state_template": {
+        "update_operation_schema_version": 1,
+        "kind": "update-operation",
+        "operation_id": "w4-update-smoke-003",
+        "stage": "planned",
+        "last_error": null
+    },
+    "evidence": [
+        "update-plan.json",
+        "operation.json",
+        "events.ndjson",
+        "health-report.json",
+        "snapshot-manifest.json",
+        "staging-manifest.json",
+        "health-check-results.json"
+    ],
+    "notes": [
+        "El almacenamiento durable debe vivir fuera del estado revertible por snapshot.",
+        "El snapshot previo no promete revertir firmware ni datos externos al alcance documentado.",
+        "Una sola operacion mutante puede estar activa a la vez."
+    ]
+}

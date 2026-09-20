@@ -163,6 +163,13 @@ final class UpdateToolkit
         foreach (['kernel_package', 'boot_mode', 'initramfs_strategy'] as $field) {
             $this->requireNonEmptyString($bootManifest, sprintf('boot_manifest.%s', $field), $bootManifest[$field] ?? null, $sourcePath);
         }
+
+        /** @var array<string, mixed> $staging */
+        $staging = $this->requireAssocArray($plan, 'staging', $plan['staging'] ?? null, $sourcePath);
+        $this->requireNonEmptyString($staging, 'staging.directory', $staging['directory'] ?? null, $sourcePath);
+        if (!is_int($staging['estimated_space_kib'] ?? null) || (int) $staging['estimated_space_kib'] <= 0) {
+            throw new ValidationError(sprintf('%s: staging.estimated_space_kib debe ser un entero positivo', basename($sourcePath)));
+        }
     }
 
     /**
@@ -218,6 +225,8 @@ final class UpdateToolkit
         $healthChecks = array_values($request['health_checks']);
 
         $snapshotName = sprintf('pre-update-%s', $operationId);
+        $totalPackageActions = count($install) + count($upgrade) + count($remove);
+        $estimatedSpaceKib = max(262144, $totalPackageActions * 131072);
 
         return [
             'update_plan_schema_version' => 1,
@@ -243,6 +252,7 @@ final class UpdateToolkit
             ],
             'execution' => [
                 'engine' => $operation['mode'],
+                'apply_mode' => 'live-apt-maintenance-window',
                 'reboot_required' => $operation['reboot_required'],
                 'stages' => [
                     'planned',
@@ -260,6 +270,11 @@ final class UpdateToolkit
                 'snapshot_name' => $snapshotName,
                 'snapshot_path' => '/.snapshots/' . $snapshotName,
                 'retention' => 'protected-until-confirmed',
+            ],
+            'staging' => [
+                'directory' => '/var/lib/w4-update/staging/' . $operationId,
+                'estimated_space_kib' => $estimatedSpaceKib,
+                'cache_policy' => 'protected-until-confirmed',
             ],
             'boot_manifest' => [
                 'kernel_package' => $bootManifest['kernel_package'],
@@ -285,6 +300,9 @@ final class UpdateToolkit
                 'operation.json',
                 'events.ndjson',
                 'health-report.json',
+                'snapshot-manifest.json',
+                'staging-manifest.json',
+                'health-check-results.json',
             ],
             'notes' => [
                 'El almacenamiento durable debe vivir fuera del estado revertible por snapshot.',
@@ -519,6 +537,7 @@ final class UpdateToolkit
             'engine' => $plan['execution']['engine'],
             'generated_artifacts' => [
                 'run-update-offline.sh',
+                'run-health-checks.sh',
                 'reconcile-after-reboot.sh',
                 'update-executor.json',
                 'UPDATE_EXECUTOR_README.txt',
@@ -545,8 +564,15 @@ final class UpdateToolkit
         $operationId = $this->escapeShellDoubleQuoted((string) $plan['operation_id']);
         $targetVersion = $this->escapeShellDoubleQuoted((string) $plan['target_version']);
         $snapshotName = $this->escapeShellDoubleQuoted((string) $plan['snapshot']['snapshot_name']);
+        $snapshotPath = $this->escapeShellDoubleQuoted((string) $plan['snapshot']['snapshot_path']);
         $bootMode = $this->escapeShellDoubleQuoted((string) $plan['boot_manifest']['boot_mode']);
         $kernelPackage = $this->escapeShellDoubleQuoted((string) $plan['boot_manifest']['kernel_package']);
+        $testFilePath = $this->escapeShellDoubleQuoted((string) $plan['health_check_manifest']['test_file_path']);
+        $stagingDirectory = $this->escapeShellDoubleQuoted((string) $plan['staging']['directory']);
+        $estimatedSpaceKib = (int) $plan['staging']['estimated_space_kib'];
+        $installCount = (int) $plan['package_changes']['counts']['install'];
+        $upgradeCount = (int) $plan['package_changes']['counts']['upgrade'];
+        $removeCount = (int) $plan['package_changes']['counts']['remove'];
 
         $installList = $this->renderShellArray($plan['package_changes']['install']);
         $upgradeList = $this->renderShellArray($plan['package_changes']['upgrade']);
@@ -558,19 +584,30 @@ final class UpdateToolkit
 set -euo pipefail
 
 SCRIPT_DIR="\$(cd -- "\$(dirname -- "\${BASH_SOURCE[0]}")" && pwd)"
-ENGINE_ROOT="${engineRoot}"
+DEFAULT_ENGINE_ROOT="\$(cd -- "\${SCRIPT_DIR}/../../../.." 2>/dev/null && pwd || true)"
+ENGINE_ROOT="\${W4_UPDATE_ENGINE_ROOT:-\${DEFAULT_ENGINE_ROOT}}"
 STORE_DIR="\${W4_UPDATE_STORE_DIR:-\${SCRIPT_DIR}/store}"
+STAGING_DIR="\${W4_UPDATE_STAGING_DIR:-${stagingDirectory}}"
+SNAPSHOT_PARENT="\${W4_UPDATE_SNAPSHOT_PARENT:-/.snapshots}"
+ROOT_MOUNT="\${W4_UPDATE_ROOT_MOUNT:-/}"
+ROOT_SUBVOLUME="\${W4_UPDATE_ROOT_SUBVOLUME:-@}"
+EXECUTE_MODE="\${W4_UPDATE_EXECUTE:-0}"
+APPLY_MODE="\${W4_UPDATE_APPLY_MODE:-live-apt}"
 FAIL_STAGE="\${W4_UPDATE_FAIL_STAGE:-}"
 ADVANCE_SCRIPT="\${ENGINE_ROOT}/scripts/advance_update_operation.php"
-RECONCILE_SCRIPT="\${ENGINE_ROOT}/scripts/reconcile_update_operation.php"
 ARTIFACT_PATH="\${STORE_DIR}/offline-application.json"
+SNAPSHOT_MANIFEST_PATH="\${STORE_DIR}/snapshot-manifest.json"
+STAGING_MANIFEST_PATH="\${STORE_DIR}/staging-manifest.json"
 HEALTH_CHECK_PATH="\${STORE_DIR}/health-checks.required.txt"
 
 OPERATION_ID="${operationId}"
 TARGET_VERSION="${targetVersion}"
 SNAPSHOT_NAME="${snapshotName}"
+SNAPSHOT_PATH="${snapshotPath}"
 BOOT_MODE="${bootMode}"
 KERNEL_PACKAGE="${kernelPackage}"
+TEST_FILE_PATH="${testFilePath}"
+REQUIRED_SPACE_KIB="${estimatedSpaceKib}"
 
 declare -a INSTALL_PACKAGES=(${installList})
 declare -a UPGRADE_PACKAGES=(${upgradeList})
@@ -579,6 +616,21 @@ declare -a REQUIRED_HEALTH_CHECKS=(${healthChecks})
 
 log() {
   echo "[w4-update] \$*" >&2
+}
+
+die() {
+  log "ERROR: \$*"
+  exit 1
+}
+
+require_command() {
+  local command_name="\$1"
+  command -v "\${command_name}" >/dev/null 2>&1 || die "falta el comando requerido: \${command_name}"
+}
+
+ensure_engine_scripts() {
+  [[ -n "\${ENGINE_ROOT}" ]] || die "ENGINE_ROOT no resolvio una ruta valida; defina W4_UPDATE_ENGINE_ROOT"
+  [[ -f "\${ADVANCE_SCRIPT}" ]] || die "no se encontro \${ADVANCE_SCRIPT}; defina W4_UPDATE_ENGINE_ROOT o ejecute dentro del repo"
 }
 
 advance_stage() {
@@ -600,6 +652,114 @@ maybe_fail() {
   fi
 }
 
+run_or_describe() {
+  if [[ "\${EXECUTE_MODE}" == "1" ]]; then
+    "\$@"
+    return
+  fi
+
+  log "[check-only] \$(printf '%q ' "\$@")"
+}
+
+check_free_space() {
+  mkdir -p "\${STAGING_DIR}"
+  local available_kib
+  available_kib="\$(df -Pk "\${STAGING_DIR}" | awk 'NR==2 {print \$4}')"
+  [[ -n "\${available_kib}" ]] || die "no se pudo calcular el espacio libre de \${STAGING_DIR}"
+
+  if (( available_kib < REQUIRED_SPACE_KIB )); then
+    die "espacio insuficiente en staging: disponible=\${available_kib} KiB requerido=\${REQUIRED_SPACE_KIB} KiB"
+  fi
+}
+
+stage_packages() {
+  mkdir -p "\${STAGING_DIR}"
+  cat > "\${STAGING_MANIFEST_PATH}" <<EOF
+{
+  "staging_manifest_schema_version": 1,
+  "kind": "staging-manifest",
+  "operation_id": "${operationId}",
+  "staging_directory": "\${STAGING_DIR}",
+  "estimated_space_kib": ${estimatedSpaceKib},
+  "install_count": ${installCount},
+  "upgrade_count": ${upgradeCount},
+  "remove_count": ${removeCount}
+}
+EOF
+
+  if [[ "\${EXECUTE_MODE}" != "1" ]]; then
+    log "Modo check-only: se omite apt-get update y descarga de paquetes"
+    return
+  fi
+
+  require_command apt-get
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update
+
+  local packages_to_stage=()
+  packages_to_stage+=("\${INSTALL_PACKAGES[@]}")
+  packages_to_stage+=("\${UPGRADE_PACKAGES[@]}")
+  if (( \${#packages_to_stage[@]} > 0 )); then
+    apt-get -o Dir::Cache::Archives="\${STAGING_DIR}" -y --download-only install "\${packages_to_stage[@]}"
+  fi
+}
+
+create_snapshot() {
+  mkdir -p "\${STORE_DIR}"
+
+  if [[ "\${EXECUTE_MODE}" == "1" ]]; then
+    if command -v snapper >/dev/null 2>&1; then
+      snapper --no-dbus create --type single --description "W4 update \${OPERATION_ID}" --userdata "operation_id=\${OPERATION_ID}"
+    elif command -v btrfs >/dev/null 2>&1; then
+      mkdir -p "\${SNAPSHOT_PARENT}"
+      btrfs subvolume snapshot -r "\${ROOT_MOUNT}" "\${SNAPSHOT_PARENT}/\${SNAPSHOT_NAME}"
+    else
+      die "no se encontro snapper ni btrfs para crear snapshot"
+    fi
+  else
+    if ! command -v snapper >/dev/null 2>&1 && ! command -v btrfs >/dev/null 2>&1; then
+      log "Modo check-only: no se detecto snapper ni btrfs; se conserva la advertencia para laboratorio"
+    fi
+  fi
+
+  cat > "\${SNAPSHOT_MANIFEST_PATH}" <<EOF
+{
+  "snapshot_manifest_schema_version": 1,
+  "kind": "snapshot-manifest",
+  "operation_id": "${operationId}",
+  "snapshot_name": "${snapshotName}",
+  "snapshot_path": "\${SNAPSHOT_PARENT}/\${SNAPSHOT_NAME}",
+  "root_mount": "\${ROOT_MOUNT}",
+  "root_subvolume": "\${ROOT_SUBVOLUME}"
+}
+EOF
+}
+
+apply_packages() {
+  if [[ "\${EXECUTE_MODE}" != "1" ]]; then
+    log "Modo check-only: se omite aplicacion real de paquetes"
+    return
+  fi
+
+  require_command apt-get
+  export DEBIAN_FRONTEND=noninteractive
+
+  if [[ "\${APPLY_MODE}" != "live-apt" ]]; then
+    die "APPLY_MODE no soportado por esta etapa: \${APPLY_MODE}"
+  fi
+
+  local packages_to_install=()
+  packages_to_install+=("\${INSTALL_PACKAGES[@]}")
+  packages_to_install+=("\${UPGRADE_PACKAGES[@]}")
+  if (( \${#packages_to_install[@]} > 0 )); then
+    apt-get -o Dir::Cache::Archives="\${STAGING_DIR}" -y install "\${packages_to_install[@]}"
+  fi
+
+  if (( \${#REMOVE_PACKAGES[@]} > 0 )); then
+    apt-get -y remove "\${REMOVE_PACKAGES[@]}"
+  fi
+}
+
 write_offline_artifact() {
   mkdir -p "\${STORE_DIR}"
   cat > "\${ARTIFACT_PATH}" <<'EOF'
@@ -610,33 +770,140 @@ write_offline_artifact() {
   "target_version": "${targetVersion}",
   "snapshot_name": "${snapshotName}",
   "boot_mode": "${bootMode}",
-  "kernel_package": "${kernelPackage}"
+  "kernel_package": "${kernelPackage}",
+  "test_file_path": "${testFilePath}",
+  "staging_directory": "${stagingDirectory}"
 }
 EOF
 
   printf '%s\n' "\${REQUIRED_HEALTH_CHECKS[@]}" > "\${HEALTH_CHECK_PATH}"
 }
 
+ensure_engine_scripts
+require_command php
+
 log "Iniciando aplicacion offline para \${OPERATION_ID}"
 advance_stage "downloading"
 maybe_fail "downloading"
+check_free_space
+stage_packages
 
 advance_stage "ready"
 maybe_fail "ready"
 
 advance_stage "prepared"
 maybe_fail "prepared"
-
-write_offline_artifact
+create_snapshot
 
 advance_stage "applying_offline"
 maybe_fail "applying_offline"
+apply_packages
+write_offline_artifact
 
 advance_stage "pending_health"
 maybe_fail "pending_health"
 
 log "Aplicacion offline completada; la operacion queda en pending_health"
-log "Tras reiniciar, ejecutar reconcile-after-reboot.sh con la salud observada"
+log "Tras reiniciar, ejecutar run-health-checks.sh y luego reconcile-after-reboot.sh"
+BASH;
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     */
+    public function renderHealthCheckScript(array $plan): string
+    {
+        $testFilePath = $this->escapeShellDoubleQuoted((string) $plan['health_check_manifest']['test_file_path']);
+        $kernelPackage = $this->escapeShellDoubleQuoted((string) $plan['boot_manifest']['kernel_package']);
+        $healthChecks = $this->renderShellArray($plan['health_check_manifest']['required']);
+
+        return <<<BASH
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="\$(cd -- "\$(dirname -- "\${BASH_SOURCE[0]}")" && pwd)"
+STORE_DIR="\${W4_UPDATE_STORE_DIR:-\${SCRIPT_DIR}/store}"
+RESULT_PATH="\${W4_UPDATE_HEALTH_RESULT_PATH:-\${STORE_DIR}/health-check-results.json}"
+TEST_FILE_PATH="\${W4_UPDATE_TEST_FILE_PATH:-${testFilePath}}"
+KERNEL_PACKAGE="\${W4_UPDATE_KERNEL_PACKAGE:-${kernelPackage}}"
+
+declare -a REQUIRED_HEALTH_CHECKS=(${healthChecks})
+declare -A CHECK_RESULTS=()
+
+run_check() {
+  local check_name="\$1"
+
+  case "\${check_name}" in
+    boot-entry-present)
+      [[ -s /boot/grub/grub.cfg || -s /boot/efi/EFI/BOOT/BOOTX64.EFI ]]
+      ;;
+    cryptroot-unlock)
+      findmnt -n -o SOURCE / | grep -Eq '^/dev/mapper/|cryptroot'
+      ;;
+    root-subvolume-mounted)
+      findmnt -n -o OPTIONS / | grep -q 'subvol='
+      ;;
+    test-file-present)
+      [[ -e "\${TEST_FILE_PATH}" ]]
+      ;;
+    dpkg-consistent)
+      ! dpkg --audit 2>/dev/null | grep -q .
+      ;;
+    kernel-package-installed)
+      dpkg-query -W -f='\${Status}' "\${KERNEL_PACKAGE}" 2>/dev/null | grep -q 'install ok installed'
+      ;;
+    *)
+      return 2
+      ;;
+  esac
+}
+
+overall_status="ok"
+mkdir -p "\${STORE_DIR}"
+
+for check_name in "\${REQUIRED_HEALTH_CHECKS[@]}"; do
+  if run_check "\${check_name}"; then
+    CHECK_RESULTS["\${check_name}"]="ok"
+    continue
+  fi
+
+  exit_code="\$?"
+  if [[ "\${exit_code}" == "2" ]]; then
+    CHECK_RESULTS["\${check_name}"]="unsupported"
+  else
+    CHECK_RESULTS["\${check_name}"]="failed"
+  fi
+
+  overall_status="failed"
+done
+
+{
+  printf '{\n'
+  printf '  "health_check_result_schema_version": 1,\n'
+  printf '  "kind": "health-check-results",\n'
+  printf '  "status": "%s",\n' "\${overall_status}"
+  printf '  "results": {\n'
+
+  index=0
+  total="\${#REQUIRED_HEALTH_CHECKS[@]}"
+  for check_name in "\${REQUIRED_HEALTH_CHECKS[@]}"; do
+    index=$((index + 1))
+    separator=','
+    if (( index == total )); then
+      separator=''
+    fi
+    printf '    "%s": "%s"%s\n' "\${check_name}" "\${CHECK_RESULTS[\${check_name}]}" "\${separator}"
+  done
+
+  printf '  }\n'
+  printf '}\n'
+} > "\${RESULT_PATH}"
+
+if [[ "\${overall_status}" == "ok" ]]; then
+  exit 0
+fi
+
+exit 1
 BASH;
     }
 
@@ -652,12 +919,28 @@ BASH;
 set -euo pipefail
 
 SCRIPT_DIR="\$(cd -- "\$(dirname -- "\${BASH_SOURCE[0]}")" && pwd)"
-ENGINE_ROOT="${engineRoot}"
+DEFAULT_ENGINE_ROOT="\$(cd -- "\${SCRIPT_DIR}/../../../.." 2>/dev/null && pwd || true)"
+ENGINE_ROOT="\${W4_UPDATE_ENGINE_ROOT:-\${DEFAULT_ENGINE_ROOT}}"
 STORE_DIR="\${W4_UPDATE_STORE_DIR:-\${SCRIPT_DIR}/store}"
-OBSERVED_STAGE="\${W4_UPDATE_OBSERVED_STAGE:-confirmed}"
+OBSERVED_STAGE="\${W4_UPDATE_OBSERVED_STAGE:-}"
 DETAIL="\${W4_UPDATE_RECONCILE_DETAIL:-post-reboot-check}"
 ERROR_CODE="\${W4_UPDATE_ERROR_CODE:-health-check-failed}"
 ERROR_MESSAGE="\${W4_UPDATE_ERROR_MESSAGE:-La validacion post-arranque fallo}"
+AUTO_HEALTHCHECK="\${W4_UPDATE_AUTO_HEALTHCHECK:-1}"
+HEALTH_SCRIPT="\${SCRIPT_DIR}/run-health-checks.sh"
+HEALTH_RESULT_PATH="\${STORE_DIR}/health-check-results.json"
+
+if [[ -z "\${OBSERVED_STAGE}" && "\${AUTO_HEALTHCHECK}" == "1" ]]; then
+  if "\${HEALTH_SCRIPT}"; then
+    OBSERVED_STAGE="confirmed"
+    DETAIL="\${DETAIL};health=ok"
+  else
+    OBSERVED_STAGE="failed"
+    DETAIL="\${DETAIL};health=failed"
+  fi
+fi
+
+OBSERVED_STAGE="\${OBSERVED_STAGE:-confirmed}"
 
 COMMAND=(
   php "\${ENGINE_ROOT}/scripts/reconcile_update_operation.php"
@@ -665,6 +948,7 @@ COMMAND=(
   --observed-stage "\${OBSERVED_STAGE}"
   --component "update-post-boot-check"
   --detail "\${DETAIL}"
+  --detail "health_result=\${HEALTH_RESULT_PATH}"
 )
 
 if [[ "\${OBSERVED_STAGE}" == "failed" ]]; then

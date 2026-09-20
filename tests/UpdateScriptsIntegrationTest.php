@@ -213,6 +213,7 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertSame($bundleDir, $payload['bundle_dir']);
 
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'run-update-offline.sh');
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'run-health-checks.sh');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'reconcile-after-reboot.sh');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'update-executor.json');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'UPDATE_EXECUTOR_README.txt');
@@ -220,13 +221,22 @@ final class UpdateScriptsIntegrationTest extends TestCase
         $offlineScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'run-update-offline.sh');
         self::assertNotFalse($offlineScript);
         self::assertStringContainsString('advance_update_operation.php', $offlineScript);
+        self::assertStringContainsString('W4_UPDATE_ENGINE_ROOT', $offlineScript);
+        self::assertStringContainsString('W4_UPDATE_EXECUTE', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_FAIL_STAGE', $offlineScript);
         self::assertStringContainsString('pending_health', $offlineScript);
+        self::assertStringContainsString('snapshot-manifest.json', $offlineScript);
+
+        $healthScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'run-health-checks.sh');
+        self::assertNotFalse($healthScript);
+        self::assertStringContainsString('dpkg --audit', $healthScript);
+        self::assertStringContainsString('health-check-results.json', $healthScript);
 
         $reconcileScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'reconcile-after-reboot.sh');
         self::assertNotFalse($reconcileScript);
         self::assertStringContainsString('reconcile_update_operation.php', $reconcileScript);
         self::assertStringContainsString('W4_UPDATE_OBSERVED_STAGE', $reconcileScript);
+        self::assertStringContainsString('run-health-checks.sh', $reconcileScript);
     }
 
     /**
