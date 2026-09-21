@@ -222,6 +222,9 @@ final class UpdateToolkitTest extends TestCase
         self::assertStringContainsString('W4_UPDATE_REPOSITORY_DIR', $repoLauncherScript);
         self::assertStringContainsString('W4_UPDATE_REPOSITORY_ENV_FILE', $repoLauncherScript);
         self::assertStringContainsString('W4_REPOSITORY_CHANNEL', $repoLauncherScript);
+        self::assertStringContainsString('W4_REPOSITORY_KEYRING_RELATIVE_PATH', $repoLauncherScript);
+        self::assertStringContainsString('W4_UPDATE_APT_KEYRING_PATH', $repoLauncherScript);
+        self::assertStringContainsString('W4_UPDATE_APT_SOURCE_LINE_SIGNED', $repoLauncherScript);
         self::assertStringContainsString('run-update-offline.sh', $repoLauncherScript);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_MODE_DEFAULT', $repoLauncherScript);
         self::assertStringContainsString('W4_UPDATE_APT_CHECK_DATE', $repoLauncherScript);

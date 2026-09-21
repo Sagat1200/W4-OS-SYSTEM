@@ -1,0 +1,71 @@
+{
+    "repository_bundle_schema_version": 1,
+    "kind": "update-repository-bundle",
+    "repository_snapshot": {
+        "id": "w4-main-2026-09-20T180000Z",
+        "channel": "testing"
+    },
+    "target_version": "1.0.1-lab",
+    "package_set": "both",
+    "package_strategy": "derived-from-manifests",
+    "source_profiles": {
+        "base": "w4-linux-base",
+        "home": "w4-os-home",
+        "business": "w4-os-business"
+    },
+    "packages": [
+        {
+            "name": "w4-base-meta",
+            "version": "1.0.1-lab",
+            "architecture": "all",
+            "depends": "apt, base-files, bash, btrfs-progs, ca-certificates, grub-efi-amd64, linux-image-amd64, network-manager, os-prober, php-cli, shim-signed, sudo, systemd",
+            "description": "W4 OS base metapackage derived from the base manifest",
+            "profile_scope": "base",
+            "source": "w4-linux-base.packages.required"
+        },
+        {
+            "name": "w4-desktop-meta",
+            "version": "1.0.1-lab",
+            "architecture": "all",
+            "depends": "pipewire, xdg-desktop-portal",
+            "description": "W4 OS desktop metapackage derived from shared edition requirements",
+            "profile_scope": "desktop",
+            "source": "intersection(w4-os-home,w4-os-business).packages.required"
+        },
+        {
+            "name": "w4-recovery-tools",
+            "version": "1.0.1-lab",
+            "architecture": "all",
+            "depends": "bash, btrfs-progs",
+            "description": "W4 OS recovery tools package for update validation",
+            "profile_scope": "base",
+            "source": "update-recovery-tooling"
+        },
+        {
+            "name": "w4-home-meta",
+            "version": "1.0.1-lab",
+            "architecture": "all",
+            "depends": "w4-base-meta, w4-desktop-meta, firefox-esr, libreoffice",
+            "description": "W4 OS Home metapackage derived from the home edition profile",
+            "profile_scope": "home",
+            "source": "w4-os-home"
+        },
+        {
+            "name": "w4-business-meta",
+            "version": "1.0.1-lab",
+            "architecture": "all",
+            "depends": "w4-base-meta, w4-desktop-meta, curl, jq",
+            "description": "W4 OS Business metapackage derived from the business edition profile",
+            "profile_scope": "business",
+            "source": "w4-os-business"
+        }
+    ],
+    "generated_artifacts": [
+        "build-repo.sh",
+        "repository-manifest.json",
+        "apt-source.list.template",
+        "apt-source.dists.list.template",
+        "apt-source.signed.list.template",
+        "REPOSITORY_BUNDLE_README.txt"
+    ]
+}

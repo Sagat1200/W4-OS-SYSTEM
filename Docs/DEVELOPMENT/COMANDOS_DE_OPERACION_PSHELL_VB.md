@@ -217,3 +217,31 @@ Notas operativas del laboratorio:
 - En Business, la passphrase LUKS simple temporal validada para el laboratorio actual es `94628153`; no reutilizar la de Home.
 - El wrapper `run-update-with-repo-env.sh` ya exporta `W4_UPDATE_APT_CHECK_DATE=0` por defecto para tolerar desfases horarios del `Release` en el repo `file:` de laboratorio.
 - Si el reboot llega al prompt LUKS antes de que el helper principal consiga retomar SSH, se puede desbloquear con `VBoxManage controlvm ... keyboardputstring ...` y luego rematar con `complete_pending_health_via_paramiko.php`.
+
+## Preparar un repo APT firmado
+
+La firma sigue siendo opcional en laboratorio, pero el bundle ya la soporta. El flujo recomendado es firmar el layout `dists` y luego usar `W4_UPDATE_APT_SOURCE_LINE_SIGNED`.
+
+```powershell
+wsl -d Ubuntu -u root -- bash -lc '
+  set -euo pipefail
+  BUNDLE=/mnt/c/W4/Packages/W4-OS\ SYSTEM/build/update/repositories/w4-main-2026-09-20T180000Z
+  OUTPUT=/var/tmp/w4-os-system/update-repositories/w4-main-2026-09-20T180000Z-signed
+  GNUPGHOME=/var/tmp/w4-os-system/signing-w4
+
+  mkdir -p "$GNUPGHOME"
+  chmod 700 "$GNUPGHOME"
+
+  export W4_UPDATE_REPO_SIGNING_MODE=gpg
+  export W4_UPDATE_REPO_GPG_KEY_ID=W4-Update-Lab
+  export W4_UPDATE_REPO_GPG_HOMEDIR="$GNUPGHOME"
+
+  bash "$BUNDLE/build-repo.sh" "$OUTPUT"
+'
+```
+
+Si el directorio firmado contiene `keyrings/w4-update-archive-keyring.gpg`, el wrapper `run-update-with-repo-env.sh` ya puede derivar automaticamente una source APT estilo:
+
+```text
+deb [signed-by=/ruta/al/repositorio/keyrings/w4-update-archive-keyring.gpg] file:/ruta/al/repositorio testing main
+```

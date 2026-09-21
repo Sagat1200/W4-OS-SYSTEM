@@ -294,6 +294,7 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'repository-manifest.json');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'apt-source.list.template');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'apt-source.dists.list.template');
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'apt-source.signed.list.template');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'REPOSITORY_BUNDLE_README.txt');
 
         $manifest = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'repository-manifest.json');
@@ -319,11 +320,21 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('package-sources.json', $buildScript);
         self::assertStringContainsString('dists/${CHANNEL}/main/binary-amd64', $buildScript);
         self::assertStringContainsString('dists/${CHANNEL}/Release', $buildScript);
+        self::assertStringContainsString('InRelease', $buildScript);
+        self::assertStringContainsString('Release.gpg', $buildScript);
         self::assertStringContainsString('apt-source.dists.list.template', $buildScript);
+        self::assertStringContainsString('apt-source.signed.list.template', $buildScript);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_MODE_DEFAULT="dists"', $buildScript);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_LINE_DEFAULT_LOCAL', $buildScript);
+        self::assertStringContainsString('W4_UPDATE_REPO_SIGNING_MODE', $buildScript);
+        self::assertStringContainsString('W4_UPDATE_APT_SOURCE_LINE_SIGNED_TEMPLATE', $buildScript);
         self::assertStringContainsString('deb [trusted=yes] file:__W4_REPO_ROOT__ ./', $buildScript);
         self::assertStringContainsString('deb [trusted=yes] file:__W4_REPO_ROOT__ ${CHANNEL} main', $buildScript);
+        self::assertStringContainsString('deb [signed-by=__W4_REPO_ROOT__/keyrings/${SIGNING_KEYRING_NAME}] file:__W4_REPO_ROOT__ ${CHANNEL} main', $buildScript);
+
+        $signedAptSource = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'apt-source.signed.list.template');
+        self::assertNotFalse($signedAptSource);
+        self::assertStringContainsString('deb [signed-by=__W4_REPO_ROOT__/keyrings/w4-update-archive-keyring.gpg] file:__W4_REPO_ROOT__ testing main', $signedAptSource);
     }
 
     /**

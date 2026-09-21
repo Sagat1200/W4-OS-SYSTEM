@@ -163,6 +163,16 @@ REPO_DIR="\${WORK_ROOT}/repo"
 PKG_DIR="\${WORK_ROOT}/packages"
 POOL_DIR="\${REPO_DIR}/pool/main/w4"
 DISTS_DIR="\${REPO_DIR}/dists/\${CHANNEL}/main/binary-amd64"
+KEYRING_DIR="\${REPO_DIR}/keyrings"
+SIGNING_MODE="\${W4_UPDATE_REPO_SIGNING_MODE:-unsigned}"
+SIGNING_KEY_ID="\${W4_UPDATE_REPO_GPG_KEY_ID:-}"
+SIGNING_HOMEDIR="\${W4_UPDATE_REPO_GPG_HOMEDIR:-}"
+SIGNING_PASSPHRASE="\${W4_UPDATE_REPO_GPG_PASSPHRASE:-}"
+SIGNING_KEYRING_NAME="\${W4_UPDATE_REPO_SIGNING_KEYRING_NAME:-w4-update-archive-keyring.gpg}"
+SIGNING_KEYRING_PATH="\${KEYRING_DIR}/\${SIGNING_KEYRING_NAME}"
+RELEASE_PATH="\${REPO_DIR}/dists/\${CHANNEL}/Release"
+INRELEASE_PATH="\${REPO_DIR}/dists/\${CHANNEL}/InRelease"
+RELEASE_GPG_PATH="\${REPO_DIR}/dists/\${CHANNEL}/Release.gpg"
 
 if [[ -z "\${OUTPUT_DIR}" ]]; then
   OUTPUT_DIR="\${SCRIPT_DIR}/output"
@@ -236,9 +246,12 @@ require_command date
 require_command gzip
 require_command stat
 require_command sha256sum
+if [[ "\${SIGNING_MODE}" != "unsigned" ]]; then
+  require_command gpg
+fi
 
 rm -rf "\${REPO_DIR}" "\${PKG_DIR}"
-mkdir -p "\${REPO_DIR}" "\${PKG_DIR}" "\${POOL_DIR}" "\${DISTS_DIR}"
+mkdir -p "\${REPO_DIR}" "\${PKG_DIR}" "\${POOL_DIR}" "\${DISTS_DIR}" "\${KEYRING_DIR}"
 
 ${packageBlock}
 
@@ -258,7 +271,7 @@ packages_size="\$(stat -c %s "\${DISTS_DIR}/Packages")"
 packages_gz_size="\$(stat -c %s "\${DISTS_DIR}/Packages.gz")"
 release_date="\$(LC_ALL=C date -Ru)"
 
-cat > "\${REPO_DIR}/dists/\${CHANNEL}/Release" <<EOF
+cat > "\${RELEASE_PATH}" <<EOF
 Origin: W4 OS
 Label: W4 OS
 Suite: \${CHANNEL}
@@ -272,6 +285,24 @@ SHA256:
  \${packages_gz_sha256} \${packages_gz_size} main/binary-amd64/Packages.gz
 EOF
 
+if [[ "\${SIGNING_MODE}" == "gpg" ]]; then
+  [[ -n "\${SIGNING_KEY_ID}" ]] || die "W4_UPDATE_REPO_GPG_KEY_ID es obligatorio cuando W4_UPDATE_REPO_SIGNING_MODE=gpg"
+
+  gpg_args=(--batch --yes)
+  if [[ -n "\${SIGNING_HOMEDIR}" ]]; then
+    gpg_args+=(--homedir "\${SIGNING_HOMEDIR}")
+  fi
+  if [[ -n "\${SIGNING_PASSPHRASE}" ]]; then
+    gpg_args+=(--pinentry-mode loopback --passphrase "\${SIGNING_PASSPHRASE}")
+  fi
+
+  rm -f "\${INRELEASE_PATH}" "\${RELEASE_GPG_PATH}" "\${SIGNING_KEYRING_PATH}" "\${SIGNING_KEYRING_PATH}.asc"
+  gpg "\${gpg_args[@]}" --armor --output "\${RELEASE_GPG_PATH}" --detach-sign --local-user "\${SIGNING_KEY_ID}" "\${RELEASE_PATH}"
+  gpg "\${gpg_args[@]}" --clearsign --output "\${INRELEASE_PATH}" --local-user "\${SIGNING_KEY_ID}" "\${RELEASE_PATH}"
+  gpg "\${gpg_args[@]}" --output "\${SIGNING_KEYRING_PATH}" --export "\${SIGNING_KEY_ID}"
+  gpg "\${gpg_args[@]}" --armor --output "\${SIGNING_KEYRING_PATH}.asc" --export "\${SIGNING_KEY_ID}"
+fi
+
 cat > "\${REPO_DIR}/apt-source.list.template" <<'EOF'
 deb [trusted=yes] file:__W4_REPO_ROOT__ ./
 EOF
@@ -280,17 +311,32 @@ cat > "\${REPO_DIR}/apt-source.dists.list.template" <<EOF
 deb [trusted=yes] file:__W4_REPO_ROOT__ \${CHANNEL} main
 EOF
 
+cat > "\${REPO_DIR}/apt-source.signed.list.template" <<EOF
+deb [signed-by=__W4_REPO_ROOT__/keyrings/\${SIGNING_KEYRING_NAME}] file:__W4_REPO_ROOT__ \${CHANNEL} main
+EOF
+
+default_source_line_template="deb [trusted=yes] file:__W4_REPO_ROOT__ \${CHANNEL} main"
+default_source_line_local="deb [trusted=yes] file:\${OUTPUT_DIR} \${CHANNEL} main"
+if [[ "\${SIGNING_MODE}" == "gpg" ]]; then
+  default_source_line_template="deb [signed-by=__W4_REPO_ROOT__/keyrings/\${SIGNING_KEYRING_NAME}] file:__W4_REPO_ROOT__ \${CHANNEL} main"
+  default_source_line_local="deb [signed-by=\${OUTPUT_DIR}/keyrings/\${SIGNING_KEYRING_NAME}] file:\${OUTPUT_DIR} \${CHANNEL} main"
+fi
+
 cat > "\${REPO_DIR}/repo.env" <<EOF
 W4_REPOSITORY_SNAPSHOT_ID="\${SNAPSHOT_ID}"
 W4_REPOSITORY_CHANNEL="\${CHANNEL}"
 W4_REPOSITORY_TARGET_VERSION="\${TARGET_VERSION}"
+W4_REPOSITORY_SIGNING_MODE="\${SIGNING_MODE}"
+W4_REPOSITORY_KEYRING_RELATIVE_PATH="keyrings/\${SIGNING_KEYRING_NAME}"
 W4_UPDATE_APT_SOURCE_MODE_DEFAULT="dists"
-W4_UPDATE_APT_SOURCE_LINE_DEFAULT_TEMPLATE="deb [trusted=yes] file:__W4_REPO_ROOT__ \${CHANNEL} main"
-W4_UPDATE_APT_SOURCE_LINE_DEFAULT_LOCAL="deb [trusted=yes] file:\${OUTPUT_DIR} \${CHANNEL} main"
+W4_UPDATE_APT_SOURCE_LINE_DEFAULT_TEMPLATE="\${default_source_line_template}"
+W4_UPDATE_APT_SOURCE_LINE_DEFAULT_LOCAL="\${default_source_line_local}"
 W4_UPDATE_APT_SOURCE_LINE_TEMPLATE="deb [trusted=yes] file:__W4_REPO_ROOT__ ./"
 W4_UPDATE_APT_SOURCE_LINE_LOCAL="deb [trusted=yes] file:\${OUTPUT_DIR} ./"
 W4_UPDATE_APT_SOURCE_LINE_DISTS_TEMPLATE="deb [trusted=yes] file:__W4_REPO_ROOT__ \${CHANNEL} main"
 W4_UPDATE_APT_SOURCE_LINE_DISTS_LOCAL="deb [trusted=yes] file:\${OUTPUT_DIR} \${CHANNEL} main"
+W4_UPDATE_APT_SOURCE_LINE_SIGNED_TEMPLATE="deb [signed-by=__W4_REPO_ROOT__/keyrings/\${SIGNING_KEYRING_NAME}] file:__W4_REPO_ROOT__ \${CHANNEL} main"
+W4_UPDATE_APT_SOURCE_LINE_SIGNED_LOCAL="deb [signed-by=\${OUTPUT_DIR}/keyrings/\${SIGNING_KEYRING_NAME}] file:\${OUTPUT_DIR} \${CHANNEL} main"
 EOF
 
 cat > "\${REPO_DIR}/package-sources.json" <<EOF
@@ -310,8 +356,11 @@ Contenido:
 - dists/\${CHANNEL}/main/binary-amd64/Packages
 - dists/\${CHANNEL}/main/binary-amd64/Packages.gz
 - dists/\${CHANNEL}/Release
+- dists/\${CHANNEL}/InRelease (cuando SIGNING_MODE=gpg)
+- dists/\${CHANNEL}/Release.gpg (cuando SIGNING_MODE=gpg)
 - apt-source.list.template
 - apt-source.dists.list.template
+- apt-source.signed.list.template
 - package-sources.json
 - repo.env
 
@@ -319,8 +368,15 @@ Uso de laboratorio:
 1. copiar este directorio al sistema objetivo
 2. definir preferentemente:
    W4_UPDATE_APT_SOURCE_MODE=dists
+   W4_UPDATE_APT_SOURCE_LINE_SIGNED="deb [signed-by=/ruta/al/repositorio/keyrings/\${SIGNING_KEYRING_NAME}] file:/ruta/al/repositorio \${CHANNEL} main"
+3. si el repo aun no fue firmado, usar como fallback:
    W4_UPDATE_APT_SOURCE_LINE_DISTS="deb [trusted=yes] file:/ruta/al/repositorio \${CHANNEL} main"
-3. ejecutar run-update-offline.sh con W4_UPDATE_EXECUTE=1
+4. ejecutar run-update-offline.sh con W4_UPDATE_EXECUTE=1
+
+Firma opcional:
+- exportar W4_UPDATE_REPO_SIGNING_MODE=gpg y W4_UPDATE_REPO_GPG_KEY_ID antes de ejecutar build-repo.sh
+- opcionalmente definir W4_UPDATE_REPO_GPG_HOMEDIR y W4_UPDATE_REPO_GPG_PASSPHRASE
+- el repositorio firmado exporta el keyring publico a keyrings/\${SIGNING_KEYRING_NAME}
 
 Origen declarativo:
 - los metapaquetes se derivan de los manifests/perfiles reales del repositorio
@@ -329,7 +385,7 @@ Origen declarativo:
 Compatibilidad:
 - el runner ya prioriza la source dists en modo auto, que es la ruta recomendada para futuras pruebas
 - se conserva la source plana para el laboratorio actual: deb [trusted=yes] file:/ruta ./
-- ademas se publica una estructura tipo APT bajo dists/\${CHANNEL} para preparar una fuente W4 mas cercana a produccion
+- ademas se publica una estructura tipo APT bajo dists/\${CHANNEL} y puede firmarse con GPG para preparar una fuente W4 mas cercana a produccion
 
 Snapshot: \${SNAPSHOT_ID}
 Canal: \${CHANNEL}
@@ -469,6 +525,7 @@ try {
             'repository-manifest.json',
             'apt-source.list.template',
             'apt-source.dists.list.template',
+            'apt-source.signed.list.template',
             'REPOSITORY_BUNDLE_README.txt',
         ],
     ];
@@ -477,6 +534,7 @@ try {
     $scriptPath = $outputDir . DIRECTORY_SEPARATOR . 'build-repo.sh';
     $sourceTemplatePath = $outputDir . DIRECTORY_SEPARATOR . 'apt-source.list.template';
     $distsSourceTemplatePath = $outputDir . DIRECTORY_SEPARATOR . 'apt-source.dists.list.template';
+    $signedSourceTemplatePath = $outputDir . DIRECTORY_SEPARATOR . 'apt-source.signed.list.template';
     $readmePath = $outputDir . DIRECTORY_SEPARATOR . 'REPOSITORY_BUNDLE_README.txt';
 
     $manifestJson = json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
@@ -501,6 +559,10 @@ try {
         throw new ValidationError(sprintf('No se pudo escribir %s', $distsSourceTemplatePath));
     }
 
+    if (file_put_contents($signedSourceTemplatePath, sprintf("deb [signed-by=__W4_REPO_ROOT__/keyrings/w4-update-archive-keyring.gpg] file:__W4_REPO_ROOT__ %s main", $channel) . PHP_EOL) === false) {
+        throw new ValidationError(sprintf('No se pudo escribir %s', $signedSourceTemplatePath));
+    }
+
     $readme = <<<TEXT
 W4 OS Update Repository Bundle
 
@@ -509,12 +571,13 @@ Archivos generados:
 - repository-manifest.json
 - apt-source.list.template
 - apt-source.dists.list.template
+- apt-source.signed.list.template
 
 Uso previsto:
 1. ejecutar build-repo.sh en Linux o WSL para producir el repositorio APT
 2. copiar el repositorio resultante al sistema objetivo
-3. preferir W4_UPDATE_APT_SOURCE_MODE=dists y W4_UPDATE_APT_SOURCE_LINE_DISTS al lanzar run-update-offline.sh
-4. usar W4_UPDATE_APT_SOURCE_LINE o W4_UPDATE_APT_SOURCE_FILE solo como compatibilidad/fallback
+3. si el repo fue firmado, preferir W4_UPDATE_APT_SOURCE_MODE=dists y W4_UPDATE_APT_SOURCE_LINE_SIGNED al lanzar run-update-offline.sh
+4. usar W4_UPDATE_APT_SOURCE_LINE_DISTS o W4_UPDATE_APT_SOURCE_LINE solo como compatibilidad/fallback
 
 Parametros embebidos:
 - snapshot_id: {$snapshotId}
