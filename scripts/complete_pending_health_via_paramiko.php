@@ -12,6 +12,7 @@ import argparse
 import os
 import posixpath
 import sys
+import time
 from pathlib import Path
 
 sys.dont_write_bytecode = True
@@ -26,6 +27,31 @@ import paramiko  # type: ignore  # noqa: E402
 
 def log(message: str) -> None:
     print(f"[w4-update-pending-health] {message}", file=sys.stderr, flush=True)
+
+
+def wait_for_ssh(host: str, port: int, username: str, password: str, timeout: float) -> paramiko.SSHClient:
+    deadline = time.time() + timeout
+    last_error: Exception | None = None
+    while time.time() < deadline:
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            client.connect(
+                host,
+                port=port,
+                username=username,
+                password=password,
+                timeout=20,
+                banner_timeout=20,
+                auth_timeout=20,
+            )
+            return client
+        except Exception as error:  # pragma: no cover - retry path de laboratorio
+            last_error = error
+            client.close()
+            time.sleep(5)
+
+    raise TimeoutError(f"No fue posible recuperar SSH en {host}:{port}: {last_error}")
 
 
 def run_sudo_command(
@@ -79,6 +105,7 @@ def main() -> int:
     parser.add_argument("--password", required=True)
     parser.add_argument("--remote-root", required=True, help="Directorio remoto base usado por run_update_validation_via_paramiko.php")
     parser.add_argument("--evidence-dir", required=True)
+    parser.add_argument("--connect-wait", type=int, default=180, help="Segundos maximos para esperar a que el SSH vuelva a estar utilizable")
     args = parser.parse_args()
 
     evidence_dir = Path(args.evidence_dir).resolve()
@@ -86,17 +113,7 @@ def main() -> int:
     remote_engine_dir = posixpath.join(args.remote_root, "engine")
     remote_store_dir = posixpath.join(remote_executor_dir, "store")
 
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(
-        args.host,
-        port=args.port,
-        username=args.username,
-        password=args.password,
-        timeout=20,
-        banner_timeout=20,
-        auth_timeout=20,
-    )
+    client = wait_for_ssh(args.host, args.port, args.username, args.password, timeout=args.connect_wait)
 
     try:
         for command, label in [

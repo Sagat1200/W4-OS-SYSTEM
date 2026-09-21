@@ -1,0 +1,11 @@
+{
+  "offline_application_schema_version": 1,
+  "kind": "offline-application",
+  "operation_id": "w4-update-business-smoke-001",
+  "target_version": "1.0.1-lab",
+  "snapshot_name": "pre-update-w4-update-business-smoke-001",
+  "boot_mode": "uefi",
+  "kernel_package": "linux-image-amd64",
+  "test_file_path": "/home/w4admin/update-proof.txt",
+  "staging_directory": "/var/lib/w4-update/staging/w4-update-business-smoke-001"
+}

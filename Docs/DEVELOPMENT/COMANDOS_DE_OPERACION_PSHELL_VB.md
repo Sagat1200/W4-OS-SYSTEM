@@ -182,6 +182,23 @@ php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_update_validation_via_paramiko.php"
   --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\validation\w4-update-smoke-003-dists-home"
 ```
 
+### Corrida completa de Business hasta reboot + desbloqueo LUKS
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_update_validation_via_paramiko.php" `
+  --host 127.0.0.1 `
+  --port 2223 `
+  --username w4admin `
+  --password W4login1234 `
+  --repo-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\repository-output\w4-main-2026-09-20T120000Z" `
+  --executor-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\executors\w4-update-business-smoke-001" `
+  --plan-path "c:\W4\Packages\W4-OS SYSTEM\build\update\plans\w4-update-business-smoke-001.update-plan.json" `
+  --remote-root /home/w4admin/w4-update-dists-business-php `
+  --vm-name "W4-OS-Business-Test" `
+  --luks-passphrase 94628153 `
+  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\validation\w4-update-business-smoke-001-dists-business-php"
+```
+
 ### Cierre de una operacion ya en `pending_health`
 
 ```powershell
@@ -190,12 +207,13 @@ php "c:\W4\Packages\W4-OS SYSTEM\scripts\complete_pending_health_via_paramiko.ph
   --port 2222 `
   --username w4 `
   --password W4login1234 `
-  --remote-root /home/w4/w4-update-dists-home `
-  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\validation\w4-update-smoke-003-dists-home"
+  --remote-root /home/w4/w4-update-dists-home-php `
+  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\validation\w4-update-smoke-003-dists-home-php"
 ```
 
 Notas operativas del laboratorio:
 
 - `run_update_validation_via_paramiko.php` normaliza a `LF` los `.sh` copiados a la VM, prepara el store durable remoto y copia un `ENGINE_ROOT` minimo (`scripts/` + `src/`) para que el coordinador PHP funcione fuera del arbol local.
+- En Business, la passphrase LUKS simple temporal validada para el laboratorio actual es `94628153`; no reutilizar la de Home.
 - El wrapper `run-update-with-repo-env.sh` ya exporta `W4_UPDATE_APT_CHECK_DATE=0` por defecto para tolerar desfases horarios del `Release` en el repo `file:` de laboratorio.
 - Si el reboot llega al prompt LUKS antes de que el helper principal consiga retomar SSH, se puede desbloquear con `VBoxManage controlvm ... keyboardputstring ...` y luego rematar con `complete_pending_health_via_paramiko.php`.
