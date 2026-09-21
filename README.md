@@ -91,6 +91,8 @@ La tercera capa ya genera un bundle offline con `run-update-offline.sh`, `run-he
 
 Las ejecuciones reales en VM ya confirmaron primero la persistencia correcta del fallo cuando APT no encontraba `w4-recovery-tools`, `w4-base-meta`, `w4-home-meta` o `w4-business-meta`; despues, con el repositorio APT W4 de laboratorio, tanto `W4-OS-Business-Test` como `W4-OS-Home-Test` ya completaron el recorrido de `MX-004` hasta `pending_health`, reboot, health checks y `confirmed`. El laboratorio tambien expuso que el sistema instalado necesitaba `btrfs-progs` para materializar snapshots Btrfs, por lo que ese prerequisito ya fue absorbido en el baseline base junto con `php-cli`, propagado a `build-input`, recompilado dentro de `rootfs` y verificado ya en `filesystem.manifest` de `live` e `iso` para Home y Business. Ademas, el repositorio APT de update ya no depende de un catalogo hardcodeado: ahora deriva `w4-base-meta`, `w4-desktop-meta`, `w4-home-meta`, `w4-business-meta` y `w4-recovery-tools` desde los manifests y perfiles reales del proyecto, deja trazada su procedencia en `package-sources.json` y ya expone un layout `dists/<channel>` que el runner offline puede priorizar automaticamente como source recomendada antes de caer al modo plano de laboratorio.
 
+En la operacion de laboratorio vigente, el uso recomendado ya es cargar `repo.env` del bundle reconstruido y exportar `W4_UPDATE_APT_SOURCE_MODE=dists` junto con `W4_UPDATE_APT_SOURCE_LINE_DISTS_LOCAL` antes de ejecutar `run-update-offline.sh`. Los bundles vigentes de `w4-update-smoke-003` y `w4-update-business-smoke-001` ya quedaron regenerados con ese contrato operativo.
+
 ## Documentacion clave
 
 - `Docs/INDICE_W4_OS.md`
