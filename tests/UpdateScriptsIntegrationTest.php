@@ -395,6 +395,75 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('bash ', $payload['run_command']);
     }
 
+    public function testSignedRepositoryRunnerSupportsPersistentKeyImportPreview(): void
+    {
+        $distribution = $this->detectWslDistribution();
+        if ($distribution === null) {
+            self::markTestSkipped('No hay una distribucion WSL disponible para validar el preview de importacion GPG persistente.');
+        }
+
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'repo-bundle-signed-import-preview';
+        $outputDir = $this->tempDir . DIRECTORY_SEPARATOR . 'repo-output-signed-import-preview';
+        $secretKeyFile = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-update-prod-secret.asc';
+        $ownertrustFile = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-update-prod-ownertrust.txt';
+
+        self::assertNotFalse(file_put_contents($secretKeyFile, "-----BEGIN PGP PRIVATE KEY BLOCK-----\nplaceholder\n"));
+        self::assertNotFalse(file_put_contents($ownertrustFile, "placeholder:6:\n"));
+
+        $generateBundle = $this->runPhpScript(
+            $this->fixturePath('scripts/generate_update_repository_bundle.php'),
+            [
+                '--snapshot-id',
+                'w4-main-2026-09-21T120000Z',
+                '--channel',
+                'testing',
+                '--target-version',
+                '1.0.1-prod-preview',
+                '--package-set',
+                'both',
+                '--output-dir',
+                $bundleDir,
+            ]
+        );
+        self::assertSame(0, $generateBundle['exitCode'], $generateBundle['stderr']);
+
+        $preview = $this->runPhpScript(
+            $this->fixturePath('scripts/run_update_repository_bundle_in_wsl.php'),
+            [
+                '--bundle',
+                $bundleDir,
+                '--output-dir',
+                $outputDir,
+                '--distribution',
+                $distribution,
+                '--signing-mode',
+                'gpg',
+                '--gpg-key-id',
+                'W4-Update-Prod',
+                '--gpg-secret-key-file',
+                $secretKeyFile,
+                '--gpg-ownertrust-file',
+                $ownertrustFile,
+                '--check-only',
+            ]
+        );
+        self::assertSame(0, $preview['exitCode'], $preview['stderr']);
+
+        $payload = $this->decodeJson($preview['stdout']);
+        self::assertSame('ready', $payload['status']);
+        self::assertSame('gpg', $payload['signing_mode']);
+        self::assertSame('W4-Update-Prod', $payload['gpg_key_id']);
+        self::assertFalse($payload['generate_lab_key']);
+        self::assertSame($distribution, $payload['distribution']);
+        self::assertStringContainsString('signing-imported', (string) $payload['gpg_homedir_wsl']);
+        self::assertNotEmpty($payload['gpg_secret_key_file_wsl']);
+        self::assertNotEmpty($payload['gpg_ownertrust_file_wsl']);
+        self::assertStringContainsString(' --import ', $payload['run_command']);
+        self::assertStringContainsString('--import-ownertrust', $payload['run_command']);
+        self::assertStringContainsString('export W4_UPDATE_REPO_GPG_HOMEDIR=', $payload['run_command']);
+        self::assertStringContainsString('bash ', $payload['run_command']);
+    }
+
     /**
      * @param list<string> $arguments
      * @return array{exitCode:int,stdout:string,stderr:string}

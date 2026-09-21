@@ -91,6 +91,8 @@ try {
     $gpgKeyId = null;
     $gpgHomedir = null;
     $gpgPassphrase = null;
+    $gpgSecretKeyFile = null;
+    $gpgOwnertrustFile = null;
     $generateLabKey = false;
     $labKeyType = 'rsa3072';
     $labKeyUsage = 'sign';
@@ -148,6 +150,14 @@ try {
                 $gpgPassphrase = $value;
                 break;
 
+            case '--gpg-secret-key-file':
+                $gpgSecretKeyFile = $value;
+                break;
+
+            case '--gpg-ownertrust-file':
+                $gpgOwnertrustFile = $value;
+                break;
+
             case '--lab-key-type':
                 $labKeyType = $value;
                 break;
@@ -173,6 +183,14 @@ try {
         throw new ValidationError('signing-mode debe ser unsigned o gpg');
     }
 
+    if ($gpgSecretKeyFile !== null && !isWslNativePath($gpgSecretKeyFile) && !is_file($gpgSecretKeyFile)) {
+        throw new ValidationError(sprintf('No existe el archivo de clave secreta GPG indicado: %s', $gpgSecretKeyFile));
+    }
+
+    if ($gpgOwnertrustFile !== null && !isWslNativePath($gpgOwnertrustFile) && !is_file($gpgOwnertrustFile)) {
+        throw new ValidationError(sprintf('No existe el archivo ownertrust GPG indicado: %s', $gpgOwnertrustFile));
+    }
+
     if ($generateLabKey) {
         $signingMode = 'gpg';
         if ($gpgKeyId === null) {
@@ -180,8 +198,20 @@ try {
         }
     }
 
+    if ($generateLabKey && ($gpgSecretKeyFile !== null || $gpgOwnertrustFile !== null)) {
+        throw new ValidationError('No combine --generate-lab-key con --gpg-secret-key-file ni --gpg-ownertrust-file');
+    }
+
     if ($signingMode === 'gpg' && $gpgKeyId === null) {
         throw new ValidationError('Debe indicar --gpg-key-id cuando signing-mode=gpg');
+    }
+
+    if ($signingMode !== 'gpg' && ($gpgSecretKeyFile !== null || $gpgOwnertrustFile !== null)) {
+        throw new ValidationError('Los archivos GPG persistentes solo aplican cuando signing-mode=gpg');
+    }
+
+    if ($gpgOwnertrustFile !== null && $gpgSecretKeyFile === null && $gpgHomedir === null) {
+        throw new ValidationError('Use --gpg-ownertrust-file junto con --gpg-secret-key-file o un --gpg-homedir ya provisionado');
     }
 
     $availableDistros = listWslDistros();
@@ -213,11 +243,26 @@ try {
     ));
 
     $wslOutputDir = resolvePathForWsl($distribution, $outputDir);
+    $wslGpgSecretKeyFile = null;
+    if ($gpgSecretKeyFile !== null) {
+        $wslGpgSecretKeyFile = resolvePathForWsl($distribution, $gpgSecretKeyFile);
+    }
+
+    $wslGpgOwnertrustFile = null;
+    if ($gpgOwnertrustFile !== null) {
+        $wslGpgOwnertrustFile = resolvePathForWsl($distribution, $gpgOwnertrustFile);
+    }
+
+    $requiresManagedHomedir = $generateLabKey || $wslGpgSecretKeyFile !== null || $wslGpgOwnertrustFile !== null;
     $wslGpgHomedir = null;
     if ($gpgHomedir !== null) {
         $wslGpgHomedir = resolvePathForWsl($distribution, $gpgHomedir);
-    } elseif ($generateLabKey) {
-        $wslGpgHomedir = sprintf('/var/tmp/w4-os-system/update-repositories/%s-signing-lab', $snapshotId ?? basename($bundlePath));
+    } elseif ($requiresManagedHomedir) {
+        $wslGpgHomedir = sprintf(
+            '/var/tmp/w4-os-system/update-repositories/%s-%s',
+            $snapshotId ?? basename($bundlePath),
+            $generateLabKey ? 'signing-lab' : 'signing-imported'
+        );
     }
 
     $bashSegments = [
@@ -225,9 +270,30 @@ try {
         sprintf('chmod +x %s', quoteForBash($wslBuildScriptPath)),
     ];
 
-    if ($generateLabKey) {
+    if ($requiresManagedHomedir) {
         $bashSegments[] = sprintf('mkdir -p %s', quoteForBash((string) $wslGpgHomedir));
         $bashSegments[] = sprintf('chmod 700 %s', quoteForBash((string) $wslGpgHomedir));
+    }
+
+    if ($wslGpgSecretKeyFile !== null) {
+        $bashSegments[] = sprintf(
+            'if ! gpg --batch --homedir %s --list-secret-keys %s >/dev/null 2>&1; then gpg --batch --yes --homedir %s --import %s >/dev/null 2>&1; fi',
+            quoteForBash((string) $wslGpgHomedir),
+            quoteForBash((string) $gpgKeyId),
+            quoteForBash((string) $wslGpgHomedir),
+            quoteForBash($wslGpgSecretKeyFile)
+        );
+    }
+
+    if ($wslGpgOwnertrustFile !== null) {
+        $bashSegments[] = sprintf(
+            'gpg --batch --yes --homedir %s --import-ownertrust %s >/dev/null 2>&1',
+            quoteForBash((string) $wslGpgHomedir),
+            quoteForBash($wslGpgOwnertrustFile)
+        );
+    }
+
+    if ($generateLabKey) {
         $bashSegments[] = sprintf(
             'if ! gpg --batch --homedir %s --list-keys %s >/dev/null 2>&1; then gpg --batch --homedir %s --passphrase %s --quick-generate-key %s %s %s %s >/dev/null 2>&1; fi',
             quoteForBash((string) $wslGpgHomedir),
@@ -275,6 +341,8 @@ try {
             'signing_mode' => $signingMode,
             'gpg_key_id' => $gpgKeyId,
             'gpg_homedir_wsl' => $wslGpgHomedir,
+            'gpg_secret_key_file_wsl' => $wslGpgSecretKeyFile,
+            'gpg_ownertrust_file_wsl' => $wslGpgOwnertrustFile,
             'generate_lab_key' => $generateLabKey,
             'run_command' => $runCommand,
         ]);
@@ -292,6 +360,8 @@ try {
         'signing_mode' => $signingMode,
         'gpg_key_id' => $gpgKeyId,
         'gpg_homedir_wsl' => $wslGpgHomedir,
+        'gpg_secret_key_file_wsl' => $wslGpgSecretKeyFile,
+        'gpg_ownertrust_file_wsl' => $wslGpgOwnertrustFile,
         'generate_lab_key' => $generateLabKey,
         'execution_output' => $executionOutput,
     ]);

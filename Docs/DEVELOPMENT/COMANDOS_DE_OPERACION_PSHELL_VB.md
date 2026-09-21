@@ -257,6 +257,25 @@ php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_update_repository_bundle_in_wsl.php
   --gpg-homedir /var/tmp/w4-os-system/signing-w4
 ```
 
+Si el material persistente vive en archivos exportados desde Windows y todavia no existe un `homedir` GPG preparado dentro de WSL, el runner ya puede importarlo automaticamente:
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_update_repository_bundle_in_wsl.php" `
+  --bundle "c:\W4\Packages\W4-OS SYSTEM\build\update\repositories\w4-main-2026-09-20T180000Z" `
+  --output-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\repository-output\w4-main-2026-09-20T180000Z-signed-prod" `
+  --distribution Ubuntu `
+  --signing-mode gpg `
+  --gpg-key-id W4-Update-Prod `
+  --gpg-secret-key-file "c:\W4\Secrets\w4-update-prod-private.asc" `
+  --gpg-ownertrust-file "c:\W4\Secrets\w4-update-prod-ownertrust.txt"
+```
+
+Notas:
+
+- Si tambien se indica `--gpg-homedir`, la importacion se realiza sobre ese homedir persistente.
+- Si no se indica `--gpg-homedir`, el runner crea automaticamente un homedir reproducible en WSL bajo `/var/tmp/w4-os-system/update-repositories/...-signing-imported`.
+- `--generate-lab-key` sigue reservado al laboratorio efimero y no debe mezclarse con archivos persistentes.
+
 Si el directorio firmado contiene `keyrings/w4-update-archive-keyring.gpg`, el wrapper `run-update-with-repo-env.sh` ya puede derivar automaticamente una source APT estilo:
 
 ```text
