@@ -225,6 +225,7 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('W4_UPDATE_ENGINE_ROOT', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_EXECUTE', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_MODE', $offlineScript);
+        self::assertStringContainsString('W4_UPDATE_APT_CHECK_DATE', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_LINE', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_LINE_DISTS', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_FILE', $offlineScript);
@@ -241,6 +242,7 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('W4_REPOSITORY_CHANNEL', $repoLauncherScript);
         self::assertStringContainsString('run-update-offline.sh', $repoLauncherScript);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_MODE_DEFAULT', $repoLauncherScript);
+        self::assertStringContainsString('W4_UPDATE_APT_CHECK_DATE', $repoLauncherScript);
 
         $healthScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'run-health-checks.sh');
         self::assertNotFalse($healthScript);

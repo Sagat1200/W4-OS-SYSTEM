@@ -95,6 +95,8 @@ En la operacion de laboratorio vigente, el uso recomendado ya es cargar `repo.en
 
 Para reducir pasos manuales en la siguiente validacion real, el bundle del ejecutor ahora tambien expone `run-update-with-repo-env.sh`: ese wrapper carga `repo.env`, deriva la source APT desde la ruta real del repositorio copiado al sistema objetivo y luego delega en `run-update-offline.sh`. Con ello, la operacion en VM puede lanzarse apuntando solo a `--repo-dir /ruta/al/repositorio`.
 
+La validacion real de Home usando ya el layout `dists` tambien quedo rehecha sobre `W4-OS-Home-Test`: el flujo avanzo de nuevo hasta `pending_health`, se reinicio la VM, se desbloqueo LUKS y luego `run-health-checks.sh` + `reconcile-after-reboot.sh` volvieron a cerrar `operation.json.stage=confirmed`, con evidencia descargada en `build/update/validation/w4-update-smoke-003-dists-home/`. Para repetir ese camino desde el host se incorporaron dos helpers operativos en PHP: `scripts/run_update_validation_via_paramiko.php` para la fase de copia + aplicacion + reboot, y `scripts/complete_pending_health_via_paramiko.php` para cerrar una operacion ya desbloqueada en `pending_health`. Con ello, `scripts/` vuelve a quedar alineado con la convencion del proyecto: entrypoints en PHP aunque el transporte de laboratorio siga apoyandose en la toolchain local de Paramiko.
+
 ## Documentacion clave
 
 - `Docs/INDICE_W4_OS.md`

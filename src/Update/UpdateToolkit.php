@@ -595,6 +595,7 @@ ROOT_SUBVOLUME="\${W4_UPDATE_ROOT_SUBVOLUME:-@}"
 EXECUTE_MODE="\${W4_UPDATE_EXECUTE:-0}"
 APPLY_MODE="\${W4_UPDATE_APPLY_MODE:-live-apt}"
 FAIL_STAGE="\${W4_UPDATE_FAIL_STAGE:-}"
+APT_CHECK_DATE="\${W4_UPDATE_APT_CHECK_DATE:-1}"
 APT_SOURCE_MODE="\${W4_UPDATE_APT_SOURCE_MODE:-auto}"
 APT_SOURCE_LINE="\${W4_UPDATE_APT_SOURCE_LINE:-}"
 APT_SOURCE_LINE_DISTS="\${W4_UPDATE_APT_SOURCE_LINE_DISTS:-}"
@@ -798,7 +799,12 @@ EOF
   require_command apt-get
   export DEBIAN_FRONTEND=noninteractive
   configure_temporary_apt_source
-  apt-get update
+  if [[ "\${APT_CHECK_DATE}" == "1" ]]; then
+    apt-get update
+  else
+    log "Se desactiva Acquire::Check-Date para la source APT temporal de laboratorio"
+    apt-get -o Acquire::Check-Date=false update
+  fi
 
   local packages_to_stage=()
   packages_to_stage+=("\${INSTALL_PACKAGES[@]}")
@@ -985,6 +991,7 @@ REPOSITORY_URI_PATH="${REPOSITORY_URI_PATH// /%20}"
 REPOSITORY_URI="file:${REPOSITORY_URI_PATH}"
 
 export W4_UPDATE_APT_SOURCE_MODE="${W4_UPDATE_APT_SOURCE_MODE:-${W4_UPDATE_APT_SOURCE_MODE_DEFAULT:-dists}}"
+export W4_UPDATE_APT_CHECK_DATE="${W4_UPDATE_APT_CHECK_DATE:-0}"
 export W4_UPDATE_APT_SOURCE_LINE_DISTS="${W4_UPDATE_APT_SOURCE_LINE_DISTS:-deb [trusted=yes] ${REPOSITORY_URI} ${CHANNEL} main}"
 export W4_UPDATE_APT_SOURCE_LINE="${W4_UPDATE_APT_SOURCE_LINE:-deb [trusted=yes] ${REPOSITORY_URI} ./}"
 

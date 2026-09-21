@@ -205,6 +205,7 @@ final class UpdateToolkitTest extends TestCase
         self::assertStringContainsString('W4_UPDATE_ENGINE_ROOT', $script);
         self::assertStringContainsString('W4_UPDATE_EXECUTE', $script);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_MODE', $script);
+        self::assertStringContainsString('W4_UPDATE_APT_CHECK_DATE', $script);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_LINE', $script);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_LINE_DISTS', $script);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_FILE', $script);
@@ -223,6 +224,7 @@ final class UpdateToolkitTest extends TestCase
         self::assertStringContainsString('W4_REPOSITORY_CHANNEL', $repoLauncherScript);
         self::assertStringContainsString('run-update-offline.sh', $repoLauncherScript);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_MODE_DEFAULT', $repoLauncherScript);
+        self::assertStringContainsString('W4_UPDATE_APT_CHECK_DATE', $repoLauncherScript);
         self::assertStringContainsString('dpkg --audit', $healthScript);
         self::assertStringContainsString('health-check-results.json', $healthScript);
         self::assertStringContainsString('scripts/reconcile_update_operation.php', $reconcileScript);
