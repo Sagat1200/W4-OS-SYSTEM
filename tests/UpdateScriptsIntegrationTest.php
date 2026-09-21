@@ -337,6 +337,64 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('deb [signed-by=__W4_REPO_ROOT__/keyrings/w4-update-archive-keyring.gpg] file:__W4_REPO_ROOT__ testing main', $signedAptSource);
     }
 
+    public function testSignedRepositoryRunnerSupportsCheckOnlyPreview(): void
+    {
+        $distribution = $this->detectWslDistribution();
+        if ($distribution === null) {
+            self::markTestSkipped('No hay una distribucion WSL disponible para validar el preview del runner firmado.');
+        }
+
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'repo-bundle-signed-preview';
+        $outputDir = $this->tempDir . DIRECTORY_SEPARATOR . 'repo-output-signed-preview';
+
+        $generateBundle = $this->runPhpScript(
+            $this->fixturePath('scripts/generate_update_repository_bundle.php'),
+            [
+                '--snapshot-id',
+                'w4-main-2026-09-20T180000Z',
+                '--channel',
+                'testing',
+                '--target-version',
+                '1.0.1-lab',
+                '--package-set',
+                'both',
+                '--output-dir',
+                $bundleDir,
+            ]
+        );
+        self::assertSame(0, $generateBundle['exitCode'], $generateBundle['stderr']);
+
+        $preview = $this->runPhpScript(
+            $this->fixturePath('scripts/run_update_repository_bundle_in_wsl.php'),
+            [
+                '--bundle',
+                $bundleDir,
+                '--output-dir',
+                $outputDir,
+                '--distribution',
+                $distribution,
+                '--signing-mode',
+                'gpg',
+                '--gpg-key-id',
+                'W4-Update-Lab',
+                '--generate-lab-key',
+                '--check-only',
+            ]
+        );
+        self::assertSame(0, $preview['exitCode'], $preview['stderr']);
+
+        $payload = $this->decodeJson($preview['stdout']);
+        self::assertSame('ready', $payload['status']);
+        self::assertSame('gpg', $payload['signing_mode']);
+        self::assertSame('W4-Update-Lab', $payload['gpg_key_id']);
+        self::assertTrue($payload['generate_lab_key']);
+        self::assertSame($distribution, $payload['distribution']);
+        self::assertStringContainsString('export W4_UPDATE_REPO_SIGNING_MODE=gpg', $payload['run_command']);
+        self::assertStringContainsString('export W4_UPDATE_REPO_GPG_KEY_ID=', $payload['run_command']);
+        self::assertStringContainsString('quick-generate-key', $payload['run_command']);
+        self::assertStringContainsString('bash ', $payload['run_command']);
+    }
+
     /**
      * @param list<string> $arguments
      * @return array{exitCode:int,stdout:string,stderr:string}
@@ -393,6 +451,62 @@ final class UpdateScriptsIntegrationTest extends TestCase
     private function fixturePath(string $relativePath): string
     {
         return $this->rootDir . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
+    }
+
+    private function detectWslDistribution(): ?string
+    {
+        if (DIRECTORY_SEPARATOR !== '\\') {
+            return null;
+        }
+
+        $result = $this->runCommand(['wsl', '-l', '-q']);
+        if ($result['exitCode'] !== 0) {
+            return null;
+        }
+
+        $lines = preg_split('/\r?\n/', $result['stdout']) ?: [];
+        $distros = array_values(array_filter(array_map(static fn (string $line): string => trim(str_replace("\0", '', $line)), $lines)));
+        if ($distros === []) {
+            return null;
+        }
+
+        foreach ($distros as $distro) {
+            if (strcasecmp($distro, 'Ubuntu') === 0) {
+                return $distro;
+            }
+        }
+
+        return $distros[0];
+    }
+
+    /**
+     * @param list<string> $command
+     * @return array{exitCode:int,stdout:string,stderr:string}
+     */
+    private function runCommand(array $command): array
+    {
+        $descriptorSpec = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+
+        $process = proc_open($command, $descriptorSpec, $pipes, $this->rootDir);
+        self::assertIsResource($process, sprintf('No se pudo ejecutar el comando %s', implode(' ', $command)));
+
+        fclose($pipes[0]);
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+
+        $exitCode = proc_close($process);
+
+        return [
+            'exitCode' => $exitCode,
+            'stdout' => is_string($stdout) ? $stdout : '',
+            'stderr' => is_string($stderr) ? $stderr : '',
+        ];
     }
 
     private function removeDirectory(string $path): void

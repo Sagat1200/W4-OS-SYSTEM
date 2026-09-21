@@ -1,0 +1,7 @@
+{
+  "w4-base-meta": "w4-linux-base.packages.required",
+  "w4-desktop-meta": "intersection(w4-os-home,w4-os-business).packages.required",
+  "w4-recovery-tools": "update-recovery-tooling",
+  "w4-home-meta": "w4-os-home",
+  "w4-business-meta": "w4-os-business"
+}

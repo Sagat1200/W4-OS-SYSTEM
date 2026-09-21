@@ -223,21 +223,38 @@ Notas operativas del laboratorio:
 La firma sigue siendo opcional en laboratorio, pero el bundle ya la soporta. El flujo recomendado es firmar el layout `dists` y luego usar `W4_UPDATE_APT_SOURCE_LINE_SIGNED`.
 
 ```powershell
-wsl -d Ubuntu -u root -- bash -lc '
-  set -euo pipefail
-  BUNDLE=/mnt/c/W4/Packages/W4-OS\ SYSTEM/build/update/repositories/w4-main-2026-09-20T180000Z
-  OUTPUT=/var/tmp/w4-os-system/update-repositories/w4-main-2026-09-20T180000Z-signed
-  GNUPGHOME=/var/tmp/w4-os-system/signing-w4
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_update_repository_bundle_in_wsl.php" `
+  --bundle "c:\W4\Packages\W4-OS SYSTEM\build\update\repositories\w4-main-2026-09-20T180000Z" `
+  --output-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\repository-output\w4-main-2026-09-20T180000Z-signed-auto" `
+  --distribution Ubuntu `
+  --signing-mode gpg `
+  --gpg-key-id W4-Update-Lab `
+  --generate-lab-key
+```
 
-  mkdir -p "$GNUPGHOME"
-  chmod 700 "$GNUPGHOME"
+Si se quiere inspeccionar primero el comando WSL sin ejecutarlo:
 
-  export W4_UPDATE_REPO_SIGNING_MODE=gpg
-  export W4_UPDATE_REPO_GPG_KEY_ID=W4-Update-Lab
-  export W4_UPDATE_REPO_GPG_HOMEDIR="$GNUPGHOME"
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_update_repository_bundle_in_wsl.php" `
+  --bundle "c:\W4\Packages\W4-OS SYSTEM\build\update\repositories\w4-main-2026-09-20T180000Z" `
+  --output-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\repository-output\w4-main-2026-09-20T180000Z-signed-auto" `
+  --distribution Ubuntu `
+  --signing-mode gpg `
+  --gpg-key-id W4-Update-Lab `
+  --generate-lab-key `
+  --check-only
+```
 
-  bash "$BUNDLE/build-repo.sh" "$OUTPUT"
-'
+El runner soporta tambien una clave persistente ya provisionada:
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_update_repository_bundle_in_wsl.php" `
+  --bundle "c:\W4\Packages\W4-OS SYSTEM\build\update\repositories\w4-main-2026-09-20T180000Z" `
+  --output-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\repository-output\w4-main-2026-09-20T180000Z-signed" `
+  --distribution Ubuntu `
+  --signing-mode gpg `
+  --gpg-key-id W4-Update-Prod `
+  --gpg-homedir /var/tmp/w4-os-system/signing-w4
 ```
 
 Si el directorio firmado contiene `keyrings/w4-update-archive-keyring.gpg`, el wrapper `run-update-with-repo-env.sh` ya puede derivar automaticamente una source APT estilo:

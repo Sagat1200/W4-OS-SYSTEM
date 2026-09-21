@@ -1,0 +1,28 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Origin: W4 OS
+Label: W4 OS
+Suite: testing
+Codename: testing
+Date: Mon, 21 Sep 2026 03:41:16 +0000
+Architectures: amd64
+Components: main
+Description: W4 OS update repository generated from repository manifests
+SHA256:
+ 8a315ae98bd4739f3587a1593094c03cbbd617f9da4cebee692394e9caae329a 2592 main/binary-amd64/Packages
+ 597448f6a07e8b79e187c00f1a602d4acd28be37f68992b26722f94aec462729 1028 main/binary-amd64/Packages.gz
+-----BEGIN PGP SIGNATURE-----
+
+iQGzBAEBCgAdFiEEoEPDROXq0UDEGRCpwRPGLo5C/sQFAmqwp1wACgkQwRPGLo5C
+/sSZvQv+O/FdNJe0dpO88XZVgk0TCJWq7VbwLpNo7c5pmuHtsae8zUh7HnWzgeVl
+d9urNfkB7YqGHsM15arN4eP4q54ivG+OB9+HnI19SzEsjv74D77JNI8qgA6nEDZk
+lijtgpLGUqnaCSEdd228ouWf7fwwkGu7Zrx5hwS/4kar19T5LC1l2NkI1YCnw7Ci
+6WeNiS3cv4KOq7WHNO4NuqIH9M0hSAfsvy3XqLoOy97tyCVXc7OUuSWRgUXAnrOD
+TMJB3R7sEOg6RyWe3BYlb/o9/Rq9avmyiaf63n8hRUY/5tEZ3uO6SIeDMfAfjjX9
+31/vxHCNxQhI30hsJqk4hPaVX+6Miu0O5VYpru7IbgEkFX+VsJrmO3fH/hhU8+Bz
+gJU72n5E5cOK9IOFDTu3T4gTNi9DYk3q9AijFCzabof2q9jDvEvCKG/5FNaDw0AF
+nCb3mpTqPIKYfN2lDLPN7PJCMPSS3eY8LcSZjnp8xjwoG2wt/jikWJ469Qgi3wSb
+aH4YoiUc
+=gkkb
+-----END PGP SIGNATURE-----

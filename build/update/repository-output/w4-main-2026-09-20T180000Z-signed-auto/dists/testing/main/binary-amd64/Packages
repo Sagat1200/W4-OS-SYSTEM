@@ -1,0 +1,70 @@
+Package: w4-base-meta
+Version: 1.0.1-lab
+Architecture: all
+Maintainer: W4 OS System <w4@example.invalid>
+Depends: apt, base-files, bash, btrfs-progs, ca-certificates, grub-efi-amd64, linux-image-amd64, network-manager, os-prober, php-cli, shim-signed, sudo, systemd
+Filename: pool/main/w4/w4-base-meta_1.0.1-lab_all.deb
+Size: 1048
+MD5sum: 0c37d819820beb525b8a0a802504e0a5
+SHA1: 7e57a6cd35c44ceec5a131077112eb7cb248f9a7
+SHA256: 12d66bd22ee1b2e77a70a9ba858f95d918be1925915373a63c7b651784d2ef3e
+Section: metapackages
+Priority: optional
+Description: W4 OS base metapackage derived from the base manifest
+
+Package: w4-business-meta
+Version: 1.0.1-lab
+Architecture: all
+Maintainer: W4 OS System <w4@example.invalid>
+Depends: w4-base-meta, w4-desktop-meta, curl, jq
+Filename: pool/main/w4/w4-business-meta_1.0.1-lab_all.deb
+Size: 984
+MD5sum: 0874583011707696a0fc61e56d159db2
+SHA1: 663e79e12696dfd705677a60f13838d23522c622
+SHA256: 2608ebdbdb4fe9e8df37a11c18e237fb884488c1313c26752006f1598b9e7299
+Section: metapackages
+Priority: optional
+Description: W4 OS Business metapackage derived from the business edition profile
+
+Package: w4-desktop-meta
+Version: 1.0.1-lab
+Architecture: all
+Maintainer: W4 OS System <w4@example.invalid>
+Depends: pipewire, xdg-desktop-portal
+Filename: pool/main/w4/w4-desktop-meta_1.0.1-lab_all.deb
+Size: 980
+MD5sum: feb80cd6bb815e71b2728e888dbf6c27
+SHA1: c67fd7bae77ed812bf1ae891d2c85adefb81b0b4
+SHA256: c2fc37bdd3140fd88e825d9cba900c2425238b9f6922669f33204bfa08859d86
+Section: metapackages
+Priority: optional
+Description: W4 OS desktop metapackage derived from shared edition requirements
+
+Package: w4-home-meta
+Version: 1.0.1-lab
+Architecture: all
+Maintainer: W4 OS System <w4@example.invalid>
+Depends: w4-base-meta, w4-desktop-meta, firefox-esr, libreoffice
+Filename: pool/main/w4/w4-home-meta_1.0.1-lab_all.deb
+Size: 988
+MD5sum: 1615ea91463aa52ec62f2d2fc6023c8e
+SHA1: d195d1f8395fd389fee931eceaed55da455abaa1
+SHA256: 758950ea491bc172e3ed8bc3841b8261001ec55330ebe6d38c596d8334939b47
+Section: metapackages
+Priority: optional
+Description: W4 OS Home metapackage derived from the home edition profile
+
+Package: w4-recovery-tools
+Version: 1.0.1-lab
+Architecture: all
+Maintainer: W4 OS System <w4@example.invalid>
+Depends: bash, btrfs-progs
+Filename: pool/main/w4/w4-recovery-tools_1.0.1-lab_all.deb
+Size: 968
+MD5sum: ad22cf78022326638afdc4a2c5b67094
+SHA1: 2feef9aa5a5bfaf6cbc453ed156478944bc11be5
+SHA256: 9fbe1cedf6d792f6e924d454724fd8fadd91643ea1c217fe0353727873b57f54
+Section: metapackages
+Priority: optional
+Description: W4 OS recovery tools package for update validation
+
