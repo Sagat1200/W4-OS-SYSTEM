@@ -262,3 +262,37 @@ Si el directorio firmado contiene `keyrings/w4-update-archive-keyring.gpg`, el w
 ```text
 deb [signed-by=/ruta/al/repositorio/keyrings/w4-update-archive-keyring.gpg] file:/ruta/al/repositorio testing main
 ```
+
+## Validacion firmada de `MX-004` en Home
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_update_validation_via_paramiko.php" `
+  --host 127.0.0.1 `
+  --port 2222 `
+  --username w4 `
+  --password W4login1234 `
+  --repo-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\repository-output\w4-main-2026-09-20T180000Z-signed-auto" `
+  --executor-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\executors\w4-update-smoke-003" `
+  --plan-path "c:\W4\Packages\W4-OS SYSTEM\build\update\plans\w4-update-smoke-003.update-plan.json" `
+  --remote-root /home/w4/w4-update-signed-home `
+  --vm-name "W4-OS-Home-Test" `
+  --luks-passphrase W4boot1234 `
+  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\validation\w4-update-smoke-003-signed-home"
+```
+
+Notas operativas del flujo firmado validado:
+
+- `run_update_validation_via_paramiko.php` ya sincroniza la hora UTC remota antes de la fase APT cuando detecta desfase grande, evitando rechazos `Not live until ...` de `sqv` sobre `InRelease`.
+- El helper ya copia el repo a una ruta publica temporal en `/var/tmp/...`, de modo que `_apt` y `sqv` puedan leer `keyrings/w4-update-archive-keyring.gpg` aunque el `home` remoto del usuario SSH tenga permisos `700`.
+- Si el desbloqueo LUKS ocurre mas tarde de lo esperado y el helper no consigue retomar SSH por si solo, se puede reenviar la passphrase desde VirtualBox y luego rematar con:
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\complete_pending_health_via_paramiko.php" `
+  --host 127.0.0.1 `
+  --port 2222 `
+  --username w4 `
+  --password W4login1234 `
+  --remote-root /home/w4/w4-update-signed-home `
+  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\validation\w4-update-smoke-003-signed-home" `
+  --connect-wait 600
+```

@@ -9,6 +9,7 @@ $pythonSource = <<<'PYTHON'
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import os
 import posixpath
 import socket
@@ -145,6 +146,53 @@ def download_file_if_exists(sftp: paramiko.SFTPClient, remote_path: str, local_p
     sftp.get(remote_path, str(local_path))
 
 
+def make_slug(value: str) -> str:
+    slug = []
+    for char in value:
+        if char.isalnum():
+            slug.append(char.lower())
+        else:
+            slug.append("-")
+
+    compact = "".join(slug).strip("-")
+    while "--" in compact:
+        compact = compact.replace("--", "-")
+
+    return compact or "w4-update"
+
+
+def sync_remote_clock_if_needed(
+    client: paramiko.SSHClient,
+    *,
+    sudo_password: str,
+    max_skew_seconds: int = 300,
+) -> None:
+    exit_code, stdout, stderr = run_command(client, "date -u -Iseconds")
+    if exit_code != 0:
+        raise RuntimeError(f"No se pudo consultar la hora remota.\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}")
+
+    remote_now = datetime.fromisoformat(stdout.strip())
+    local_now = datetime.now(timezone.utc)
+    skew_seconds = abs((local_now - remote_now).total_seconds())
+
+    if skew_seconds <= max_skew_seconds:
+        return
+
+    target_timestamp = local_now.strftime("%Y-%m-%d %H:%M:%S UTC")
+    log(
+        f"El reloj remoto tiene un desfase de {int(skew_seconds)}s; "
+        f"se ajustara a {target_timestamp}"
+    )
+    exit_code, stdout, stderr = run_command(
+        client,
+        f"sudo -S -p '' date -u -s '{target_timestamp}'",
+        sudo_password=sudo_password,
+        timeout=120,
+    )
+    if exit_code != 0:
+        raise RuntimeError(f"No se pudo ajustar la hora remota.\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog="run_update_validation_via_paramiko.php",
@@ -176,7 +224,8 @@ def main() -> int:
     if not plan_path.is_file():
         raise SystemExit(f"No existe el plan local: {plan_path}")
 
-    remote_repo_dir = posixpath.join(args.remote_root, "repo")
+    remote_slug = make_slug(posixpath.basename(args.remote_root.rstrip("/")) or args.username)
+    remote_repo_dir = posixpath.join("/var/tmp", f"{remote_slug}-repo")
     remote_executor_dir = posixpath.join(args.remote_root, "executor")
     remote_engine_dir = posixpath.join(args.remote_root, "engine")
     remote_plan_path = posixpath.join(args.remote_root, "update-plan.json")
@@ -185,9 +234,11 @@ def main() -> int:
     log(f"Conectando a {args.username}@{args.host}:{args.port}")
     client = connect(args.host, args.port, args.username, args.password)
     try:
+        sync_remote_clock_if_needed(client, sudo_password=args.password)
+
         exit_code, stdout, stderr = run_command(
             client,
-            f"rm -rf {remote_repo_dir!s} {remote_executor_dir!s} {remote_engine_dir!s} && mkdir -p {args.remote_root!s}",
+            f"rm -rf {remote_repo_dir!s} {remote_executor_dir!s} {remote_engine_dir!s} && mkdir -p {args.remote_root!s} {remote_repo_dir!s}",
         )
         if exit_code != 0:
             raise RuntimeError(f"No se pudo preparar el directorio remoto.\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}")
@@ -221,6 +272,18 @@ def main() -> int:
         exit_code, stdout, stderr = run_command(client, normalize_command)
         if exit_code != 0:
             raise RuntimeError(f"No se pudo normalizar fin de linea en scripts remotos.\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}")
+
+        permissions_command = (
+            f"find {remote_repo_dir} -type d -exec chmod 755 {{}} + && "
+            f"find {remote_repo_dir} -type f -exec chmod 644 {{}} + && "
+            f"find {remote_executor_dir} -type d -exec chmod 755 {{}} + && "
+            f"find {remote_engine_dir} -type d -exec chmod 755 {{}} + && "
+            f"find {remote_executor_dir} -type f -name '*.sh' -exec chmod 755 {{}} + && "
+            f"find {remote_engine_dir}/scripts -type f -name '*.php' -exec chmod 644 {{}} +"
+        )
+        exit_code, stdout, stderr = run_command(client, permissions_command)
+        if exit_code != 0:
+            raise RuntimeError(f"No se pudieron ajustar permisos remotos.\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}")
 
         prepare_command = (
             f"php {remote_engine_dir}/scripts/prepare_update_operation.php "
