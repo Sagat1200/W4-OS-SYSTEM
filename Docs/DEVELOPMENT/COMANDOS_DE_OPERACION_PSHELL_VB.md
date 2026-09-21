@@ -282,6 +282,11 @@ Si el directorio firmado contiene `keyrings/w4-update-archive-keyring.gpg`, el w
 deb [signed-by=/ruta/al/repositorio/keyrings/w4-update-archive-keyring.gpg] file:/ruta/al/repositorio testing main
 ```
 
+Estado actual validado:
+
+- El homedir persistente de firma ya quedo materializado en WSL como `/var/tmp/w4-os-system/signing-w4` con la identidad `W4-Update-Prod`.
+- La salida firmada vigente para esa identidad quedo reconstruida en `build/update/repository-output/w4-main-2026-09-20T180000Z-signed-prod/`.
+
 ## Validacion firmada de `MX-004` en Home
 
 ```powershell
@@ -290,13 +295,13 @@ php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_update_validation_via_paramiko.php"
   --port 2222 `
   --username w4 `
   --password W4login1234 `
-  --repo-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\repository-output\w4-main-2026-09-20T180000Z-signed-auto" `
+  --repo-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\repository-output\w4-main-2026-09-20T180000Z-signed-prod" `
   --executor-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\executors\w4-update-smoke-003" `
   --plan-path "c:\W4\Packages\W4-OS SYSTEM\build\update\plans\w4-update-smoke-003.update-plan.json" `
-  --remote-root /home/w4/w4-update-signed-home `
+  --remote-root /home/w4/w4-update-signed-prod-home `
   --vm-name "W4-OS-Home-Test" `
   --luks-passphrase W4boot1234 `
-  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\validation\w4-update-smoke-003-signed-home"
+  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\validation\w4-update-smoke-003-signed-prod-home"
 ```
 
 Notas operativas del flujo firmado validado:
@@ -304,6 +309,7 @@ Notas operativas del flujo firmado validado:
 - `run_update_validation_via_paramiko.php` ya sincroniza la hora UTC remota antes de la fase APT cuando detecta desfase grande, evitando rechazos `Not live until ...` de `sqv` sobre `InRelease`.
 - El helper ya copia el repo a una ruta publica temporal en `/var/tmp/...`, de modo que `_apt` y `sqv` puedan leer `keyrings/w4-update-archive-keyring.gpg` aunque el `home` remoto del usuario SSH tenga permisos `700`.
 - Si la VM tarda mas en mostrar el prompt LUKS, se puede ampliar la espera antes de inyectar la passphrase con `--unlock-wait <segundos>`. El valor por defecto del helper ya subio a `30`.
+- En la revalidacion mas reciente con `signed-prod`, el primer desbloqueo automatico todavia quedo corto; la corrida se cerro reenviando manualmente `W4boot1234` por `VBoxManage controlvm ... keyboardputstring ...` y luego rematando `pending_health`.
 - Si el desbloqueo LUKS ocurre mas tarde de lo esperado y el helper no consigue retomar SSH por si solo, se puede reenviar la passphrase desde VirtualBox y luego rematar con:
 
 ```powershell
@@ -312,8 +318,8 @@ php "c:\W4\Packages\W4-OS SYSTEM\scripts\complete_pending_health_via_paramiko.ph
   --port 2222 `
   --username w4 `
   --password W4login1234 `
-  --remote-root /home/w4/w4-update-signed-home `
-  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\validation\w4-update-smoke-003-signed-home" `
+  --remote-root /home/w4/w4-update-signed-prod-home `
+  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\validation\w4-update-smoke-003-signed-prod-home" `
   --connect-wait 600
 ```
 
