@@ -11,6 +11,7 @@ WORK_ROOT="${W4_UPDATE_REPO_WORK_ROOT:-/var/tmp/w4-os-system/update-repositories
 REPO_DIR="${WORK_ROOT}/repo"
 PKG_DIR="${WORK_ROOT}/packages"
 POOL_DIR="${REPO_DIR}/pool/main/w4"
+DISTS_DIR="${REPO_DIR}/dists/${CHANNEL}/main/binary-amd64"
 
 if [[ -z "${OUTPUT_DIR}" ]]; then
   OUTPUT_DIR="${SCRIPT_DIR}/output"
@@ -81,16 +82,19 @@ log "Package set: ${PACKAGE_SET}"
 
 require_command dpkg-deb
 require_command dpkg-scanpackages
+require_command date
 require_command gzip
+require_command stat
 require_command sha256sum
 
 rm -rf "${REPO_DIR}" "${PKG_DIR}"
-mkdir -p "${REPO_DIR}" "${PKG_DIR}" "${POOL_DIR}"
+mkdir -p "${REPO_DIR}" "${PKG_DIR}" "${POOL_DIR}" "${DISTS_DIR}"
 
-build_package "w4-base-meta" "1.0.1-lab" "all" "apt, bash, ca-certificates, php-cli" "W4 OS base metapackage for update validation" "base"
-build_package "w4-recovery-tools" "1.0.1-lab" "all" "bash" "W4 OS recovery tools package for update validation" "base"
-build_package "w4-home-meta" "1.0.1-lab" "all" "w4-base-meta" "W4 OS Home metapackage for update validation" "home"
-build_package "w4-business-meta" "1.0.1-lab" "all" "w4-base-meta" "W4 OS Business metapackage for update validation" "business"
+build_package "w4-base-meta" "1.0.1-lab" "all" "apt, base-files, bash, btrfs-progs, ca-certificates, grub-efi-amd64, linux-image-amd64, network-manager, os-prober, php-cli, shim-signed, sudo, systemd" "W4 OS base metapackage derived from the base manifest" "base"
+build_package "w4-desktop-meta" "1.0.1-lab" "all" "pipewire, xdg-desktop-portal" "W4 OS desktop metapackage derived from shared edition requirements" "desktop"
+build_package "w4-recovery-tools" "1.0.1-lab" "all" "bash, btrfs-progs" "W4 OS recovery tools package for update validation" "base"
+build_package "w4-home-meta" "1.0.1-lab" "all" "w4-base-meta, w4-desktop-meta, firefox-esr, libreoffice" "W4 OS Home metapackage derived from the home edition profile" "home"
+build_package "w4-business-meta" "1.0.1-lab" "all" "w4-base-meta, w4-desktop-meta, curl, jq" "W4 OS Business metapackage derived from the business edition profile" "business"
 
 (
   cd "${REPO_DIR}"
@@ -99,16 +103,58 @@ build_package "w4-business-meta" "1.0.1-lab" "all" "w4-base-meta" "W4 OS Busines
   sha256sum Packages Packages.gz > SHA256SUMS
 )
 
+cp "${REPO_DIR}/Packages" "${DISTS_DIR}/Packages"
+cp "${REPO_DIR}/Packages.gz" "${DISTS_DIR}/Packages.gz"
+
+packages_sha256="$(sha256sum "${DISTS_DIR}/Packages" | awk '{print $1}')"
+packages_gz_sha256="$(sha256sum "${DISTS_DIR}/Packages.gz" | awk '{print $1}')"
+packages_size="$(stat -c %s "${DISTS_DIR}/Packages")"
+packages_gz_size="$(stat -c %s "${DISTS_DIR}/Packages.gz")"
+release_date="$(LC_ALL=C date -Ru)"
+
+cat > "${REPO_DIR}/dists/${CHANNEL}/Release" <<EOF
+Origin: W4 OS
+Label: W4 OS
+Suite: ${CHANNEL}
+Codename: ${CHANNEL}
+Date: ${release_date}
+Architectures: amd64
+Components: main
+Description: W4 OS update repository generated from repository manifests
+SHA256:
+ ${packages_sha256} ${packages_size} main/binary-amd64/Packages
+ ${packages_gz_sha256} ${packages_gz_size} main/binary-amd64/Packages.gz
+EOF
+
 cat > "${REPO_DIR}/apt-source.list.template" <<'EOF'
 deb [trusted=yes] file:__W4_REPO_ROOT__ ./
+EOF
+
+cat > "${REPO_DIR}/apt-source.dists.list.template" <<EOF
+deb [trusted=yes] file:__W4_REPO_ROOT__ ${CHANNEL} main
 EOF
 
 cat > "${REPO_DIR}/repo.env" <<EOF
 W4_REPOSITORY_SNAPSHOT_ID="${SNAPSHOT_ID}"
 W4_REPOSITORY_CHANNEL="${CHANNEL}"
 W4_REPOSITORY_TARGET_VERSION="${TARGET_VERSION}"
+W4_UPDATE_APT_SOURCE_MODE_DEFAULT="dists"
+W4_UPDATE_APT_SOURCE_LINE_DEFAULT_TEMPLATE="deb [trusted=yes] file:__W4_REPO_ROOT__ ${CHANNEL} main"
+W4_UPDATE_APT_SOURCE_LINE_DEFAULT_LOCAL="deb [trusted=yes] file:${OUTPUT_DIR} ${CHANNEL} main"
 W4_UPDATE_APT_SOURCE_LINE_TEMPLATE="deb [trusted=yes] file:__W4_REPO_ROOT__ ./"
 W4_UPDATE_APT_SOURCE_LINE_LOCAL="deb [trusted=yes] file:${OUTPUT_DIR} ./"
+W4_UPDATE_APT_SOURCE_LINE_DISTS_TEMPLATE="deb [trusted=yes] file:__W4_REPO_ROOT__ ${CHANNEL} main"
+W4_UPDATE_APT_SOURCE_LINE_DISTS_LOCAL="deb [trusted=yes] file:${OUTPUT_DIR} ${CHANNEL} main"
+EOF
+
+cat > "${REPO_DIR}/package-sources.json" <<EOF
+{
+  "w4-base-meta": "w4-linux-base.packages.required",
+  "w4-desktop-meta": "intersection(w4-os-home,w4-os-business).packages.required",
+  "w4-recovery-tools": "update-recovery-tooling",
+  "w4-home-meta": "w4-os-home",
+  "w4-business-meta": "w4-os-business"
+}
 EOF
 
 cat > "${REPO_DIR}/REPOSITORY_README.txt" <<EOF
@@ -119,14 +165,29 @@ Contenido:
 - Packages
 - Packages.gz
 - SHA256SUMS
+- dists/${CHANNEL}/main/binary-amd64/Packages
+- dists/${CHANNEL}/main/binary-amd64/Packages.gz
+- dists/${CHANNEL}/Release
 - apt-source.list.template
+- apt-source.dists.list.template
+- package-sources.json
 - repo.env
 
 Uso de laboratorio:
 1. copiar este directorio al sistema objetivo
-2. definir W4_UPDATE_APT_SOURCE_LINE con una source tipo:
-   deb [trusted=yes] file:/ruta/al/repositorio ./
+2. definir preferentemente:
+   W4_UPDATE_APT_SOURCE_MODE=dists
+   W4_UPDATE_APT_SOURCE_LINE_DISTS="deb [trusted=yes] file:/ruta/al/repositorio ${CHANNEL} main"
 3. ejecutar run-update-offline.sh con W4_UPDATE_EXECUTE=1
+
+Origen declarativo:
+- los metapaquetes se derivan de los manifests/perfiles reales del repositorio
+- package-sources.json resume la fuente usada para cada paquete
+
+Compatibilidad:
+- el runner ya prioriza la source dists en modo auto, que es la ruta recomendada para futuras pruebas
+- se conserva la source plana para el laboratorio actual: deb [trusted=yes] file:/ruta ./
+- ademas se publica una estructura tipo APT bajo dists/${CHANNEL} para preparar una fuente W4 mas cercana a produccion
 
 Snapshot: ${SNAPSHOT_ID}
 Canal: ${CHANNEL}

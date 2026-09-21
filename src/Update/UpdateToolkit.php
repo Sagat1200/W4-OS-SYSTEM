@@ -594,7 +594,9 @@ ROOT_SUBVOLUME="\${W4_UPDATE_ROOT_SUBVOLUME:-@}"
 EXECUTE_MODE="\${W4_UPDATE_EXECUTE:-0}"
 APPLY_MODE="\${W4_UPDATE_APPLY_MODE:-live-apt}"
 FAIL_STAGE="\${W4_UPDATE_FAIL_STAGE:-}"
+APT_SOURCE_MODE="\${W4_UPDATE_APT_SOURCE_MODE:-auto}"
 APT_SOURCE_LINE="\${W4_UPDATE_APT_SOURCE_LINE:-}"
+APT_SOURCE_LINE_DISTS="\${W4_UPDATE_APT_SOURCE_LINE_DISTS:-}"
 APT_SOURCE_FILE="\${W4_UPDATE_APT_SOURCE_FILE:-}"
 APT_SOURCE_TARGET=""
 APT_SOURCE_INSTALLED="0"
@@ -652,10 +654,41 @@ configure_temporary_apt_source() {
   if [[ -n "\${APT_SOURCE_FILE}" ]]; then
     [[ -f "\${APT_SOURCE_FILE}" ]] || die "no se encontro el archivo de source APT temporal: \${APT_SOURCE_FILE}"
     source_content="\$(<"\${APT_SOURCE_FILE}")"
-  elif [[ -n "\${APT_SOURCE_LINE}" ]]; then
-    source_content="\${APT_SOURCE_LINE}"
   else
-    return
+    case "\${APT_SOURCE_MODE}" in
+      auto)
+        if [[ -n "\${APT_SOURCE_LINE_DISTS}" ]]; then
+          source_content="\${APT_SOURCE_LINE_DISTS}"
+        elif [[ -n "\${APT_SOURCE_LINE}" ]]; then
+          source_content="\${APT_SOURCE_LINE}"
+        else
+          return
+        fi
+        ;;
+      dists)
+        if [[ -n "\${APT_SOURCE_LINE_DISTS}" ]]; then
+          source_content="\${APT_SOURCE_LINE_DISTS}"
+        elif [[ -n "\${APT_SOURCE_LINE}" ]]; then
+          log "W4_UPDATE_APT_SOURCE_LINE_DISTS no esta definido; se usara la source plana como fallback"
+          source_content="\${APT_SOURCE_LINE}"
+        else
+          return
+        fi
+        ;;
+      flat)
+        if [[ -n "\${APT_SOURCE_LINE}" ]]; then
+          source_content="\${APT_SOURCE_LINE}"
+        elif [[ -n "\${APT_SOURCE_LINE_DISTS}" ]]; then
+          log "W4_UPDATE_APT_SOURCE_LINE no esta definido; se usara la source dists como fallback"
+          source_content="\${APT_SOURCE_LINE_DISTS}"
+        else
+          return
+        fi
+        ;;
+      *)
+        die "W4_UPDATE_APT_SOURCE_MODE no soportado: \${APT_SOURCE_MODE}"
+        ;;
+    esac
   fi
 
   [[ -n "\${source_content}" ]] || die "la source APT temporal esta vacia"

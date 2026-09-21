@@ -203,10 +203,13 @@ final class UpdateToolkitTest extends TestCase
         self::assertStringContainsString('scripts/advance_update_operation.php', $script);
         self::assertStringContainsString('W4_UPDATE_ENGINE_ROOT', $script);
         self::assertStringContainsString('W4_UPDATE_EXECUTE', $script);
+        self::assertStringContainsString('W4_UPDATE_APT_SOURCE_MODE', $script);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_LINE', $script);
+        self::assertStringContainsString('W4_UPDATE_APT_SOURCE_LINE_DISTS', $script);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_FILE', $script);
         self::assertStringContainsString('apt-get -o Dir::Cache::Archives', $script);
         self::assertStringContainsString('configure_temporary_apt_source', $script);
+        self::assertStringContainsString('W4_UPDATE_APT_SOURCE_MODE no soportado', $script);
         self::assertStringContainsString('snapshot-manifest.json', $script);
         self::assertStringContainsString('staging-manifest.json', $script);
         self::assertStringContainsString('trap \'handle_error $? $LINENO\' ERR', $script);

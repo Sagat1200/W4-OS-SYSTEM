@@ -223,7 +223,9 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('advance_update_operation.php', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_ENGINE_ROOT', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_EXECUTE', $offlineScript);
+        self::assertStringContainsString('W4_UPDATE_APT_SOURCE_MODE', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_LINE', $offlineScript);
+        self::assertStringContainsString('W4_UPDATE_APT_SOURCE_LINE_DISTS', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_FILE', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_FAIL_STAGE', $offlineScript);
         self::assertStringContainsString('pending_health', $offlineScript);
@@ -270,11 +272,12 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertSame($bundleDir, $payload['bundle_dir']);
         self::assertSame('w4-main-2026-09-20T120000Z', $payload['snapshot_id']);
         self::assertSame('testing', $payload['channel']);
-        self::assertSame(4, $payload['package_count']);
+        self::assertSame(5, $payload['package_count']);
 
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'build-repo.sh');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'repository-manifest.json');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'apt-source.list.template');
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'apt-source.dists.list.template');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'REPOSITORY_BUNDLE_README.txt');
 
         $manifest = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'repository-manifest.json');
@@ -283,17 +286,28 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertSame('testing', $manifest['repository_snapshot']['channel']);
         self::assertSame('1.0.1-lab', $manifest['target_version']);
         self::assertSame('both', $manifest['package_set']);
-        self::assertCount(4, $manifest['packages']);
+        self::assertSame('derived-from-manifests', $manifest['package_strategy']);
+        self::assertSame('w4-linux-base', $manifest['source_profiles']['base']);
+        self::assertCount(5, $manifest['packages']);
 
         $buildScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'build-repo.sh');
         self::assertNotFalse($buildScript);
         self::assertStringContainsString('dpkg-deb --build', $buildScript);
         self::assertStringContainsString('dpkg-scanpackages --multiversion', $buildScript);
         self::assertStringContainsString('w4-base-meta', $buildScript);
+        self::assertStringContainsString('w4-desktop-meta', $buildScript);
         self::assertStringContainsString('w4-home-meta', $buildScript);
         self::assertStringContainsString('w4-business-meta', $buildScript);
         self::assertStringContainsString('w4-recovery-tools', $buildScript);
+        self::assertStringContainsString('btrfs-progs', $buildScript);
+        self::assertStringContainsString('package-sources.json', $buildScript);
+        self::assertStringContainsString('dists/${CHANNEL}/main/binary-amd64', $buildScript);
+        self::assertStringContainsString('dists/${CHANNEL}/Release', $buildScript);
+        self::assertStringContainsString('apt-source.dists.list.template', $buildScript);
+        self::assertStringContainsString('W4_UPDATE_APT_SOURCE_MODE_DEFAULT="dists"', $buildScript);
+        self::assertStringContainsString('W4_UPDATE_APT_SOURCE_LINE_DEFAULT_LOCAL', $buildScript);
         self::assertStringContainsString('deb [trusted=yes] file:__W4_REPO_ROOT__ ./', $buildScript);
+        self::assertStringContainsString('deb [trusted=yes] file:__W4_REPO_ROOT__ ${CHANNEL} main', $buildScript);
     }
 
     /**
