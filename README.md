@@ -93,6 +93,8 @@ Las ejecuciones reales en VM ya confirmaron primero la persistencia correcta del
 
 En la operacion de laboratorio vigente, el uso recomendado ya es cargar `repo.env` del bundle reconstruido y exportar `W4_UPDATE_APT_SOURCE_MODE=dists` junto con `W4_UPDATE_APT_SOURCE_LINE_DISTS_LOCAL` antes de ejecutar `run-update-offline.sh`. Los bundles vigentes de `w4-update-smoke-003` y `w4-update-business-smoke-001` ya quedaron regenerados con ese contrato operativo.
 
+Para reducir pasos manuales en la siguiente validacion real, el bundle del ejecutor ahora tambien expone `run-update-with-repo-env.sh`: ese wrapper carga `repo.env`, deriva la source APT desde la ruta real del repositorio copiado al sistema objetivo y luego delega en `run-update-offline.sh`. Con ello, la operacion en VM puede lanzarse apuntando solo a `--repo-dir /ruta/al/repositorio`.
+
 ## Documentacion clave
 
 - `Docs/INDICE_W4_OS.md`

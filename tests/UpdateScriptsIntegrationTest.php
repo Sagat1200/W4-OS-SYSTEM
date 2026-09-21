@@ -213,6 +213,7 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertSame($bundleDir, $payload['bundle_dir']);
 
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'run-update-offline.sh');
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'run-update-with-repo-env.sh');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'run-health-checks.sh');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'reconcile-after-reboot.sh');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'update-executor.json');
@@ -233,6 +234,14 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('trap \'handle_error $? $LINENO\' ERR', $offlineScript);
         self::assertStringContainsString('--stage failed', $offlineScript);
 
+        $repoLauncherScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'run-update-with-repo-env.sh');
+        self::assertNotFalse($repoLauncherScript);
+        self::assertStringContainsString('W4_UPDATE_REPOSITORY_DIR', $repoLauncherScript);
+        self::assertStringContainsString('W4_UPDATE_REPOSITORY_ENV_FILE', $repoLauncherScript);
+        self::assertStringContainsString('W4_REPOSITORY_CHANNEL', $repoLauncherScript);
+        self::assertStringContainsString('run-update-offline.sh', $repoLauncherScript);
+        self::assertStringContainsString('W4_UPDATE_APT_SOURCE_MODE_DEFAULT', $repoLauncherScript);
+
         $healthScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'run-health-checks.sh');
         self::assertNotFalse($healthScript);
         self::assertStringContainsString('dpkg --audit', $healthScript);
@@ -243,6 +252,11 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('reconcile_update_operation.php', $reconcileScript);
         self::assertStringContainsString('W4_UPDATE_OBSERVED_STAGE', $reconcileScript);
         self::assertStringContainsString('run-health-checks.sh', $reconcileScript);
+
+        $readme = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'UPDATE_EXECUTOR_README.txt');
+        self::assertNotFalse($readme);
+        self::assertStringContainsString('run-update-with-repo-env.sh', $readme);
+        self::assertStringContainsString('W4_UPDATE_REPOSITORY_DIR', $readme);
     }
 
     public function testGenerateUpdateRepositoryBundleWritesLabRepoArtifacts(): void

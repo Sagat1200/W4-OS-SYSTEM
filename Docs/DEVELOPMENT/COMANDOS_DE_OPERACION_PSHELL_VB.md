@@ -105,3 +105,60 @@ Notas operativas validadas en Business:
 - `W4-OS-Business-Test` ya quedo validado de punta a punta: instalacion destructiva, `verify-installation.sh`, primer boot cifrado, login local de `w4admin` y layout final correcto.
 - El payload regenerado de instalacion ya exporta un `PATH` con rutas `sbin`, evitando falsos negativos de `sgdisk` y `partprobe` en sesiones live minimales.
 - Si el layout de teclado en `initramfs` o `tty1` impide escribir correctamente las credenciales complejas, se puede repetir el workaround validado: agregar temporalmente una passphrase LUKS ASCII simple y/o cambiar temporalmente la password de login desde la live antes de reintentar el arranque desde disco.
+
+## Flujo recomendado para `MX-004` con repo APT tipo `dists`
+
+### Home por NAT con port forwarding 2222
+
+```powershell
+scp -P 2222 -r "c:\W4\Packages\W4-OS SYSTEM\build\update\repository-output\w4-main-2026-09-20T120000Z" "w4@127.0.0.1:/home/w4/w4-update-repo"
+scp -P 2222 -r "c:\W4\Packages\W4-OS SYSTEM\build\update\executors\w4-update-smoke-003" "w4@127.0.0.1:/home/w4/w4-update-executor"
+ssh -p 2222 w4@127.0.0.1
+```
+
+Dentro de la VM:
+
+```bash
+cd ~/w4-update-executor
+chmod +x run-update-offline.sh run-update-with-repo-env.sh run-health-checks.sh reconcile-after-reboot.sh
+sudo W4_UPDATE_EXECUTE=1 ./run-update-with-repo-env.sh --repo-dir /home/w4/w4-update-repo
+sudo reboot
+```
+
+Tras el reinicio:
+
+```bash
+cd ~/w4-update-executor
+./run-health-checks.sh
+sudo ./reconcile-after-reboot.sh
+```
+
+### Business por NAT con port forwarding 2223
+
+```powershell
+scp -P 2223 -r "c:\W4\Packages\W4-OS SYSTEM\build\update\repository-output\w4-main-2026-09-20T120000Z" "w4admin@127.0.0.1:/home/w4admin/w4-update-repo"
+scp -P 2223 -r "c:\W4\Packages\W4-OS SYSTEM\build\update\executors\w4-update-business-smoke-001" "w4admin@127.0.0.1:/home/w4admin/w4-update-executor"
+ssh -p 2223 w4admin@127.0.0.1
+```
+
+Dentro de la VM:
+
+```bash
+cd ~/w4-update-executor
+chmod +x run-update-offline.sh run-update-with-repo-env.sh run-health-checks.sh reconcile-after-reboot.sh
+sudo W4_UPDATE_EXECUTE=1 ./run-update-with-repo-env.sh --repo-dir /home/w4admin/w4-update-repo
+sudo reboot
+```
+
+Tras el reinicio:
+
+```bash
+cd ~/w4-update-executor
+./run-health-checks.sh
+sudo ./reconcile-after-reboot.sh
+```
+
+Notas:
+
+- El wrapper `run-update-with-repo-env.sh` deriva la source APT desde la ruta real del repo copiado a la VM y evita reutilizar las rutas locales del host presentes en `repo.env`.
+- Si se necesita otro canal, puede sobreescribirse con `W4_UPDATE_REPOSITORY_CHANNEL=<canal>` antes de lanzar el wrapper.

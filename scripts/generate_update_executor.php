@@ -53,11 +53,13 @@ try {
 
     $manifest = $toolkit->createUpdateExecutorManifest($plan);
     $offlineScript = $toolkit->renderOfflineExecutorScript($plan, $rootDir);
+    $repoLauncherScript = $toolkit->renderRepositoryAwareLauncherScript();
     $healthCheckScript = $toolkit->renderHealthCheckScript($plan);
     $reconcileScript = $toolkit->renderReconcileScript($plan, $rootDir);
 
     $manifestPath = $bundleDir . DIRECTORY_SEPARATOR . 'update-executor.json';
     $offlinePath = $bundleDir . DIRECTORY_SEPARATOR . 'run-update-offline.sh';
+    $repoLauncherPath = $bundleDir . DIRECTORY_SEPARATOR . 'run-update-with-repo-env.sh';
     $healthCheckPath = $bundleDir . DIRECTORY_SEPARATOR . 'run-health-checks.sh';
     $reconcilePath = $bundleDir . DIRECTORY_SEPARATOR . 'reconcile-after-reboot.sh';
     $readmePath = $bundleDir . DIRECTORY_SEPARATOR . 'UPDATE_EXECUTOR_README.txt';
@@ -75,6 +77,10 @@ try {
         throw new ValidationError(sprintf('No se pudo escribir %s', $offlinePath));
     }
 
+    if (file_put_contents($repoLauncherPath, $repoLauncherScript . PHP_EOL) === false) {
+        throw new ValidationError(sprintf('No se pudo escribir %s', $repoLauncherPath));
+    }
+
     if (file_put_contents($healthCheckPath, $healthCheckScript . PHP_EOL) === false) {
         throw new ValidationError(sprintf('No se pudo escribir %s', $healthCheckPath));
     }
@@ -88,19 +94,23 @@ W4 OS Update Executor
 
 Archivos generados:
 - run-update-offline.sh
+- run-update-with-repo-env.sh
 - run-health-checks.sh
 - reconcile-after-reboot.sh
 - update-executor.json
 
 Uso previsto:
 1. preparar primero el store durable con prepare_update_operation.php
-2. ejecutar run-update-offline.sh hasta dejar la operacion en pending_health
-3. tras el reinicio, ejecutar run-health-checks.sh
-4. ejecutar reconcile-after-reboot.sh para confirmar o fallar la operacion
+2. copiar tambien el repositorio APT reconstruido al sistema objetivo
+3. ejecutar preferentemente run-update-with-repo-env.sh --repo-dir /ruta/al/repositorio hasta dejar la operacion en pending_health
+4. tras el reinicio, ejecutar run-health-checks.sh
+5. ejecutar reconcile-after-reboot.sh para confirmar o fallar la operacion
 
 Variables utiles:
 - W4_UPDATE_STORE_DIR: carpeta del store durable
 - W4_UPDATE_ENGINE_ROOT: raiz del repo cuando el bundle se mueve fuera del arbol local
+- W4_UPDATE_REPOSITORY_DIR: directorio real del repo APT copiado al sistema objetivo
+- W4_UPDATE_REPOSITORY_ENV_FILE: ruta alternativa al repo.env del repositorio copiado
 - W4_UPDATE_EXECUTE: usar 1 para habilitar apt-get y snapshot reales
 - W4_UPDATE_APPLY_MODE: estrategia de aplicacion, por ahora `live-apt`
 - W4_UPDATE_APT_SOURCE_MODE: `auto` por defecto; prioriza `W4_UPDATE_APT_SOURCE_LINE_DISTS` y cae a `W4_UPDATE_APT_SOURCE_LINE`

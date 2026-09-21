@@ -196,6 +196,7 @@ final class UpdateToolkitTest extends TestCase
         $plan = $toolkit->createUpdatePlan($request, 'w4-update-fixed-005');
 
         $script = $toolkit->renderOfflineExecutorScript($plan, $this->rootDir);
+        $repoLauncherScript = $toolkit->renderRepositoryAwareLauncherScript();
         $healthScript = $toolkit->renderHealthCheckScript($plan);
         $reconcileScript = $toolkit->renderReconcileScript($plan, $this->rootDir);
         $manifest = $toolkit->createUpdateExecutorManifest($plan);
@@ -217,12 +218,18 @@ final class UpdateToolkitTest extends TestCase
         self::assertStringContainsString('W4_UPDATE_FAIL_STAGE', $script);
         self::assertStringContainsString('offline-application.json', $script);
         self::assertStringContainsString('pending_health', $script);
+        self::assertStringContainsString('W4_UPDATE_REPOSITORY_DIR', $repoLauncherScript);
+        self::assertStringContainsString('W4_UPDATE_REPOSITORY_ENV_FILE', $repoLauncherScript);
+        self::assertStringContainsString('W4_REPOSITORY_CHANNEL', $repoLauncherScript);
+        self::assertStringContainsString('run-update-offline.sh', $repoLauncherScript);
+        self::assertStringContainsString('W4_UPDATE_APT_SOURCE_MODE_DEFAULT', $repoLauncherScript);
         self::assertStringContainsString('dpkg --audit', $healthScript);
         self::assertStringContainsString('health-check-results.json', $healthScript);
         self::assertStringContainsString('scripts/reconcile_update_operation.php', $reconcileScript);
         self::assertStringContainsString('W4_UPDATE_OBSERVED_STAGE', $reconcileScript);
         self::assertStringContainsString('run-health-checks.sh', $reconcileScript);
         self::assertContains('run-update-offline.sh', $manifest['generated_artifacts']);
+        self::assertContains('run-update-with-repo-env.sh', $manifest['generated_artifacts']);
         self::assertContains('run-health-checks.sh', $manifest['generated_artifacts']);
         self::assertContains('reconcile-after-reboot.sh', $manifest['generated_artifacts']);
     }

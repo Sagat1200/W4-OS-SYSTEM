@@ -5,6 +5,7 @@
     "engine": "apt-offline-snapshot",
     "generated_artifacts": [
         "run-update-offline.sh",
+        "run-update-with-repo-env.sh",
         "run-health-checks.sh",
         "reconcile-after-reboot.sh",
         "update-executor.json",
