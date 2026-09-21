@@ -284,6 +284,7 @@ Notas operativas del flujo firmado validado:
 
 - `run_update_validation_via_paramiko.php` ya sincroniza la hora UTC remota antes de la fase APT cuando detecta desfase grande, evitando rechazos `Not live until ...` de `sqv` sobre `InRelease`.
 - El helper ya copia el repo a una ruta publica temporal en `/var/tmp/...`, de modo que `_apt` y `sqv` puedan leer `keyrings/w4-update-archive-keyring.gpg` aunque el `home` remoto del usuario SSH tenga permisos `700`.
+- Si la VM tarda mas en mostrar el prompt LUKS, se puede ampliar la espera antes de inyectar la passphrase con `--unlock-wait <segundos>`. El valor por defecto del helper ya subio a `30`.
 - Si el desbloqueo LUKS ocurre mas tarde de lo esperado y el helper no consigue retomar SSH por si solo, se puede reenviar la passphrase desde VirtualBox y luego rematar con:
 
 ```powershell
@@ -294,5 +295,62 @@ php "c:\W4\Packages\W4-OS SYSTEM\scripts\complete_pending_health_via_paramiko.ph
   --password W4login1234 `
   --remote-root /home/w4/w4-update-signed-home `
   --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\validation\w4-update-smoke-003-signed-home" `
+  --connect-wait 600
+```
+
+## Validacion firmada de `MX-004` en Business
+
+Antes de repetir el flujo firmado en `W4-OS-Business-Test`, dejar la VM arrancando desde disco y sin la live ISO acoplada:
+
+```powershell
+& "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" controlvm "W4-OS-Business-Test" acpipowerbutton
+& "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" storageattach "W4-OS-Business-Test" --storagectl "IDE" --port 0 --device 0 --type dvddrive --medium none
+& "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" modifyvm "W4-OS-Business-Test" --boot1 disk --boot2 dvd --boot3 none --boot4 none
+& "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" startvm "W4-OS-Business-Test" --type headless
+```
+
+Luego ejecutar:
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_update_validation_via_paramiko.php" `
+  --host 127.0.0.1 `
+  --port 2223 `
+  --username w4admin `
+  --password W4login1234 `
+  --repo-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\repository-output\w4-main-2026-09-20T180000Z-signed-auto" `
+  --executor-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\executors\w4-update-business-smoke-001" `
+  --plan-path "c:\W4\Packages\W4-OS SYSTEM\build\update\plans\w4-update-business-smoke-001.update-plan.json" `
+  --remote-root /home/w4admin/w4-update-signed-business `
+  --vm-name "W4-OS-Business-Test" `
+  --luks-passphrase 94628153 `
+  --unlock-wait 30 `
+  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\validation\w4-update-business-smoke-001-signed-business"
+```
+
+Notas operativas del flujo firmado validado en Business:
+
+- Si aparece `ERROR: Could not create subvolume: File exists`, limpiar solo el snapshot sobrante con:
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_remote_command_via_paramiko.php" `
+  --host 127.0.0.1 `
+  --port 2223 `
+  --username w4admin `
+  --password W4login1234 `
+  --command "sudo -S -p '' btrfs subvolume delete /.snapshots/pre-update-w4-update-business-smoke-001" `
+  --sudo-password W4login1234 `
+  --pty
+```
+
+- Si el helper principal llega a `pending_health` pero no recupera SSH tras el reboot, se puede reenviar la passphrase LUKS desde VirtualBox y rematar con:
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\complete_pending_health_via_paramiko.php" `
+  --host 127.0.0.1 `
+  --port 2223 `
+  --username w4admin `
+  --password W4login1234 `
+  --remote-root /home/w4admin/w4-update-signed-business `
+  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\validation\w4-update-business-smoke-001-signed-business" `
   --connect-wait 600
 ```

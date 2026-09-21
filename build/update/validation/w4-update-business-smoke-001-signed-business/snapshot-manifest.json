@@ -1,0 +1,9 @@
+{
+  "snapshot_manifest_schema_version": 1,
+  "kind": "snapshot-manifest",
+  "operation_id": "w4-update-business-smoke-001",
+  "snapshot_name": "pre-update-w4-update-business-smoke-001",
+  "snapshot_path": "/.snapshots/pre-update-w4-update-business-smoke-001",
+  "root_mount": "/",
+  "root_subvolume": "@"
+}

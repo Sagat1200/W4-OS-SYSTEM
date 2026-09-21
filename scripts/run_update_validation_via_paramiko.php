@@ -207,6 +207,7 @@ def main() -> int:
     parser.add_argument("--plan-path", required=True, help="Ruta local del update-plan.json a usar para inicializar el store")
     parser.add_argument("--remote-root", required=True, help="Directorio base remoto donde se copiara repo + ejecutor")
     parser.add_argument("--reboot-wait", type=int, default=240, help="Segundos maximos para esperar la vuelta del SSH tras reboot")
+    parser.add_argument("--unlock-wait", type=int, default=30, help="Segundos de espera antes de inyectar la passphrase LUKS tras pedir reboot")
     parser.add_argument("--vm-name", help="Nombre de la VM en VirtualBox para automatizar el desbloqueo LUKS")
     parser.add_argument("--luks-passphrase", help="Passphrase LUKS ASCII para desbloqueo post-reboot")
     parser.add_argument("--evidence-dir", required=True, help="Directorio local para guardar artefactos descargados")
@@ -319,7 +320,7 @@ def main() -> int:
 
     if args.vm_name and args.luks_passphrase:
         log("Esperando el prompt LUKS para inyectar la passphrase")
-        time.sleep(15)
+        time.sleep(args.unlock_wait)
         send_vbox_text(args.vm_name, args.luks_passphrase)
 
     log("Esperando a que la VM vuelva por SSH")
