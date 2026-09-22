@@ -250,10 +250,25 @@ El runner soporta tambien una clave persistente ya provisionada:
 ```powershell
 php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_update_repository_bundle_in_wsl.php" `
   --bundle "c:\W4\Packages\W4-OS SYSTEM\build\update\repositories\w4-main-2026-09-20T180000Z" `
-  --output-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\repository-output\w4-main-2026-09-20T180000Z-signed" `
   --distribution Ubuntu `
-  --signing-mode gpg `
-  --gpg-key-id W4-Update-Prod `
+  --signing-profile prod
+```
+
+Con `--signing-profile prod`, el runner ya fija por convenio:
+
+- `signing-mode=gpg`
+- `gpg-key-id=W4-Update-Prod`
+- `gpg-homedir=/var/tmp/w4-os-system/signing-w4`
+- `output-dir` por defecto terminado en `-signed-prod` cuando no se indica uno manualmente
+
+La variante expandida sigue siendo valida si se quiere sobreescribir algun valor concreto:
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_update_repository_bundle_in_wsl.php" `
+  --bundle "c:\W4\Packages\W4-OS SYSTEM\build\update\repositories\w4-main-2026-09-20T180000Z" `
+  --output-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\repository-output\w4-main-2026-09-20T180000Z-signed-prod" `
+  --distribution Ubuntu `
+  --signing-profile prod `
   --gpg-homedir /var/tmp/w4-os-system/signing-w4
 ```
 
@@ -275,6 +290,7 @@ Notas:
 - Si tambien se indica `--gpg-homedir`, la importacion se realiza sobre ese homedir persistente.
 - Si no se indica `--gpg-homedir`, el runner crea automaticamente un homedir reproducible en WSL bajo `/var/tmp/w4-os-system/update-repositories/...-signing-imported`.
 - `--generate-lab-key` sigue reservado al laboratorio efimero y no debe mezclarse con archivos persistentes.
+- `--signing-profile prod` es ya la ruta operativa recomendada para la publicacion oficial; `--generate-lab-key` queda como camino de laboratorio.
 
 Si el directorio firmado contiene `keyrings/w4-update-archive-keyring.gpg`, el wrapper `run-update-with-repo-env.sh` ya puede derivar automaticamente una source APT estilo:
 

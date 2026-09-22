@@ -88,6 +88,7 @@ try {
     $distribution = 'Ubuntu';
     $checkOnly = false;
     $signingMode = 'unsigned';
+    $signingProfile = null;
     $gpgKeyId = null;
     $gpgHomedir = null;
     $gpgPassphrase = null;
@@ -138,6 +139,10 @@ try {
                 $signingMode = $value;
                 break;
 
+            case '--signing-profile':
+                $signingProfile = $value;
+                break;
+
             case '--gpg-key-id':
                 $gpgKeyId = $value;
                 break;
@@ -179,6 +184,28 @@ try {
         throw new ValidationError('Debe indicar --snapshot-id o --bundle');
     }
 
+    if ($signingProfile !== null && !in_array($signingProfile, ['lab', 'prod'], true)) {
+        throw new ValidationError('signing-profile debe ser lab o prod');
+    }
+
+    if ($signingProfile === 'lab') {
+        $signingMode = 'gpg';
+        $generateLabKey = true;
+        if ($gpgKeyId === null) {
+            $gpgKeyId = 'W4-Update-Lab';
+        }
+    }
+
+    if ($signingProfile === 'prod') {
+        $signingMode = 'gpg';
+        if ($gpgKeyId === null) {
+            $gpgKeyId = 'W4-Update-Prod';
+        }
+        if ($gpgHomedir === null) {
+            $gpgHomedir = '/var/tmp/w4-os-system/signing-w4';
+        }
+    }
+
     if (!in_array($signingMode, ['unsigned', 'gpg'], true)) {
         throw new ValidationError('signing-mode debe ser unsigned o gpg');
     }
@@ -196,6 +223,10 @@ try {
         if ($gpgKeyId === null) {
             $gpgKeyId = 'W4-Update-Lab';
         }
+    }
+
+    if ($signingProfile === 'prod' && $generateLabKey) {
+        throw new ValidationError('No combine --signing-profile prod con --generate-lab-key');
     }
 
     if ($generateLabKey && ($gpgSecretKeyFile !== null || $gpgOwnertrustFile !== null)) {
@@ -233,7 +264,16 @@ try {
     }
 
     if ($outputDir === null) {
-        $outputDir = $defaultOutputRoot . DIRECTORY_SEPARATOR . ($snapshotId ?? basename($bundlePath));
+        $outputBaseName = $snapshotId ?? basename($bundlePath);
+        if ($signingProfile === 'prod') {
+            $outputBaseName .= '-signed-prod';
+        } elseif ($signingProfile === 'lab' || $generateLabKey) {
+            $outputBaseName .= '-signed-auto';
+        } elseif ($signingMode === 'gpg') {
+            $outputBaseName .= '-signed';
+        }
+
+        $outputDir = $defaultOutputRoot . DIRECTORY_SEPARATOR . $outputBaseName;
     }
 
     $wslBuildScriptPath = runWindowsCommand(sprintf(
@@ -334,6 +374,7 @@ try {
         printJson([
             'status' => 'ready',
             'distribution' => $distribution,
+            'signing_profile' => $signingProfile,
             'bundle_path_windows' => $bundlePath,
             'build_script_path_wsl' => $wslBuildScriptPath,
             'output_dir_windows' => isWslNativePath($outputDir) ? null : $outputDir,

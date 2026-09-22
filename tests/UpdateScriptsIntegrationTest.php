@@ -464,6 +464,60 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('bash ', $payload['run_command']);
     }
 
+    public function testSignedRepositoryRunnerSupportsProductionProfilePreview(): void
+    {
+        $distribution = $this->detectWslDistribution();
+        if ($distribution === null) {
+            self::markTestSkipped('No hay una distribucion WSL disponible para validar el perfil productivo del runner firmado.');
+        }
+
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'repo-bundle-signed-prod-profile';
+
+        $generateBundle = $this->runPhpScript(
+            $this->fixturePath('scripts/generate_update_repository_bundle.php'),
+            [
+                '--snapshot-id',
+                'w4-main-2026-09-21T180000Z',
+                '--channel',
+                'testing',
+                '--target-version',
+                '1.0.1-prod',
+                '--package-set',
+                'both',
+                '--output-dir',
+                $bundleDir,
+            ]
+        );
+        self::assertSame(0, $generateBundle['exitCode'], $generateBundle['stderr']);
+
+        $preview = $this->runPhpScript(
+            $this->fixturePath('scripts/run_update_repository_bundle_in_wsl.php'),
+            [
+                '--bundle',
+                $bundleDir,
+                '--distribution',
+                $distribution,
+                '--signing-profile',
+                'prod',
+                '--check-only',
+            ]
+        );
+        self::assertSame(0, $preview['exitCode'], $preview['stderr']);
+
+        $payload = $this->decodeJson($preview['stdout']);
+        self::assertSame('ready', $payload['status']);
+        self::assertSame('prod', $payload['signing_profile']);
+        self::assertSame('gpg', $payload['signing_mode']);
+        self::assertSame('W4-Update-Prod', $payload['gpg_key_id']);
+        self::assertSame('/var/tmp/w4-os-system/signing-w4', $payload['gpg_homedir_wsl']);
+        self::assertFalse($payload['generate_lab_key']);
+        self::assertSame($distribution, $payload['distribution']);
+        self::assertStringEndsWith('-signed-prod', basename((string) $payload['output_dir_windows']));
+        self::assertStringContainsString('export W4_UPDATE_REPO_SIGNING_MODE=gpg', $payload['run_command']);
+        self::assertStringContainsString('export W4_UPDATE_REPO_GPG_KEY_ID=', $payload['run_command']);
+        self::assertStringContainsString('export W4_UPDATE_REPO_GPG_HOMEDIR=', $payload['run_command']);
+    }
+
     public function testUpdateValidationHelperHelpMentionsUnlockRetryOptions(): void
     {
         $result = $this->runPhpScript(
