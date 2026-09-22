@@ -41,6 +41,7 @@ final class UpdateToolkitTest extends TestCase
         self::assertSame('1.0.0-lab', $plan['source_version']);
         self::assertSame('1.0.1-lab', $plan['target_version']);
         self::assertSame('apt-offline-snapshot', $plan['execution']['engine']);
+        self::assertSame('live-apt', $plan['execution']['apply_mode']);
         self::assertSame(
             ['planned', 'downloading', 'ready', 'prepared', 'applying_offline', 'pending_health', 'confirmed'],
             $plan['execution']['stages']
@@ -73,6 +74,11 @@ final class UpdateToolkitTest extends TestCase
         self::assertSame('planned', $operation['stage']);
         self::assertSame('pre-update-w4-update-fixed-002', $operation['snapshot']['snapshot_name']);
         self::assertNull($operation['last_error']);
+
+        $healthReport = $this->decodeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'health-report.json');
+        self::assertSame('planned', $healthReport['stage']);
+        self::assertSame('pending', $healthReport['status']);
+        self::assertSame('w4-update-fixed-002', $healthReport['operation_id']);
 
         $events = file($storeDir . DIRECTORY_SEPARATOR . 'events.ndjson', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         self::assertIsArray($events);
@@ -204,6 +210,7 @@ final class UpdateToolkitTest extends TestCase
         self::assertStringContainsString('scripts/advance_update_operation.php', $script);
         self::assertStringContainsString('W4_UPDATE_ENGINE_ROOT', $script);
         self::assertStringContainsString('W4_UPDATE_EXECUTE', $script);
+        self::assertStringContainsString('W4_UPDATE_APPLY_MODE:-live-apt', $script);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_MODE', $script);
         self::assertStringContainsString('W4_UPDATE_APT_CHECK_DATE', $script);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_LINE', $script);
@@ -213,6 +220,10 @@ final class UpdateToolkitTest extends TestCase
         self::assertStringContainsString('configure_temporary_apt_source', $script);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_MODE no soportado', $script);
         self::assertStringContainsString('snapshot-manifest.json', $script);
+        self::assertStringContainsString('--print-number', $script);
+        self::assertStringContainsString('planned_snapshot_path', $script);
+        self::assertStringContainsString('snapshot_backend', $script);
+        self::assertStringContainsString('snapshot_reference', $script);
         self::assertStringContainsString('staging-manifest.json', $script);
         self::assertStringContainsString('trap \'handle_error $? $LINENO\' ERR', $script);
         self::assertStringContainsString('--stage failed', $script);
@@ -254,6 +265,19 @@ final class UpdateToolkitTest extends TestCase
             ],
             'confirmed'
         );
+    }
+
+    public function testReadJsonFileRejectsScalarJsonRoot(): void
+    {
+        $toolkit = new UpdateToolkit();
+        $jsonPath = $this->tempDir . DIRECTORY_SEPARATOR . 'scalar.json';
+
+        self::assertNotFalse(file_put_contents($jsonPath, '"valor-escalar"' . PHP_EOL));
+
+        $this->expectException(ValidationError::class);
+        $this->expectExceptionMessage('la raiz debe ser un objeto o arreglo JSON');
+
+        $toolkit->readJsonFile($jsonPath);
     }
 
     /**

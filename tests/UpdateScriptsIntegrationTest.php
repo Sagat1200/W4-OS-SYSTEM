@@ -53,6 +53,24 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertSame('pending_health', $plan['health_check_manifest']['pending_state']);
     }
 
+    public function testGenerateUpdatePlanRejectsScalarJsonAsValidationError(): void
+    {
+        $requestPath = $this->tempDir . DIRECTORY_SEPARATOR . 'invalid-scalar.update-request.json';
+        self::assertNotFalse(file_put_contents($requestPath, '"valor-escalar"' . PHP_EOL));
+
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/generate_update_plan.php'),
+            [
+                '--request',
+                $requestPath,
+            ]
+        );
+
+        self::assertSame(1, $result['exitCode']);
+        self::assertStringContainsString('ERROR:', $result['stderr']);
+        self::assertStringContainsString('la raiz debe ser un objeto o arreglo JSON', $result['stderr']);
+    }
+
     public function testPrepareUpdateOperationCreatesDurableStore(): void
     {
         $planPath = $this->tempDir . DIRECTORY_SEPARATOR . 'prepared.update-plan.json';
@@ -94,6 +112,10 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertFileExists($storeDir . DIRECTORY_SEPARATOR . 'operation.json');
         self::assertFileExists($storeDir . DIRECTORY_SEPARATOR . 'events.ndjson');
         self::assertFileExists($storeDir . DIRECTORY_SEPARATOR . 'health-report.json');
+
+        $healthReport = $this->decodeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'health-report.json');
+        self::assertSame('planned', $healthReport['stage']);
+        self::assertSame('pending', $healthReport['status']);
     }
 
     public function testAdvanceAndReconcileUpdateOperationFlow(): void
@@ -224,6 +246,7 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('advance_update_operation.php', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_ENGINE_ROOT', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_EXECUTE', $offlineScript);
+        self::assertStringContainsString('W4_UPDATE_APPLY_MODE:-live-apt', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_MODE', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_APT_CHECK_DATE', $offlineScript);
         self::assertStringContainsString('W4_UPDATE_APT_SOURCE_LINE', $offlineScript);
@@ -232,6 +255,10 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('W4_UPDATE_FAIL_STAGE', $offlineScript);
         self::assertStringContainsString('pending_health', $offlineScript);
         self::assertStringContainsString('snapshot-manifest.json', $offlineScript);
+        self::assertStringContainsString('--print-number', $offlineScript);
+        self::assertStringContainsString('planned_snapshot_path', $offlineScript);
+        self::assertStringContainsString('snapshot_backend', $offlineScript);
+        self::assertStringContainsString('snapshot_reference', $offlineScript);
         self::assertStringContainsString('trap \'handle_error $? $LINENO\' ERR', $offlineScript);
         self::assertStringContainsString('--stage failed', $offlineScript);
 

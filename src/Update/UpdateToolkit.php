@@ -37,6 +37,13 @@ final class UpdateToolkit
             throw new ValidationError(sprintf('JSON invalido en %s: %s', $path, $exception->getMessage()));
         }
 
+        if (!is_array($data)) {
+            throw new ValidationError(sprintf(
+                'JSON invalido en %s: la raiz debe ser un objeto o arreglo JSON',
+                $path
+            ));
+        }
+
         return $data;
     }
 
@@ -252,7 +259,7 @@ final class UpdateToolkit
             ],
             'execution' => [
                 'engine' => $operation['mode'],
-                'apply_mode' => 'live-apt-maintenance-window',
+                'apply_mode' => 'live-apt',
                 'reboot_required' => $operation['reboot_required'],
                 'stages' => [
                     'planned',
@@ -340,18 +347,7 @@ final class UpdateToolkit
 
         $this->writeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'update-plan.json', $plan);
         $this->writeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'operation.json', $operation);
-        $this->writeJsonFile(
-            $storeDir . DIRECTORY_SEPARATOR . 'health-report.json',
-            [
-                'health_report_schema_version' => 1,
-                'kind' => 'health-report',
-                'operation_id' => $plan['operation_id'],
-                'stage' => 'pending_health',
-                'status' => 'pending',
-                'required_checks' => $plan['health_check_manifest']['required'],
-                'test_file_path' => $plan['health_check_manifest']['test_file_path'],
-            ]
-        );
+        $this->writeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'health-report.json', $this->buildHealthReport($plan, $operation));
 
         $this->appendEvent(
             $storeDir . DIRECTORY_SEPARATOR . 'events.ndjson',
@@ -564,6 +560,7 @@ final class UpdateToolkit
         $engineRoot = $this->escapeShellDoubleQuoted($rootDir);
         $operationId = $this->escapeShellDoubleQuoted((string) $plan['operation_id']);
         $targetVersion = $this->escapeShellDoubleQuoted((string) $plan['target_version']);
+        $applyMode = $this->escapeShellDoubleQuoted((string) $plan['execution']['apply_mode']);
         $snapshotName = $this->escapeShellDoubleQuoted((string) $plan['snapshot']['snapshot_name']);
         $snapshotPath = $this->escapeShellDoubleQuoted((string) $plan['snapshot']['snapshot_path']);
         $bootMode = $this->escapeShellDoubleQuoted((string) $plan['boot_manifest']['boot_mode']);
@@ -588,12 +585,12 @@ SCRIPT_DIR="\$(cd -- "\$(dirname -- "\${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_ENGINE_ROOT="\$(cd -- "\${SCRIPT_DIR}/../../../.." 2>/dev/null && pwd || true)"
 ENGINE_ROOT="\${W4_UPDATE_ENGINE_ROOT:-\${DEFAULT_ENGINE_ROOT}}"
 STORE_DIR="\${W4_UPDATE_STORE_DIR:-\${SCRIPT_DIR}/store}"
-STAGING_DIR="\${W4_UPDATE_STAGING_DIR:-${stagingDirectory}}"
+STAGING_DIR="\${W4_UPDATE_STAGING_DIR:-{$stagingDirectory}}"
 SNAPSHOT_PARENT="\${W4_UPDATE_SNAPSHOT_PARENT:-/.snapshots}"
 ROOT_MOUNT="\${W4_UPDATE_ROOT_MOUNT:-/}"
 ROOT_SUBVOLUME="\${W4_UPDATE_ROOT_SUBVOLUME:-@}"
 EXECUTE_MODE="\${W4_UPDATE_EXECUTE:-0}"
-APPLY_MODE="\${W4_UPDATE_APPLY_MODE:-live-apt}"
+APPLY_MODE="\${W4_UPDATE_APPLY_MODE:-{$applyMode}}"
 FAIL_STAGE="\${W4_UPDATE_FAIL_STAGE:-}"
 APT_CHECK_DATE="\${W4_UPDATE_APT_CHECK_DATE:-1}"
 APT_SOURCE_MODE="\${W4_UPDATE_APT_SOURCE_MODE:-auto}"
@@ -608,22 +605,22 @@ SNAPSHOT_MANIFEST_PATH="\${STORE_DIR}/snapshot-manifest.json"
 STAGING_MANIFEST_PATH="\${STORE_DIR}/staging-manifest.json"
 HEALTH_CHECK_PATH="\${STORE_DIR}/health-checks.required.txt"
 
-OPERATION_ID="${operationId}"
-TARGET_VERSION="${targetVersion}"
-SNAPSHOT_NAME="${snapshotName}"
-SNAPSHOT_PATH="${snapshotPath}"
-BOOT_MODE="${bootMode}"
-KERNEL_PACKAGE="${kernelPackage}"
-TEST_FILE_PATH="${testFilePath}"
-REQUIRED_SPACE_KIB="${estimatedSpaceKib}"
+OPERATION_ID="{$operationId}"
+TARGET_VERSION="{$targetVersion}"
+SNAPSHOT_NAME="{$snapshotName}"
+SNAPSHOT_PATH="{$snapshotPath}"
+BOOT_MODE="{$bootMode}"
+KERNEL_PACKAGE="{$kernelPackage}"
+TEST_FILE_PATH="{$testFilePath}"
+REQUIRED_SPACE_KIB="{$estimatedSpaceKib}"
 CURRENT_STAGE="planned"
 FAILURE_PERSISTED="0"
 APT_SOURCE_TARGET="/etc/apt/sources.list.d/w4-update-\${OPERATION_ID}.list"
 
-declare -a INSTALL_PACKAGES=(${installList})
-declare -a UPGRADE_PACKAGES=(${upgradeList})
-declare -a REMOVE_PACKAGES=(${removeList})
-declare -a REQUIRED_HEALTH_CHECKS=(${healthChecks})
+declare -a INSTALL_PACKAGES=({$installList})
+declare -a UPGRADE_PACKAGES=({$upgradeList})
+declare -a REMOVE_PACKAGES=({$removeList})
+declare -a REQUIRED_HEALTH_CHECKS=({$healthChecks})
 
 log() {
   echo "[w4-update] \$*" >&2
@@ -779,12 +776,12 @@ stage_packages() {
 {
   "staging_manifest_schema_version": 1,
   "kind": "staging-manifest",
-  "operation_id": "${operationId}",
+  "operation_id": "{$operationId}",
   "staging_directory": "\${STAGING_DIR}",
-  "estimated_space_kib": ${estimatedSpaceKib},
-  "install_count": ${installCount},
-  "upgrade_count": ${upgradeCount},
-  "remove_count": ${removeCount}
+  "estimated_space_kib": {$estimatedSpaceKib},
+  "install_count": {$installCount},
+  "upgrade_count": {$upgradeCount},
+  "remove_count": {$removeCount}
 }
 EOF
 
@@ -816,17 +813,37 @@ EOF
 
 create_snapshot() {
   mkdir -p "\${STORE_DIR}"
+  local snapshot_backend="planned"
+  local snapshot_reference="\${SNAPSHOT_NAME}"
+  local snapshot_actual_path="\${SNAPSHOT_PATH}"
 
   if [[ "\${EXECUTE_MODE}" == "1" ]]; then
     if command -v snapper >/dev/null 2>&1; then
-      snapper --no-dbus create --type single --description "W4 update \${OPERATION_ID}" --userdata "operation_id=\${OPERATION_ID}"
+      snapshot_backend="snapper"
+      snapshot_reference="$(snapper --no-dbus create --print-number --type single --description "W4 update \${OPERATION_ID}" --userdata "operation_id=\${OPERATION_ID}")"
+      snapshot_reference="$(printf '%s' "\${snapshot_reference}" | tr -d '[:space:]')"
+      if [[ -z "\${snapshot_reference}" ]]; then
+        die "snapper no devolvio un identificador de snapshot"
+      fi
+      snapshot_actual_path="\${SNAPSHOT_PARENT}/\${snapshot_reference}/snapshot"
     elif command -v btrfs >/dev/null 2>&1; then
+      snapshot_backend="btrfs"
       mkdir -p "\${SNAPSHOT_PARENT}"
       btrfs subvolume snapshot -r "\${ROOT_MOUNT}" "\${SNAPSHOT_PARENT}/\${SNAPSHOT_NAME}"
+      snapshot_actual_path="\${SNAPSHOT_PARENT}/\${SNAPSHOT_NAME}"
     else
       die "no se encontro snapper ni btrfs para crear snapshot"
     fi
   else
+    if command -v snapper >/dev/null 2>&1; then
+      snapshot_backend="snapper"
+      snapshot_reference="pending-execution"
+      snapshot_actual_path="\${SNAPSHOT_PARENT}/pending-execution/snapshot"
+    elif command -v btrfs >/dev/null 2>&1; then
+      snapshot_backend="btrfs"
+      snapshot_actual_path="\${SNAPSHOT_PARENT}/\${SNAPSHOT_NAME}"
+    fi
+
     if ! command -v snapper >/dev/null 2>&1 && ! command -v btrfs >/dev/null 2>&1; then
       log "Modo check-only: no se detecto snapper ni btrfs; se conserva la advertencia para laboratorio"
     fi
@@ -836,9 +853,12 @@ create_snapshot() {
 {
   "snapshot_manifest_schema_version": 1,
   "kind": "snapshot-manifest",
-  "operation_id": "${operationId}",
-  "snapshot_name": "${snapshotName}",
-  "snapshot_path": "\${SNAPSHOT_PARENT}/\${SNAPSHOT_NAME}",
+  "operation_id": "{$operationId}",
+  "snapshot_name": "{$snapshotName}",
+  "planned_snapshot_path": "\${SNAPSHOT_PATH}",
+  "snapshot_backend": "\${snapshot_backend}",
+  "snapshot_reference": "\${snapshot_reference}",
+  "snapshot_path": "\${snapshot_actual_path}",
   "root_mount": "\${ROOT_MOUNT}",
   "root_subvolume": "\${ROOT_SUBVOLUME}"
 }
@@ -876,13 +896,13 @@ write_offline_artifact() {
 {
   "offline_application_schema_version": 1,
   "kind": "offline-application",
-  "operation_id": "${operationId}",
-  "target_version": "${targetVersion}",
-  "snapshot_name": "${snapshotName}",
-  "boot_mode": "${bootMode}",
-  "kernel_package": "${kernelPackage}",
-  "test_file_path": "${testFilePath}",
-  "staging_directory": "${stagingDirectory}"
+  "operation_id": "{$operationId}",
+  "target_version": "{$targetVersion}",
+  "snapshot_name": "{$snapshotName}",
+  "boot_mode": "{$bootMode}",
+  "kernel_package": "{$kernelPackage}",
+  "test_file_path": "{$testFilePath}",
+  "staging_directory": "{$stagingDirectory}"
 }
 EOF
 
@@ -1031,10 +1051,10 @@ set -euo pipefail
 SCRIPT_DIR="\$(cd -- "\$(dirname -- "\${BASH_SOURCE[0]}")" && pwd)"
 STORE_DIR="\${W4_UPDATE_STORE_DIR:-\${SCRIPT_DIR}/store}"
 RESULT_PATH="\${W4_UPDATE_HEALTH_RESULT_PATH:-\${STORE_DIR}/health-check-results.json}"
-TEST_FILE_PATH="\${W4_UPDATE_TEST_FILE_PATH:-${testFilePath}}"
-KERNEL_PACKAGE="\${W4_UPDATE_KERNEL_PACKAGE:-${kernelPackage}}"
+TEST_FILE_PATH="\${W4_UPDATE_TEST_FILE_PATH:-{$testFilePath}}"
+KERNEL_PACKAGE="\${W4_UPDATE_KERNEL_PACKAGE:-{$kernelPackage}}"
 
-declare -a REQUIRED_HEALTH_CHECKS=(${healthChecks})
+declare -a REQUIRED_HEALTH_CHECKS=({$healthChecks})
 declare -A CHECK_RESULTS=()
 
 run_check() {
