@@ -4,10 +4,10 @@ Architecture: all
 Maintainer: W4 OS System <w4@example.invalid>
 Depends: apt, base-files, bash, btrfs-progs, ca-certificates, grub-efi-amd64, linux-image-amd64, network-manager, os-prober, php-cli, shim-signed, sudo, systemd
 Filename: pool/main/w4/w4-base-meta_1.0.1-lab_all.deb
-Size: 1048
-MD5sum: 66ed441f8318fbd8c94c83e916f9a5cc
-SHA1: 5fc92e706055f0289f031c2a6d4ecfb94574020e
-SHA256: f718558099ef8d04dc24646c44508470d1de9639b18ec0ce9f1c12de600281ee
+Size: 1052
+MD5sum: 9191ada865e270c9ad78aeb72c326e61
+SHA1: dbd1e5bfc4f860799872d2c2e7d3e93f5cf01d4f
+SHA256: 490007c4a7300af9201f71c6c084ae4cec96b00978486287af7b89d7af7f82cf
 Section: metapackages
 Priority: optional
 Description: W4 OS base metapackage derived from the base manifest
@@ -19,9 +19,9 @@ Maintainer: W4 OS System <w4@example.invalid>
 Depends: w4-base-meta, w4-desktop-meta, curl, jq
 Filename: pool/main/w4/w4-business-meta_1.0.1-lab_all.deb
 Size: 984
-MD5sum: bf8cf08c2c6ee76e9e940cde20a7e18d
-SHA1: c69a2d81796a0695e979e863b7dc3ca2cd7753b2
-SHA256: 2d48abc36e939b2c9e9a8fbd4e0a95f505116cde5c3ffcd1e0abe156041efba3
+MD5sum: db3dca9d76685f49a103e15efebec022
+SHA1: 8529299431d209b65f9b104088064770589976d3
+SHA256: 914ff9371e6b03bb3b92b4ea539101a64a934625b88d50fefc02fc48c4251d75
 Section: metapackages
 Priority: optional
 Description: W4 OS Business metapackage derived from the business edition profile
@@ -33,9 +33,9 @@ Maintainer: W4 OS System <w4@example.invalid>
 Depends: pipewire, xdg-desktop-portal
 Filename: pool/main/w4/w4-desktop-meta_1.0.1-lab_all.deb
 Size: 980
-MD5sum: fb68373b84a7751e04c8727b89c66177
-SHA1: a0d609559adfa680721ae7cb4f063d8dc8629560
-SHA256: 5ffda01f3b4a531ca747cf084c6696dcc5c60e228a48671eb5386574e206e934
+MD5sum: 7c919a215b134e15995344686b7a5db3
+SHA1: 80fa23522b3d4a0064978417b013dc6736c5e6a3
+SHA256: d8557077c8f2c71584d944ac286ea0d3843dd6157b617b82ffacaad954fdeeba
 Section: metapackages
 Priority: optional
 Description: W4 OS desktop metapackage derived from shared edition requirements
@@ -47,9 +47,9 @@ Maintainer: W4 OS System <w4@example.invalid>
 Depends: w4-base-meta, w4-desktop-meta, firefox-esr, libreoffice
 Filename: pool/main/w4/w4-home-meta_1.0.1-lab_all.deb
 Size: 992
-MD5sum: f8f3e165f676dc96a123ab2f9668e662
-SHA1: a583ee4a3071c157c2d8251440372152ba16a8ff
-SHA256: 306ff46833509c45f5ba68703cc64a694972b4e2f49743fc98079436c2d54542
+MD5sum: a9c554c82540f931df10d024aa52998c
+SHA1: 7b09c1f7f83b9e415544947f6a01e12d6dfde34a
+SHA256: bfc8fe56b91051220c57b03ffe68ea1b9b58078c4f2f6e9b8f043d9f47766ea2
 Section: metapackages
 Priority: optional
 Description: W4 OS Home metapackage derived from the home edition profile
@@ -60,10 +60,10 @@ Architecture: all
 Maintainer: W4 OS System <w4@example.invalid>
 Depends: bash, btrfs-progs
 Filename: pool/main/w4/w4-recovery-tools_1.0.1-lab_all.deb
-Size: 968
-MD5sum: 49d4882ec3636ff618e814b5d40a3b95
-SHA1: 5d3d711b5f0b3a926a5c0d3300d8388aecd4150a
-SHA256: 3cfe3b13faeaad62706f181232fa0e2f966e84366d500fb0bb3296754f259865
+Size: 972
+MD5sum: e01f63854d8c2454ebedc7b58d855628
+SHA1: e1ab95f25b272f174f404f5ffb7a91002006e676
+SHA256: c036f33d57f20f2e1033965fa16e224c96b5eebec0526ca0699c9587c3b984dc
 Section: metapackages
 Priority: optional
 Description: W4 OS recovery tools package for update validation

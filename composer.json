@@ -30,6 +30,7 @@
         "scripts/prepare_update_operation.php",
         "scripts/reconcile_update_operation.php",
         "scripts/run_update_repository_bundle_in_wsl.php",
+        "scripts/publish_update_repository.php",
         "scripts/prepare_installation_bundle.php",
         "scripts/prepare_installation_runtime.php",
         "scripts/prepare_installation_transfer.php"

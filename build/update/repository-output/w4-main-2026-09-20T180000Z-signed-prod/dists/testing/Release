@@ -2,10 +2,10 @@ Origin: W4 OS
 Label: W4 OS
 Suite: testing
 Codename: testing
-Date: Mon, 21 Sep 2026 23:01:27 +0000
+Date: Tue, 22 Sep 2026 04:51:01 +0000
 Architectures: amd64
 Components: main
 Description: W4 OS update repository generated from repository manifests
 SHA256:
- 2e1bb4af63708eacde1074b72ceec021fff928b60249b66f629d68669e61c6de 2592 main/binary-amd64/Packages
- 0d915995f4c26f84270b7c96b61e33cadb38491adb3a758e34da56db4f9a2984 1029 main/binary-amd64/Packages.gz
+ adc9c10000b9199ed727a182f2f7d805aab90ba62000038caaba43544beaffb0 2592 main/binary-amd64/Packages
+ 7de452ce6f6a425d4d91796fae4f55f3a169fc23d398c4f0e54f2da2bb81527c 1028 main/binary-amd64/Packages.gz

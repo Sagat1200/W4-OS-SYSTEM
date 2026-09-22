@@ -545,6 +545,58 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('export W4_UPDATE_REPO_GPG_HOMEDIR=', $payload['run_command']);
     }
 
+    public function testOfficialRepositoryPublisherSupportsProductionPreview(): void
+    {
+        $distribution = $this->detectWslDistribution();
+        if ($distribution === null) {
+            self::markTestSkipped('No hay una distribucion WSL disponible para validar el publisher oficial del repo firmado.');
+        }
+
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'repo-bundle-official-prod';
+
+        $generateBundle = $this->runPhpScript(
+            $this->fixturePath('scripts/generate_update_repository_bundle.php'),
+            [
+                '--snapshot-id',
+                'w4-main-2026-09-21T210000Z',
+                '--channel',
+                'testing',
+                '--target-version',
+                '1.0.2-prod',
+                '--package-set',
+                'both',
+                '--output-dir',
+                $bundleDir,
+            ]
+        );
+        self::assertSame(0, $generateBundle['exitCode'], $generateBundle['stderr']);
+
+        $preview = $this->runPhpScript(
+            $this->fixturePath('scripts/publish_update_repository.php'),
+            [
+                '--bundle',
+                $bundleDir,
+                '--distribution',
+                $distribution,
+                '--check-only',
+            ]
+        );
+        self::assertSame(0, $preview['exitCode'], $preview['stderr']);
+
+        $payload = $this->decodeJson($preview['stdout']);
+        self::assertSame('ready', $payload['status']);
+        self::assertSame('official-prod', $payload['publication_profile']);
+        self::assertSame($distribution, $payload['distribution']);
+        self::assertSame('w4-main-2026-09-21T210000Z', $payload['snapshot_id']);
+        self::assertSame('testing', $payload['channel']);
+        self::assertContains('repo.env', $payload['verification_targets']);
+        self::assertContains('dists/testing/InRelease', $payload['verification_targets']);
+        self::assertContains('keyrings/w4-update-archive-keyring.gpg', $payload['verification_targets']);
+        self::assertSame('prod', $payload['runner_preview']['signing_profile']);
+        self::assertSame('gpg', $payload['runner_preview']['signing_mode']);
+        self::assertStringEndsWith('-signed-prod', basename((string) $payload['output_dir']));
+    }
+
     public function testUpdateValidationHelperHelpMentionsUnlockRetryOptions(): void
     {
         $result = $this->runPhpScript(

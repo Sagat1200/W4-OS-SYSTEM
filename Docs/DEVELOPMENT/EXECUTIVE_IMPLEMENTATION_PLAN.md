@@ -196,6 +196,42 @@ Fuera de alcance de este ciclo:
 - orquestacion de flota Business,
 - promesas de rollback universal sobre firmware o datos externos al snapshot.
 
+### Backlog operativo de cierre para `MX-004`
+
+1. Publicacion operativa del repo firmado oficial
+   - reconstruir el repositorio APT usando `--signing-profile prod`,
+   - verificar `InRelease`, `Release.gpg`, keyring y `repo.env` alineados con `signed-by=`,
+   - congelar la ruta oficial de salida y el procedimiento repetible de reconstruccion.
+
+2. Revalidacion final del flujo firmado sobre Home y Business
+   - repetir `w4-update-smoke-003` y `w4-update-business-smoke-001` contra el repo firmado oficial,
+   - confirmar `operation.json.stage=confirmed`, `health-report.status=ok` y evidencia descargable al host,
+   - verificar que el consumo se haga por la source firmada y no por fallback `trusted=yes`.
+
+3. Endurecimiento final del desbloqueo LUKS en laboratorio
+   - eliminar la necesidad de reinyeccion manual de passphrase cuando el helper se adelanta al prompt,
+   - decidir entre deteccion por consola, espera sincronizada o criterio operativo equivalente,
+   - dejar el comportamiento cubierto por prueba automatizada o documentado como limitacion aceptada.
+
+4. Congelacion del playbook operativo de `MX-004`
+   - consolidar el comando oficial de reconstruccion/publicacion,
+   - consolidar el comando oficial de validacion host -> VM,
+   - actualizar la documentacion operativa para que un tercero pueda repetir el flujo sin conocimiento tacito.
+
+5. Cierre formal del ciclo y handoff a `MX-005`
+   - actualizar `DEVELOPMENT_MATRIX.md` y `DEVELOPMENT_VERSIONS.md` con el cierre real,
+   - dejar enlazada la evidencia final de Home y Business,
+   - abrir `MX-005` solo cuando el repo firmado oficial y el recovery probado queden estabilizados.
+
+### Criterio de salida especifico de `MX-004`
+
+`MX-004` solo debe considerarse listo para ceder prioridad a `MX-005` cuando se cumplan simultaneamente estas condiciones:
+
+1. el repo firmado oficial se reconstruye de forma repetible con `--signing-profile prod`,
+2. Home y Business completan de nuevo el flujo firmado hasta `confirmed`,
+3. el desbloqueo LUKS deja de requerir intervencion manual fuera del playbook aceptado,
+4. la evidencia final y los comandos operativos quedan trazados en la documentacion de desarrollo.
+
 ## Criterio de gobernanza
 
 Una fase no se considera cerrada por redaccion adicional de documentos. Solo se cierra cuando existe:

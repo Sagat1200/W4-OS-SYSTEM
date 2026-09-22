@@ -1,0 +1,34 @@
+{
+    "publication_manifest_schema_version": 1,
+    "kind": "published-update-repository",
+    "publication_profile": "official-prod",
+    "signing_profile": "prod",
+    "bundle_dir": "c:\\W4\\Packages\\W4-OS SYSTEM\\build\\update\\repositories\\w4-main-2026-09-20T180000Z",
+    "output_dir": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\update\\repository-output\\w4-main-2026-09-20T180000Z-signed-prod",
+    "distribution": "Ubuntu",
+    "published_at": "2026-09-22T04:51:03+00:00",
+    "repository_snapshot": {
+        "id": "w4-main-2026-09-20T180000Z",
+        "channel": "testing"
+    },
+    "target_version": "1.0.1-lab",
+    "verification": {
+        "snapshot_id": "w4-main-2026-09-20T180000Z",
+        "channel": "testing",
+        "target_version": "1.0.1-lab",
+        "output_dir": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\update\\repository-output\\w4-main-2026-09-20T180000Z-signed-prod",
+        "repo_env": {
+            "signing_mode": "gpg",
+            "keyring_relative_path": "keyrings\/w4-update-archive-keyring.gpg",
+            "default_source_mode": "dists",
+            "signed_source_line_local": "deb [signed-by=\/mnt\/c\/W4\/Packages\/W4-OS SYSTEM\/build\/update\/repository-output\/w4-main-2026-09-20T180000Z-signed-prod\/keyrings\/w4-update-archive-keyring.gpg] file:\/mnt\/c\/W4\/Packages\/W4-OS SYSTEM\/build\/update\/repository-output\/w4-main-2026-09-20T180000Z-signed-prod testing main"
+        },
+        "verified_artifacts": [
+            "repo.env",
+            "dists\/testing\/Release",
+            "dists\/testing\/InRelease",
+            "dists\/testing\/Release.gpg",
+            "keyrings\/w4-update-archive-keyring.gpg"
+        ]
+    }
+}

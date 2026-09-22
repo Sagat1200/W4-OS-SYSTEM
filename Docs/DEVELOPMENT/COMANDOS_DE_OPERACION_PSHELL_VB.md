@@ -254,6 +254,23 @@ php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_update_repository_bundle_in_wsl.php
   --signing-profile prod
 ```
 
+La ruta oficial recomendada para publicar el repo firmado ya puede ejecutarse con un wrapper dedicado que fija `prod` y valida la salida:
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\publish_update_repository.php" `
+  --bundle "c:\W4\Packages\W4-OS SYSTEM\build\update\repositories\w4-main-2026-09-20T180000Z" `
+  --distribution Ubuntu
+```
+
+Si se quiere inspeccionar primero el comando sin reconstruir el repo:
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\publish_update_repository.php" `
+  --bundle "c:\W4\Packages\W4-OS SYSTEM\build\update\repositories\w4-main-2026-09-20T180000Z" `
+  --distribution Ubuntu `
+  --check-only
+```
+
 Con `--signing-profile prod`, el runner ya fija por convenio:
 
 - `signing-mode=gpg`
@@ -291,6 +308,7 @@ Notas:
 - Si no se indica `--gpg-homedir`, el runner crea automaticamente un homedir reproducible en WSL bajo `/var/tmp/w4-os-system/update-repositories/...-signing-imported`.
 - `--generate-lab-key` sigue reservado al laboratorio efimero y no debe mezclarse con archivos persistentes.
 - `--signing-profile prod` es ya la ruta operativa recomendada para la publicacion oficial; `--generate-lab-key` queda como camino de laboratorio.
+- `publish_update_repository.php` deja ademas `publication-manifest.json` en la salida firmada, verificando `repo.env`, `InRelease`, `Release.gpg` y `keyrings/w4-update-archive-keyring.gpg` antes de dar la publicacion por buena.
 
 Si el directorio firmado contiene `keyrings/w4-update-archive-keyring.gpg`, el wrapper `run-update-with-repo-env.sh` ya puede derivar automaticamente una source APT estilo:
 
