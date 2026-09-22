@@ -343,6 +343,7 @@ Notas operativas del flujo firmado validado:
 
 - `run_update_validation_via_paramiko.php` ya sincroniza la hora UTC remota antes de la fase APT cuando detecta desfase grande, evitando rechazos `Not live until ...` de `sqv` sobre `InRelease`.
 - El helper ya copia el repo a una ruta publica temporal en `/var/tmp/...`, de modo que `_apt` y `sqv` puedan leer `keyrings/w4-update-archive-keyring.gpg` aunque el `home` remoto del usuario SSH tenga permisos `700`.
+- Si la VM parte totalmente apagada, el primer arranque desde disco puede quedar detenido en el prompt LUKS antes de que exista SSH; en ese caso, conviene desbloquear una vez desde `VBoxManage controlvm ... keyboardputstring ...` y luego lanzar la validacion host->VM ya con el sistema instalado levantado.
 - Si la VM tarda mas en mostrar el prompt LUKS, se puede ampliar la espera antes de inyectar la passphrase con `--unlock-wait <segundos>`. El valor por defecto del helper ya subio a `30`.
 - El helper ahora tambien soporta `--unlock-retry-interval <segundos>` y `--unlock-retries <cantidad>` para reinyectar automaticamente la passphrase LUKS si el primer intento se adelanta al prompt real.
 - En las revalidaciones recientes con `signed-prod`, Home y Business confirmaron ese mismo timing del prompt LUKS; aun con el helper reforzado, el remate manual con `VBoxManage controlvm ... keyboardputstring ...` sigue siendo un fallback valido si hiciera falta.
@@ -420,6 +421,7 @@ php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_update_validation_via_paramiko.php"
 
 Notas operativas del flujo firmado validado en Business:
 
+- Si una corrida vuelve a fallar en `prepared` con `Could not create subvolume: File exists`, limpiar antes `/.snapshots/pre-update-w4-update-business-smoke-001` y relanzar la validacion.
 - Si aparece `ERROR: Could not create subvolume: File exists`, limpiar solo el snapshot sobrante con:
 
 ```powershell
