@@ -25,6 +25,10 @@ function readJsonFile(string $path): array
         throw new ValidationError(sprintf('JSON invalido en %s: %s', $path, $exception->getMessage()));
     }
 
+    if (!is_array($data)) {
+        throw new ValidationError(sprintf('JSON invalido en %s: la raiz debe ser un objeto o arreglo JSON', $path));
+    }
+
     return $data;
 }
 

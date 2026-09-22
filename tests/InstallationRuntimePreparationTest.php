@@ -87,6 +87,29 @@ final class InstallationRuntimePreparationTest extends TestCase
         self::assertContains('runtime/installation-runtime.json', $bundleManifest['generated_artifacts']);
     }
 
+    public function testPrepareInstallationRuntimeRejectsScalarBundleJson(): void
+    {
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-home-invalid-runtime';
+        self::assertTrue(mkdir($bundleDir, 0777, true), 'No se pudo crear el bundle temporal');
+
+        copy(
+            $this->fixturePath('build/install/w4-os-home/installation-plan.json'),
+            $bundleDir . DIRECTORY_SEPARATOR . 'installation-plan.json'
+        );
+        self::assertNotFalse(file_put_contents($bundleDir . DIRECTORY_SEPARATOR . 'installation-bundle.json', '"valor-escalar"' . PHP_EOL));
+
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/prepare_installation_runtime.php'),
+            [
+                '--bundle-dir',
+                $bundleDir,
+            ]
+        );
+
+        self::assertSame(1, $result['exitCode']);
+        self::assertStringContainsString('la raiz debe ser un objeto o arreglo JSON', $result['stderr']);
+    }
+
     /**
      * @param list<string> $arguments
      * @return array{exitCode:int,stdout:string,stderr:string}

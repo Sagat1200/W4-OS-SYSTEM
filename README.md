@@ -50,6 +50,7 @@ Actualmente, **W4 OS System** ya supero la fase puramente documental inicial y c
 - ensamblado de `rootfs`, `live` e `iso`,
 - validacion de arranque UEFI en VM para Home y Business,
 - instalacion destructiva end-to-end validada en VirtualBox para Home y Business con `GPT + ESP + /boot + LUKS2 + Btrfs`,
+- endurecimiento tecnico reciente del pipeline de instalacion para rechazar discos `read_only`, resolver el subvolumen raiz por `mountpoint=/` en `verify-installation.sh` y estabilizar el contrato JSON de los CLI ante raices escalares,
 - primera base ejecutable para `Update y recovery` con `update-plan`, almacen durable, transiciones persistidas, reconciliacion post-reinicio y bundle offline con health checks,
 - laboratorios reales de `Update y recovery` en `W4-OS-Home-Test` y `W4-OS-Business-Test`, ya capaces de persistir `failed`, `last_error` y eventos durables cuando APT no resuelve los paquetes W4 esperados,
 - recorridos exitosos end-to-end de `Update y recovery` ya validados en `W4-OS-Business-Test` y `W4-OS-Home-Test` hasta `pending_health`, reboot, health checks y `confirmed`,

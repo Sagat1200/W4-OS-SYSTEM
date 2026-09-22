@@ -65,6 +65,54 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'CHECK_ONLY_PREPARATION.txt');
     }
 
+    public function testPrepareInstallationBundleRejectsExplicitReadOnlyDisk(): void
+    {
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'prepared-home-readonly';
+        $inventoryPath = $this->tempDir . DIRECTORY_SEPARATOR . 'readonly-inventory.json';
+        $inventory = $this->decodeJsonFile($this->fixturePath('build/install-inventory/virtualbox-live-home.json'));
+        $inventory['disks'][0]['read_only'] = true;
+        self::assertNotFalse(file_put_contents($inventoryPath, json_encode($inventory, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . PHP_EOL));
+
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/prepare_installation_bundle.php'),
+            [
+                '--profile',
+                'w4-os-home',
+                '--disk-inventory',
+                $inventoryPath,
+                '--device',
+                '/dev/sda',
+                '--bundle-dir',
+                $bundleDir,
+            ]
+        );
+
+        self::assertSame(1, $result['exitCode']);
+        self::assertStringContainsString('solo lectura', $result['stderr']);
+    }
+
+    public function testPrepareInstallationBundleRejectsScalarInventoryJson(): void
+    {
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'prepared-home-invalid-json';
+        $inventoryPath = $this->tempDir . DIRECTORY_SEPARATOR . 'invalid-inventory.json';
+        self::assertNotFalse(file_put_contents($inventoryPath, '"valor-escalar"' . PHP_EOL));
+
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/prepare_installation_bundle.php'),
+            [
+                '--profile',
+                'w4-os-home',
+                '--disk-inventory',
+                $inventoryPath,
+                '--bundle-dir',
+                $bundleDir,
+            ]
+        );
+
+        self::assertSame(1, $result['exitCode']);
+        self::assertStringContainsString('la raiz debe ser un objeto o arreglo JSON', $result['stderr']);
+    }
+
     public function testGenerateInstallationExecutorEmitsCheckOnlyScriptAndUpdatesBundleManifest(): void
     {
         $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'executor-home-bundle';
@@ -159,6 +207,69 @@ final class InstallationScriptsIntegrationTest extends TestCase
 
         self::assertStringContainsString('falta /boot/grub/grub.cfg', $verifyScript);
         self::assertStringContainsString('falta la ruta UEFI de fallback BOOTX64.EFI', $verifyScript);
+    }
+
+    public function testGenerateInstallationExecutorUsesRootSubvolumeByMountpoint(): void
+    {
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'executor-root-subvolume';
+        self::assertTrue(mkdir($bundleDir, 0777, true), 'No se pudo crear el bundle temporal');
+
+        $plan = $this->decodeJsonFile($this->fixturePath('build/install/w4-os-home/installation-plan.json'));
+        $plan['storage']['btrfs']['subvolumes'] = [
+            ['name' => '@home', 'mountpoint' => '/home'],
+            ['name' => '@', 'mountpoint' => '/'],
+            ['name' => '@log', 'mountpoint' => '/var/log'],
+            ['name' => '@cache', 'mountpoint' => '/var/cache'],
+            ['name' => '@data', 'mountpoint' => '/var/lib/w4'],
+        ];
+
+        self::assertNotFalse(file_put_contents(
+            $bundleDir . DIRECTORY_SEPARATOR . 'installation-plan.json',
+            json_encode($plan, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . PHP_EOL
+        ));
+
+        copy(
+            $this->fixturePath('build/install/w4-os-home/installation-bundle.json'),
+            $bundleDir . DIRECTORY_SEPARATOR . 'installation-bundle.json'
+        );
+
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/generate_installation_executor.php'),
+            [
+                '--bundle-dir',
+                $bundleDir,
+            ]
+        );
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $verifyScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'verify-installation.sh');
+        self::assertNotFalse($verifyScript);
+        self::assertStringContainsString("ROOT_SUBVOLUME='@'", $verifyScript);
+        self::assertStringNotContainsString("ROOT_SUBVOLUME='@home'", $verifyScript);
+    }
+
+    public function testGenerateInstallationExecutorRejectsScalarPlanJson(): void
+    {
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'executor-invalid-plan';
+        self::assertTrue(mkdir($bundleDir, 0777, true), 'No se pudo crear el bundle temporal');
+
+        self::assertNotFalse(file_put_contents($bundleDir . DIRECTORY_SEPARATOR . 'installation-plan.json', '"valor-escalar"' . PHP_EOL));
+        copy(
+            $this->fixturePath('build/install/w4-os-home/installation-bundle.json'),
+            $bundleDir . DIRECTORY_SEPARATOR . 'installation-bundle.json'
+        );
+
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/generate_installation_executor.php'),
+            [
+                '--bundle-dir',
+                $bundleDir,
+            ]
+        );
+
+        self::assertSame(1, $result['exitCode']);
+        self::assertStringContainsString('la raiz debe ser un objeto o arreglo JSON', $result['stderr']);
     }
 
     /**

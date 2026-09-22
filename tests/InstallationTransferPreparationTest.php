@@ -138,6 +138,30 @@ final class InstallationTransferPreparationTest extends TestCase
         );
     }
 
+    public function testPrepareInstallationTransferRejectsScalarRuntimeManifest(): void
+    {
+        $bundleDir = $this->createBundleFixture('invalid-runtime-manifest');
+        $transferDir = $this->tempDir . DIRECTORY_SEPARATOR . 'transfer-invalid-runtime';
+
+        self::assertNotFalse(file_put_contents(
+            $bundleDir . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'installation-runtime.json',
+            '"valor-escalar"' . PHP_EOL
+        ));
+
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/prepare_installation_transfer.php'),
+            [
+                '--bundle-dir',
+                $bundleDir,
+                '--transfer-dir',
+                $transferDir,
+            ]
+        );
+
+        self::assertSame(1, $result['exitCode']);
+        self::assertStringContainsString('la raiz debe ser un objeto o arreglo JSON', $result['stderr']);
+    }
+
     private function createBundleFixture(string $bundleName, bool $includeSecrets = false): string
     {
         $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . $bundleName;

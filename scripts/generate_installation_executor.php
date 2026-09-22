@@ -27,6 +27,10 @@ function readJsonFile(string $path): array
         throw new ValidationError(sprintf('JSON invalido en %s: %s', $path, $exception->getMessage()));
     }
 
+    if (!is_array($data)) {
+        throw new ValidationError(sprintf('JSON invalido en %s: la raiz debe ser un objeto o arreglo JSON', $path));
+    }
+
     return $data;
 }
 
@@ -762,7 +766,7 @@ function buildVerificationScript(array $plan): string
     $disk = $plan['plan_binding']['selected_disk'];
     $user = $plan['identity']['user'];
     $identity = $plan['identity'];
-    $rootSubvolume = $plan['storage']['btrfs']['subvolumes'][0];
+    $rootSubvolume = rootSubvolume($plan);
 
     $script = <<<'BASH'
 #!/usr/bin/env bash

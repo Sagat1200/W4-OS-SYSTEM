@@ -71,6 +71,51 @@ final class InstallerToolkitTest extends TestCase
         $toolkit->createInstallationPlan($installationProfile, $buildInput, $inventory);
     }
 
+    public function testValidateDiskInventoryRequiresReadOnlyFlag(): void
+    {
+        $toolkit = new InstallerToolkit();
+        $inventory = $this->readJson('build/install-inventory/virtualbox-live-home.json');
+
+        unset($inventory['disks'][0]['read_only']);
+
+        $this->expectException(ValidationError::class);
+        $this->expectExceptionMessage('read_only debe ser booleano');
+
+        $toolkit->validateDiskInventory($inventory, 'build/install-inventory/virtualbox-live-home.json');
+    }
+
+    public function testCreateInstallationPlanRejectsReadOnlyDisk(): void
+    {
+        $toolkit = new InstallerToolkit();
+        $buildInput = $this->readJson('build/inputs/w4-os-home.build-input.json');
+        $installationProfile = $this->homeProfileBoundToVirtualBoxInventory();
+        $inventory = $this->readJson('build/install-inventory/virtualbox-live-home.json');
+
+        $inventory['disks'][0]['read_only'] = true;
+
+        $this->expectException(ValidationError::class);
+        $this->expectExceptionMessage('solo lectura');
+
+        $toolkit->createInstallationPlan($installationProfile, $buildInput, $inventory);
+    }
+
+    public function testReadJsonFileRejectsScalarJsonRoot(): void
+    {
+        $toolkit = new InstallerToolkit();
+        $jsonPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-installer-scalar-' . bin2hex(random_bytes(6)) . '.json';
+
+        self::assertNotFalse(file_put_contents($jsonPath, '"valor-escalar"' . PHP_EOL));
+
+        try {
+            $this->expectException(ValidationError::class);
+            $this->expectExceptionMessage('la raiz debe ser un objeto o arreglo JSON');
+
+            $toolkit->readJsonFile($jsonPath);
+        } finally {
+            @unlink($jsonPath);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */

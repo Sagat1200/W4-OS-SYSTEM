@@ -26,6 +26,10 @@ function readJsonFile(string $path): array
         throw new ValidationError(sprintf('JSON invalido en %s: %s', $path, $exception->getMessage()));
     }
 
+    if (!is_array($data)) {
+        throw new ValidationError(sprintf('JSON invalido en %s: la raiz debe ser un objeto o arreglo JSON', $path));
+    }
+
     return $data;
 }
 
@@ -81,6 +85,14 @@ function selectDisk(array $disks, ?string $device, string $selection): array
     if ($device !== null) {
         foreach ($disks as $disk) {
             if (($disk['device'] ?? null) === $device) {
+                if (($disk['read_only'] ?? false) === true) {
+                    throw new ValidationError(sprintf('El disco solicitado es de solo lectura: %s', $device));
+                }
+
+                if (($disk['is_installation_media'] ?? false) === true) {
+                    throw new ValidationError(sprintf('El disco solicitado corresponde al medio instalador: %s', $device));
+                }
+
                 return $disk;
             }
         }

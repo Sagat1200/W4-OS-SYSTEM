@@ -26,6 +26,13 @@ final class InstallerToolkit
             throw new ValidationError(sprintf('JSON invalido en %s: %s', $path, $exception->getMessage()));
         }
 
+        if (!is_array($data)) {
+            throw new ValidationError(sprintf(
+                'JSON invalido en %s: la raiz debe ser un objeto o arreglo JSON',
+                $path
+            ));
+        }
+
         return $data;
     }
 
@@ -195,7 +202,7 @@ final class InstallerToolkit
                 }
             }
 
-            foreach (['is_installation_media', 'has_partitions', 'has_filesystem_signatures'] as $field) {
+            foreach (['is_installation_media', 'has_partitions', 'has_filesystem_signatures', 'read_only'] as $field) {
                 if (!is_bool($disk[$field] ?? null)) {
                     throw new ValidationError(sprintf('%s: disks[%d].%s debe ser booleano', basename($sourcePath), $index, $field));
                 }
@@ -245,6 +252,10 @@ final class InstallerToolkit
 
         if (($selectedDisk['is_installation_media'] ?? false) === true) {
             throw new ValidationError('El disco seleccionado corresponde al medio instalador y debe ser rechazado');
+        }
+
+        if (($selectedDisk['read_only'] ?? false) === true) {
+            throw new ValidationError('El disco seleccionado es de solo lectura y debe ser rechazado');
         }
 
         if (($selectedDisk['has_partitions'] ?? true) === true || ($selectedDisk['has_filesystem_signatures'] ?? true) === true) {
