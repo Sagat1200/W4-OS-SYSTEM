@@ -18,6 +18,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Callable
 
 sys.dont_write_bytecode = True
 
@@ -117,14 +118,27 @@ def run_command(
         time.sleep(0.2)
 
 
-def wait_for_ssh(host: str, port: int, username: str, password: str, timeout: float) -> paramiko.SSHClient:
+def wait_for_ssh(
+    host: str,
+    port: int,
+    username: str,
+    password: str,
+    timeout: float,
+    *,
+    retry_callback: Callable[[], None] | None = None,
+    retry_interval: float = 30.0,
+) -> paramiko.SSHClient:
     deadline = time.time() + timeout
     last_error: Exception | None = None
+    next_retry = time.time() + retry_interval if retry_callback is not None else None
     while time.time() < deadline:
         try:
             return connect(host, port, username, password)
         except Exception as error:  # pragma: no cover - real lab retry path
             last_error = error
+            if retry_callback is not None and next_retry is not None and time.time() >= next_retry:
+                retry_callback()
+                next_retry = time.time() + retry_interval
             time.sleep(5)
     raise TimeoutError(f"No fue posible recuperar SSH en {host}:{port}: {last_error}")
 
@@ -208,6 +222,8 @@ def main() -> int:
     parser.add_argument("--remote-root", required=True, help="Directorio base remoto donde se copiara repo + ejecutor")
     parser.add_argument("--reboot-wait", type=int, default=240, help="Segundos maximos para esperar la vuelta del SSH tras reboot")
     parser.add_argument("--unlock-wait", type=int, default=30, help="Segundos de espera antes de inyectar la passphrase LUKS tras pedir reboot")
+    parser.add_argument("--unlock-retry-interval", type=int, default=30, help="Segundos entre reintentos automaticos de la passphrase LUKS mientras SSH aun no vuelve")
+    parser.add_argument("--unlock-retries", type=int, default=3, help="Cantidad maxima de reinyecciones adicionales de la passphrase LUKS tras el intento inicial")
     parser.add_argument("--vm-name", help="Nombre de la VM en VirtualBox para automatizar el desbloqueo LUKS")
     parser.add_argument("--luks-passphrase", help="Passphrase LUKS ASCII para desbloqueo post-reboot")
     parser.add_argument("--evidence-dir", required=True, help="Directorio local para guardar artefactos descargados")
@@ -318,13 +334,35 @@ def main() -> int:
     finally:
         client.close()
 
+    unlock_attempts = 0
+    unlock_retry_budget = max(0, args.unlock_retries)
+    unlock_retry_callback = None
     if args.vm_name and args.luks_passphrase:
         log("Esperando el prompt LUKS para inyectar la passphrase")
         time.sleep(args.unlock_wait)
         send_vbox_text(args.vm_name, args.luks_passphrase)
+        unlock_attempts = 1
+
+        def retry_unlock() -> None:
+            nonlocal unlock_attempts
+            if unlock_attempts > unlock_retry_budget:
+                return
+            unlock_attempts += 1
+            log(f"Reintentando la inyeccion de la passphrase LUKS (intento {unlock_attempts})")
+            send_vbox_text(args.vm_name, args.luks_passphrase)
+
+        unlock_retry_callback = retry_unlock
 
     log("Esperando a que la VM vuelva por SSH")
-    client = wait_for_ssh(args.host, args.port, args.username, args.password, timeout=args.reboot_wait)
+    client = wait_for_ssh(
+        args.host,
+        args.port,
+        args.username,
+        args.password,
+        timeout=args.reboot_wait,
+        retry_callback=unlock_retry_callback,
+        retry_interval=max(5, args.unlock_retry_interval),
+    )
     try:
         health_command = f"cd {remote_executor_dir} && sudo -S -p '' ./run-health-checks.sh"
         log("Ejecutando health checks")

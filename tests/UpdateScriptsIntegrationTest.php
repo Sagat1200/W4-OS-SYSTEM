@@ -464,6 +464,19 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('bash ', $payload['run_command']);
     }
 
+    public function testUpdateValidationHelperHelpMentionsUnlockRetryOptions(): void
+    {
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/run_update_validation_via_paramiko.php'),
+            ['--help']
+        );
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+        self::assertStringContainsString('--unlock-retry-interval', $result['stdout']);
+        self::assertStringContainsString('--unlock-retries', $result['stdout']);
+        self::assertStringContainsString('passphrase LUKS', $result['stdout']);
+    }
+
     /**
      * @param list<string> $arguments
      * @return array{exitCode:int,stdout:string,stderr:string}
