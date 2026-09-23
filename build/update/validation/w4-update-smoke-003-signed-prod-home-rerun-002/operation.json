@@ -1,0 +1,29 @@
+{
+    "update_operation_schema_version": 1,
+    "kind": "update-operation",
+    "operation_id": "w4-update-smoke-003",
+    "profile_id": "w4-os-home",
+    "source_version": "1.0.0-lab",
+    "target_version": "1.0.1-lab",
+    "stage": "confirmed",
+    "repository_snapshot": {
+        "id": "w4-main-2026-09-19T120000Z",
+        "channel": "testing"
+    },
+    "snapshot": {
+        "root_subvolume": "@",
+        "snapshot_name": "pre-update-w4-update-smoke-003",
+        "snapshot_path": "\/.snapshots\/pre-update-w4-update-smoke-003",
+        "retention": "protected-until-confirmed"
+    },
+    "boot_manifest": {
+        "kernel_package": "linux-image-amd64",
+        "boot_mode": "uefi",
+        "initramfs_strategy": "update-initramfs"
+    },
+    "last_error": null,
+    "timestamps": {
+        "created_at": "2026-09-23T20:52:25+00:00",
+        "updated_at": "2026-09-23T20:53:10+00:00"
+    }
+}

@@ -149,6 +149,48 @@ def send_vbox_text(vm_name: str, text: str) -> None:
     subprocess.run([str(vboxmanage), "controlvm", vm_name, "keyboardputscancode", "1c", "9c"], check=True)
 
 
+def build_unlock_retry_callback(
+    *,
+    vm_name: str,
+    luks_passphrase: str,
+    unlock_wait: int,
+    unlock_retry_interval: int,
+    unlock_retries: int,
+    unlock_window: int,
+) -> Callable[[], None]:
+    unlock_attempts = 0
+    unlock_retry_budget = max(0, unlock_retries)
+    unlock_window_deadline = time.time() + max(unlock_wait, unlock_window)
+    next_unlock_at = time.time() + max(0, unlock_wait)
+
+    log(
+        "Activando ventana automatica de desbloqueo LUKS "
+        f"({max(unlock_wait, unlock_window)}s, intervalo {max(5, unlock_retry_interval)}s)"
+    )
+
+    def retry_unlock() -> None:
+        nonlocal unlock_attempts
+        nonlocal next_unlock_at
+
+        now = time.time()
+        if now < next_unlock_at:
+            return
+        if now > unlock_window_deadline:
+            return
+        if unlock_attempts > unlock_retry_budget:
+            return
+
+        unlock_attempts += 1
+        if unlock_attempts == 1:
+            log("Inyectando la passphrase LUKS")
+        else:
+            log(f"Reintentando la inyeccion de la passphrase LUKS (intento {unlock_attempts})")
+        send_vbox_text(vm_name, luks_passphrase)
+        next_unlock_at = now + max(5, unlock_retry_interval)
+
+    return retry_unlock
+
+
 def download_file_if_exists(sftp: paramiko.SFTPClient, remote_path: str, local_path: Path) -> None:
     try:
         remote_stat = sftp.stat(remote_path)
@@ -221,9 +263,10 @@ def main() -> int:
     parser.add_argument("--plan-path", required=True, help="Ruta local del update-plan.json a usar para inicializar el store")
     parser.add_argument("--remote-root", required=True, help="Directorio base remoto donde se copiara repo + ejecutor")
     parser.add_argument("--reboot-wait", type=int, default=240, help="Segundos maximos para esperar la vuelta del SSH tras reboot")
-    parser.add_argument("--unlock-wait", type=int, default=30, help="Segundos de espera antes de inyectar la passphrase LUKS tras pedir reboot")
-    parser.add_argument("--unlock-retry-interval", type=int, default=30, help="Segundos entre reintentos automaticos de la passphrase LUKS mientras SSH aun no vuelve")
-    parser.add_argument("--unlock-retries", type=int, default=3, help="Cantidad maxima de reinyecciones adicionales de la passphrase LUKS tras el intento inicial")
+    parser.add_argument("--unlock-wait", type=int, default=20, help="Segundos minimos antes del primer intento automatico de passphrase LUKS tras pedir reboot")
+    parser.add_argument("--unlock-retry-interval", type=int, default=10, help="Segundos entre reintentos automaticos de la passphrase LUKS mientras SSH aun no vuelve")
+    parser.add_argument("--unlock-retries", type=int, default=12, help="Cantidad maxima de reinyecciones adicionales de la passphrase LUKS tras el intento inicial")
+    parser.add_argument("--unlock-window", type=int, default=180, help="Ventana maxima en segundos para seguir reinyectando la passphrase LUKS durante el reboot")
     parser.add_argument("--vm-name", help="Nombre de la VM en VirtualBox para automatizar el desbloqueo LUKS")
     parser.add_argument("--luks-passphrase", help="Passphrase LUKS ASCII para desbloqueo post-reboot")
     parser.add_argument("--evidence-dir", required=True, help="Directorio local para guardar artefactos descargados")
@@ -248,8 +291,27 @@ def main() -> int:
     remote_plan_path = posixpath.join(args.remote_root, "update-plan.json")
     remote_store_dir = posixpath.join(remote_executor_dir, "store")
 
-    log(f"Conectando a {args.username}@{args.host}:{args.port}")
-    client = connect(args.host, args.port, args.username, args.password)
+    initial_unlock_retry_callback = None
+    if args.vm_name and args.luks_passphrase:
+        initial_unlock_retry_callback = build_unlock_retry_callback(
+            vm_name=args.vm_name,
+            luks_passphrase=args.luks_passphrase,
+            unlock_wait=args.unlock_wait,
+            unlock_retry_interval=args.unlock_retry_interval,
+            unlock_retries=args.unlock_retries,
+            unlock_window=args.unlock_window,
+        )
+
+    log(f"Esperando SSH inicial en {args.username}@{args.host}:{args.port}")
+    client = wait_for_ssh(
+        args.host,
+        args.port,
+        args.username,
+        args.password,
+        timeout=args.reboot_wait,
+        retry_callback=initial_unlock_retry_callback,
+        retry_interval=max(5, args.unlock_retry_interval),
+    )
     try:
         sync_remote_clock_if_needed(client, sudo_password=args.password)
 
@@ -334,24 +396,16 @@ def main() -> int:
     finally:
         client.close()
 
-    unlock_attempts = 0
-    unlock_retry_budget = max(0, args.unlock_retries)
     unlock_retry_callback = None
     if args.vm_name and args.luks_passphrase:
-        log("Esperando el prompt LUKS para inyectar la passphrase")
-        time.sleep(args.unlock_wait)
-        send_vbox_text(args.vm_name, args.luks_passphrase)
-        unlock_attempts = 1
-
-        def retry_unlock() -> None:
-            nonlocal unlock_attempts
-            if unlock_attempts > unlock_retry_budget:
-                return
-            unlock_attempts += 1
-            log(f"Reintentando la inyeccion de la passphrase LUKS (intento {unlock_attempts})")
-            send_vbox_text(args.vm_name, args.luks_passphrase)
-
-        unlock_retry_callback = retry_unlock
+        unlock_retry_callback = build_unlock_retry_callback(
+            vm_name=args.vm_name,
+            luks_passphrase=args.luks_passphrase,
+            unlock_wait=args.unlock_wait,
+            unlock_retry_interval=args.unlock_retry_interval,
+            unlock_retries=args.unlock_retries,
+            unlock_window=args.unlock_window,
+        )
 
     log("Esperando a que la VM vuelva por SSH")
     client = wait_for_ssh(

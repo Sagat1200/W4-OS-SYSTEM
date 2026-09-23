@@ -345,9 +345,9 @@ Notas operativas del flujo firmado validado:
 
 - `run_update_validation_via_paramiko.php` ya sincroniza la hora UTC remota antes de la fase APT cuando detecta desfase grande, evitando rechazos `Not live until ...` de `sqv` sobre `InRelease`.
 - El helper ya copia el repo a una ruta publica temporal en `/var/tmp/...`, de modo que `_apt` y `sqv` puedan leer `keyrings/w4-update-archive-keyring.gpg` aunque el `home` remoto del usuario SSH tenga permisos `700`.
-- Si la VM parte totalmente apagada, el primer arranque desde disco puede quedar detenido en el prompt LUKS antes de que exista SSH; en ese caso, conviene desbloquear una vez desde `VBoxManage controlvm ... keyboardputstring ...` y luego lanzar la validacion host->VM ya con el sistema instalado levantado.
-- Si la VM tarda mas en mostrar el prompt LUKS, se puede ampliar la espera antes de inyectar la passphrase con `--unlock-wait <segundos>`. El valor por defecto del helper ya subio a `30`.
-- El helper ahora tambien soporta `--unlock-retry-interval <segundos>` y `--unlock-retries <cantidad>` para reinyectar automaticamente la passphrase LUKS si el primer intento se adelanta al prompt real.
+- El helper reforzado ya intenta cubrir tambien el primer arranque desde VM apagada usando la misma ventana automatica de reinyeccion LUKS antes de que exista SSH. Si aun asi la VM queda detenida en el prompt, el desbloqueo manual desde `VBoxManage controlvm ... keyboardputstring ...` sigue siendo el fallback valido.
+- Si la VM tarda mas en mostrar el prompt LUKS, se puede ampliar la espera antes de inyectar la passphrase con `--unlock-wait <segundos>`. El valor por defecto del helper ahora es `20`.
+- El helper ahora tambien soporta `--unlock-retry-interval <segundos>`, `--unlock-retries <cantidad>` y `--unlock-window <segundos>` para mantener una ventana automatica de reinyeccion de la passphrase LUKS si el primer intento se adelanta al prompt real. Los nuevos defaults quedan en `10`, `12` y `180`, respectivamente.
 - En las revalidaciones recientes con `signed-prod`, Home y Business confirmaron ese mismo timing del prompt LUKS; aun con el helper reforzado, el remate manual con `VBoxManage controlvm ... keyboardputstring ...` sigue siendo un fallback valido si hiciera falta.
 - Si el desbloqueo LUKS ocurre mas tarde de lo esperado y el helper no consigue retomar SSH por si solo, se puede reenviar la passphrase desde VirtualBox y luego rematar con:
 

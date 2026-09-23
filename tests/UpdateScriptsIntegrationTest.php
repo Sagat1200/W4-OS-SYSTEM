@@ -607,6 +607,7 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertSame(0, $result['exitCode'], $result['stderr']);
         self::assertStringContainsString('--unlock-retry-interval', $result['stdout']);
         self::assertStringContainsString('--unlock-retries', $result['stdout']);
+        self::assertStringContainsString('--unlock-window', $result['stdout']);
         self::assertStringContainsString('passphrase LUKS', $result['stdout']);
     }
 

@@ -1,0 +1,10 @@
+{
+  "staging_manifest_schema_version": 1,
+  "kind": "staging-manifest",
+  "operation_id": "w4-update-smoke-003",
+  "staging_directory": "/var/lib/w4-update/staging/w4-update-smoke-003",
+  "estimated_space_kib": 524288,
+  "install_count": 1,
+  "upgrade_count": 3,
+  "remove_count": 0
+}
