@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ValidationError;
+
 require_once __DIR__ . '/lib/ManifestToolkit.php';
 
 $rootDir = dirname(__DIR__);
