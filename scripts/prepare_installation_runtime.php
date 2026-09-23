@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ValidationError;
+
 require_once __DIR__ . '/bootstrap.php';
 
 $rootDir = dirname(__DIR__);
@@ -102,6 +104,111 @@ function detectSource(
         'path' => $candidate,
         'auto_detected' => true,
     ];
+}
+
+/**
+ * @param array<string,mixed> $policy
+ */
+function applyCredentialPolicy(string $value, array $policy): string
+{
+    if ($policy['ascii_only'] ?? true) {
+        $value = preg_replace('/[^A-Za-z0-9!@#%^&*+=:.]/', '', $value) ?? '';
+    }
+
+    $minLength = max(0, (int) ($policy['min_length'] ?? 0));
+    $maxLength = max(0, (int) ($policy['max_length'] ?? 0));
+    $requireDigit = (bool) ($policy['require_digit'] ?? false);
+    $requireAlpha = (bool) ($policy['require_alpha'] ?? false);
+    $attempts = 0;
+    $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    $digits = '0123456789';
+    $letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+
+    while (true) {
+        $candidate = $value;
+        $candidateLength = strlen($candidate);
+
+        if ($minLength > 0 && $candidateLength < $minLength) {
+            $missing = $minLength - $candidateLength;
+            for ($index = 0; $index < $missing; $index++) {
+                $candidate .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+            }
+        }
+
+        if ($maxLength > 0 && strlen($candidate) > $maxLength) {
+            $candidate = substr($candidate, 0, $maxLength);
+        }
+
+        if ($requireDigit && !preg_match('/[0-9]/', $candidate)) {
+            $candidate .= $digits[random_int(0, strlen($digits) - 1)];
+        }
+
+        if ($requireAlpha && !preg_match('/[A-Za-z]/', $candidate)) {
+            $candidate .= $letters[random_int(0, strlen($letters) - 1)];
+        }
+
+        if ($maxLength > 0 && strlen($candidate) > $maxLength) {
+            $candidate = substr($candidate, 0, $maxLength);
+        }
+
+        $candidateLength = strlen($candidate);
+        if (
+            ($minLength === 0 || $candidateLength >= $minLength)
+            && ($maxLength === 0 || $candidateLength <= $maxLength)
+            && ($requireDigit === false || preg_match('/[0-9]/', $candidate))
+            && ($requireAlpha === false || preg_match('/[A-Za-z]/', $candidate))
+        ) {
+            return $candidate;
+        }
+
+        $attempts++;
+        if ($attempts > 8) {
+            throw new ValidationError('No se pudo generar un secreto que cumpla la politica de credenciales');
+        }
+
+        $value .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+    }
+}
+
+/**
+ * @return array{ascii_only:bool,min_length:int,max_length:int,require_digit:bool,require_alpha:bool}
+ */
+function defaultCredentialPolicy(bool $isPassphrase): array
+{
+    if ($isPassphrase) {
+        return [
+            'ascii_only' => true,
+            'min_length' => 16,
+            'max_length' => 32,
+            'require_digit' => true,
+            'require_alpha' => true,
+        ];
+    }
+
+    return [
+        'ascii_only' => true,
+        'min_length' => 12,
+        'max_length' => 24,
+        'require_digit' => true,
+        'require_alpha' => true,
+    ];
+}
+
+/**
+ * @param array<string,mixed> $policy
+ */
+function validateCredentialPolicy(array $policy, string $name): void
+{
+    $minLength = (int) ($policy['min_length'] ?? 0);
+    $maxLength = (int) ($policy['max_length'] ?? 0);
+
+    if ($minLength < 0 || $maxLength < 0) {
+        throw new ValidationError(sprintf('La politica %s no admite longitudes negativas', $name));
+    }
+
+    if ($maxLength !== 0 && $minLength > $maxLength) {
+        throw new ValidationError(sprintf('La politica %s tiene min_length mayor que max_length', $name));
+    }
 }
 
 function randomSecret(int $bytes): string
@@ -274,6 +381,46 @@ function mergeRuntimeArtifacts(array $bundleManifest): array
     return $bundleManifest;
 }
 
+/**
+ * @return array<string,mixed>
+ */
+function parseCredentialPolicy(string $argument, ?string $value): array
+{
+    if ($value === null || $value === '') {
+        throw new ValidationError(sprintf('Falta el valor para %s', $argument));
+    }
+
+    $parts = explode(',', $value);
+    $policy = [];
+
+    foreach ($parts as $part) {
+        $pair = explode('=', $part, 2);
+        if (count($pair) !== 2) {
+            throw new ValidationError(sprintf('Formato invalido en %s; use key=value,key2=value2', $argument));
+        }
+
+        [$key, $entryValue] = $pair;
+        switch ($key) {
+            case 'ascii_only':
+            case 'require_digit':
+            case 'require_alpha':
+                $policy[$key] = in_array($entryValue, ['1', 'true', 'yes', 'on'], true);
+                break;
+            case 'min_length':
+            case 'max_length':
+                if (!preg_match('/^\d+$/', $entryValue)) {
+                    throw new ValidationError(sprintf('%s.%s debe ser un entero no negativo', $argument, $key));
+                }
+                $policy[$key] = (int) $entryValue;
+                break;
+            default:
+                throw new ValidationError(sprintf('Politica desconocida %s.%s', $argument, $key));
+        }
+    }
+
+    return $policy;
+}
+
 try {
     $arguments = $argv ?? [];
     $profileId = null;
@@ -282,6 +429,8 @@ try {
     $sourceSquashfs = null;
     $runtimeDir = null;
     $generateSecrets = false;
+    $passphrasePolicy = null;
+    $passwordPolicy = null;
 
     for ($index = 1, $count = count($arguments); $index < $count; $index++) {
         $argument = $arguments[$index];
@@ -296,6 +445,8 @@ try {
             case '--source-rootfs':
             case '--source-squashfs':
             case '--runtime-dir':
+            case '--passphrase-policy':
+            case '--password-policy':
                 if (!isset($arguments[$index + 1]) || $arguments[$index + 1] === '') {
                     throw new ValidationError(sprintf('Falta el valor para %s', $argument));
                 }
@@ -321,6 +472,14 @@ try {
 
                     case '--runtime-dir':
                         $runtimeDir = $value;
+                        break;
+
+                    case '--passphrase-policy':
+                        $passphrasePolicy = parseCredentialPolicy('--passphrase-policy', $value);
+                        break;
+
+                    case '--password-policy':
+                        $passwordPolicy = parseCredentialPolicy('--password-policy', $value);
                         break;
                 }
                 break;
@@ -368,10 +527,23 @@ try {
 
     $source = detectSource($profileId, $sourceRootfs, $sourceSquashfs, $defaultLiveOutputRoot);
 
+    $finalPassphrasePolicy = array_merge(defaultCredentialPolicy(true), $passphrasePolicy ?? []);
+    $finalPasswordPolicy = array_merge(defaultCredentialPolicy(false), $passwordPolicy ?? []);
+    validateCredentialPolicy($finalPassphrasePolicy, 'passphrase-policy');
+    validateCredentialPolicy($finalPasswordPolicy, 'password-policy');
+
     $generatedSecrets = [];
     if ($generateSecrets) {
-        $generatedSecrets['disk_passphrase'] = randomSecret(24);
-        $generatedSecrets['local_user_password'] = randomSecret(18);
+        $generatedSecrets['disk_passphrase'] = applyCredentialPolicy(randomSecret(24), $finalPassphrasePolicy);
+        $generatedSecrets['local_user_password'] = applyCredentialPolicy(randomSecret(18), $finalPasswordPolicy);
+
+        if (trim($generatedSecrets['disk_passphrase']) === '' || strlen($generatedSecrets['disk_passphrase']) < ($finalPassphrasePolicy['min_length'] ?? 1)) {
+            throw new ValidationError('No se pudo generar una passphrase de disco valida con la politica definida');
+        }
+
+        if (trim($generatedSecrets['local_user_password']) === '' || strlen($generatedSecrets['local_user_password']) < ($finalPasswordPolicy['min_length'] ?? 1)) {
+            throw new ValidationError('No se pudo generar una contrasena de usuario valida con la politica definida');
+        }
 
         if (file_put_contents(
             $runtimeDir . DIRECTORY_SEPARATOR . 'disk-passphrase.txt',
@@ -444,6 +616,10 @@ try {
                 'disk-passphrase.txt',
                 'local-user-password.txt',
             ] : [],
+            'policies' => [
+                'passphrase' => $finalPassphrasePolicy,
+                'password' => $finalPasswordPolicy,
+            ],
         ],
         'commands' => [
             'check_only' => 'bash run-check-only.sh',
@@ -467,6 +643,10 @@ try {
                 $runtimeDir . DIRECTORY_SEPARATOR . 'disk-passphrase.txt',
                 $runtimeDir . DIRECTORY_SEPARATOR . 'local-user-password.txt',
             ] : [],
+            'policies' => [
+                'passphrase' => $finalPassphrasePolicy,
+                'password' => $finalPasswordPolicy,
+            ],
         ],
         'check_only_command' => 'bash run-check-only.sh',
         'install_command' => 'bash run-installation.sh',
