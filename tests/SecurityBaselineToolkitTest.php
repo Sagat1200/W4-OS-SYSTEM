@@ -1,0 +1,194 @@
+<?php
+
+declare(strict_types=1);
+
+namespace W4\OS\Tests;
+
+use PHPUnit\Framework\TestCase;
+use W4\OS\Security\SecurityBaselineToolkit;
+
+final class SecurityBaselineToolkitTest extends TestCase
+{
+    private string $rootDir;
+    private string $tempDir;
+
+    protected function setUp(): void
+    {
+        $this->rootDir = dirname(__DIR__);
+        $this->tempDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-os-security-tests-' . bin2hex(random_bytes(6));
+
+        self::assertTrue(mkdir($this->tempDir, 0777, true), 'No se pudo crear el directorio temporal');
+    }
+
+    protected function tearDown(): void
+    {
+        $this->removeDirectory($this->tempDir);
+    }
+
+    public function testCreateBaselineForHomeTracksImplementedControlsAndGaps(): void
+    {
+        $toolkit = new SecurityBaselineToolkit($this->rootDir);
+
+        $baseline = $toolkit->createBaseline(
+            'w4-os-home',
+            $this->fixturePath('installer-profiles/w4-os-home.vm-install.json')
+        );
+
+        self::assertSame('security-baseline', $baseline['kind']);
+        self::assertSame('w4-os-home', $baseline['profile_id']);
+        self::assertSame('installed-image', $baseline['scope']);
+        self::assertSame(5, $baseline['summary']['implemented']);
+        self::assertSame(2, $baseline['summary']['gap']);
+
+        $controls = $this->indexControls($baseline['controls']);
+        self::assertSame('implemented', $controls['encrypted-root']['implementation_state']);
+        self::assertSame('runtime', $controls['encrypted-root']['validation_scope']);
+        self::assertSame('gap', $controls['firewall-control-plane']['implementation_state']);
+        self::assertSame('gap', $controls['mac-enforcement']['implementation_state']);
+        self::assertSame('implemented', $controls['authenticated-updates']['implementation_state']);
+        self::assertSame('pipeline', $controls['authenticated-updates']['validation_scope']);
+        self::assertSame('w4', $controls['standard-account']['expected']['username']);
+    }
+
+    public function testGenerateSecurityBaselineBundleWritesArtifacts(): void
+    {
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-business-baseline';
+
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/generate_security_baseline_bundle.php'),
+            [
+                '--profile',
+                'w4-os-business',
+                '--bundle-dir',
+                $bundleDir,
+            ]
+        );
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('ok', $payload['status']);
+        self::assertSame($bundleDir, $payload['bundle_dir']);
+        self::assertContains('security-baseline.json', $payload['generated_artifacts']);
+        self::assertContains('verify-security-baseline.php', $payload['generated_artifacts']);
+
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'security-baseline.json');
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'verify-security-baseline.php');
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'SECURITY_BASELINE_README.txt');
+
+        $baseline = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'security-baseline.json');
+        self::assertSame('w4-os-business', $baseline['profile_id']);
+        self::assertSame(5, $baseline['summary']['implemented']);
+        self::assertSame(2, $baseline['summary']['gap']);
+
+        $verifier = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'verify-security-baseline.php');
+        self::assertNotFalse($verifier);
+        self::assertStringContainsString("addResult(\$results, 'authenticated-updates', 'skipped'", $verifier);
+        self::assertStringContainsString("addResult(\$results, 'firewall-control-plane'", $verifier);
+        self::assertStringContainsString("command -v sudo", $verifier);
+
+        $readme = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'SECURITY_BASELINE_README.txt');
+        self::assertNotFalse($readme);
+        self::assertStringContainsString('php ./verify-security-baseline.php', $readme);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $controls
+     * @return array<string, array<string, mixed>>
+     */
+    private function indexControls(array $controls): array
+    {
+        $indexed = [];
+        foreach ($controls as $control) {
+            $indexed[(string) $control['id']] = $control;
+        }
+
+        return $indexed;
+    }
+
+    /**
+     * @param list<string> $arguments
+     * @return array{exitCode:int,stdout:string,stderr:string}
+     */
+    private function runPhpScript(string $scriptPath, array $arguments): array
+    {
+        $command = array_merge([PHP_BINARY, $scriptPath], $arguments);
+        $descriptorSpec = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+
+        $process = proc_open($command, $descriptorSpec, $pipes, $this->rootDir);
+        self::assertIsResource($process, sprintf('No se pudo ejecutar %s', $scriptPath));
+
+        fclose($pipes[0]);
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+
+        $exitCode = proc_close($process);
+
+        return [
+            'exitCode' => $exitCode,
+            'stdout' => is_string($stdout) ? $stdout : '',
+            'stderr' => is_string($stderr) ? $stderr : '',
+        ];
+    }
+
+    private function fixturePath(string $relativePath): string
+    {
+        return $this->rootDir . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decodeJson(string $json): array
+    {
+        /** @var array<string, mixed> $data */
+        $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+
+        return $data;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decodeJsonFile(string $path): array
+    {
+        $raw = file_get_contents($path);
+        self::assertNotFalse($raw, sprintf('No se pudo leer %s', $path));
+
+        return $this->decodeJson($raw);
+    }
+
+    private function removeDirectory(string $path): void
+    {
+        if (!is_dir($path)) {
+            return;
+        }
+
+        $items = scandir($path);
+        if ($items === false) {
+            return;
+        }
+
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+
+            $itemPath = $path . DIRECTORY_SEPARATOR . $item;
+            if (is_dir($itemPath)) {
+                $this->removeDirectory($itemPath);
+                continue;
+            }
+
+            @unlink($itemPath);
+        }
+
+        @rmdir($path);
+    }
+}

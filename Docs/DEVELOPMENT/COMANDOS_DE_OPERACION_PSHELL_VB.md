@@ -450,3 +450,25 @@ php "c:\W4\Packages\W4-OS SYSTEM\scripts\complete_pending_health_via_paramiko.ph
   --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\update\validation\w4-update-business-smoke-001-signed-business" `
   --connect-wait 600
 ```
+
+## MX-005 · Seguridad baseline
+
+Generar el bundle base de seguridad por perfil en el host:
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\generate_security_baseline_bundle.php" --profile w4-os-home
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\generate_security_baseline_bundle.php" --profile w4-os-business
+```
+
+Validar el baseline dentro de una imagen ya instalada:
+
+```bash
+cd ~/w4-security-baseline
+php ./verify-security-baseline.php
+```
+
+Notas operativas del primer ciclo de `MX-005`:
+
+- El bundle queda en `build/security/<perfil>/` con `security-baseline.json`, `verify-security-baseline.php` y `SECURITY_BASELINE_README.txt`.
+- En esta primera capa, los gaps esperados y explicitados por el propio baseline son `firewall-control-plane` y `mac-enforcement`; no son un fallo del generador, sino el backlog inmediato del siguiente paquete de hardening.
+- El control `authenticated-updates` se reporta como `skipped` en la verificacion local porque su evidencia sigue viniendo del pipeline firmado ya validado en `MX-004`.

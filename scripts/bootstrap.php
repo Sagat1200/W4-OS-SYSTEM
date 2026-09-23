@@ -40,6 +40,10 @@ if (!class_exists('UpdateToolkit', false) && class_exists(\W4\OS\Update\UpdateTo
     class_alias(\W4\OS\Update\UpdateToolkit::class, 'UpdateToolkit');
 }
 
+if (!class_exists('SecurityBaselineToolkit', false) && class_exists(\W4\OS\Security\SecurityBaselineToolkit::class)) {
+    class_alias(\W4\OS\Security\SecurityBaselineToolkit::class, 'SecurityBaselineToolkit');
+}
+
 if (!function_exists('printJson')) {
     /**
      * @param array<string, mixed> $data
