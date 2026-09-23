@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Algunas live sessions no incluyen rutas sbin en PATH.
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLAN_JSON="${SCRIPT_DIR}/installation-plan.json"
 PROFILE_NAME='W4 OS Home'
@@ -13,6 +16,7 @@ SIZE_TOLERANCE_BYTES='1048576'
 HOSTNAME_VALUE='w4-home-vm'
 LOCALE_VALUE='es_DO.UTF-8'
 KEYBOARD_VALUE='latam'
+CONSOLE_KEYMAP_VALUE='la-latin1'
 USERNAME_VALUE='w4'
 DISPLAY_NAME_VALUE='W4 User'
 PASSWORD_SOURCE='secret://install/local-user-password'
@@ -435,9 +439,22 @@ EOF
 
 mkdir -p "${TARGET_ROOT}/etc/default"
 cat > "${TARGET_ROOT}/etc/default/keyboard" <<EOF
+XKBMODEL="pc105"
 XKBLAYOUT="${KEYBOARD_VALUE}"
+XKBVARIANT=""
+XKBOPTIONS=""
+BACKSPACE="guess"
 EOF
 echo "LANG=${LOCALE_VALUE}" > "${TARGET_ROOT}/etc/default/locale"
+cat > "${TARGET_ROOT}/etc/vconsole.conf" <<EOF
+KEYMAP=${CONSOLE_KEYMAP_VALUE}
+FONT=latarcyrheb-sun16
+EOF
+mkdir -p "${TARGET_ROOT}/etc/initramfs-tools/conf.d"
+cat > "${TARGET_ROOT}/etc/initramfs-tools/conf.d/w4-keyboard" <<EOF
+KEYMAP=${CONSOLE_KEYMAP_VALUE}
+XKBLAYOUT=${KEYBOARD_VALUE}
+EOF
 
 if [[ -e /etc/resolv.conf ]]; then
   cp -L /etc/resolv.conf "${TARGET_ROOT}/etc/resolv.conf"
@@ -491,6 +508,10 @@ printf '%s:%s\n' "${USERNAME_VALUE}" "${LOCAL_USER_PASSWORD}" | chroot "${TARGET
 
 if chroot_has_command locale-gen; then
   chroot "${TARGET_ROOT}" locale-gen || true
+fi
+
+if chroot_has_command setupcon; then
+  chroot "${TARGET_ROOT}" setupcon --save-only || warn "setupcon devolvio un error; se conserva la configuracion escrita en /etc/default/keyboard"
 fi
 
 if ! chroot_has_command grub-install; then

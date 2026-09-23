@@ -179,6 +179,14 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('mkdir -p "${TARGET_ROOT}/boot"', $applyScript);
         self::assertStringContainsString('mkdir -p "${TARGET_ROOT}/boot/efi"', $applyScript);
         self::assertStringContainsString('mount "${BOOT_PART}" "${TARGET_ROOT}/boot"', $applyScript);
+        self::assertStringContainsString("CONSOLE_KEYMAP_VALUE='la-latin1'", $applyScript);
+        self::assertStringContainsString('XKBMODEL="pc105"', $applyScript);
+        self::assertStringContainsString('XKBLAYOUT="${KEYBOARD_VALUE}"', $applyScript);
+        self::assertStringContainsString('KEYMAP=${CONSOLE_KEYMAP_VALUE}', $applyScript);
+        self::assertStringContainsString('cat > "${TARGET_ROOT}/etc/vconsole.conf" <<EOF', $applyScript);
+        self::assertStringContainsString('cat > "${TARGET_ROOT}/etc/initramfs-tools/conf.d/w4-keyboard" <<EOF', $applyScript);
+        self::assertStringContainsString('chroot "${TARGET_ROOT}" setupcon --save-only', $applyScript);
+        self::assertStringContainsString('setupcon devolvio un error; se conserva la configuracion escrita en /etc/default/keyboard', $applyScript);
         $verifyScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'verify-installation.sh');
         self::assertNotFalse($verifyScript);
 

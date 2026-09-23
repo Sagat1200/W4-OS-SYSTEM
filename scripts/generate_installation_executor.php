@@ -3,8 +3,6 @@
 declare(strict_types=1);
 
 use W4\OS\Support\ValidationError;
-use JsonException;
-
 require_once __DIR__ . '/lib/InstallerToolkit.php';
 
 $rootDir = dirname(__DIR__);
@@ -52,6 +50,21 @@ function writeJsonFile(string $path, array $data): void
 function shellLiteral(string $value): string
 {
     return "'" . str_replace("'", "'\"'\"'", $value) . "'";
+}
+
+function consoleKeymapForLayout(string $keyboardLayout): string
+{
+    return match ($keyboardLayout) {
+        'latam' => 'la-latin1',
+        'es' => 'es',
+        'us' => 'us',
+        'uk' => 'uk',
+        'de' => 'de',
+        'fr' => 'fr',
+        'it' => 'it',
+        'br' => 'br-abnt2',
+        default => $keyboardLayout,
+    };
 }
 
 function normalizeLf(string $content): string
@@ -212,6 +225,7 @@ SIZE_TOLERANCE_BYTES='1048576'
 HOSTNAME_VALUE=%HOSTNAME%
 LOCALE_VALUE=%LOCALE%
 KEYBOARD_VALUE=%KEYBOARD%
+CONSOLE_KEYMAP_VALUE=%CONSOLE_KEYMAP%
 USERNAME_VALUE=%USERNAME%
 DISPLAY_NAME_VALUE=%DISPLAY_NAME%
 PASSWORD_SOURCE=%PASSWORD_SOURCE%
@@ -623,9 +637,22 @@ EOF
 
 mkdir -p "${TARGET_ROOT}/etc/default"
 cat > "${TARGET_ROOT}/etc/default/keyboard" <<EOF
+XKBMODEL="pc105"
 XKBLAYOUT="${KEYBOARD_VALUE}"
+XKBVARIANT=""
+XKBOPTIONS=""
+BACKSPACE="guess"
 EOF
 echo "LANG=${LOCALE_VALUE}" > "${TARGET_ROOT}/etc/default/locale"
+cat > "${TARGET_ROOT}/etc/vconsole.conf" <<EOF
+KEYMAP=${CONSOLE_KEYMAP_VALUE}
+FONT=latarcyrheb-sun16
+EOF
+mkdir -p "${TARGET_ROOT}/etc/initramfs-tools/conf.d"
+cat > "${TARGET_ROOT}/etc/initramfs-tools/conf.d/w4-keyboard" <<EOF
+KEYMAP=${CONSOLE_KEYMAP_VALUE}
+XKBLAYOUT=${KEYBOARD_VALUE}
+EOF
 
 if [[ -e /etc/resolv.conf ]]; then
   cp -L /etc/resolv.conf "${TARGET_ROOT}/etc/resolv.conf"
@@ -675,6 +702,10 @@ if chroot_has_command locale-gen; then
   chroot "${TARGET_ROOT}" locale-gen || true
 fi
 
+if chroot_has_command setupcon; then
+  chroot "${TARGET_ROOT}" setupcon --save-only || warn "setupcon devolvio un error; se conserva la configuracion escrita en /etc/default/keyboard"
+fi
+
 if ! chroot_has_command grub-install; then
   log "grub-install no esta disponible; instalando paquetes EFI requeridos"
   chroot_has_command apt-get || fail "grub-install no esta disponible y apt-get tampoco existe en el sistema destino"
@@ -712,6 +743,7 @@ BASH;
             '%HOSTNAME%',
             '%LOCALE%',
             '%KEYBOARD%',
+            '%CONSOLE_KEYMAP%',
             '%USERNAME%',
             '%DISPLAY_NAME%',
             '%PASSWORD_SOURCE%',
@@ -738,6 +770,7 @@ BASH;
             shellLiteral((string) $identity['hostname']),
             shellLiteral((string) $identity['locale']),
             shellLiteral((string) $identity['keyboard']),
+            shellLiteral(consoleKeymapForLayout((string) $identity['keyboard'])),
             shellLiteral((string) $user['username']),
             shellLiteral((string) $user['display_name']),
             shellLiteral((string) $user['password_source']),

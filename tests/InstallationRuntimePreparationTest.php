@@ -110,6 +110,53 @@ final class InstallationRuntimePreparationTest extends TestCase
         self::assertStringContainsString('la raiz debe ser un objeto o arreglo JSON', $result['stderr']);
     }
 
+    public function testPrepareInstallationRuntimeAppliesCredentialPolicies(): void
+    {
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-home-policy-runtime';
+        self::assertTrue(mkdir($bundleDir, 0777, true), 'No se pudo crear el bundle temporal');
+
+        copy(
+            $this->fixturePath('build/install/w4-os-home/installation-plan.json'),
+            $bundleDir . DIRECTORY_SEPARATOR . 'installation-plan.json'
+        );
+        copy(
+            $this->fixturePath('build/install/w4-os-home/installation-bundle.json'),
+            $bundleDir . DIRECTORY_SEPARATOR . 'installation-bundle.json'
+        );
+
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/prepare_installation_runtime.php'),
+            [
+                '--bundle-dir',
+                $bundleDir,
+                '--generate-secrets',
+                '--passphrase-policy',
+                'min_length=20,max_length=20,ascii_only=true,require_digit=true,require_alpha=true',
+                '--password-policy',
+                'min_length=14,max_length=14,ascii_only=true,require_digit=true,require_alpha=true',
+            ]
+        );
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame(20, $payload['generated_secrets']['policies']['passphrase']['min_length']);
+        self::assertSame(14, $payload['generated_secrets']['policies']['password']['min_length']);
+
+        $runtimeDir = $bundleDir . DIRECTORY_SEPARATOR . 'runtime';
+        $diskPassphrase = trim((string) file_get_contents($runtimeDir . DIRECTORY_SEPARATOR . 'disk-passphrase.txt'));
+        $userPassword = trim((string) file_get_contents($runtimeDir . DIRECTORY_SEPARATOR . 'local-user-password.txt'));
+
+        self::assertSame(20, strlen($diskPassphrase));
+        self::assertSame(14, strlen($userPassword));
+        self::assertMatchesRegularExpression('/^[A-Za-z0-9!@#%^&*+=:.]+$/', $diskPassphrase);
+        self::assertMatchesRegularExpression('/^[A-Za-z0-9!@#%^&*+=:.]+$/', $userPassword);
+        self::assertMatchesRegularExpression('/[0-9]/', $diskPassphrase);
+        self::assertMatchesRegularExpression('/[A-Za-z]/', $diskPassphrase);
+        self::assertMatchesRegularExpression('/[0-9]/', $userPassword);
+        self::assertMatchesRegularExpression('/[A-Za-z]/', $userPassword);
+    }
+
     /**
      * @param list<string> $arguments
      * @return array{exitCode:int,stdout:string,stderr:string}

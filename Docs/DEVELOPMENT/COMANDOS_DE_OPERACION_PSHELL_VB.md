@@ -70,6 +70,7 @@ En PowerShell tras la verificacion:
 Notas operativas validadas en Home:
 
 - El primer arranque instalado ya fue validado en `W4-OS-Home-Test` con `LUKS2 + Btrfs`, login local y mounts finales correctos.
+- El runtime regenerado ahora produce secretos efimeros ASCII-safe por defecto y el instalador persiste el layout de teclado tambien en consola e `initramfs`; conviene revalidar el siguiente primer boot con payload regenerado antes de volver a asumir el workaround manual.
 - Si la consola de `initramfs` o `tty1` interpreta mal caracteres del teclado, anadir temporalmente una passphrase LUKS y/o password de login simples en ASCII desde la live antes de reintentar el boot.
 
 ### Business por NAT con port forwarding 2223
@@ -104,6 +105,7 @@ Notas operativas validadas en Business:
 
 - `W4-OS-Business-Test` ya quedo validado de punta a punta: instalacion destructiva, `verify-installation.sh`, primer boot cifrado, login local de `w4admin` y layout final correcto.
 - El payload regenerado de instalacion ya exporta un `PATH` con rutas `sbin`, evitando falsos negativos de `sgdisk` y `partprobe` en sesiones live minimales.
+- El runtime regenerado ahora produce secretos efimeros ASCII-safe por defecto y el instalador persiste el layout de teclado tambien en consola e `initramfs`; la siguiente revalidacion debe hacerse con payload regenerado para medir si el workaround manual sigue siendo necesario.
 - Si el layout de teclado en `initramfs` o `tty1` impide escribir correctamente las credenciales complejas, se puede repetir el workaround validado: agregar temporalmente una passphrase LUKS ASCII simple y/o cambiar temporalmente la password de login desde la live antes de reintentar el arranque desde disco.
 
 ## Flujo recomendado para `MX-004` con repo APT tipo `dists`
