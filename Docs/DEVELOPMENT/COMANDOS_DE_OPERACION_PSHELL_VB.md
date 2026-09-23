@@ -349,6 +349,7 @@ Notas operativas del flujo firmado validado:
 - Si la VM tarda mas en mostrar el prompt LUKS, se puede ampliar la espera antes de inyectar la passphrase con `--unlock-wait <segundos>`. El valor por defecto del helper ahora es `20`.
 - El helper ahora tambien soporta `--unlock-retry-interval <segundos>`, `--unlock-retries <cantidad>` y `--unlock-window <segundos>` para mantener una ventana automatica de reinyeccion de la passphrase LUKS si el primer intento se adelanta al prompt real. Los nuevos defaults quedan en `10`, `12` y `180`, respectivamente.
 - En las revalidaciones recientes con `signed-prod`, Home y Business confirmaron ese mismo timing del prompt LUKS; aun con el helper reforzado, el remate manual con `VBoxManage controlvm ... keyboardputstring ...` sigue siendo un fallback valido si hiciera falta.
+- La repeticion mas reciente desde VMs completamente apagadas ya cerro en `stage=confirmed` tanto para Home como para Business usando solo el helper reforzado; el remate manual queda relegado a fallback y ya no forma parte del camino normal validado.
 - Si el desbloqueo LUKS ocurre mas tarde de lo esperado y el helper no consigue retomar SSH por si solo, se puede reenviar la passphrase desde VirtualBox y luego rematar con:
 
 ```powershell
