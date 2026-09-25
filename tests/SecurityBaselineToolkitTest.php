@@ -92,6 +92,53 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertStringContainsString('php ./verify-security-baseline.php', $readme);
     }
 
+    public function testRunSecurityBaselineViaParamikoSupportsDryRun(): void
+    {
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-home-baseline';
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'evidence';
+
+        $generate = $this->runPhpScript(
+            $this->fixturePath('scripts/generate_security_baseline_bundle.php'),
+            [
+                '--profile',
+                'w4-os-home',
+                '--bundle-dir',
+                $bundleDir,
+            ]
+        );
+        self::assertSame(0, $generate['exitCode'], $generate['stderr']);
+
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/run_security_baseline_via_paramiko.php'),
+            [
+                '--host',
+                '127.0.0.1',
+                '--port',
+                '2222',
+                '--username',
+                'w4',
+                '--password',
+                'W4login1234',
+                '--bundle-dir',
+                $bundleDir,
+                '--remote-root',
+                '/home/w4/w4-security-baseline',
+                '--evidence-dir',
+                $evidenceDir,
+                '--dry-run',
+            ]
+        );
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('dry-run', $payload['status']);
+        self::assertSame('/home/w4/w4-security-baseline', $payload['remote_root']);
+        self::assertSame('/home/w4/w4-security-baseline/security-baseline-report.json', $payload['remote_report_path']);
+        self::assertStringContainsString('php ./verify-security-baseline.php /home/w4/w4-security-baseline/security-baseline-report.json', $payload['remote_command']);
+        self::assertSame($evidenceDir . DIRECTORY_SEPARATOR . 'security-baseline-report.json', $payload['local_report_path']);
+    }
+
     /**
      * @param list<array<string, mixed>> $controls
      * @return array<string, array<string, mixed>>

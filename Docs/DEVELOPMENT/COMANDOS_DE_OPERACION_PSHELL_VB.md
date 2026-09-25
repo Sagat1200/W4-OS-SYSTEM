@@ -473,26 +473,28 @@ Notas operativas del primer ciclo de `MX-005`:
 - Tras el primer hardening, los bundles regenerados de Home y Business ya marcan `7` controles implementados y `0` gaps declarativos; la siguiente validacion ya debe hacerse sobre imagen instalada y no solo sobre manifiestos/overlays.
 - El control `authenticated-updates` se reporta como `skipped` en la verificacion local porque su evidencia sigue viniendo del pipeline firmado ya validado en `MX-004`.
 
-Copiar el baseline de Home a la VM instalada y ejecutarlo:
+Validar Home con el helper host -> VM:
 
 ```powershell
-scp -P 2222 -r "c:\W4\Packages\W4-OS SYSTEM\build\security\w4-os-home" "w4@127.0.0.1:/home/w4/w4-security-baseline"
-ssh -p 2222 w4@127.0.0.1
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_security_baseline_via_paramiko.php" `
+  --host 127.0.0.1 `
+  --port 2222 `
+  --username w4 `
+  --password W4login1234 `
+  --bundle-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\w4-os-home" `
+  --remote-root /home/w4/w4-security-baseline `
+  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\validation\w4-os-home"
 ```
 
-```bash
-cd ~/w4-security-baseline
-php ./verify-security-baseline.php
-```
-
-Copiar el baseline de Business a la VM instalada y ejecutarlo:
+Validar Business con el helper host -> VM:
 
 ```powershell
-scp -P 2223 -r "c:\W4\Packages\W4-OS SYSTEM\build\security\w4-os-business" "w4admin@127.0.0.1:/home/w4admin/w4-security-baseline"
-ssh -p 2223 w4admin@127.0.0.1
-```
-
-```bash
-cd ~/w4-security-baseline
-php ./verify-security-baseline.php
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_security_baseline_via_paramiko.php" `
+  --host 127.0.0.1 `
+  --port 2223 `
+  --username w4admin `
+  --password W4login1234 `
+  --bundle-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\w4-os-business" `
+  --remote-root /home/w4admin/w4-security-baseline `
+  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\validation\w4-os-business"
 ```
