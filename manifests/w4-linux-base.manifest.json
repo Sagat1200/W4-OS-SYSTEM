@@ -28,6 +28,7 @@
   },
   "packages": {
     "required": [
+      "apparmor",
       "apt",
       "base-files",
       "bash",
@@ -40,7 +41,8 @@
       "php-cli",
       "shim-signed",
       "sudo",
-      "systemd"
+      "systemd",
+      "ufw"
     ],
     "recommended": [
       "flatpak",

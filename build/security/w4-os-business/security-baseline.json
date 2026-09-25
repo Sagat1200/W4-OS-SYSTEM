@@ -86,7 +86,7 @@
             "title": "Control de firewall presente",
             "severity": "required",
             "category": "network",
-            "implementation_state": "gap",
+            "implementation_state": "implemented",
             "validation_scope": "runtime",
             "description": "La imagen debe exponer al menos una autoridad local verificable para reglas de firewall.",
             "expected": {
@@ -105,7 +105,7 @@
             "title": "Control MAC presente",
             "severity": "required",
             "category": "hardening",
-            "implementation_state": "gap",
+            "implementation_state": "implemented",
             "validation_scope": "runtime",
             "description": "La imagen debe poder demostrar un control de mandatory access control activo o al menos instalado.",
             "expected": {
@@ -139,7 +139,7 @@
         }
     ],
     "summary": {
-        "implemented": 5,
-        "gap": 2
+        "implemented": 7,
+        "gap": 0
     }
 }

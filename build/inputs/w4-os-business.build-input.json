@@ -33,6 +33,7 @@
     },
     "packages": {
         "required": [
+            "apparmor",
             "apt",
             "base-files",
             "bash",
@@ -49,6 +50,7 @@
             "shim-signed",
             "sudo",
             "systemd",
+            "ufw",
             "xdg-desktop-portal"
         ],
         "recommended": [
@@ -71,7 +73,7 @@
     "counts": {
         "required_meta_packages": 3,
         "recommended_meta_packages": 0,
-        "required_packages": 17,
+        "required_packages": 19,
         "recommended_packages": 5
     }
 }

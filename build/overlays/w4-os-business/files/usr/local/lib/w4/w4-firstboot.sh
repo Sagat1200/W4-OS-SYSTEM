@@ -29,6 +29,24 @@ if [[ -z "${CURRENT_HOSTNAME}" ]] || [[ "${CURRENT_HOSTNAME}" == "localhost" ]] 
   printf '%s\n' "${TARGET_HOSTNAME}" > /etc/hostname
 fi
 
+if command -v aa-enabled >/dev/null 2>&1; then
+  aa-enabled >/dev/null 2>&1 || true
+fi
+
+if command -v systemctl >/dev/null 2>&1; then
+  if systemctl list-unit-files apparmor.service >/dev/null 2>&1; then
+    systemctl enable apparmor.service >/dev/null 2>&1 || true
+    systemctl start apparmor.service >/dev/null 2>&1 || true
+  fi
+fi
+
+if command -v ufw >/dev/null 2>&1; then
+  ufw --force reset >/dev/null 2>&1 || true
+  ufw default deny incoming >/dev/null 2>&1 || true
+  ufw default allow outgoing >/dev/null 2>&1 || true
+  ufw --force enable >/dev/null 2>&1 || true
+fi
+
 mkdir -p /etc/w4
 cat > /etc/w4/firstboot-state.env <<EOF
 W4_PROFILE_ID="${W4_PROFILE_ID:-${PROFILE_ID}}"

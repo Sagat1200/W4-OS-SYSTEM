@@ -127,6 +127,7 @@ function applyCredentialPolicy(string $value, array $policy): string
     while (true) {
         $candidate = $value;
         $candidateLength = strlen($candidate);
+        $digitPosition = null;
 
         if ($minLength > 0 && $candidateLength < $minLength) {
             $missing = $minLength - $candidateLength;
@@ -140,11 +141,28 @@ function applyCredentialPolicy(string $value, array $policy): string
         }
 
         if ($requireDigit && !preg_match('/[0-9]/', $candidate)) {
-            $candidate .= $digits[random_int(0, strlen($digits) - 1)];
+            $digit = $digits[random_int(0, strlen($digits) - 1)];
+            if ($maxLength > 0 && strlen($candidate) >= $maxLength) {
+                $position = random_int(0, max(0, strlen($candidate) - 1));
+                $candidate[$position] = $digit;
+                $digitPosition = $position;
+            } else {
+                $candidate .= $digit;
+            }
         }
 
         if ($requireAlpha && !preg_match('/[A-Za-z]/', $candidate)) {
-            $candidate .= $letters[random_int(0, strlen($letters) - 1)];
+            $letter = $letters[random_int(0, strlen($letters) - 1)];
+            if ($maxLength > 0 && strlen($candidate) >= $maxLength) {
+                $upperBound = max(0, strlen($candidate) - 1);
+                $position = random_int(0, $upperBound);
+                if ($digitPosition !== null && $upperBound > 0 && $position === $digitPosition) {
+                    $position = ($position + 1) % ($upperBound + 1);
+                }
+                $candidate[$position] = $letter;
+            } else {
+                $candidate .= $letter;
+            }
         }
 
         if ($maxLength > 0 && strlen($candidate) > $maxLength) {

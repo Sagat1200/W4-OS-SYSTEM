@@ -470,5 +470,29 @@ php ./verify-security-baseline.php
 Notas operativas del primer ciclo de `MX-005`:
 
 - El bundle queda en `build/security/<perfil>/` con `security-baseline.json`, `verify-security-baseline.php` y `SECURITY_BASELINE_README.txt`.
-- En esta primera capa, los gaps esperados y explicitados por el propio baseline son `firewall-control-plane` y `mac-enforcement`; no son un fallo del generador, sino el backlog inmediato del siguiente paquete de hardening.
+- Tras el primer hardening, los bundles regenerados de Home y Business ya marcan `7` controles implementados y `0` gaps declarativos; la siguiente validacion ya debe hacerse sobre imagen instalada y no solo sobre manifiestos/overlays.
 - El control `authenticated-updates` se reporta como `skipped` en la verificacion local porque su evidencia sigue viniendo del pipeline firmado ya validado en `MX-004`.
+
+Copiar el baseline de Home a la VM instalada y ejecutarlo:
+
+```powershell
+scp -P 2222 -r "c:\W4\Packages\W4-OS SYSTEM\build\security\w4-os-home" "w4@127.0.0.1:/home/w4/w4-security-baseline"
+ssh -p 2222 w4@127.0.0.1
+```
+
+```bash
+cd ~/w4-security-baseline
+php ./verify-security-baseline.php
+```
+
+Copiar el baseline de Business a la VM instalada y ejecutarlo:
+
+```powershell
+scp -P 2223 -r "c:\W4\Packages\W4-OS SYSTEM\build\security\w4-os-business" "w4admin@127.0.0.1:/home/w4admin/w4-security-baseline"
+ssh -p 2223 w4admin@127.0.0.1
+```
+
+```bash
+cd ~/w4-security-baseline
+php ./verify-security-baseline.php
+```

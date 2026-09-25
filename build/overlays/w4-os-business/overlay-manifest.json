@@ -22,12 +22,29 @@
         "w4-firstboot.service",
         "w4-live-prep.service"
     ],
+    "security": {
+        "apparmor": {
+            "bootloader_defaults": "files\/etc\/default\/grub.d\/50-w4-security.cfg",
+            "activation": "firstboot-enables-service"
+        },
+        "firewall": {
+            "tool": "ufw",
+            "defaults": "deny-incoming-allow-outgoing",
+            "config_files": [
+                "files\/etc\/default\/ufw",
+                "files\/etc\/ufw\/ufw.conf"
+            ]
+        }
+    },
     "generated_files": [
         "files\/etc\/hostname",
         "files\/etc\/hosts",
+        "files\/etc\/default\/grub.d\/50-w4-security.cfg",
+        "files\/etc\/default\/ufw",
         "files\/etc\/issue",
         "files\/etc\/issue.net",
         "files\/etc\/motd",
+        "files\/etc\/ufw\/ufw.conf",
         "files\/etc\/default\/w4-live",
         "files\/etc\/w4\/profile.env",
         "files\/etc\/w4\/os-release.env",

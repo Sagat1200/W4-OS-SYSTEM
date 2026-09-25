@@ -37,14 +37,14 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertSame('security-baseline', $baseline['kind']);
         self::assertSame('w4-os-home', $baseline['profile_id']);
         self::assertSame('installed-image', $baseline['scope']);
-        self::assertSame(5, $baseline['summary']['implemented']);
-        self::assertSame(2, $baseline['summary']['gap']);
+        self::assertSame(7, $baseline['summary']['implemented']);
+        self::assertSame(0, $baseline['summary']['gap']);
 
         $controls = $this->indexControls($baseline['controls']);
         self::assertSame('implemented', $controls['encrypted-root']['implementation_state']);
         self::assertSame('runtime', $controls['encrypted-root']['validation_scope']);
-        self::assertSame('gap', $controls['firewall-control-plane']['implementation_state']);
-        self::assertSame('gap', $controls['mac-enforcement']['implementation_state']);
+        self::assertSame('implemented', $controls['firewall-control-plane']['implementation_state']);
+        self::assertSame('implemented', $controls['mac-enforcement']['implementation_state']);
         self::assertSame('implemented', $controls['authenticated-updates']['implementation_state']);
         self::assertSame('pipeline', $controls['authenticated-updates']['validation_scope']);
         self::assertSame('w4', $controls['standard-account']['expected']['username']);
@@ -78,8 +78,8 @@ final class SecurityBaselineToolkitTest extends TestCase
 
         $baseline = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'security-baseline.json');
         self::assertSame('w4-os-business', $baseline['profile_id']);
-        self::assertSame(5, $baseline['summary']['implemented']);
-        self::assertSame(2, $baseline['summary']['gap']);
+        self::assertSame(7, $baseline['summary']['implemented']);
+        self::assertSame(0, $baseline['summary']['gap']);
 
         $verifier = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'verify-security-baseline.php');
         self::assertNotFalse($verifier);

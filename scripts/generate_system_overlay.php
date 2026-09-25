@@ -119,6 +119,46 @@ TXT);
 /**
  * @param array<string, string> $vars
  */
+function buildUfwDefaults(array $vars): string
+{
+    return str_replace(["\r\n", "\r"], "\n", <<<TXT
+# W4 OS security baseline
+IPV6=yes
+DEFAULT_INPUT_POLICY="DROP"
+DEFAULT_OUTPUT_POLICY="ACCEPT"
+DEFAULT_FORWARD_POLICY="DROP"
+DEFAULT_APPLICATION_POLICY="SKIP"
+MANAGE_BUILTINS=no
+IPT_SYSCTL=/etc/ufw/sysctl.conf
+TXT);
+}
+
+/**
+ * @param array<string, string> $vars
+ */
+function buildUfwConfig(array $vars): string
+{
+    return str_replace(["\r\n", "\r"], "\n", <<<TXT
+# W4 OS security baseline
+ENABLED=yes
+LOGLEVEL=low
+TXT);
+}
+
+/**
+ * @param array<string, string> $vars
+ */
+function buildSecurityGrubDefaults(array $vars): string
+{
+    return str_replace(["\r\n", "\r"], "\n", <<<TXT
+# W4 OS security baseline
+GRUB_CMDLINE_LINUX_DEFAULT="\${GRUB_CMDLINE_LINUX_DEFAULT:+\${GRUB_CMDLINE_LINUX_DEFAULT} }apparmor=1 security=apparmor"
+TXT);
+}
+
+/**
+ * @param array<string, string> $vars
+ */
 function buildMotd(array $vars): string
 {
     return str_replace(["\r\n", "\r"], "\n", <<<TXT
@@ -256,6 +296,24 @@ CURRENT_HOSTNAME="$(cat /etc/hostname 2>/dev/null || true)"
 
 if [[ -z "${CURRENT_HOSTNAME}" ]] || [[ "${CURRENT_HOSTNAME}" == "localhost" ]] || [[ "${CURRENT_HOSTNAME}" == "debian" ]]; then
   printf '%s\n' "${TARGET_HOSTNAME}" > /etc/hostname
+fi
+
+if command -v aa-enabled >/dev/null 2>&1; then
+  aa-enabled >/dev/null 2>&1 || true
+fi
+
+if command -v systemctl >/dev/null 2>&1; then
+  if systemctl list-unit-files apparmor.service >/dev/null 2>&1; then
+    systemctl enable apparmor.service >/dev/null 2>&1 || true
+    systemctl start apparmor.service >/dev/null 2>&1 || true
+  fi
+fi
+
+if command -v ufw >/dev/null 2>&1; then
+  ufw --force reset >/dev/null 2>&1 || true
+  ufw default deny incoming >/dev/null 2>&1 || true
+  ufw default allow outgoing >/dev/null 2>&1 || true
+  ufw --force enable >/dev/null 2>&1 || true
 fi
 
 mkdir -p /etc/w4
@@ -432,9 +490,12 @@ function buildOverlayFiles(array $buildInput, array $vars): array
     return [
         'files/etc/hostname' => $vars['hostname'] . "\n",
         'files/etc/hosts' => buildHosts($vars) . "\n",
+        'files/etc/default/grub.d/50-w4-security.cfg' => buildSecurityGrubDefaults($vars) . "\n",
+        'files/etc/default/ufw' => buildUfwDefaults($vars) . "\n",
         'files/etc/issue' => buildIssue($vars) . "\n",
         'files/etc/issue.net' => buildIssueNet($vars) . "\n",
         'files/etc/motd' => buildMotd($vars) . "\n",
+        'files/etc/ufw/ufw.conf' => buildUfwConfig($vars) . "\n",
         'files/etc/default/w4-live' => sprintf("W4_LIVE_USER=%s\nW4_LIVE_HOSTNAME=%s\n", $vars['live_user'], $vars['live_hostname']),
         'files/etc/w4/profile.env' => buildProfileEnv($vars, $features) . "\n",
         'files/etc/w4/os-release.env' => buildOsReleaseOverlay($vars) . "\n",
@@ -539,6 +600,20 @@ try {
         'services' => [
             'w4-firstboot.service',
             'w4-live-prep.service',
+        ],
+        'security' => [
+            'apparmor' => [
+                'bootloader_defaults' => 'files/etc/default/grub.d/50-w4-security.cfg',
+                'activation' => 'firstboot-enables-service',
+            ],
+            'firewall' => [
+                'tool' => 'ufw',
+                'defaults' => 'deny-incoming-allow-outgoing',
+                'config_files' => [
+                    'files/etc/default/ufw',
+                    'files/etc/ufw/ufw.conf',
+                ],
+            ],
         ],
         'generated_files' => array_keys($files),
         'next_steps' => [

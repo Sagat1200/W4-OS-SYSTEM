@@ -33,8 +33,10 @@ final class ManifestToolkitTest extends TestCase
         self::assertContains('w4-base-meta', $resolved['required_meta_packages']);
         self::assertContains('w4-home-meta', $resolved['required_meta_packages']);
         self::assertContains('apt', $resolved['required_packages']);
+        self::assertContains('apparmor', $resolved['required_packages']);
         self::assertContains('btrfs-progs', $resolved['required_packages']);
         self::assertContains('php-cli', $resolved['required_packages']);
+        self::assertContains('ufw', $resolved['required_packages']);
         self::assertContains('firefox-esr', $resolved['required_packages']);
         self::assertContains('vlc', $resolved['recommended_packages']);
         self::assertContains('home-onboarding', $resolved['features']);
@@ -52,9 +54,11 @@ final class ManifestToolkitTest extends TestCase
         self::assertSame('stable', $buildInput['target']['release_channel']);
         self::assertSame('iso', $buildInput['target']['image_format']);
         self::assertContains('w4-main', $buildInput['repositories']);
+        self::assertContains('apparmor', $buildInput['packages']['required']);
         self::assertContains('btrfs-progs', $buildInput['packages']['required']);
         self::assertContains('firefox-esr', $buildInput['packages']['required']);
         self::assertContains('php-cli', $buildInput['packages']['required']);
+        self::assertContains('ufw', $buildInput['packages']['required']);
         self::assertContains('snapper', $buildInput['packages']['recommended']);
         self::assertSame(
             count($buildInput['packages']['required']),
