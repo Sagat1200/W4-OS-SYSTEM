@@ -137,6 +137,60 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertSame('/home/w4/w4-security-baseline/security-baseline-report.json', $payload['remote_report_path']);
         self::assertStringContainsString('php ./verify-security-baseline.php /home/w4/w4-security-baseline/security-baseline-report.json', $payload['remote_command']);
         self::assertSame($evidenceDir . DIRECTORY_SEPARATOR . 'security-baseline-report.json', $payload['local_report_path']);
+        self::assertSame(300, $payload['connect_wait']);
+        self::assertSame(5, $payload['retry_interval']);
+    }
+
+    public function testRunSecurityBaselineViaParamikoDryRunIncludesLuksOptions(): void
+    {
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-home-baseline-luks';
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'evidence-luks';
+
+        $generate = $this->runPhpScript(
+            $this->fixturePath('scripts/generate_security_baseline_bundle.php'),
+            [
+                '--profile',
+                'w4-os-home',
+                '--bundle-dir',
+                $bundleDir,
+            ]
+        );
+        self::assertSame(0, $generate['exitCode'], $generate['stderr']);
+
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/run_security_baseline_via_paramiko.php'),
+            [
+                '--host',
+                '127.0.0.1',
+                '--port',
+                '2222',
+                '--username',
+                'w4',
+                '--password',
+                'W4login1234',
+                '--bundle-dir',
+                $bundleDir,
+                '--remote-root',
+                '/home/w4/w4-security-baseline',
+                '--evidence-dir',
+                $evidenceDir,
+                '--vm-name',
+                'W4-OS-Home-Test',
+                '--luks-passphrase',
+                'W4boot1234',
+                '--dry-run',
+            ]
+        );
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('W4-OS-Home-Test', $payload['vm_name']);
+        self::assertTrue($payload['luks_unlock_enabled']);
+        self::assertSame(20, $payload['unlock_wait']);
+        self::assertSame(10, $payload['unlock_retry_interval']);
+        self::assertSame(12, $payload['unlock_retries']);
+        self::assertSame(180, $payload['unlock_window']);
     }
 
     /**

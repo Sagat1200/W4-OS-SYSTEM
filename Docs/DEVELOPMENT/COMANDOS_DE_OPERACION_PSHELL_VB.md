@@ -483,7 +483,10 @@ php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_security_baseline_via_paramiko.php"
   --password W4login1234 `
   --bundle-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\w4-os-home" `
   --remote-root /home/w4/w4-security-baseline `
-  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\validation\w4-os-home"
+  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\validation\w4-os-home" `
+  --vm-name "W4-OS-Home-Test" `
+  --luks-passphrase W4boot1234 `
+  --connect-wait 300
 ```
 
 Validar Business con el helper host -> VM:
@@ -496,5 +499,8 @@ php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_security_baseline_via_paramiko.php"
   --password W4login1234 `
   --bundle-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\w4-os-business" `
   --remote-root /home/w4admin/w4-security-baseline `
-  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\validation\w4-os-business"
+  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\validation\w4-os-business" `
+  --connect-wait 300
 ```
+
+Si la VM aun no esta arrancada, el helper ahora espera SSH durante la ventana indicada en `--connect-wait`. En Home, cuando el arranque parte de disco cifrado, el helper tambien puede reenviar automaticamente la passphrase LUKS si se indican `--vm-name` y `--luks-passphrase`.

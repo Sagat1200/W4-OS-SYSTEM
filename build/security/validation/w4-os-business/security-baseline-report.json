@@ -1,0 +1,48 @@
+{
+    "security_baseline_report_schema_version": 1,
+    "kind": "security-baseline-report",
+    "profile_id": "w4-os-business",
+    "generated_at": "2026-09-25T02:57:15+00:00",
+    "results": [
+        {
+            "id": "encrypted-root",
+            "status": "passed",
+            "detail": "La raiz esta montada desde /dev/mapper/cryptroot[/@]"
+        },
+        {
+            "id": "standard-account",
+            "status": "passed",
+            "detail": "La cuenta w4admin existe y no usa UID 0"
+        },
+        {
+            "id": "auditable-admin-path",
+            "status": "passed",
+            "detail": "sudo esta disponible en /usr/bin/sudo"
+        },
+        {
+            "id": "remote-admin-disabled-by-default",
+            "status": "failed",
+            "detail": "ssh aparece habilitado: enabled"
+        },
+        {
+            "id": "firewall-control-plane",
+            "status": "failed",
+            "detail": "No se encontro ufw ni nft en la imagen"
+        },
+        {
+            "id": "mac-enforcement",
+            "status": "passed",
+            "detail": "AppArmor aparece activo en el kernel"
+        },
+        {
+            "id": "authenticated-updates",
+            "status": "skipped",
+            "detail": "Control validado por pipeline firmado; revisar security-baseline.json y evidencia de MX-004"
+        }
+    ],
+    "summary": {
+        "passed": 4,
+        "failed": 2,
+        "skipped": 1
+    }
+}

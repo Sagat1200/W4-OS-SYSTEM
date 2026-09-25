@@ -12,8 +12,11 @@ import argparse
 import json
 import os
 import posixpath
+import subprocess
 import sys
+import time
 from pathlib import Path
+from typing import Callable
 
 sys.dont_write_bytecode = True
 
@@ -70,6 +73,81 @@ def connect(host: str, port: int, username: str, password: str) -> paramiko.SSHC
     return client
 
 
+def wait_for_ssh(
+    host: str,
+    port: int,
+    username: str,
+    password: str,
+    timeout: float,
+    *,
+    retry_callback: Callable[[], None] | None = None,
+    retry_interval: float = 5.0,
+) -> paramiko.SSHClient:
+    deadline = time.time() + timeout
+    last_error: Exception | None = None
+    next_retry = time.time() + retry_interval if retry_callback is not None else None
+
+    while time.time() < deadline:
+        try:
+            return connect(host, port, username, password)
+        except Exception as error:  # pragma: no cover - real lab retry path
+            last_error = error
+            if retry_callback is not None and next_retry is not None and time.time() >= next_retry:
+                retry_callback()
+                next_retry = time.time() + retry_interval
+            time.sleep(retry_interval)
+
+    raise TimeoutError(f"No fue posible conectar por SSH a {host}:{port}: {last_error}")
+
+
+def send_vbox_text(vm_name: str, text: str) -> None:
+    vboxmanage = Path(r"C:\Program Files\Oracle\VirtualBox\VBoxManage.exe")
+    subprocess.run([str(vboxmanage), "controlvm", vm_name, "keyboardputstring", text], check=True)
+    subprocess.run([str(vboxmanage), "controlvm", vm_name, "keyboardputscancode", "1c", "9c"], check=True)
+
+
+def build_unlock_retry_callback(
+    *,
+    vm_name: str,
+    luks_passphrase: str,
+    unlock_wait: int,
+    unlock_retry_interval: int,
+    unlock_retries: int,
+    unlock_window: int,
+) -> Callable[[], None]:
+    unlock_attempts = 0
+    unlock_retry_budget = max(0, unlock_retries)
+    unlock_window_deadline = time.time() + max(unlock_wait, unlock_window)
+    next_unlock_at = time.time() + max(0, unlock_wait)
+
+    log(
+        "Activando ventana automatica de desbloqueo LUKS "
+        f"({max(unlock_wait, unlock_window)}s, intervalo {max(5, unlock_retry_interval)}s)"
+    )
+
+    def retry_unlock() -> None:
+        nonlocal unlock_attempts
+        nonlocal next_unlock_at
+
+        now = time.time()
+        if now < next_unlock_at:
+            return
+        if now > unlock_window_deadline:
+            return
+        if unlock_attempts > unlock_retry_budget:
+            return
+
+        unlock_attempts += 1
+        if unlock_attempts == 1:
+            log("Inyectando la passphrase LUKS")
+        else:
+            log(f"Reintentando la inyeccion de la passphrase LUKS (intento {unlock_attempts})")
+        send_vbox_text(vm_name, luks_passphrase)
+        next_unlock_at = now + max(5, unlock_retry_interval)
+
+    return retry_unlock
+
+
 def run_command(client: paramiko.SSHClient, command: str, timeout: float = 1800) -> tuple[int, str, str]:
     stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
     output = stdout.read().decode("utf-8", errors="replace")
@@ -91,6 +169,14 @@ def main() -> int:
     parser.add_argument("--evidence-dir", required=True)
     parser.add_argument("--remote-php", default="php")
     parser.add_argument("--report-name", default="security-baseline-report.json")
+    parser.add_argument("--vm-name")
+    parser.add_argument("--luks-passphrase")
+    parser.add_argument("--unlock-wait", default=20, type=int)
+    parser.add_argument("--unlock-retry-interval", default=10, type=int)
+    parser.add_argument("--unlock-retries", default=12, type=int)
+    parser.add_argument("--unlock-window", default=180, type=int)
+    parser.add_argument("--connect-wait", default=300, type=int)
+    parser.add_argument("--retry-interval", default=5, type=int)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -107,6 +193,9 @@ def main() -> int:
     if not bundle_dir.is_dir():
         raise SystemExit(f"ERROR: No existe el bundle de baseline: {bundle_dir}")
 
+    if (args.vm_name is None) != (args.luks_passphrase is None):
+        raise SystemExit("ERROR: --vm-name y --luks-passphrase deben indicarse juntos")
+
     plan = {
         "status": "dry-run" if args.dry_run else "ok",
         "host": args.host,
@@ -118,6 +207,14 @@ def main() -> int:
         "remote_report_path": remote_report_path,
         "evidence_dir": str(evidence_dir),
         "local_report_path": str(local_report_path),
+        "vm_name": args.vm_name,
+        "luks_unlock_enabled": args.vm_name is not None,
+        "unlock_wait": args.unlock_wait,
+        "unlock_retry_interval": args.unlock_retry_interval,
+        "unlock_retries": args.unlock_retries,
+        "unlock_window": args.unlock_window,
+        "connect_wait": args.connect_wait,
+        "retry_interval": args.retry_interval,
     }
 
     if args.dry_run:
@@ -125,8 +222,29 @@ def main() -> int:
         return 0
 
     evidence_dir.mkdir(parents=True, exist_ok=True)
-    log(f"Conectando a {args.username}@{args.host}:{args.port}")
-    client = connect(args.host, args.port, args.username, args.password)
+    retry_callback = None
+    if args.vm_name is not None and args.luks_passphrase is not None:
+        retry_callback = build_unlock_retry_callback(
+            vm_name=args.vm_name,
+            luks_passphrase=args.luks_passphrase,
+            unlock_wait=args.unlock_wait,
+            unlock_retry_interval=args.unlock_retry_interval,
+            unlock_retries=args.unlock_retries,
+            unlock_window=args.unlock_window,
+        )
+    log(
+        f"Esperando SSH en {args.username}@{args.host}:{args.port} "
+        f"(timeout {args.connect_wait}s, intervalo {args.retry_interval}s)"
+    )
+    client = wait_for_ssh(
+        args.host,
+        args.port,
+        args.username,
+        args.password,
+        timeout=args.connect_wait,
+        retry_callback=retry_callback,
+        retry_interval=max(1, args.retry_interval),
+    )
 
     try:
         sftp = client.open_sftp()
