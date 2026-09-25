@@ -86,6 +86,8 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertStringContainsString("addResult(\$results, 'authenticated-updates', 'skipped'", $verifier);
         self::assertStringContainsString("addResult(\$results, 'firewall-control-plane'", $verifier);
         self::assertStringContainsString("command -v sudo", $verifier);
+        self::assertStringContainsString('function resolveBinary(array $candidates): string', $verifier);
+        self::assertStringContainsString("'/usr/sbin'", $verifier);
 
         $readme = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'SECURITY_BASELINE_README.txt');
         self::assertNotFalse($readme);

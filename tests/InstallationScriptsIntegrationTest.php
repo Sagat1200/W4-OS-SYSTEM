@@ -155,6 +155,9 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('chroot_has_command() {', $applyScript);
         self::assertStringContainsString('chroot "${TARGET_ROOT}" /bin/bash -lc "command -v', $applyScript);
         self::assertStringContainsString('cp -L /etc/resolv.conf "${TARGET_ROOT}/etc/resolv.conf"', $applyScript);
+        self::assertStringContainsString('USER_HOME="$(chroot "${TARGET_ROOT}" getent passwd "${USERNAME_VALUE}" | cut -d: -f6 || true)"', $applyScript);
+        self::assertStringContainsString('mkdir -p "${TARGET_ROOT}${USER_HOME}"', $applyScript);
+        self::assertStringContainsString('cp -an "${TARGET_ROOT}/etc/skel/." "${TARGET_ROOT}${USER_HOME}/"', $applyScript);
         self::assertStringContainsString('No se encontraron artefactos de kernel en /boot; reinstalando paquetes linux-image', $applyScript);
         self::assertStringContainsString('preferred_kernel_package="linux-image-amd64"', $applyScript);
         self::assertStringContainsString('Asegurando soporte initramfs para cryptroot', $applyScript);

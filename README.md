@@ -113,3 +113,7 @@ La validacion real de Home usando ya el layout `dists` tambien quedo rehecha sob
 ## Enfoque
 
 W4 OS System no nace como una simple distribucion derivada sin direccion. Nace como una propuesta para construir una linea de sistemas operativos W4 con arquitectura clara, criterio de evolucion y una implementacion que pueda sostenerse con el tiempo.
+
+## Estado reciente
+
+En la validacion runtime mas reciente de `MX-005`, `W4-OS-Home-Test` ya completo otra vez el arranque fresco cifrado hasta login local real. Esa corrida confirmo dos ajustes absorbidos en el repositorio: el verificador de baseline ahora resuelve herramientas como `ufw` tambien en rutas `sbin/bin` para evitar falsos negativos en Debian, y el generador del ejecutor de instalacion ya repara de forma idempotente el directorio personal del usuario local cuando el usuario existe pero su `HOME` no quedo materializado.

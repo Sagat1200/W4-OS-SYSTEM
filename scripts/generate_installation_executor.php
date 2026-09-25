@@ -695,6 +695,15 @@ if chroot "${TARGET_ROOT}" getent group sudo >/dev/null 2>&1; then
   chroot "${TARGET_ROOT}" usermod -aG sudo "${USERNAME_VALUE}"
 fi
 
+USER_HOME="$(chroot "${TARGET_ROOT}" getent passwd "${USERNAME_VALUE}" | cut -d: -f6 || true)"
+if [[ -n "${USER_HOME}" ]] && [[ "${USER_HOME}" == /* ]] && [[ "${USER_HOME}" != "/" ]]; then
+  mkdir -p "${TARGET_ROOT}${USER_HOME}"
+  if [[ -d "${TARGET_ROOT}/etc/skel" ]]; then
+    cp -an "${TARGET_ROOT}/etc/skel/." "${TARGET_ROOT}${USER_HOME}/" 2>/dev/null || true
+  fi
+  chroot "${TARGET_ROOT}" chown -R "${USERNAME_VALUE}:${USERNAME_VALUE}" "${USER_HOME}"
+fi
+
 LOCAL_USER_PASSWORD="$(cat "${LOCAL_USER_PASSWORD_FILE}")"
 printf '%s:%s\n' "${USERNAME_VALUE}" "${LOCAL_USER_PASSWORD}" | chroot "${TARGET_ROOT}" chpasswd
 

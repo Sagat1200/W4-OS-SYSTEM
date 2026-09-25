@@ -288,6 +288,34 @@ function addResult(array &\$results, string \$id, string \$status, string \$deta
     ];
 }
 
+function resolveBinary(array \$candidates): string
+{
+    \$searchDirectories = [
+        '/usr/local/sbin',
+        '/usr/local/bin',
+        '/usr/sbin',
+        '/usr/bin',
+        '/sbin',
+        '/bin',
+    ];
+
+    foreach (\$candidates as \$candidate) {
+        \$commandResult = runCommand('command -v ' . escapeshellarg(\$candidate));
+        if (\$commandResult['exit_code'] === 0 && \$commandResult['stdout'] !== '') {
+            return \$commandResult['stdout'];
+        }
+
+        foreach (\$searchDirectories as \$directory) {
+            \$path = \$directory . DIRECTORY_SEPARATOR . \$candidate;
+            if (is_file(\$path) && is_executable(\$path)) {
+                return \$path;
+            }
+        }
+    }
+
+    return '';
+}
+
 \$results = [];
 \$username = {$username};
 \$rootPrefix = {$rootPrefix};
@@ -324,14 +352,7 @@ if (\$sshService['exit_code'] !== 0) {
     addResult(\$results, 'remote-admin-disabled-by-default', 'passed', 'ssh no esta habilitado por defecto (' . \$sshService['stdout'] . ')');
 }
 
-\$firewallCommand = '';
-foreach (\$acceptedFirewallCommands as \$candidate) {
-    \$commandResult = runCommand('command -v ' . escapeshellarg(\$candidate));
-    if (\$commandResult['exit_code'] === 0 && \$commandResult['stdout'] !== '') {
-        \$firewallCommand = \$commandResult['stdout'];
-        break;
-    }
-}
+\$firewallCommand = resolveBinary(\$acceptedFirewallCommands);
 if (\$firewallCommand !== '') {
     addResult(\$results, 'firewall-control-plane', 'passed', 'Herramienta de firewall disponible: ' . \$firewallCommand);
 } else {
