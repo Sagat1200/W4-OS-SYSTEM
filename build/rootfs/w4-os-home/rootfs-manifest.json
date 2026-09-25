@@ -26,6 +26,7 @@
     ],
     "packages": {
         "required": [
+            "apparmor",
             "apt",
             "base-files",
             "bash",
@@ -42,6 +43,7 @@
             "shim-signed",
             "sudo",
             "systemd",
+            "ufw",
             "xdg-desktop-portal"
         ],
         "recommended": [

@@ -15,7 +15,7 @@
         ]
     },
     "target": {
-        "release_channel": "stable",
+        "release_channel": "testing",
         "image_format": "iso"
     },
     "repositories": [
