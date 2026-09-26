@@ -482,6 +482,38 @@ ensure_target_package_state() {
   [[ -f "${TARGET_ROOT}/var/lib/dpkg/status" ]] || fail "la instalacion no dejo un estado dpkg utilizable en ${TARGET_ROOT}/var/lib/dpkg"
 }
 
+normalize_target_security_permissions() {
+  log "Normalizando permisos base del sistema destino"
+
+  chown root:root "${TARGET_ROOT}" "${TARGET_ROOT}/etc" "${TARGET_ROOT}/usr" 2>/dev/null || true
+  chmod 0755 "${TARGET_ROOT}" "${TARGET_ROOT}/etc" "${TARGET_ROOT}/usr" 2>/dev/null || true
+
+  if [[ -d "${TARGET_ROOT}/etc/default" ]]; then
+    chown root:root "${TARGET_ROOT}/etc/default" 2>/dev/null || true
+    chmod 0755 "${TARGET_ROOT}/etc/default" 2>/dev/null || true
+  fi
+
+  if [[ -d "${TARGET_ROOT}/etc/ufw" ]]; then
+    chown root:root "${TARGET_ROOT}/etc/ufw" 2>/dev/null || true
+    chmod 0755 "${TARGET_ROOT}/etc/ufw" 2>/dev/null || true
+  fi
+
+  if [[ -f "${TARGET_ROOT}/etc/ufw/ufw.conf" ]]; then
+    chown root:root "${TARGET_ROOT}/etc/ufw/ufw.conf" 2>/dev/null || true
+    chmod 0644 "${TARGET_ROOT}/etc/ufw/ufw.conf" 2>/dev/null || true
+  fi
+
+  if [[ -d "${TARGET_ROOT}/tmp" ]]; then
+    chown root:root "${TARGET_ROOT}/tmp" 2>/dev/null || true
+    chmod 1777 "${TARGET_ROOT}/tmp" 2>/dev/null || true
+  fi
+
+  if [[ -d "${TARGET_ROOT}/var/tmp" ]]; then
+    chown root:root "${TARGET_ROOT}/var/tmp" 2>/dev/null || true
+    chmod 1777 "${TARGET_ROOT}/var/tmp" 2>/dev/null || true
+  fi
+}
+
 mount_chroot_support() {
   mkdir -p "${TARGET_ROOT}/dev/pts" "${TARGET_ROOT}/run" "${TARGET_ROOT}/run/lock"
   mount --bind /dev "${TARGET_ROOT}/dev"
@@ -676,6 +708,7 @@ rsync -aHAX --numeric-ids \
   --exclude=lost+found \
   "${SOURCE_ROOT}/" "${TARGET_ROOT}/"
 
+normalize_target_security_permissions
 ensure_target_package_state
 
 echo "${HOSTNAME_VALUE}" > "${TARGET_ROOT}/etc/hostname"
@@ -753,7 +786,7 @@ if [[ -n "${USER_HOME}" ]] && [[ "${USER_HOME}" == /* ]] && [[ "${USER_HOME}" !=
   chroot "${TARGET_ROOT}" chown -R "${USERNAME_VALUE}:${USERNAME_VALUE}" "${USER_HOME}"
 fi
 
-LOCAL_USER_PASSWORD="$(cat "${LOCAL_USER_PASSWORD_FILE}")"
+LOCAL_USER_PASSWORD="$(tr -d '\r\n' < "${LOCAL_USER_PASSWORD_FILE}")"
 printf '%s:%s\n' "${USERNAME_VALUE}" "${LOCAL_USER_PASSWORD}" | chroot "${TARGET_ROOT}" chpasswd
 
 if chroot_has_command locale-gen; then
@@ -786,6 +819,8 @@ fi
 if chroot_has_command update-grub; then
   chroot "${TARGET_ROOT}" update-grub
 fi
+
+normalize_target_security_permissions
 
 log "Instalacion preparada. Ejecute verify-installation.sh antes de reiniciar."
 BASH;

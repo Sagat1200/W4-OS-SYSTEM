@@ -504,3 +504,29 @@ php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_security_baseline_via_paramiko.php"
 ```
 
 Si la VM aun no esta arrancada, el helper ahora espera SSH durante la ventana indicada en `--connect-wait`. En Home, cuando el arranque parte de disco cifrado, el helper tambien puede reenviar automaticamente la passphrase LUKS si se indican `--vm-name` y `--luks-passphrase`.
+
+Nota operativa 2026-09-26:
+
+- Para `W4-OS-Home-GUI`, la regla NAT confirmada es `127.0.0.1:2222 -> guest:22`.
+- La passphrase LUKS final del payload corregido es `M39DeuNq9EhcUjzu4qYUOtHnmJZRv6Wf`; la password local final de `w4` es `xlt7vdhKEKCPkpL9VfKzlO6`.
+- Si el helper abre TCP pero falla con `Error reading SSH protocol banner`, confirmar desde `tty1` que `openssh-server` existe y que `sshd` escucha en `0.0.0.0:22`. En la validacion de Home reinstalado fue necesario abrir una excepcion temporal de laboratorio: instalar `openssh-server`, mantener `ssh` sin habilitar por defecto, arrancar el servicio y permitir `22/tcp` en `ufw` solo durante la corrida. Despues de descargar la evidencia, se elimino la regla `ufw`, se detuvo `ssh` y se purgo `openssh-server`.
+- El payload Home anterior genero `local-user-password.txt` con `CRLF`; si esa password fue aplicada con `cat`, el login local queda afectado por un `\r` invisible. El payload regenerado corrige esto limpiando `CR/LF` antes de `chpasswd` y escribiendo la passphrase LUKS sin terminador final.
+- Durante esa excepcion temporal, `ufw` expuso permisos inseguros heredados en el target (`/`, `/etc`, `/usr`, `/etc/default`, `/etc/ufw` y `ufw.conf`). El instalador ahora normaliza esos permisos con `normalize_target_security_permissions()` y la VM validada fue corregida manualmente.
+
+Comando confirmado para `W4-OS-Home-GUI` reinstalado:
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_security_baseline_via_paramiko.php" `
+  --host 127.0.0.1 `
+  --port 2222 `
+  --username w4 `
+  --password xlt7vdhKEKCPkpL9VfKzlO6 `
+  --bundle-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\w4-os-home" `
+  --remote-root /home/w4/w4-security-baseline `
+  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\validation\w4-os-home" `
+  --vm-name "W4-OS-Home-GUI" `
+  --luks-passphrase M39DeuNq9EhcUjzu4qYUOtHnmJZRv6Wf `
+  --connect-wait 300
+```
+
+La evidencia fresca queda en `build/security/validation/w4-os-home/security-baseline-report.json` con resumen `6 passed`, `0 failed`, `1 skipped`.

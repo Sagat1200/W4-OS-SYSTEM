@@ -213,6 +213,9 @@ cleanup() {
 prepare_source_root() {
   if [[ -n "${SOURCE_ROOTFS}" ]]; then
     [[ -d "${SOURCE_ROOTFS}" ]] || fail "W4_INSTALL_SOURCE_ROOTFS no apunta a una carpeta valida"
+    if [[ ! -f "${SOURCE_ROOTFS}/var/lib/dpkg/status" ]]; then
+      warn "W4_INSTALL_SOURCE_ROOTFS no incluye var/lib/dpkg; se intentara restaurar el estado de paquetes desde W4_INSTALL_SOURCE_SQUASHFS"
+    fi
     printf '%s' "${SOURCE_ROOTFS}"
     return 0
   fi
@@ -226,6 +229,80 @@ prepare_source_root() {
   log "Extrayendo squashfs fuente"
   unsquashfs -f -d "${STAGING_ROOT}" "${SOURCE_SQUASHFS}" >/dev/null
   printf '%s' "${STAGING_ROOT}"
+}
+
+source_has_package_state() {
+  local source_root="${1}"
+  [[ -f "${source_root}/var/lib/dpkg/status" ]]
+}
+
+restore_target_package_state_from_source_root() {
+  local source_root="${1}"
+
+  log "Repoblando estado de paquetes desde el arbol fuente"
+  mkdir -p "${TARGET_ROOT}/var/lib"
+
+  if [[ -d "${source_root}/var/lib/apt" ]]; then
+    rsync -aHAX --numeric-ids "${source_root}/var/lib/apt/" "${TARGET_ROOT}/var/lib/apt/"
+  fi
+
+  rsync -aHAX --numeric-ids "${source_root}/var/lib/dpkg/" "${TARGET_ROOT}/var/lib/dpkg/"
+}
+
+restore_target_package_state_from_squashfs() {
+  [[ -n "${SOURCE_SQUASHFS}" ]] || fail "la fuente seleccionada no contiene var/lib/dpkg y no se indico W4_INSTALL_SOURCE_SQUASHFS para restaurarlo"
+  [[ -f "${SOURCE_SQUASHFS}" ]] || fail "W4_INSTALL_SOURCE_SQUASHFS no existe"
+
+  require_command unsquashfs
+  log "Restaurando estado de paquetes desde squashfs fuente"
+  mkdir -p "${TARGET_ROOT}/var/lib"
+  unsquashfs -f -d "${TARGET_ROOT}" "${SOURCE_SQUASHFS}" var/lib/apt var/lib/dpkg >/dev/null
+}
+
+ensure_target_package_state() {
+  if [[ -f "${TARGET_ROOT}/var/lib/dpkg/status" ]]; then
+    return 0
+  fi
+
+  if source_has_package_state "${SOURCE_ROOT}"; then
+    restore_target_package_state_from_source_root "${SOURCE_ROOT}"
+  else
+    restore_target_package_state_from_squashfs
+  fi
+
+  [[ -f "${TARGET_ROOT}/var/lib/dpkg/status" ]] || fail "la instalacion no dejo un estado dpkg utilizable en ${TARGET_ROOT}/var/lib/dpkg"
+}
+
+normalize_target_security_permissions() {
+  log "Normalizando permisos base del sistema destino"
+
+  chown root:root "${TARGET_ROOT}" "${TARGET_ROOT}/etc" "${TARGET_ROOT}/usr" 2>/dev/null || true
+  chmod 0755 "${TARGET_ROOT}" "${TARGET_ROOT}/etc" "${TARGET_ROOT}/usr" 2>/dev/null || true
+
+  if [[ -d "${TARGET_ROOT}/etc/default" ]]; then
+    chown root:root "${TARGET_ROOT}/etc/default" 2>/dev/null || true
+    chmod 0755 "${TARGET_ROOT}/etc/default" 2>/dev/null || true
+  fi
+
+  if [[ -d "${TARGET_ROOT}/etc/ufw" ]]; then
+    chown root:root "${TARGET_ROOT}/etc/ufw" 2>/dev/null || true
+    chmod 0755 "${TARGET_ROOT}/etc/ufw" 2>/dev/null || true
+  fi
+
+  if [[ -f "${TARGET_ROOT}/etc/ufw/ufw.conf" ]]; then
+    chown root:root "${TARGET_ROOT}/etc/ufw/ufw.conf" 2>/dev/null || true
+    chmod 0644 "${TARGET_ROOT}/etc/ufw/ufw.conf" 2>/dev/null || true
+  fi
+
+  if [[ -d "${TARGET_ROOT}/tmp" ]]; then
+    chown root:root "${TARGET_ROOT}/tmp" 2>/dev/null || true
+    chmod 1777 "${TARGET_ROOT}/tmp" 2>/dev/null || true
+  fi
+
+  if [[ -d "${TARGET_ROOT}/var/tmp" ]]; then
+    chown root:root "${TARGET_ROOT}/var/tmp" 2>/dev/null || true
+    chmod 1777 "${TARGET_ROOT}/var/tmp" 2>/dev/null || true
+  fi
 }
 
 mount_chroot_support() {
@@ -267,20 +344,22 @@ ensure_kernel_boot_artifacts() {
     preferred_kernel_package="linux-image-amd64"
   fi
 
+  mapfile -t kernel_package_names < <(
+    chroot "${TARGET_ROOT}" /bin/bash -lc "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' 'linux-image-[0-9]*' 2>/dev/null | awk '\$1 == \"ii\" { print \$2 }' | grep -v -- '-unsigned$' || true"
+  )
+
+  if [[ "${#kernel_package_names[@]}" -eq 0 ]]; then
+    mapfile -t kernel_package_names < <(
+      chroot "${TARGET_ROOT}" /bin/bash -lc "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' 'linux-image-[0-9]*' 2>/dev/null | awk '\$1 == \"ii\" { print \$2 }' || true"
+    )
+  fi
+
   if [[ -n "${preferred_kernel_package}" ]]; then
     log "Reinstalando metapaquete ${preferred_kernel_package}"
     chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get install -y --reinstall "${preferred_kernel_package}"
-  else
-    mapfile -t kernel_package_names < <(
-      chroot "${TARGET_ROOT}" /bin/bash -lc "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' 'linux-image-[0-9]*' 2>/dev/null | awk '\$1 == \"ii\" { print \$2 }' | grep -v -- '-unsigned$' || true"
-    )
+  fi
 
-    if [[ "${#kernel_package_names[@]}" -eq 0 ]]; then
-      mapfile -t kernel_package_names < <(
-        chroot "${TARGET_ROOT}" /bin/bash -lc "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' 'linux-image-[0-9]*' 2>/dev/null | awk '\$1 == \"ii\" { print \$2 }' || true"
-      )
-    fi
-
+  if ! compgen -G "${TARGET_ROOT}/boot/vmlinuz-*" >/dev/null 2>&1; then
     if [[ "${#kernel_package_names[@]}" -eq 0 ]]; then
       fail "faltan artefactos de kernel en /boot y no se encontraron paquetes linux-image instalados"
     fi
@@ -431,6 +510,9 @@ rsync -aHAX --numeric-ids \
   --exclude=lost+found \
   "${SOURCE_ROOT}/" "${TARGET_ROOT}/"
 
+normalize_target_security_permissions
+ensure_target_package_state
+
 echo "${HOSTNAME_VALUE}" > "${TARGET_ROOT}/etc/hostname"
 cat > "${TARGET_ROOT}/etc/hosts" <<EOF
 127.0.0.1 localhost
@@ -503,7 +585,16 @@ if chroot "${TARGET_ROOT}" getent group sudo >/dev/null 2>&1; then
   chroot "${TARGET_ROOT}" usermod -aG sudo "${USERNAME_VALUE}"
 fi
 
-LOCAL_USER_PASSWORD="$(cat "${LOCAL_USER_PASSWORD_FILE}")"
+USER_HOME="$(chroot "${TARGET_ROOT}" getent passwd "${USERNAME_VALUE}" | cut -d: -f6 || true)"
+if [[ -n "${USER_HOME}" ]] && [[ "${USER_HOME}" == /* ]] && [[ "${USER_HOME}" != "/" ]]; then
+  mkdir -p "${TARGET_ROOT}${USER_HOME}"
+  if [[ -d "${TARGET_ROOT}/etc/skel" ]]; then
+    cp -an "${TARGET_ROOT}/etc/skel/." "${TARGET_ROOT}${USER_HOME}/" 2>/dev/null || true
+  fi
+  chroot "${TARGET_ROOT}" chown -R "${USERNAME_VALUE}:${USERNAME_VALUE}" "${USER_HOME}"
+fi
+
+LOCAL_USER_PASSWORD="$(tr -d '\r\n' < "${LOCAL_USER_PASSWORD_FILE}")"
 printf '%s:%s\n' "${USERNAME_VALUE}" "${LOCAL_USER_PASSWORD}" | chroot "${TARGET_ROOT}" chpasswd
 
 if chroot_has_command locale-gen; then
@@ -536,5 +627,7 @@ fi
 if chroot_has_command update-grub; then
   chroot "${TARGET_ROOT}" update-grub
 fi
+
+normalize_target_security_permissions
 
 log "Instalacion preparada. Ejecute verify-installation.sh antes de reiniciar."

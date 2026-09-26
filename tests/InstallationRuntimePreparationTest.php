@@ -144,8 +144,14 @@ final class InstallationRuntimePreparationTest extends TestCase
         self::assertSame(14, $payload['generated_secrets']['policies']['password']['min_length']);
 
         $runtimeDir = $bundleDir . DIRECTORY_SEPARATOR . 'runtime';
-        $diskPassphrase = trim((string) file_get_contents($runtimeDir . DIRECTORY_SEPARATOR . 'disk-passphrase.txt'));
-        $userPassword = trim((string) file_get_contents($runtimeDir . DIRECTORY_SEPARATOR . 'local-user-password.txt'));
+        $diskPassphraseRaw = (string) file_get_contents($runtimeDir . DIRECTORY_SEPARATOR . 'disk-passphrase.txt');
+        $userPasswordRaw = (string) file_get_contents($runtimeDir . DIRECTORY_SEPARATOR . 'local-user-password.txt');
+        self::assertStringNotContainsString("\r", $diskPassphraseRaw);
+        self::assertStringNotContainsString("\n", $diskPassphraseRaw);
+        self::assertStringNotContainsString("\r", $userPasswordRaw);
+
+        $diskPassphrase = trim($diskPassphraseRaw);
+        $userPassword = trim($userPasswordRaw);
 
         self::assertSame(20, strlen($diskPassphrase));
         self::assertSame(14, strlen($userPassword));

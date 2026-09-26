@@ -565,14 +565,14 @@ try {
 
         if (file_put_contents(
             $runtimeDir . DIRECTORY_SEPARATOR . 'disk-passphrase.txt',
-            $generatedSecrets['disk_passphrase'] . PHP_EOL
+            $generatedSecrets['disk_passphrase']
         ) === false) {
             throw new ValidationError('No se pudo escribir disk-passphrase.txt');
         }
 
         if (file_put_contents(
             $runtimeDir . DIRECTORY_SEPARATOR . 'local-user-password.txt',
-            $generatedSecrets['local_user_password'] . PHP_EOL
+            $generatedSecrets['local_user_password'] . "\n"
         ) === false) {
             throw new ValidationError('No se pudo escribir local-user-password.txt');
         }

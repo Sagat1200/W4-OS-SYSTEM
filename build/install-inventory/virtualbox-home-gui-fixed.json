@@ -1,0 +1,30 @@
+{
+  "inventory_schema_version": 1,
+  "kind": "disk-inventory",
+  "id": "virtualbox-home-gui-fixed",
+  "generated_by": "manual-live-capture",
+  "disks": [
+    {
+      "device": "/dev/sda",
+      "serial": "VBOX_HARDDISK_VB1ebc199a-f7c5f703",
+      "wwid": null,
+      "by_path": "pci-0000:00:0d.0-ata-1.0",
+      "size_bytes": 35218731520,
+      "is_installation_media": false,
+      "has_partitions": false,
+      "has_filesystem_signatures": false,
+      "read_only": false
+    },
+    {
+      "device": "/dev/sr0",
+      "serial": "VBOX_CD-ROM_VB0-01f003f6",
+      "wwid": null,
+      "by_path": null,
+      "size_bytes": 588873728,
+      "is_installation_media": true,
+      "has_partitions": true,
+      "has_filesystem_signatures": true,
+      "read_only": true
+    }
+  ]
+}

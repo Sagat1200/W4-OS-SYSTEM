@@ -1,0 +1,45 @@
+00:00:00.288312 VirtualBox GUI (separate) 7.2.8 r173730 win.amd64 (Apr 18 2026 12:04:41) release log
+00:00:00.288314 Log opened 2026-09-26T23:13:54.119112800Z
+00:00:00.288315 Build Type: release
+00:00:00.288318 OS Product: Windows 11
+00:00:00.288433 OS Release: 10.0.26200.9457
+00:00:00.288438 OS Service Pack: 
+00:00:00.314488 DMI Product Name: H310MHP
+00:00:00.320033 DMI Product Version: 
+00:00:00.320041 Firmware type: UEFI
+00:00:00.320481 Secure Boot: Disabled
+00:00:00.320491 Host RAM: 32689MB (31.9GB) total, 19468MB (19.0GB) available
+00:00:00.320496 Executable: C:\Program Files\Oracle\VirtualBox\VirtualBoxVM.exe
+00:00:00.320497 Process ID: 16344
+00:00:00.320497 Package type: WINDOWS_64BITS_GENERIC
+00:00:00.320498 Windows Features:
+00:00:00.320498   Core Isolation (Memory Integrity): ENABLED
+00:00:00.321465 GUI: UIMediumEnumerator: Initial medium-enumeration finished!
+00:00:00.344452 GUI: UIMediumEnumerator: Medium-enumeration started...
+00:00:01.430488 GUI: UIFrameBufferPrivate::performResize: Size=640x480, Using fallback buffer since no source bitmap is provided
+00:00:01.435695 DnD: User Interface Privilege Isolation (UIPI) is running with SECURITY_MANDATORY_MEDIUM_RID
+00:00:01.688139 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:00:01.688197 GUI: UIFrameBufferPrivate::performResize: Size=1280x800, Using fallback buffer since no source bitmap is provided
+00:00:01.691536 GUI: UISession::sltAdditionsChange: GA state really changed, notifying listeners.
+00:00:01.703393 GUI: UIMachineViewNormal::adjustGuestScreenSize: Adjust guest-screen size if necessary
+00:00:01.703628 GUI: UIMachineLogicNormal::sltCheckForRequestedVisualStateType: Requested-state=1, Machine-state=6
+00:00:01.713921 GUI: UIMachineLogicNormal::sltCheckForRequestedVisualStateType: Requested-state=1, Machine-state=6
+00:00:10.226253 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:00:11.314077 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:00:26.157476 GUI: UIMachineView::handleScaleChange: Screen=0
+00:00:26.167195 GUI: UIMachineViewNormal::adjustGuestScreenSize: Adjust guest-screen size if necessary
+00:00:26.167355 GUI: UIMachineView::sltPerformGuestResize: Sending guest size-hint to screen 0 as 1536x764
+00:00:26.167697 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:00:30.857673 GUI: UIMachineView::handleScaleChange: Screen=0
+00:00:30.883573 GUI: UIMachineViewNormal::adjustGuestScreenSize: Adjust guest-screen size if necessary
+00:00:30.896049 GUI: UIMachineView::sltPerformGuestResize: Sending guest size-hint to screen 0 as 1280x636
+00:00:30.907410 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:14:37.219622 GUI: UIFrameBufferPrivate::performResize: Size=1280x800, Using fallback buffer since no source bitmap is provided
+00:14:37.241770 GUI: UIFrameBufferPrivate::performResize: Size=1280x800, Using fallback buffer since no source bitmap is provided
+00:14:37.626008 GUI: Waiting for session to be unlocked to close Runtime UI..
+00:14:37.858051 GUI: Request to close Runtime UI because session is unlocked.
+00:14:37.858099 GUI: Request for async QApp quit.
+00:14:37.891897 GUI: UICommon: Handling aboutToQuit request..
+00:14:38.496497 ERROR [COM]: aRC=E_UNEXPECTED (0x8000ffff) aIID={c0447716-ff5a-4795-b57a-ecd5fffa18a4} aComponent={SessionWrap} aText={The session is not locked (session state: Unlocked)}, preserve=false aResultDetail=0
+00:14:38.497917 ERROR [COM]: aRC=E_UNEXPECTED (0x8000ffff) aIID={c0447716-ff5a-4795-b57a-ecd5fffa18a4} aComponent={SessionWrap} aText={The session is not locked (session state: Unlocked)}, preserve=false aResultDetail=0
+00:14:38.528732 GUI: UICommon: aboutToQuit request handled!

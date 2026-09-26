@@ -158,11 +158,16 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('USER_HOME="$(chroot "${TARGET_ROOT}" getent passwd "${USERNAME_VALUE}" | cut -d: -f6 || true)"', $applyScript);
         self::assertStringContainsString('mkdir -p "${TARGET_ROOT}${USER_HOME}"', $applyScript);
         self::assertStringContainsString('cp -an "${TARGET_ROOT}/etc/skel/." "${TARGET_ROOT}${USER_HOME}/"', $applyScript);
+        self::assertStringContainsString("LOCAL_USER_PASSWORD=\"$(tr -d '\\r\\n' < \"\${LOCAL_USER_PASSWORD_FILE}\")\"", $applyScript);
         self::assertStringContainsString('W4_INSTALL_SOURCE_ROOTFS no incluye var/lib/dpkg; se intentara restaurar el estado de paquetes desde W4_INSTALL_SOURCE_SQUASHFS', $applyScript);
         self::assertStringContainsString('source_has_package_state() {', $applyScript);
         self::assertStringContainsString('restore_target_package_state_from_source_root() {', $applyScript);
         self::assertStringContainsString('restore_target_package_state_from_squashfs() {', $applyScript);
         self::assertStringContainsString('ensure_target_package_state() {', $applyScript);
+        self::assertStringContainsString('normalize_target_security_permissions() {', $applyScript);
+        self::assertStringContainsString('chmod 0755 "${TARGET_ROOT}" "${TARGET_ROOT}/etc" "${TARGET_ROOT}/usr"', $applyScript);
+        self::assertStringContainsString('chmod 0644 "${TARGET_ROOT}/etc/ufw/ufw.conf"', $applyScript);
+        self::assertStringContainsString('chmod 1777 "${TARGET_ROOT}/tmp"', $applyScript);
         self::assertStringContainsString('rsync -aHAX --numeric-ids "${source_root}/var/lib/dpkg/" "${TARGET_ROOT}/var/lib/dpkg/"', $applyScript);
         self::assertStringContainsString('unsquashfs -f -d "${TARGET_ROOT}" "${SOURCE_SQUASHFS}" var/lib/apt var/lib/dpkg >/dev/null', $applyScript);
         self::assertStringContainsString('la instalacion no dejo un estado dpkg utilizable', $applyScript);

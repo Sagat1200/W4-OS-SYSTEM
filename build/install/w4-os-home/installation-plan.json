@@ -11,18 +11,18 @@
     },
     "plan_binding": {
         "selector": {
-            "serial": "VBOX_HARDDISK_VB85d286f4-23d1ffff",
+            "serial": "VBOX_HARDDISK_VB1ebc199a-f7c5f703",
             "by_path": "pci-0000:00:0d.0-ata-1.0"
         },
         "selected_disk": {
             "device": "\/dev\/sda",
-            "serial": "VBOX_HARDDISK_VB85d286f4-23d1ffff",
+            "serial": "VBOX_HARDDISK_VB1ebc199a-f7c5f703",
             "wwid": "",
             "by_path": "pci-0000:00:0d.0-ata-1.0",
             "size_bytes": 35218731520
         },
         "expected_state": "empty",
-        "binding_hash": "9e3d1757c737f407ea6cf458ce1036cc34d907325ce119ad7c571de125a72955",
+        "binding_hash": "4e91b696a8cc8cfa79a7d1be1c1f4dd662c0ae224aea79c0fdf5eee3ae5cc038",
         "revalidate_before_write": true
     },
     "identity": {

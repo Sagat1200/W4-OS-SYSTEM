@@ -2,9 +2,9 @@ W4 OS Check-Only Preparation
 
 Perfil: W4 OS Home
 Disco objetivo: /dev/sda
-Inventario usado: c:\W4\Packages\W4-OS SYSTEM\build\install-inventory\virtualbox-live-home.json
-Perfil derivado: C:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-home\installation-profile.derived.json
-Bundle: C:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-home
+Inventario usado: build\install-inventory\virtualbox-home-gui-fixed.json
+Perfil derivado: build\install\w4-os-home\installation-profile.derived.json
+Bundle: build\install\w4-os-home
 
 Secuencia recomendada dentro de la ISO live:
 1. Confirmar que el disco sigue vacio y coincide con el selector del perfil derivado.
