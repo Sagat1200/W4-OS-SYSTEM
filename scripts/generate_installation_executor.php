@@ -422,6 +422,9 @@ cleanup() {
 prepare_source_root() {
   if [[ -n "${SOURCE_ROOTFS}" ]]; then
     [[ -d "${SOURCE_ROOTFS}" ]] || fail "W4_INSTALL_SOURCE_ROOTFS no apunta a una carpeta valida"
+    if [[ ! -f "${SOURCE_ROOTFS}/var/lib/dpkg/status" ]]; then
+      warn "W4_INSTALL_SOURCE_ROOTFS no incluye var/lib/dpkg; se intentara restaurar el estado de paquetes desde W4_INSTALL_SOURCE_SQUASHFS"
+    fi
     printf '%s' "${SOURCE_ROOTFS}"
     return 0
   fi
@@ -435,6 +438,48 @@ prepare_source_root() {
   log "Extrayendo squashfs fuente"
   unsquashfs -f -d "${STAGING_ROOT}" "${SOURCE_SQUASHFS}" >/dev/null
   printf '%s' "${STAGING_ROOT}"
+}
+
+source_has_package_state() {
+  local source_root="${1}"
+  [[ -f "${source_root}/var/lib/dpkg/status" ]]
+}
+
+restore_target_package_state_from_source_root() {
+  local source_root="${1}"
+
+  log "Repoblando estado de paquetes desde el arbol fuente"
+  mkdir -p "${TARGET_ROOT}/var/lib"
+
+  if [[ -d "${source_root}/var/lib/apt" ]]; then
+    rsync -aHAX --numeric-ids "${source_root}/var/lib/apt/" "${TARGET_ROOT}/var/lib/apt/"
+  fi
+
+  rsync -aHAX --numeric-ids "${source_root}/var/lib/dpkg/" "${TARGET_ROOT}/var/lib/dpkg/"
+}
+
+restore_target_package_state_from_squashfs() {
+  [[ -n "${SOURCE_SQUASHFS}" ]] || fail "la fuente seleccionada no contiene var/lib/dpkg y no se indico W4_INSTALL_SOURCE_SQUASHFS para restaurarlo"
+  [[ -f "${SOURCE_SQUASHFS}" ]] || fail "W4_INSTALL_SOURCE_SQUASHFS no existe"
+
+  require_command unsquashfs
+  log "Restaurando estado de paquetes desde squashfs fuente"
+  mkdir -p "${TARGET_ROOT}/var/lib"
+  unsquashfs -f -d "${TARGET_ROOT}" "${SOURCE_SQUASHFS}" var/lib/apt var/lib/dpkg >/dev/null
+}
+
+ensure_target_package_state() {
+  if [[ -f "${TARGET_ROOT}/var/lib/dpkg/status" ]]; then
+    return 0
+  fi
+
+  if source_has_package_state "${SOURCE_ROOT}"; then
+    restore_target_package_state_from_source_root "${SOURCE_ROOT}"
+  else
+    restore_target_package_state_from_squashfs
+  fi
+
+  [[ -f "${TARGET_ROOT}/var/lib/dpkg/status" ]] || fail "la instalacion no dejo un estado dpkg utilizable en ${TARGET_ROOT}/var/lib/dpkg"
 }
 
 mount_chroot_support() {
@@ -476,20 +521,22 @@ ensure_kernel_boot_artifacts() {
     preferred_kernel_package="linux-image-amd64"
   fi
 
+  mapfile -t kernel_package_names < <(
+    chroot "${TARGET_ROOT}" /bin/bash -lc "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' 'linux-image-[0-9]*' 2>/dev/null | awk '\$1 == \"ii\" { print \$2 }' | grep -v -- '-unsigned$' || true"
+  )
+
+  if [[ "${#kernel_package_names[@]}" -eq 0 ]]; then
+    mapfile -t kernel_package_names < <(
+      chroot "${TARGET_ROOT}" /bin/bash -lc "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' 'linux-image-[0-9]*' 2>/dev/null | awk '\$1 == \"ii\" { print \$2 }' || true"
+    )
+  fi
+
   if [[ -n "${preferred_kernel_package}" ]]; then
     log "Reinstalando metapaquete ${preferred_kernel_package}"
     chroot "${TARGET_ROOT}" env DEBIAN_FRONTEND=noninteractive apt-get install -y --reinstall "${preferred_kernel_package}"
-  else
-    mapfile -t kernel_package_names < <(
-      chroot "${TARGET_ROOT}" /bin/bash -lc "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' 'linux-image-[0-9]*' 2>/dev/null | awk '\$1 == \"ii\" { print \$2 }' | grep -v -- '-unsigned$' || true"
-    )
+  fi
 
-    if [[ "${#kernel_package_names[@]}" -eq 0 ]]; then
-      mapfile -t kernel_package_names < <(
-        chroot "${TARGET_ROOT}" /bin/bash -lc "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' 'linux-image-[0-9]*' 2>/dev/null | awk '\$1 == \"ii\" { print \$2 }' || true"
-      )
-    fi
-
+  if ! compgen -G "${TARGET_ROOT}/boot/vmlinuz-*" >/dev/null 2>&1; then
     if [[ "${#kernel_package_names[@]}" -eq 0 ]]; then
       fail "faltan artefactos de kernel en /boot y no se encontraron paquetes linux-image instalados"
     fi
@@ -628,6 +675,8 @@ rsync -aHAX --numeric-ids \
   --exclude=/media/* \
   --exclude=lost+found \
   "${SOURCE_ROOT}/" "${TARGET_ROOT}/"
+
+ensure_target_package_state
 
 echo "${HOSTNAME_VALUE}" > "${TARGET_ROOT}/etc/hostname"
 cat > "${TARGET_ROOT}/etc/hosts" <<EOF

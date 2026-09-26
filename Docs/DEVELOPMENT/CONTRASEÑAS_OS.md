@@ -10,6 +10,11 @@ Documento de referencia rápida para las credenciales usadas durante la validaci
 - Passphrase LUKS original: `9y4YUCtZJ_e_RQ5H5qZHrMNBTJ3dmujm`
 - Passphrase LUKS simple temporal validada: `W4boot1234`
 
+### Reinstalacion preparada el 2026-09-25
+
+- Password temporal regenerada del usuario local para el siguiente payload Home: `Sg9hl2QOL0dD3HjZTqM6oEir`
+- Passphrase LUKS temporal regenerada para el siguiente payload Home: `aMkiJb5EKX8W1LrqZOTCJYPvxQAmgks`
+
 ## W4 OS Business
 
 - Usuario local validado: `w4admin`
