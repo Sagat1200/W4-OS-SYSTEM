@@ -150,6 +150,32 @@ final class SecurityBaselineToolkit
                 ]
             ),
             $this->buildControl(
+                id: 'critical-filesystem-permissions',
+                title: 'Permisos criticos del sistema',
+                severity: 'required',
+                category: 'hardening',
+                implementationState: 'implemented',
+                validationScope: 'runtime',
+                description: 'La imagen instalada debe mantener propietarios y modos seguros en rutas base y configuracion de firewall.',
+                expected: [
+                    'paths' => [
+                        ['path' => '/', 'type' => 'dir', 'owner_uid' => 0, 'group_gid' => 0, 'mode' => '0755'],
+                        ['path' => '/etc', 'type' => 'dir', 'owner_uid' => 0, 'group_gid' => 0, 'mode' => '0755'],
+                        ['path' => '/usr', 'type' => 'dir', 'owner_uid' => 0, 'group_gid' => 0, 'mode' => '0755'],
+                        ['path' => '/etc/default', 'type' => 'dir', 'owner_uid' => 0, 'group_gid' => 0, 'mode' => '0755'],
+                        ['path' => '/etc/ufw', 'type' => 'dir', 'owner_uid' => 0, 'group_gid' => 0, 'mode' => '0755'],
+                        ['path' => '/etc/default/ufw', 'type' => 'file', 'owner_uid' => 0, 'group_gid' => 0, 'mode' => '0644'],
+                        ['path' => '/etc/ufw/ufw.conf', 'type' => 'file', 'owner_uid' => 0, 'group_gid' => 0, 'mode' => '0644'],
+                        ['path' => '/tmp', 'type' => 'dir', 'owner_uid' => 0, 'group_gid' => 0, 'mode' => '1777'],
+                        ['path' => '/var/tmp', 'type' => 'dir', 'owner_uid' => 0, 'group_gid' => 0, 'mode' => '1777'],
+                    ],
+                ],
+                evidence: [
+                    'scripts/generate_installation_executor.php',
+                    'Docs/W4-OS/157_W4_OS_SECURITY_BASELINE.md',
+                ]
+            ),
+            $this->buildControl(
                 id: 'authenticated-updates',
                 title: 'Actualizacion autenticada',
                 severity: 'required',
@@ -227,6 +253,7 @@ final class SecurityBaselineToolkit
         $rootPrefix = $this->phpLiteral((string) $this->controlExpectedValue($baseline, 'encrypted-root', 'root_source_prefix'));
         $acceptedFirewallCommands = var_export((array) $this->controlExpectedValue($baseline, 'firewall-control-plane', 'accepted_commands'), true);
         $forbiddenEnabledStates = var_export((array) $this->controlExpectedValue($baseline, 'remote-admin-disabled-by-default', 'enabled_states_forbidden'), true);
+        $criticalPermissionPaths = var_export((array) $this->controlExpectedValue($baseline, 'critical-filesystem-permissions', 'paths'), true);
 
         return <<<PHP
 <?php
@@ -316,11 +343,72 @@ function resolveBinary(array \$candidates): string
     return '';
 }
 
+function formatMode(int \$mode): string
+{
+    return sprintf('%04o', \$mode & 07777);
+}
+
+/**
+ * @param list<array<string, mixed>> \$expectedPaths
+ * @return list<string>
+ */
+function findPermissionViolations(array \$expectedPaths): array
+{
+    \$violations = [];
+
+    foreach (\$expectedPaths as \$expected) {
+        \$path = (string) (\$expected['path'] ?? '');
+        if (\$path === '' || !file_exists(\$path)) {
+            \$violations[] = \$path . ' no existe';
+            continue;
+        }
+
+        \$type = (string) (\$expected['type'] ?? '');
+        if (\$type === 'dir' && !is_dir(\$path)) {
+            \$violations[] = \$path . ' no es directorio';
+            continue;
+        }
+        if (\$type === 'file' && !is_file(\$path)) {
+            \$violations[] = \$path . ' no es archivo';
+            continue;
+        }
+
+        \$owner = fileowner(\$path);
+        \$group = filegroup(\$path);
+        \$mode = fileperms(\$path);
+        if (\$owner === false || \$group === false || \$mode === false) {
+            \$violations[] = \$path . ' no pudo inspeccionarse';
+            continue;
+        }
+
+        \$expectedOwner = (int) (\$expected['owner_uid'] ?? -1);
+        \$expectedGroup = (int) (\$expected['group_gid'] ?? -1);
+        \$expectedMode = (string) (\$expected['mode'] ?? '');
+        \$actualMode = formatMode(\$mode);
+
+        if (\$owner !== \$expectedOwner || \$group !== \$expectedGroup || \$actualMode !== \$expectedMode) {
+            \$violations[] = sprintf(
+                '%s owner=%d group=%d mode=%s esperado owner=%d group=%d mode=%s',
+                \$path,
+                \$owner,
+                \$group,
+                \$actualMode,
+                \$expectedOwner,
+                \$expectedGroup,
+                \$expectedMode
+            );
+        }
+    }
+
+    return \$violations;
+}
+
 \$results = [];
 \$username = {$username};
 \$rootPrefix = {$rootPrefix};
 \$acceptedFirewallCommands = {$acceptedFirewallCommands};
 \$forbiddenEnabledStates = {$forbiddenEnabledStates};
+\$criticalPermissionPaths = {$criticalPermissionPaths};
 
 \$rootSource = runCommand("findmnt -n -o SOURCE /");
 if (\$rootSource['exit_code'] === 0 && str_starts_with(\$rootSource['stdout'], \$rootPrefix)) {
@@ -364,6 +452,13 @@ if (\$apparmor['exit_code'] === 0) {
     addResult(\$results, 'mac-enforcement', 'passed', 'AppArmor aparece activo en el kernel');
 } else {
     addResult(\$results, 'mac-enforcement', 'failed', 'No se pudo confirmar AppArmor activo');
+}
+
+\$permissionViolations = findPermissionViolations(\$criticalPermissionPaths);
+if (\$permissionViolations === []) {
+    addResult(\$results, 'critical-filesystem-permissions', 'passed', 'Permisos criticos del sistema alineados con la baseline');
+} else {
+    addResult(\$results, 'critical-filesystem-permissions', 'failed', implode('; ', \$permissionViolations));
 }
 
 addResult(\$results, 'authenticated-updates', 'skipped', 'Control validado por pipeline firmado; revisar security-baseline.json y evidencia de MX-004');

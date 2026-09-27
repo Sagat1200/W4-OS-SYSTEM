@@ -117,6 +117,86 @@
             ]
         },
         {
+            "id": "critical-filesystem-permissions",
+            "title": "Permisos criticos del sistema",
+            "severity": "required",
+            "category": "hardening",
+            "implementation_state": "implemented",
+            "validation_scope": "runtime",
+            "description": "La imagen instalada debe mantener propietarios y modos seguros en rutas base y configuracion de firewall.",
+            "expected": {
+                "paths": [
+                    {
+                        "path": "/",
+                        "type": "dir",
+                        "owner_uid": 0,
+                        "group_gid": 0,
+                        "mode": "0755"
+                    },
+                    {
+                        "path": "/etc",
+                        "type": "dir",
+                        "owner_uid": 0,
+                        "group_gid": 0,
+                        "mode": "0755"
+                    },
+                    {
+                        "path": "/usr",
+                        "type": "dir",
+                        "owner_uid": 0,
+                        "group_gid": 0,
+                        "mode": "0755"
+                    },
+                    {
+                        "path": "/etc/default",
+                        "type": "dir",
+                        "owner_uid": 0,
+                        "group_gid": 0,
+                        "mode": "0755"
+                    },
+                    {
+                        "path": "/etc/ufw",
+                        "type": "dir",
+                        "owner_uid": 0,
+                        "group_gid": 0,
+                        "mode": "0755"
+                    },
+                    {
+                        "path": "/etc/default/ufw",
+                        "type": "file",
+                        "owner_uid": 0,
+                        "group_gid": 0,
+                        "mode": "0644"
+                    },
+                    {
+                        "path": "/etc/ufw/ufw.conf",
+                        "type": "file",
+                        "owner_uid": 0,
+                        "group_gid": 0,
+                        "mode": "0644"
+                    },
+                    {
+                        "path": "/tmp",
+                        "type": "dir",
+                        "owner_uid": 0,
+                        "group_gid": 0,
+                        "mode": "1777"
+                    },
+                    {
+                        "path": "/var/tmp",
+                        "type": "dir",
+                        "owner_uid": 0,
+                        "group_gid": 0,
+                        "mode": "1777"
+                    }
+                ]
+            },
+            "evidence": [
+                "scripts/generate_installation_executor.php",
+                "Docs/W4-OS/157_W4_OS_SECURITY_BASELINE.md"
+            ]
+        },
+        {
             "id": "authenticated-updates",
             "title": "Actualizacion autenticada",
             "severity": "required",
@@ -139,7 +219,7 @@
         }
     ],
     "summary": {
-        "implemented": 7,
+        "implemented": 8,
         "gap": 0
     }
 }

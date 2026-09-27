@@ -166,6 +166,7 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('ensure_target_package_state() {', $applyScript);
         self::assertStringContainsString('normalize_target_security_permissions() {', $applyScript);
         self::assertStringContainsString('chmod 0755 "${TARGET_ROOT}" "${TARGET_ROOT}/etc" "${TARGET_ROOT}/usr"', $applyScript);
+        self::assertStringContainsString('chmod 0644 "${TARGET_ROOT}/etc/default/ufw"', $applyScript);
         self::assertStringContainsString('chmod 0644 "${TARGET_ROOT}/etc/ufw/ufw.conf"', $applyScript);
         self::assertStringContainsString('chmod 1777 "${TARGET_ROOT}/tmp"', $applyScript);
         self::assertStringContainsString('rsync -aHAX --numeric-ids "${source_root}/var/lib/dpkg/" "${TARGET_ROOT}/var/lib/dpkg/"', $applyScript);

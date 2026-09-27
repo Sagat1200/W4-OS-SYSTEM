@@ -85,6 +85,66 @@ function resolveBinary(array $candidates): string
     return '';
 }
 
+function formatMode(int $mode): string
+{
+    return sprintf('%04o', $mode & 07777);
+}
+
+/**
+ * @param list<array<string, mixed>> $expectedPaths
+ * @return list<string>
+ */
+function findPermissionViolations(array $expectedPaths): array
+{
+    $violations = [];
+
+    foreach ($expectedPaths as $expected) {
+        $path = (string) ($expected['path'] ?? '');
+        if ($path === '' || !file_exists($path)) {
+            $violations[] = $path . ' no existe';
+            continue;
+        }
+
+        $type = (string) ($expected['type'] ?? '');
+        if ($type === 'dir' && !is_dir($path)) {
+            $violations[] = $path . ' no es directorio';
+            continue;
+        }
+        if ($type === 'file' && !is_file($path)) {
+            $violations[] = $path . ' no es archivo';
+            continue;
+        }
+
+        $owner = fileowner($path);
+        $group = filegroup($path);
+        $mode = fileperms($path);
+        if ($owner === false || $group === false || $mode === false) {
+            $violations[] = $path . ' no pudo inspeccionarse';
+            continue;
+        }
+
+        $expectedOwner = (int) ($expected['owner_uid'] ?? -1);
+        $expectedGroup = (int) ($expected['group_gid'] ?? -1);
+        $expectedMode = (string) ($expected['mode'] ?? '');
+        $actualMode = formatMode($mode);
+
+        if ($owner !== $expectedOwner || $group !== $expectedGroup || $actualMode !== $expectedMode) {
+            $violations[] = sprintf(
+                '%s owner=%d group=%d mode=%s esperado owner=%d group=%d mode=%s',
+                $path,
+                $owner,
+                $group,
+                $actualMode,
+                $expectedOwner,
+                $expectedGroup,
+                $expectedMode
+            );
+        }
+    }
+
+    return $violations;
+}
+
 $results = [];
 $username = 'w4';
 $rootPrefix = '/dev/mapper/';
@@ -98,6 +158,80 @@ $forbiddenEnabledStates = array (
   2 => 'linked',
   3 => 'linked-runtime',
   4 => 'alias',
+);
+$criticalPermissionPaths = array (
+  0 => 
+  array (
+    'path' => '/',
+    'type' => 'dir',
+    'owner_uid' => 0,
+    'group_gid' => 0,
+    'mode' => '0755',
+  ),
+  1 => 
+  array (
+    'path' => '/etc',
+    'type' => 'dir',
+    'owner_uid' => 0,
+    'group_gid' => 0,
+    'mode' => '0755',
+  ),
+  2 => 
+  array (
+    'path' => '/usr',
+    'type' => 'dir',
+    'owner_uid' => 0,
+    'group_gid' => 0,
+    'mode' => '0755',
+  ),
+  3 => 
+  array (
+    'path' => '/etc/default',
+    'type' => 'dir',
+    'owner_uid' => 0,
+    'group_gid' => 0,
+    'mode' => '0755',
+  ),
+  4 => 
+  array (
+    'path' => '/etc/ufw',
+    'type' => 'dir',
+    'owner_uid' => 0,
+    'group_gid' => 0,
+    'mode' => '0755',
+  ),
+  5 => 
+  array (
+    'path' => '/etc/default/ufw',
+    'type' => 'file',
+    'owner_uid' => 0,
+    'group_gid' => 0,
+    'mode' => '0644',
+  ),
+  6 => 
+  array (
+    'path' => '/etc/ufw/ufw.conf',
+    'type' => 'file',
+    'owner_uid' => 0,
+    'group_gid' => 0,
+    'mode' => '0644',
+  ),
+  7 => 
+  array (
+    'path' => '/tmp',
+    'type' => 'dir',
+    'owner_uid' => 0,
+    'group_gid' => 0,
+    'mode' => '1777',
+  ),
+  8 => 
+  array (
+    'path' => '/var/tmp',
+    'type' => 'dir',
+    'owner_uid' => 0,
+    'group_gid' => 0,
+    'mode' => '1777',
+  ),
 );
 
 $rootSource = runCommand("findmnt -n -o SOURCE /");
@@ -142,6 +276,13 @@ if ($apparmor['exit_code'] === 0) {
     addResult($results, 'mac-enforcement', 'passed', 'AppArmor aparece activo en el kernel');
 } else {
     addResult($results, 'mac-enforcement', 'failed', 'No se pudo confirmar AppArmor activo');
+}
+
+$permissionViolations = findPermissionViolations($criticalPermissionPaths);
+if ($permissionViolations === []) {
+    addResult($results, 'critical-filesystem-permissions', 'passed', 'Permisos criticos del sistema alineados con la baseline');
+} else {
+    addResult($results, 'critical-filesystem-permissions', 'failed', implode('; ', $permissionViolations));
 }
 
 addResult($results, 'authenticated-updates', 'skipped', 'Control validado por pipeline firmado; revisar security-baseline.json y evidencia de MX-004');

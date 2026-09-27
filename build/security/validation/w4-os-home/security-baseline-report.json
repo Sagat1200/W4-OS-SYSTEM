@@ -2,7 +2,7 @@
     "security_baseline_report_schema_version": 1,
     "kind": "security-baseline-report",
     "profile_id": "w4-os-home",
-    "generated_at": "2026-09-26T23:41:09+00:00",
+    "generated_at": "2026-09-27T05:42:06+00:00",
     "results": [
         {
             "id": "encrypted-root",
@@ -35,13 +35,18 @@
             "detail": "AppArmor aparece activo en el kernel"
         },
         {
+            "id": "critical-filesystem-permissions",
+            "status": "passed",
+            "detail": "Permisos criticos del sistema alineados con la baseline"
+        },
+        {
             "id": "authenticated-updates",
             "status": "skipped",
             "detail": "Control validado por pipeline firmado; revisar security-baseline.json y evidencia de MX-004"
         }
     ],
     "summary": {
-        "passed": 6,
+        "passed": 7,
         "failed": 0,
         "skipped": 1
     }

@@ -284,6 +284,11 @@ normalize_target_security_permissions() {
     chmod 0755 "${TARGET_ROOT}/etc/default" 2>/dev/null || true
   fi
 
+  if [[ -f "${TARGET_ROOT}/etc/default/ufw" ]]; then
+    chown root:root "${TARGET_ROOT}/etc/default/ufw" 2>/dev/null || true
+    chmod 0644 "${TARGET_ROOT}/etc/default/ufw" 2>/dev/null || true
+  fi
+
   if [[ -d "${TARGET_ROOT}/etc/ufw" ]]; then
     chown root:root "${TARGET_ROOT}/etc/ufw" 2>/dev/null || true
     chmod 0755 "${TARGET_ROOT}/etc/ufw" 2>/dev/null || true

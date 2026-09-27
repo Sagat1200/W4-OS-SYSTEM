@@ -37,7 +37,7 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertSame('security-baseline', $baseline['kind']);
         self::assertSame('w4-os-home', $baseline['profile_id']);
         self::assertSame('installed-image', $baseline['scope']);
-        self::assertSame(7, $baseline['summary']['implemented']);
+        self::assertSame(8, $baseline['summary']['implemented']);
         self::assertSame(0, $baseline['summary']['gap']);
 
         $controls = $this->indexControls($baseline['controls']);
@@ -45,6 +45,10 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertSame('runtime', $controls['encrypted-root']['validation_scope']);
         self::assertSame('implemented', $controls['firewall-control-plane']['implementation_state']);
         self::assertSame('implemented', $controls['mac-enforcement']['implementation_state']);
+        self::assertSame('implemented', $controls['critical-filesystem-permissions']['implementation_state']);
+        self::assertSame('runtime', $controls['critical-filesystem-permissions']['validation_scope']);
+        self::assertSame('/etc/default/ufw', $controls['critical-filesystem-permissions']['expected']['paths'][5]['path']);
+        self::assertSame('/etc/ufw/ufw.conf', $controls['critical-filesystem-permissions']['expected']['paths'][6]['path']);
         self::assertSame('implemented', $controls['authenticated-updates']['implementation_state']);
         self::assertSame('pipeline', $controls['authenticated-updates']['validation_scope']);
         self::assertSame('w4', $controls['standard-account']['expected']['username']);
@@ -78,13 +82,17 @@ final class SecurityBaselineToolkitTest extends TestCase
 
         $baseline = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'security-baseline.json');
         self::assertSame('w4-os-business', $baseline['profile_id']);
-        self::assertSame(7, $baseline['summary']['implemented']);
+        self::assertSame(8, $baseline['summary']['implemented']);
         self::assertSame(0, $baseline['summary']['gap']);
 
         $verifier = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'verify-security-baseline.php');
         self::assertNotFalse($verifier);
         self::assertStringContainsString("addResult(\$results, 'authenticated-updates', 'skipped'", $verifier);
         self::assertStringContainsString("addResult(\$results, 'firewall-control-plane'", $verifier);
+        self::assertStringContainsString("addResult(\$results, 'critical-filesystem-permissions'", $verifier);
+        self::assertStringContainsString('function findPermissionViolations(array $expectedPaths): array', $verifier);
+        self::assertStringContainsString("'/etc/default/ufw'", $verifier);
+        self::assertStringContainsString("'/etc/ufw/ufw.conf'", $verifier);
         self::assertStringContainsString("command -v sudo", $verifier);
         self::assertStringContainsString('function resolveBinary(array $candidates): string', $verifier);
         self::assertStringContainsString("'/usr/sbin'", $verifier);
