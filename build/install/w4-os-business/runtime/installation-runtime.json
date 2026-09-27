@@ -15,7 +15,23 @@
         "files": [
             "disk-passphrase.txt",
             "local-user-password.txt"
-        ]
+        ],
+        "policies": {
+            "passphrase": {
+                "ascii_only": true,
+                "min_length": 16,
+                "max_length": 32,
+                "require_digit": true,
+                "require_alpha": true
+            },
+            "password": {
+                "ascii_only": true,
+                "min_length": 12,
+                "max_length": 24,
+                "require_digit": true,
+                "require_alpha": true
+            }
+        }
     },
     "commands": {
         "check_only": "bash run-check-only.sh",

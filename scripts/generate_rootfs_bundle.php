@@ -231,10 +231,10 @@ if command -v mmdebstrap >/dev/null 2>&1; then
     --include={$requiredPackagesForMmdebstrap} \
     --aptopt='Acquire::Retries "3"' \
     {$track} "\${ROOTFS_DIR}" \
-    "deb [signed-by=\${HOST_BOOTSTRAP_KEYRING}] http://deb.debian.org/debian {$track} main"
+    "deb [signed-by=\${HOST_BOOTSTRAP_KEYRING}] https://deb.debian.org/debian {$track} main"
 else
   echo "==> Bootstrap base Debian con debootstrap"
-  debootstrap --keyring="\${HOST_BOOTSTRAP_KEYRING}" --merged-usr --variant=minbase {$track} "\${ROOTFS_DIR}" http://deb.debian.org/debian/
+  debootstrap --keyring="\${HOST_BOOTSTRAP_KEYRING}" --merged-usr --variant=minbase {$track} "\${ROOTFS_DIR}" https://deb.debian.org/debian/
 
   echo "==> Asegurando keyring Debian dentro del rootfs"
   ensure_debian_keyring_in_rootfs "\${ROOTFS_DIR}"

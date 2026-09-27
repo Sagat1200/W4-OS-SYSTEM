@@ -15,6 +15,13 @@
         "installation-plan.json",
         "installation-profile.derived.json",
         "installation-profile.json",
+        "runtime\/RUNTIME_PREPARATION.txt",
+        "runtime\/disk-passphrase.txt.template",
+        "runtime\/install.env",
+        "runtime\/installation-runtime.json",
+        "runtime\/local-user-password.txt.template",
+        "runtime\/run-check-only.sh",
+        "runtime\/run-installation.sh",
         "verify-installation.sh"
     ]
 }

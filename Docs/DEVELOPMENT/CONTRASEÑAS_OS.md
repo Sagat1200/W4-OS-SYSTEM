@@ -30,6 +30,11 @@ Documento de referencia rápida para las credenciales usadas durante la validaci
 - Passphrase LUKS original: `H538cR8kzOJRXZri8gKtUjEWpcM5XQ6S`
 - Passphrase LUKS simple temporal validada: `94628153`
 
+### Reinstalacion preparada el 2026-09-26
+
+- Password temporal regenerada del usuario local para el payload Business endurecido y LF-only: `OLrpPpPOUY9GxoBsboPOmF`
+- Passphrase LUKS temporal regenerada para el payload Business endurecido sin terminador final: `eblQs6wdCkaIUWIb0yfVZc6io3n9gd`
+
 ## Nota operativa
 
 - Las credenciales simples temporales se usaron como workaround por diferencias de layout de teclado en `initramfs` y `tty1`.
