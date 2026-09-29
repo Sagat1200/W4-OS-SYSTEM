@@ -167,6 +167,76 @@ Notas:
 
 ## Automatizacion desde el host con Paramiko
 
+## Playbook runtime `MX-005` Security Baseline
+
+Este flujo valida la imagen instalada sin dejar administracion remota permanente. La excepcion SSH es solo transporte de laboratorio: se instala temporalmente `openssh-server`, se deja `ssh.service` deshabilitado por defecto, se arranca solo en runtime, se abre `ufw allow 22/tcp` para la corrida y se retira todo al final.
+
+### Preparar transporte temporal en Home
+
+Dentro de `W4-OS-Home-GUI`, despues de desbloquear LUKS y entrar como `w4`:
+
+```bash
+printf 'xlt7vdhKEKCPkpL9VfKzlO6\n' | sudo -S sh -lc 'set -e; DEBIAN_FRONTEND=noninteractive apt-get update; DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server; systemctl disable ssh.service || true; systemctl start ssh.service; ufw allow 22/tcp || true; systemctl is-enabled ssh.service || true; systemctl is-active ssh.service; ss -ltnp | grep :22 || true'
+```
+
+Desde PowerShell:
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_security_baseline_via_paramiko.php" `
+  --host 127.0.0.1 `
+  --port 2222 `
+  --username w4 `
+  --password xlt7vdhKEKCPkpL9VfKzlO6 `
+  --bundle-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\w4-os-home" `
+  --remote-root /home/w4/w4-security-baseline `
+  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\validation\w4-os-home" `
+  --connect-wait 120 `
+  --sudo
+```
+
+Limpieza obligatoria dentro de Home:
+
+```bash
+printf 'xlt7vdhKEKCPkpL9VfKzlO6\n' | sudo -S sh -lc 'ufw --force delete allow 22/tcp || true; systemctl stop ssh.service || true; systemctl disable ssh.service || true; DEBIAN_FRONTEND=noninteractive apt-get purge -y openssh-server openssh-sftp-server || true; systemctl is-enabled ssh.service || true; systemctl is-active ssh.service || true'
+```
+
+### Preparar transporte temporal en Business
+
+Dentro de `W4-OS-Business-Test`, despues de desbloquear LUKS y entrar como `w4admin`:
+
+```bash
+printf 'OLrpPpPOUY9GxoBsboPOmF\n' | sudo -S sh -lc 'set -e; DEBIAN_FRONTEND=noninteractive apt-get update; DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server; systemctl disable ssh.service || true; systemctl start ssh.service; ufw allow 22/tcp || true; systemctl is-enabled ssh.service || true; systemctl is-active ssh.service; ss -ltnp | grep :22 || true'
+```
+
+Desde PowerShell:
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_security_baseline_via_paramiko.php" `
+  --host 127.0.0.1 `
+  --port 2223 `
+  --username w4admin `
+  --password OLrpPpPOUY9GxoBsboPOmF `
+  --bundle-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\w4-os-business" `
+  --remote-root /home/w4admin/w4-security-baseline `
+  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\validation\w4-os-business" `
+  --connect-wait 120 `
+  --sudo
+```
+
+Limpieza obligatoria dentro de Business:
+
+```bash
+printf 'OLrpPpPOUY9GxoBsboPOmF\n' | sudo -S sh -lc 'ufw --force delete allow 22/tcp || true; systemctl stop ssh.service || true; systemctl disable ssh.service || true; DEBIAN_FRONTEND=noninteractive apt-get purge -y openssh-server openssh-sftp-server || true; systemctl is-enabled ssh.service || true; systemctl is-active ssh.service || true'
+```
+
+Resultado esperado:
+
+- `security-baseline.json`: `10 implemented`, `0 gap`.
+- `security-baseline-report.json`: `9 passed`, `0 failed`, `1 skipped`.
+- El unico `skipped` esperado es `authenticated-updates`, porque se valida por evidencia firmada de pipeline (`MX-004`).
+- `remote-admin-disabled-by-default` debe seguir pasando aunque `ssh` este activo temporalmente, porque el control comprueba que no este habilitado por defecto.
+- Tras la limpieza, `ssh.service` debe quedar `inactive` o `not-found`.
+
 ### Corrida completa de Home hasta reboot + desbloqueo LUKS
 
 ```powershell

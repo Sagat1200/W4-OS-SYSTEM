@@ -148,8 +148,19 @@ def build_unlock_retry_callback(
     return retry_unlock
 
 
-def run_command(client: paramiko.SSHClient, command: str, timeout: float = 1800) -> tuple[int, str, str]:
-    stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
+def run_command(
+    client: paramiko.SSHClient,
+    command: str,
+    timeout: float = 1800,
+    *,
+    stdin_text: str | None = None,
+    get_pty: bool = False,
+) -> tuple[int, str, str]:
+    stdin, stdout, stderr = client.exec_command(command, timeout=timeout, get_pty=get_pty)
+    if stdin_text is not None:
+        stdin.write(stdin_text)
+        stdin.flush()
+    stdin.channel.shutdown_write()
     output = stdout.read().decode("utf-8", errors="replace")
     error = stderr.read().decode("utf-8", errors="replace")
     return stdout.channel.recv_exit_status(), output, error
@@ -169,6 +180,7 @@ def main() -> int:
     parser.add_argument("--evidence-dir", required=True)
     parser.add_argument("--remote-php", default="php")
     parser.add_argument("--report-name", default="security-baseline-report.json")
+    parser.add_argument("--sudo", action="store_true")
     parser.add_argument("--vm-name")
     parser.add_argument("--luks-passphrase")
     parser.add_argument("--unlock-wait", default=20, type=int)
@@ -184,10 +196,10 @@ def main() -> int:
     evidence_dir = Path(args.evidence_dir).resolve()
     remote_root = args.remote_root.rstrip("/")
     remote_report_path = posixpath.join(remote_root, args.report_name)
-    remote_command = (
-        f"cd {remote_root} && "
-        f"{args.remote_php} ./verify-security-baseline.php {remote_report_path}"
-    )
+    verifier_command = f"{args.remote_php} ./verify-security-baseline.php {remote_report_path}"
+    if args.sudo:
+        verifier_command = f"sudo -S -p '' {verifier_command}"
+    remote_command = f"cd {remote_root} && {verifier_command}"
     local_report_path = evidence_dir / args.report_name
 
     if not bundle_dir.is_dir():
@@ -204,6 +216,7 @@ def main() -> int:
         "bundle_dir": str(bundle_dir),
         "remote_root": remote_root,
         "remote_command": remote_command,
+        "sudo": args.sudo,
         "remote_report_path": remote_report_path,
         "evidence_dir": str(evidence_dir),
         "local_report_path": str(local_report_path),
@@ -252,7 +265,11 @@ def main() -> int:
             log(f"Subiendo bundle a {remote_root}")
             upload_tree(sftp, bundle_dir, remote_root)
             log("Ejecutando verify-security-baseline.php")
-            exit_code, stdout, stderr = run_command(client, remote_command)
+            exit_code, stdout, stderr = run_command(
+                client,
+                remote_command,
+                stdin_text=(args.password + "\n") if args.sudo else None,
+            )
             if stdout:
                 print(stdout, end="")
             if stderr:

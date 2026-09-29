@@ -134,6 +134,27 @@ final class SecurityBaselineToolkit
                 ]
             ),
             $this->buildControl(
+                id: 'firewall-default-deny-incoming',
+                title: 'Firewall activo con entrada denegada por defecto',
+                severity: 'required',
+                category: 'network',
+                implementationState: $this->containsPackage($requiredPackages, $recommendedPackages, 'ufw') ? 'implemented' : 'gap',
+                validationScope: 'runtime',
+                description: 'UFW debe quedar habilitado por configuracion y con politica de entrada denegada por defecto.',
+                expected: [
+                    'ufw_conf' => '/etc/ufw/ufw.conf',
+                    'ufw_default' => '/etc/default/ufw',
+                    'enabled_key' => 'ENABLED',
+                    'enabled_value' => 'yes',
+                    'input_policy_key' => 'DEFAULT_INPUT_POLICY',
+                    'input_policy_value' => 'DROP',
+                ],
+                evidence: [
+                    'Docs/W4-OS/159_W4_OS_FIREWALL_SYSTEM.md',
+                    'scripts/generate_system_overlay.php',
+                ]
+            ),
+            $this->buildControl(
                 id: 'mac-enforcement',
                 title: 'Control MAC presente',
                 severity: 'required',
@@ -143,6 +164,23 @@ final class SecurityBaselineToolkit
                 description: 'La imagen debe poder demostrar un control de mandatory access control activo o al menos instalado.',
                 expected: [
                     'module' => 'apparmor',
+                ],
+                evidence: [
+                    'Docs/W4-OS/158_W4_OS_APPARMOR_ARCHITECTURE.md',
+                    'Docs/W4-OS/157_W4_OS_SECURITY_BASELINE.md',
+                ]
+            ),
+            $this->buildControl(
+                id: 'apparmor-enforced-profiles',
+                title: 'Perfiles AppArmor en modo enforce',
+                severity: 'required',
+                category: 'hardening',
+                implementationState: $this->containsPackage($requiredPackages, $recommendedPackages, 'apparmor') ? 'implemented' : 'gap',
+                validationScope: 'runtime',
+                description: 'AppArmor debe exponer al menos un perfil cargado en modo enforce.',
+                expected: [
+                    'profiles_path' => '/sys/kernel/security/apparmor/profiles',
+                    'minimum_enforced_profiles' => 1,
                 ],
                 evidence: [
                     'Docs/W4-OS/158_W4_OS_APPARMOR_ARCHITECTURE.md',
@@ -254,6 +292,8 @@ final class SecurityBaselineToolkit
         $acceptedFirewallCommands = var_export((array) $this->controlExpectedValue($baseline, 'firewall-control-plane', 'accepted_commands'), true);
         $forbiddenEnabledStates = var_export((array) $this->controlExpectedValue($baseline, 'remote-admin-disabled-by-default', 'enabled_states_forbidden'), true);
         $criticalPermissionPaths = var_export((array) $this->controlExpectedValue($baseline, 'critical-filesystem-permissions', 'paths'), true);
+        $firewallDenyExpected = var_export((array) $this->controlExpected($baseline, 'firewall-default-deny-incoming'), true);
+        $apparmorProfilesExpected = var_export((array) $this->controlExpected($baseline, 'apparmor-enforced-profiles'), true);
 
         return <<<PHP
 <?php
@@ -348,6 +388,67 @@ function formatMode(int \$mode): string
     return sprintf('%04o', \$mode & 07777);
 }
 
+function readConfigValue(string \$path, string \$key): ?string
+{
+    if (!is_readable(\$path)) {
+        return null;
+    }
+
+    \$lines = file(\$path, FILE_IGNORE_NEW_LINES);
+    if (\$lines === false) {
+        return null;
+    }
+
+    foreach (\$lines as \$line) {
+        \$line = trim(\$line);
+        if (\$line === '' || str_starts_with(\$line, '#')) {
+            continue;
+        }
+
+        \$parts = explode('=', \$line, 2);
+        if (count(\$parts) !== 2 || trim(\$parts[0]) !== \$key) {
+            continue;
+        }
+
+        return trim(trim(\$parts[1]), "'\\"");
+    }
+
+    return null;
+}
+
+function countEnforcedAppArmorProfiles(string \$profilesPath): int
+{
+    if (is_readable(\$profilesPath)) {
+        \$lines = file(\$profilesPath, FILE_IGNORE_NEW_LINES);
+        if (\$lines !== false) {
+            \$count = 0;
+            foreach (\$lines as \$line) {
+                if (str_contains(\$line, '(enforce)')) {
+                    \$count++;
+                }
+            }
+
+            return \$count;
+        }
+    }
+
+    \$aaStatus = resolveBinary(['aa-status', 'apparmor_status']);
+    if (\$aaStatus === '') {
+        return 0;
+    }
+
+    \$status = runCommand(escapeshellarg(\$aaStatus));
+    if (\$status['exit_code'] !== 0) {
+        return 0;
+    }
+
+    if (preg_match('/(\\d+)\\s+profiles?\\s+are\\s+in\\s+enforce\\s+mode/i', \$status['stdout'], \$matches) === 1) {
+        return (int) \$matches[1];
+    }
+
+    return 0;
+}
+
 /**
  * @param list<array<string, mixed>> \$expectedPaths
  * @return list<string>
@@ -409,6 +510,8 @@ function findPermissionViolations(array \$expectedPaths): array
 \$acceptedFirewallCommands = {$acceptedFirewallCommands};
 \$forbiddenEnabledStates = {$forbiddenEnabledStates};
 \$criticalPermissionPaths = {$criticalPermissionPaths};
+\$firewallDenyExpected = {$firewallDenyExpected};
+\$apparmorProfilesExpected = {$apparmorProfilesExpected};
 
 \$rootSource = runCommand("findmnt -n -o SOURCE /");
 if (\$rootSource['exit_code'] === 0 && str_starts_with(\$rootSource['stdout'], \$rootPrefix)) {
@@ -447,11 +550,27 @@ if (\$firewallCommand !== '') {
     addResult(\$results, 'firewall-control-plane', 'failed', 'No se encontro ufw ni nft en la imagen');
 }
 
+\$enabledValue = readConfigValue((string) \$firewallDenyExpected['ufw_conf'], (string) \$firewallDenyExpected['enabled_key']);
+\$inputPolicy = readConfigValue((string) \$firewallDenyExpected['ufw_default'], (string) \$firewallDenyExpected['input_policy_key']);
+if (strcasecmp((string) \$enabledValue, (string) \$firewallDenyExpected['enabled_value']) === 0 && strtoupper((string) \$inputPolicy) === (string) \$firewallDenyExpected['input_policy_value']) {
+    addResult(\$results, 'firewall-default-deny-incoming', 'passed', 'UFW habilitado por configuracion con DEFAULT_INPUT_POLICY=' . \$inputPolicy);
+} else {
+    addResult(\$results, 'firewall-default-deny-incoming', 'failed', 'UFW esperado ENABLED=' . \$firewallDenyExpected['enabled_value'] . ' y DEFAULT_INPUT_POLICY=' . \$firewallDenyExpected['input_policy_value'] . '; obtenido ENABLED=' . (string) \$enabledValue . ' DEFAULT_INPUT_POLICY=' . (string) \$inputPolicy);
+}
+
 \$apparmor = runCommand("test -r /sys/module/apparmor/parameters/enabled && grep -qx 'Y' /sys/module/apparmor/parameters/enabled");
 if (\$apparmor['exit_code'] === 0) {
     addResult(\$results, 'mac-enforcement', 'passed', 'AppArmor aparece activo en el kernel');
 } else {
     addResult(\$results, 'mac-enforcement', 'failed', 'No se pudo confirmar AppArmor activo');
+}
+
+\$enforcedProfiles = countEnforcedAppArmorProfiles((string) \$apparmorProfilesExpected['profiles_path']);
+\$minimumEnforcedProfiles = (int) \$apparmorProfilesExpected['minimum_enforced_profiles'];
+if (\$enforcedProfiles >= \$minimumEnforcedProfiles) {
+    addResult(\$results, 'apparmor-enforced-profiles', 'passed', 'AppArmor reporta ' . \$enforcedProfiles . ' perfiles en enforce');
+} else {
+    addResult(\$results, 'apparmor-enforced-profiles', 'failed', 'AppArmor no alcanza el minimo de perfiles enforce: ' . \$enforcedProfiles . '/' . \$minimumEnforcedProfiles);
 }
 
 \$permissionViolations = findPermissionViolations(\$criticalPermissionPaths);
@@ -531,13 +650,23 @@ TXT;
      */
     private function controlExpectedValue(array $baseline, string $controlId, string $field): mixed
     {
+        $expected = $this->controlExpected($baseline, $controlId);
+
+        return $expected[$field] ?? null;
+    }
+
+    /**
+     * @param array<string, mixed> $baseline
+     * @return array<string, mixed>
+     */
+    private function controlExpected(array $baseline, string $controlId): array
+    {
         /** @var list<array<string, mixed>> $controls */
         $controls = $baseline['controls'];
         foreach ($controls as $control) {
             if (($control['id'] ?? null) === $controlId) {
                 /** @var array<string, mixed> $expected */
-                $expected = $control['expected'];
-                return $expected[$field] ?? null;
+                return $control['expected'];
             }
         }
 

@@ -90,6 +90,67 @@ function formatMode(int $mode): string
     return sprintf('%04o', $mode & 07777);
 }
 
+function readConfigValue(string $path, string $key): ?string
+{
+    if (!is_readable($path)) {
+        return null;
+    }
+
+    $lines = file($path, FILE_IGNORE_NEW_LINES);
+    if ($lines === false) {
+        return null;
+    }
+
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || str_starts_with($line, '#')) {
+            continue;
+        }
+
+        $parts = explode('=', $line, 2);
+        if (count($parts) !== 2 || trim($parts[0]) !== $key) {
+            continue;
+        }
+
+        return trim(trim($parts[1]), "'\"");
+    }
+
+    return null;
+}
+
+function countEnforcedAppArmorProfiles(string $profilesPath): int
+{
+    if (is_readable($profilesPath)) {
+        $lines = file($profilesPath, FILE_IGNORE_NEW_LINES);
+        if ($lines !== false) {
+            $count = 0;
+            foreach ($lines as $line) {
+                if (str_contains($line, '(enforce)')) {
+                    $count++;
+                }
+            }
+
+            return $count;
+        }
+    }
+
+    $aaStatus = resolveBinary(['aa-status', 'apparmor_status']);
+    if ($aaStatus === '') {
+        return 0;
+    }
+
+    $status = runCommand(escapeshellarg($aaStatus));
+    if ($status['exit_code'] !== 0) {
+        return 0;
+    }
+
+    if (preg_match('/(\d+)\s+profiles?\s+are\s+in\s+enforce\s+mode/i', $status['stdout'], $matches) === 1) {
+        return (int) $matches[1];
+    }
+
+    return 0;
+}
+
 /**
  * @param list<array<string, mixed>> $expectedPaths
  * @return list<string>
@@ -233,6 +294,18 @@ $criticalPermissionPaths = array (
     'mode' => '1777',
   ),
 );
+$firewallDenyExpected = array (
+  'ufw_conf' => '/etc/ufw/ufw.conf',
+  'ufw_default' => '/etc/default/ufw',
+  'enabled_key' => 'ENABLED',
+  'enabled_value' => 'yes',
+  'input_policy_key' => 'DEFAULT_INPUT_POLICY',
+  'input_policy_value' => 'DROP',
+);
+$apparmorProfilesExpected = array (
+  'profiles_path' => '/sys/kernel/security/apparmor/profiles',
+  'minimum_enforced_profiles' => 1,
+);
 
 $rootSource = runCommand("findmnt -n -o SOURCE /");
 if ($rootSource['exit_code'] === 0 && str_starts_with($rootSource['stdout'], $rootPrefix)) {
@@ -271,11 +344,27 @@ if ($firewallCommand !== '') {
     addResult($results, 'firewall-control-plane', 'failed', 'No se encontro ufw ni nft en la imagen');
 }
 
+$enabledValue = readConfigValue((string) $firewallDenyExpected['ufw_conf'], (string) $firewallDenyExpected['enabled_key']);
+$inputPolicy = readConfigValue((string) $firewallDenyExpected['ufw_default'], (string) $firewallDenyExpected['input_policy_key']);
+if (strcasecmp((string) $enabledValue, (string) $firewallDenyExpected['enabled_value']) === 0 && strtoupper((string) $inputPolicy) === (string) $firewallDenyExpected['input_policy_value']) {
+    addResult($results, 'firewall-default-deny-incoming', 'passed', 'UFW habilitado por configuracion con DEFAULT_INPUT_POLICY=' . $inputPolicy);
+} else {
+    addResult($results, 'firewall-default-deny-incoming', 'failed', 'UFW esperado ENABLED=' . $firewallDenyExpected['enabled_value'] . ' y DEFAULT_INPUT_POLICY=' . $firewallDenyExpected['input_policy_value'] . '; obtenido ENABLED=' . (string) $enabledValue . ' DEFAULT_INPUT_POLICY=' . (string) $inputPolicy);
+}
+
 $apparmor = runCommand("test -r /sys/module/apparmor/parameters/enabled && grep -qx 'Y' /sys/module/apparmor/parameters/enabled");
 if ($apparmor['exit_code'] === 0) {
     addResult($results, 'mac-enforcement', 'passed', 'AppArmor aparece activo en el kernel');
 } else {
     addResult($results, 'mac-enforcement', 'failed', 'No se pudo confirmar AppArmor activo');
+}
+
+$enforcedProfiles = countEnforcedAppArmorProfiles((string) $apparmorProfilesExpected['profiles_path']);
+$minimumEnforcedProfiles = (int) $apparmorProfilesExpected['minimum_enforced_profiles'];
+if ($enforcedProfiles >= $minimumEnforcedProfiles) {
+    addResult($results, 'apparmor-enforced-profiles', 'passed', 'AppArmor reporta ' . $enforcedProfiles . ' perfiles en enforce');
+} else {
+    addResult($results, 'apparmor-enforced-profiles', 'failed', 'AppArmor no alcanza el minimo de perfiles enforce: ' . $enforcedProfiles . '/' . $minimumEnforcedProfiles);
 }
 
 $permissionViolations = findPermissionViolations($criticalPermissionPaths);

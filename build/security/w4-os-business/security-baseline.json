@@ -101,6 +101,27 @@
             ]
         },
         {
+            "id": "firewall-default-deny-incoming",
+            "title": "Firewall activo con entrada denegada por defecto",
+            "severity": "required",
+            "category": "network",
+            "implementation_state": "implemented",
+            "validation_scope": "runtime",
+            "description": "UFW debe quedar habilitado por configuracion y con politica de entrada denegada por defecto.",
+            "expected": {
+                "ufw_conf": "/etc/ufw/ufw.conf",
+                "ufw_default": "/etc/default/ufw",
+                "enabled_key": "ENABLED",
+                "enabled_value": "yes",
+                "input_policy_key": "DEFAULT_INPUT_POLICY",
+                "input_policy_value": "DROP"
+            },
+            "evidence": [
+                "Docs/W4-OS/159_W4_OS_FIREWALL_SYSTEM.md",
+                "scripts/generate_system_overlay.php"
+            ]
+        },
+        {
             "id": "mac-enforcement",
             "title": "Control MAC presente",
             "severity": "required",
@@ -110,6 +131,23 @@
             "description": "La imagen debe poder demostrar un control de mandatory access control activo o al menos instalado.",
             "expected": {
                 "module": "apparmor"
+            },
+            "evidence": [
+                "Docs/W4-OS/158_W4_OS_APPARMOR_ARCHITECTURE.md",
+                "Docs/W4-OS/157_W4_OS_SECURITY_BASELINE.md"
+            ]
+        },
+        {
+            "id": "apparmor-enforced-profiles",
+            "title": "Perfiles AppArmor en modo enforce",
+            "severity": "required",
+            "category": "hardening",
+            "implementation_state": "implemented",
+            "validation_scope": "runtime",
+            "description": "AppArmor debe exponer al menos un perfil cargado en modo enforce.",
+            "expected": {
+                "profiles_path": "/sys/kernel/security/apparmor/profiles",
+                "minimum_enforced_profiles": 1
             },
             "evidence": [
                 "Docs/W4-OS/158_W4_OS_APPARMOR_ARCHITECTURE.md",
@@ -219,7 +257,7 @@
         }
     ],
     "summary": {
-        "implemented": 8,
+        "implemented": 10,
         "gap": 0
     }
 }

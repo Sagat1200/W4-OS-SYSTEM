@@ -37,14 +37,18 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertSame('security-baseline', $baseline['kind']);
         self::assertSame('w4-os-home', $baseline['profile_id']);
         self::assertSame('installed-image', $baseline['scope']);
-        self::assertSame(8, $baseline['summary']['implemented']);
+        self::assertSame(10, $baseline['summary']['implemented']);
         self::assertSame(0, $baseline['summary']['gap']);
 
         $controls = $this->indexControls($baseline['controls']);
         self::assertSame('implemented', $controls['encrypted-root']['implementation_state']);
         self::assertSame('runtime', $controls['encrypted-root']['validation_scope']);
         self::assertSame('implemented', $controls['firewall-control-plane']['implementation_state']);
+        self::assertSame('implemented', $controls['firewall-default-deny-incoming']['implementation_state']);
+        self::assertSame('DROP', $controls['firewall-default-deny-incoming']['expected']['input_policy_value']);
         self::assertSame('implemented', $controls['mac-enforcement']['implementation_state']);
+        self::assertSame('implemented', $controls['apparmor-enforced-profiles']['implementation_state']);
+        self::assertSame(1, $controls['apparmor-enforced-profiles']['expected']['minimum_enforced_profiles']);
         self::assertSame('implemented', $controls['critical-filesystem-permissions']['implementation_state']);
         self::assertSame('runtime', $controls['critical-filesystem-permissions']['validation_scope']);
         self::assertSame('/etc/default/ufw', $controls['critical-filesystem-permissions']['expected']['paths'][5]['path']);
@@ -82,13 +86,18 @@ final class SecurityBaselineToolkitTest extends TestCase
 
         $baseline = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'security-baseline.json');
         self::assertSame('w4-os-business', $baseline['profile_id']);
-        self::assertSame(8, $baseline['summary']['implemented']);
+        self::assertSame(10, $baseline['summary']['implemented']);
         self::assertSame(0, $baseline['summary']['gap']);
 
         $verifier = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'verify-security-baseline.php');
         self::assertNotFalse($verifier);
         self::assertStringContainsString("addResult(\$results, 'authenticated-updates', 'skipped'", $verifier);
         self::assertStringContainsString("addResult(\$results, 'firewall-control-plane'", $verifier);
+        self::assertStringContainsString("addResult(\$results, 'firewall-default-deny-incoming'", $verifier);
+        self::assertStringContainsString('function readConfigValue(string $path, string $key): ?string', $verifier);
+        self::assertStringContainsString("DEFAULT_INPUT_POLICY", $verifier);
+        self::assertStringContainsString("addResult(\$results, 'apparmor-enforced-profiles'", $verifier);
+        self::assertStringContainsString('function countEnforcedAppArmorProfiles(string $profilesPath): int', $verifier);
         self::assertStringContainsString("addResult(\$results, 'critical-filesystem-permissions'", $verifier);
         self::assertStringContainsString('function findPermissionViolations(array $expectedPaths): array', $verifier);
         self::assertStringContainsString("'/etc/default/ufw'", $verifier);
@@ -201,6 +210,52 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertSame(10, $payload['unlock_retry_interval']);
         self::assertSame(12, $payload['unlock_retries']);
         self::assertSame(180, $payload['unlock_window']);
+    }
+
+    public function testRunSecurityBaselineViaParamikoDryRunSupportsSudoVerifier(): void
+    {
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-home-baseline-sudo';
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'evidence-sudo';
+
+        $generate = $this->runPhpScript(
+            $this->fixturePath('scripts/generate_security_baseline_bundle.php'),
+            [
+                '--profile',
+                'w4-os-home',
+                '--bundle-dir',
+                $bundleDir,
+            ]
+        );
+        self::assertSame(0, $generate['exitCode'], $generate['stderr']);
+
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/run_security_baseline_via_paramiko.php'),
+            [
+                '--host',
+                '127.0.0.1',
+                '--port',
+                '2222',
+                '--username',
+                'w4',
+                '--password',
+                'W4login1234',
+                '--bundle-dir',
+                $bundleDir,
+                '--remote-root',
+                '/home/w4/w4-security-baseline',
+                '--evidence-dir',
+                $evidenceDir,
+                '--sudo',
+                '--dry-run',
+            ]
+        );
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertTrue($payload['sudo']);
+        self::assertStringContainsString("sudo -S -p '' php ./verify-security-baseline.php", $payload['remote_command']);
+        self::assertStringNotContainsString('W4login1234', $payload['remote_command']);
     }
 
     /**

@@ -2,7 +2,7 @@
     "security_baseline_report_schema_version": 1,
     "kind": "security-baseline-report",
     "profile_id": "w4-os-business",
-    "generated_at": "2026-09-27T05:36:07+00:00",
+    "generated_at": "2026-09-29T08:16:24+00:00",
     "results": [
         {
             "id": "encrypted-root",
@@ -30,9 +30,19 @@
             "detail": "Herramienta de firewall disponible: /usr/sbin/ufw"
         },
         {
+            "id": "firewall-default-deny-incoming",
+            "status": "passed",
+            "detail": "UFW habilitado por configuracion con DEFAULT_INPUT_POLICY=DROP"
+        },
+        {
             "id": "mac-enforcement",
             "status": "passed",
             "detail": "AppArmor aparece activo en el kernel"
+        },
+        {
+            "id": "apparmor-enforced-profiles",
+            "status": "passed",
+            "detail": "AppArmor reporta 3 perfiles en enforce"
         },
         {
             "id": "critical-filesystem-permissions",
@@ -46,7 +56,7 @@
         }
     ],
     "summary": {
-        "passed": 7,
+        "passed": 9,
         "failed": 0,
         "skipped": 1
     }
