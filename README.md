@@ -59,6 +59,8 @@ Actualmente, **W4 OS System** ya supero la fase puramente documental inicial y c
 - `php-cli` formalizado en el baseline base para sostener el runtime actual del coordinador de `Update y recovery`,
 - `btrfs-progs` formalizado en el baseline base para sostener snapshots Btrfs durante `MX-004`,
 - apertura tecnica de `W4 OS Server` con Base sin desktop obligatorio, perfil Server headless, politica inicial separada, propagacion de Debian `trixie` como codename efectivo y publisher capaz de generar `--package-set server`,
+- instalador MVP de `W4 OS Server` con perfil unattended, inventario Hyper-V de laboratorio y bundle `build/install/w4-os-server`,
+- `W4 OS Server` materializado en WSL con rootfs Debian `trixie`, arbol live, ISO `build/iso-output/w4-os-server/w4-os-server-live-amd64.iso` y manifiesto sin paquetes desktop prohibidos,
 - base PHP estructurada como paquete Composer,
 - y suite PHPUnit para toolkits y scripts principales.
 
@@ -85,7 +87,11 @@ El siguiente ciclo tecnico activo corresponde a `MX-012 · W4 OS Server bootstra
 - mantener Home y Business funcionales con desktop explicito,
 - fijar Debian `trixie` como codename efectivo del bootstrap,
 - generar `build-input`, `rootfs bundle`, overlay, live, ISO y repositorio W4 para `w4-os-server`,
-- y validar por PHPUnit que Server no hereda `w4-desktop-meta`, `os-prober`, PipeWire ni portales XDG.
+- preparar el primer perfil de instalacion Server,
+- materializar la ISO Server real en WSL,
+- y validar por PHPUnit y manifiesto que Server no hereda `w4-desktop-meta`, `os-prober`, PipeWire ni portales XDG.
+
+El siguiente paso operativo de `MX-012` es arrancar esa ISO en VM UEFI con disco desechable, capturar inventario real, ejecutar el instalador Server y verificar primer boot con LUKS/SSH.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 

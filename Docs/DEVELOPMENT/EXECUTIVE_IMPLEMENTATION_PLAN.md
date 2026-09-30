@@ -147,6 +147,8 @@ Resultado ejecutivo esperado:
 - Perfil `w4-os-server` resoluble, con SSH permanente y sin paquetes desktop.
 - Politica Server separada de los manifests para evitar que el cargador actual la interprete como perfil.
 - `build-input`, `rootfs bundle`, overlay y repositorio W4 capaces de distinguir Server por identidad.
+- Perfil de instalacion Server MVP generado con layout cifrado y subvolumen `/srv`.
+- Rootfs Debian `trixie`, arbol live e ISO Server materializados en WSL con manifiesto headless verificable.
 - Pruebas PHPUnit que impidan fallback Home y arrastre de `w4-desktop-meta`.
 
 Entregables tecnicos obligatorios:
@@ -157,9 +159,11 @@ Entregables tecnicos obligatorios:
 4. `config/editions/server/policy.json` como contrato operativo inicial.
 5. Generadores comunes actualizados para `codename=trixie`, branding Server y `--package-set server`.
 6. Artefactos inmediatos regenerados y suite PHPUnit completa en verde.
+7. Perfil y bundle de instalacion Server preparados para VM vacia.
+8. ISO Server materializada en `build/iso-output/w4-os-server/w4-os-server-live-amd64.iso`.
 
 Siguiente paso despues de este corte:
-materializar `rootfs`, `live` e ISO Server en Linux/WSL, agregar perfil de instalacion Server y ejecutar regresion de composicion Home/Business.
+ejecutar regresion de composicion Home/Business y validar arranque/instalacion Server en VM UEFI con disco virtual desechable.
 
 ## Referencia historica · MX-004
 

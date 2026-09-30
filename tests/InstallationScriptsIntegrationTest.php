@@ -65,6 +65,46 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'CHECK_ONLY_PREPARATION.txt');
     }
 
+    public function testPrepareInstallationBundleSupportsServerProfile(): void
+    {
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'prepared-server-bundle';
+        $inventoryPath = $this->fixturePath('examples/install/hyperv-server-empty-disk.inventory.json');
+
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/prepare_installation_bundle.php'),
+            [
+                '--profile',
+                'w4-os-server',
+                '--disk-inventory',
+                $inventoryPath,
+                '--bundle-dir',
+                $bundleDir,
+            ]
+        );
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('ok', $payload['status']);
+        self::assertSame('/dev/sda', $payload['selected_disk']);
+
+        $derivedProfile = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-profile.derived.json');
+        self::assertSame('w4-os-server', $derivedProfile['build_profile_id']);
+        self::assertSame('server', $derivedProfile['edition']);
+        self::assertSame('w4-server-vm', $derivedProfile['identity']['hostname']);
+
+        $plan = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-plan.json');
+        self::assertSame('w4-os-server', $plan['profile_id']);
+        self::assertSame('server', $plan['summary']['edition']);
+        self::assertContains(
+            ['name' => '@srv', 'mountpoint' => '/srv'],
+            $plan['storage']['btrfs']['subvolumes']
+        );
+
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'apply-installation.sh');
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'verify-installation.sh');
+    }
+
     public function testPrepareInstallationBundleRejectsExplicitReadOnlyDisk(): void
     {
         $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'prepared-home-readonly';

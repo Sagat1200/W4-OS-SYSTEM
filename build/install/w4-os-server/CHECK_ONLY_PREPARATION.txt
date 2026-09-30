@@ -1,0 +1,14 @@
+W4 OS Check-Only Preparation
+
+Perfil: W4 OS Server
+Disco objetivo: /dev/sda
+Inventario usado: examples\install\hyperv-server-empty-disk.inventory.json
+Perfil derivado: build\install\w4-os-server\installation-profile.derived.json
+Bundle: build\install\w4-os-server
+
+Secuencia recomendada dentro de la ISO live:
+1. Confirmar que el disco sigue vacio y coincide con el selector del perfil derivado.
+2. Ejecutar `bash apply-installation.sh` sin `W4_INSTALL_EXECUTE=1` para validar el binding y el estado del disco.
+3. Ejecutar `bash verify-installation.sh` solo despues de una corrida real o de un montaje manual del target.
+
+Este bundle sigue sin escribir en disco por defecto. La instalacion real exige secretos externos y una fuente explicita de rootfs o squashfs.

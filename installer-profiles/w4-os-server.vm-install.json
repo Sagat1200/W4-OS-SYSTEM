@@ -1,0 +1,77 @@
+{
+  "installation_schema_version": 1,
+  "kind": "installation-profile",
+  "id": "w4-os-server-vm-empty-disk",
+  "name": "W4 OS Server VM Empty Disk",
+  "edition": "server",
+  "build_profile_id": "w4-os-server",
+  "target": {
+    "disk_selector": {
+      "serial": "hyperv-vm-disk-server-001",
+      "wwid": "wwid-hyperv-vm-disk-server-001"
+    },
+    "expected_state": "empty",
+    "confirm_destroy": true
+  },
+  "storage": {
+    "table": "gpt",
+    "layout": "btrfs-luks2",
+    "esp": {
+      "size_mib": 512
+    },
+    "boot": {
+      "size_mib": 2048
+    },
+    "root": {
+      "luks_name": "cryptroot",
+      "subvolumes": [
+        {
+          "name": "@",
+          "mountpoint": "/"
+        },
+        {
+          "name": "@srv",
+          "mountpoint": "/srv"
+        },
+        {
+          "name": "@log",
+          "mountpoint": "/var/log"
+        },
+        {
+          "name": "@cache",
+          "mountpoint": "/var/cache"
+        },
+        {
+          "name": "@data",
+          "mountpoint": "/var/lib/w4"
+        }
+      ]
+    }
+  },
+  "identity": {
+    "locale": "es_DO.UTF-8",
+    "keyboard": "latam",
+    "hostname": "w4-server-vm",
+    "account": {
+      "username": "w4admin",
+      "display_name": "W4 Server Administrator",
+      "password_source": "secret://install/server-local-password"
+    }
+  },
+  "security": {
+    "encryption": {
+      "enabled": true,
+      "type": "luks2-passphrase",
+      "passphrase_source": "secret://install/server-disk-passphrase"
+    }
+  },
+  "installer": {
+    "engine": "debian-compatible-mvp",
+    "revalidate_before_write": true
+  },
+  "notes": [
+    "Perfil MVP para VM Server vacia en Hyper-V.",
+    "Instala una composicion headless administrable por SSH permanente.",
+    "No habilita roles de aplicacion; los roles Server se agregan por perfiles posteriores."
+  ]
+}

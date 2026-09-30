@@ -1,0 +1,30 @@
+{
+  "inventory_schema_version": 1,
+  "kind": "disk-inventory",
+  "id": "hyperv-server-empty-disk",
+  "generated_by": "manual-sample",
+  "disks": [
+    {
+      "device": "/dev/sda",
+      "serial": "hyperv-vm-disk-server-001",
+      "wwid": "wwid-hyperv-vm-disk-server-001",
+      "by_path": "pci-0000:00:07.0-scsi-0:0:0:0",
+      "size_bytes": 68719476736,
+      "is_installation_media": false,
+      "has_partitions": false,
+      "has_filesystem_signatures": false,
+      "read_only": false
+    },
+    {
+      "device": "/dev/sr0",
+      "serial": "hyperv-install-media-server",
+      "wwid": "wwid-hyperv-install-media-server",
+      "by_path": "pci-0000:00:07.1-ata-1",
+      "size_bytes": 4294967296,
+      "is_installation_media": true,
+      "has_partitions": true,
+      "has_filesystem_signatures": true,
+      "read_only": true
+    }
+  ]
+}

@@ -46,6 +46,36 @@ final class InstallerToolkitTest extends TestCase
         self::assertContains('first-boot', $plan['summary']['requires_post_install_validation']);
     }
 
+    public function testCreateServerInstallationPlanFromHypervInventory(): void
+    {
+        $toolkit = new InstallerToolkit();
+        $buildInput = $this->readJson('build/inputs/w4-os-server.build-input.json');
+        $installationProfile = $this->readJson('installer-profiles/w4-os-server.vm-install.json');
+        $inventory = $this->readJson('examples/install/hyperv-server-empty-disk.inventory.json');
+
+        $toolkit->validateBuildInput($buildInput, 'build/inputs/w4-os-server.build-input.json');
+        $toolkit->validateInstallationProfile($installationProfile, 'installer-profiles/w4-os-server.vm-install.json');
+        $toolkit->validateDiskInventory($inventory, 'examples/install/hyperv-server-empty-disk.inventory.json');
+
+        $plan = $toolkit->createInstallationPlan($installationProfile, $buildInput, $inventory);
+
+        self::assertSame('installation-plan', $plan['kind']);
+        self::assertSame('w4-os-server', $plan['profile_id']);
+        self::assertSame('server', $plan['summary']['edition']);
+        self::assertSame('/dev/sda', $plan['plan_binding']['selected_disk']['device']);
+        self::assertSame('w4-server-vm', $plan['identity']['hostname']);
+        self::assertSame('w4admin', $plan['identity']['user']['username']);
+        self::assertSame('secret://install/server-local-password', $plan['identity']['user']['password_source']);
+        self::assertSame(
+            'secret://install/server-disk-passphrase',
+            $plan['storage']['encryption']['passphrase_source']
+        );
+        self::assertContains(
+            ['name' => '@srv', 'mountpoint' => '/srv'],
+            $plan['storage']['btrfs']['subvolumes']
+        );
+    }
+
     public function testCreateInstallationPlanRejectsAmbiguousSelector(): void
     {
         $toolkit = new InstallerToolkit();

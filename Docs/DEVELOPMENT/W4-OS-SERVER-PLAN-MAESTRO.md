@@ -1,6 +1,6 @@
 # W4 OS Server — bootstrap desde Business y desarrollo independiente
 
-**Documento operativo y de arquitectura · 30 de septiembre de 2026 · revisión 2**
+**Documento operativo y de arquitectura · 30 de septiembre de 2026 · revisión 4**
 
 **Workspace Windows previsto:** `C:\W4\Packages\W4-OS SERVER`
 
@@ -8,7 +8,7 @@
 
 ## 1. Alcance, evidencia y significado de «clonar»
 
-Este documento entrega en una sola pieza el procedimiento de bootstrap, la arquitectura objetivo, los archivos que deben crearse, los cambios del motor compartido y los criterios para construir y validar Server. La revisión inicial documentaba la ejecución esperada; al cierre de `C-092` ya existe un primer corte técnico P0 en este checkout común: perfil Server, política separada, Base sin desktop obligatorio, propagación de `codename=trixie`, overlay con identidad Server, recetas `rootfs`/`live`/`iso` generadas y publisher con `--package-set server`. Todavía no se ha materializado una ISO Server en Linux/WSL ni probado una instalación Server.
+Este documento entrega en una sola pieza el procedimiento de bootstrap, la arquitectura objetivo, los archivos que deben crearse, los cambios del motor compartido y los criterios para construir y validar Server. La revisión inicial documentaba la ejecución esperada; al cierre de `C-092` ya existe un primer corte técnico P0 en este checkout común: perfil Server, política separada, Base sin desktop obligatorio, propagación de `codename=trixie`, overlay con identidad Server, recetas `rootfs`/`live`/`iso` generadas y publisher con `--package-set server`. En `C-093` se añadió el perfil de instalación Server MVP, inventario Hyper-V de laboratorio, bundle `build/install/w4-os-server` y cobertura PHPUnit del instalador. En `C-094` se materializaron en WSL el `rootfs`, el arbol live y la ISO Server `build/iso-output/w4-os-server/w4-os-server-live-amd64.iso`, con checksum `152b1690a29ad660ad6eb69e6a2d004c66e335b0fcf9108b69d4bc93f58ddca4` y manifiesto sin paquetes desktop prohibidos. Todavía no se ha probado una instalación Server en VM.
 
 Se recuperó la conversación «Análisis del repositorio» y se consultaron directamente archivos de `Sagat1200/W4-OS-SYSTEM` en su rama predeterminada. La inspección es selectiva, no una auditoría completa ni una reproducción de sus pruebas. Las validaciones Home/Business que describe el README son evidencia declarada por el proyecto; deben repetirse para Server.
 
@@ -882,7 +882,7 @@ Salida: composición Server válida, aún sin promesa de ISO operativa.
 
 ### P1 — primera PoC instalable
 
-- [ ] Debian trixie real en rootfs y sources; ningún uso accidental de testing upstream.
+- [x] Debian trixie real en rootfs y sources; ningún uso accidental de testing upstream.
 - [ ] Paquetes W4 requeridos existen y se instalan desde repo de laboratorio firmado.
 - [ ] ISO amd64 arranca en UEFI sin GUI.
 - [ ] Instalador por consola instala en disco virtual con GPT/ESP/boot/LUKS2/Btrfs.
@@ -989,9 +989,9 @@ Cada ADR debe registrar contexto, alternativas, consecuencias, responsable, fech
 7. [ ] Generalizar catálogo del repositorio y crear paquetes funcionales/metapaquete.
 8. [ ] Fijar trixie hasta el bootstrap y sources efectivos.
 9. [ ] Añadir defaults de systemd/SSH, red, firewall y limpieza de identidad live.
-10. [ ] Adaptar instalador al perfil Server y validar en modo plan.
-11. [ ] Ejecutar validación, generar recetas y materializar en Linux.
-12. [ ] Inspeccionar paquetes/servicios de rootfs, live y target: no desktop.
+10. [x] Adaptar instalador al perfil Server y validar en modo plan.
+11. [x] Ejecutar validación, generar recetas y materializar `rootfs`, live e ISO en Linux/WSL.
+12. [x] Inspeccionar paquetes/servicios de rootfs y live/ISO: no desktop.
 13. [ ] Instalar en VM UEFI con disco virtual desechable y probar reboot LUKS/SSH.
 14. [ ] Probar seguridad desde consola y segunda VM.
 15. [ ] Ejecutar update firmado, fallo controlado y recovery completo.
