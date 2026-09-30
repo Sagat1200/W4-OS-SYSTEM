@@ -149,6 +149,9 @@ Resultado ejecutivo esperado:
 - `build-input`, `rootfs bundle`, overlay y repositorio W4 capaces de distinguir Server por identidad.
 - Perfil de instalacion Server MVP generado con layout cifrado y subvolumen `/srv`.
 - Rootfs Debian `trixie`, arbol live e ISO Server materializados en WSL con manifiesto headless verificable.
+- Preflight VM y smoke live Server confirmados en VirtualBox EFI con SSH activo y disco desechable visible.
+- Instalacion Server completada en VM desechable con LUKS2, Btrfs, primer boot desde disco y SSH validado.
+- Baseline runtime Server ejecutado; el fix de overlay live/firstboot queda implementado en generadores y cubierto por PHPUnit.
 - Pruebas PHPUnit que impidan fallback Home y arrastre de `w4-desktop-meta`.
 
 Entregables tecnicos obligatorios:
@@ -161,9 +164,12 @@ Entregables tecnicos obligatorios:
 6. Artefactos inmediatos regenerados y suite PHPUnit completa en verde.
 7. Perfil y bundle de instalacion Server preparados para VM vacia.
 8. ISO Server materializada en `build/iso-output/w4-os-server/w4-os-server-live-amd64.iso`.
+9. Preflight y smoke live Server trazados con VM desechable `W4-OS-Server-Smoke`.
+10. Instalacion Server validada con `verify-installation.sh`, primer boot LUKS y SSH `w4admin`.
+11. Baseline runtime Server con evidencia inicial/remediada y correccion de transporte del `system-overlay` al live bundle.
 
 Siguiente paso despues de este corte:
-ejecutar regresion de composicion Home/Business y validar arranque/instalacion Server en VM UEFI con disco virtual desechable.
+regenerar live/ISO Server con el fix de overlay, reinstalar una VM fresca para validar `w4-firstboot`/UFW sin remediacion manual, decidir el contrato SSH Server y despues ejecutar regresion de composicion Home/Business.
 
 ## Referencia historica · MX-004
 

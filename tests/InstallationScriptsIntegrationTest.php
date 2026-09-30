@@ -105,6 +105,47 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'verify-installation.sh');
     }
 
+    public function testPrepareInstallationBundleSupportsServerVirtualBoxSmokeInventory(): void
+    {
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'prepared-server-vbox-smoke-bundle';
+        $inventoryPath = $this->fixturePath('examples/install/virtualbox-server-smoke.inventory.json');
+
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/prepare_installation_bundle.php'),
+            [
+                '--profile',
+                'w4-os-server',
+                '--disk-inventory',
+                $inventoryPath,
+                '--bundle-dir',
+                $bundleDir,
+            ]
+        );
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('ok', $payload['status']);
+        self::assertSame('/dev/sda', $payload['selected_disk']);
+        self::assertSame('VBOX_HARDDISK_VB411f3f48-4e00630d', $payload['selector']['serial']);
+
+        $derivedProfile = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-profile.derived.json');
+        self::assertSame('w4-os-server', $derivedProfile['build_profile_id']);
+        self::assertSame('server', $derivedProfile['edition']);
+        self::assertSame(
+            'pci-0000:00:0d.0-ata-1.0',
+            $derivedProfile['target']['disk_selector']['by_path']
+        );
+
+        $plan = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-plan.json');
+        self::assertSame(34359738368, $plan['plan_binding']['selected_disk']['size_bytes']);
+        self::assertSame('server', $plan['summary']['edition']);
+        self::assertContains(
+            ['name' => '@srv', 'mountpoint' => '/srv'],
+            $plan['storage']['btrfs']['subvolumes']
+        );
+    }
+
     public function testPrepareInstallationBundleRejectsExplicitReadOnlyDisk(): void
     {
         $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'prepared-home-readonly';
@@ -243,6 +284,9 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('KEYMAP=${CONSOLE_KEYMAP_VALUE}', $applyScript);
         self::assertStringContainsString('cat > "${TARGET_ROOT}/etc/vconsole.conf" <<EOF', $applyScript);
         self::assertStringContainsString('cat > "${TARGET_ROOT}/etc/initramfs-tools/conf.d/w4-keyboard" <<EOF', $applyScript);
+        self::assertStringContainsString('elif [[ -f "${TARGET_ROOT}/etc/systemd/system/w4-firstboot.service" ]]; then', $applyScript);
+        self::assertStringContainsString('ln -sf ../w4-firstboot.service "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants/w4-firstboot.service"', $applyScript);
+        self::assertStringContainsString('rm -f "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants/w4-live-prep.service"', $applyScript);
         self::assertStringContainsString('chroot "${TARGET_ROOT}" setupcon --save-only', $applyScript);
         self::assertStringContainsString('setupcon devolvio un error; se conserva la configuracion escrita en /etc/default/keyboard', $applyScript);
         $verifyScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'verify-installation.sh');

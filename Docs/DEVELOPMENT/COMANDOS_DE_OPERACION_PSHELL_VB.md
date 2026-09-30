@@ -600,3 +600,75 @@ php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_security_baseline_via_paramiko.php"
 ```
 
 La evidencia fresca queda en `build/security/validation/w4-os-home/security-baseline-report.json` con resumen `6 passed`, `0 failed`, `1 skipped`.
+
+## MX-012 · W4 OS Server
+
+Preflight no destructivo antes de usar una VM Server:
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\preflight_server_vm_validation.php" `
+  --profile w4-os-server `
+  --expected-sha256 152b1690a29ad660ad6eb69e6a2d004c66e335b0fcf9108b69d4bc93f58ddca4
+```
+
+Resultado confirmado en `C-096`:
+
+- ISO Server presente en `build/iso-output/w4-os-server/w4-os-server-live-amd64.iso`.
+- Bundle de instalacion presente en `build/install/w4-os-server`.
+- VirtualBox disponible en `C:\Program Files\Oracle\VirtualBox\VBoxManage.exe`.
+- VM desechable `W4-OS-Server-Smoke` creada con firmware EFI, disco VDI nuevo de `32G` e ISO Server montada.
+- Ajuste requerido para evidencia headless: `--graphicscontroller vmsvga --vram 32`.
+- Capturas:
+  - `build/vbox-server-smoke/server-smoke-boot-vmsvga-60s.png`
+  - `build/vbox-server-smoke/server-smoke-console-checks.png`
+
+La captura de consola confirma autologin `w4live`, `PRETTY_NAME="W4 OS Server"`, `W4_PROFILE_ID="w4-os-server"`, `W4_EDITION="Server"`, SSH activo, `loop0` desde `filesystem.squashfs`, `sr0` como medio live y `sda 32G` como disco desechable.
+
+Instalacion validada en `C-097`:
+
+- Bundle retargeteado: `build/install/w4-os-server-vbox-smoke`.
+- Inventario usado: `examples/install/virtualbox-server-smoke.inventory.json`.
+- VDI final: `VBOX_HARDDISK_VB411f3f48-4e00630d`.
+- El instalador de la live minima requirio instalar temporalmente `gdisk`, `parted`, `dosfstools`, `e2fsprogs` y `squashfs-tools`; para no llenar el overlay se uso el VDI como scratch Btrfs temporal de APT y luego se limpio con `wipefs` antes de instalar.
+- El cierre valido uso `W4_INSTALL_SOURCE_ROOTFS=/run/live/rootfs/filesystem.squashfs` y `W4_INSTALL_SOURCE_SQUASHFS=/run/live/medium/live/filesystem.squashfs`.
+- Los archivos de secretos deben escribirse como ASCII sin BOM y sin terminador final. Un intento con `Set-Content` en encoding UTF-16 produjo fallo de desbloqueo LUKS aunque la cadena visible era correcta.
+- Evidencia final:
+  - `build/vbox-server-smoke/server-installed-ascii-before-luks.png`
+  - `build/vbox-server-smoke/server-installed-ascii-after-luks.png`
+  - `build/vbox-server-smoke/server-installed-validation.txt`
+
+Baseline runtime Server en `C-098`:
+
+```powershell
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\generate_security_baseline_bundle.php" --profile w4-os-server
+
+php "c:\W4\Packages\W4-OS SYSTEM\scripts\run_security_baseline_via_paramiko.php" `
+  --host 127.0.0.1 `
+  --port 2224 `
+  --username w4admin `
+  --password fGyMAXZ3yUx2GFuSjeKC5DW3XVfZLU `
+  --bundle-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\w4-os-server" `
+  --remote-root /home/w4admin/w4-security-baseline `
+  --evidence-dir "c:\W4\Packages\W4-OS SYSTEM\build\security\validation\w4-os-server" `
+  --sudo
+```
+
+Resultados de `C-098`:
+
+- Reporte inicial: `build/security/validation/w4-os-server/security-baseline-report.json` con `7 passed`, `2 failed`, `1 skipped`.
+- Fallos iniciales:
+  - `remote-admin-disabled-by-default`: `ssh.service` aparece `enabled`.
+  - `firewall-default-deny-incoming`: UFW tenia `DEFAULT_INPUT_POLICY=DROP`, pero `ENABLED=no`.
+- Causa confirmada: la instalacion no incluia `w4-firstboot.service`; el bundle live no transportaba/aplicaba `build/overlays/w4-os-server/files` antes de crear `filesystem.squashfs`.
+- Correccion implementada:
+  - `generate_live_bundle.php` copia `files/system-overlay` dentro del live bundle y lo aplica al `WORK_ROOTFS`.
+  - `generate_installation_executor.php` habilita `w4-firstboot.service` tambien cuando vive en `/etc/systemd/system` y retira `w4-live-prep` del target instalado.
+- Reporte remediado: `build/security/validation/w4-os-server-remediated/security-baseline-report.json` con `8 passed`, `1 failed`, `1 skipped`.
+- Evidencia textual: `build/vbox-server-smoke/server-baseline-runtime-validation.txt`.
+- Si `ufw --force enable` bloquea el transporte SSH por NAT, recuperar por consola VirtualBox y abrir temporalmente:
+
+```bash
+sudo ufw allow 22/tcp
+```
+
+El fallo restante es de contrato: `config/editions/server/policy.json` declara `ssh.enabled=true`, mientras el control heredado de `MX-005` espera administracion remota deshabilitada por defecto. La siguiente corrida debe decidir si Server mantiene SSH administrable por politica o si se ajusta el baseline Server.

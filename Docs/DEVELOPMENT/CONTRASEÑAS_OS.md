@@ -35,6 +35,18 @@ Documento de referencia rápida para las credenciales usadas durante la validaci
 - Password temporal regenerada del usuario local para el payload Business endurecido y LF-only: `OLrpPpPOUY9GxoBsboPOmF`
 - Passphrase LUKS temporal regenerada para el payload Business endurecido sin terminador final: `eblQs6wdCkaIUWIb0yfVZc6io3n9gd`
 
+## W4 OS Server
+
+### Instalacion VirtualBox smoke preparada el 2026-09-30
+
+- VM de laboratorio: `W4-OS-Server-Smoke`
+- Usuario live temporal para transporte SSH: `w4live`
+- Password temporal de `w4live`: `TD8okajwzC26KEQ62b3gww7o4eQBWQ`
+- Usuario local instalado: `w4admin`
+- Password temporal del usuario local Server: `fGyMAXZ3yUx2GFuSjeKC5DW3XVfZLU`
+- Passphrase LUKS temporal Server: `ShC5VgzrwqmJKu9fAkAsXr4GXCwHFg`
+- Nota: el primer intento de instalacion genero archivos de secretos con encoding UTF-16 desde PowerShell y la passphrase visible no desbloqueo LUKS. El cierre valido se hizo reescribiendo `disk-passphrase.txt` y `local-user-password.txt` como ASCII sin BOM y sin terminador final.
+
 ## Nota operativa
 
 - Las credenciales simples temporales se usaron como workaround por diferencias de layout de teclado en `initramfs` y `tty1`.

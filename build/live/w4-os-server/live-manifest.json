@@ -6,6 +6,7 @@
     "base_manifest_id": "w4-linux-base",
     "source_build_input": "w4-os-server.build-input.json",
     "source_overlay_manifest": "overlay-manifest.json",
+    "source_overlay_payload": "files\/system-overlay",
     "branding": {
         "profile_id": "w4-os-server",
         "profile_name": "W4 OS Server",
@@ -30,7 +31,8 @@
         "files\/.disk\/info",
         "files\/README-LIVE.txt",
         "files\/boot\/grub\/grub.cfg",
-        "compose-live.sh"
+        "compose-live.sh",
+        "files\/system-overlay\/"
     ],
     "next_steps": [
         "componer image-root y filesystem.squashfs",

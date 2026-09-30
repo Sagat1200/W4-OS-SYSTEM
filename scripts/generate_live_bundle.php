@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ValidationError;
+
 require_once __DIR__ . '/lib/ManifestToolkit.php';
 
 $rootDir = dirname(__DIR__);
@@ -27,6 +29,72 @@ function readJsonFile(string $path): array
     }
 
     return $data;
+}
+
+function removeDirectory(string $path): void
+{
+    if (!is_dir($path)) {
+        return;
+    }
+
+    $items = scandir($path);
+    if ($items === false) {
+        throw new ValidationError(sprintf('No se pudo listar la carpeta %s', $path));
+    }
+
+    foreach ($items as $item) {
+        if ($item === '.' || $item === '..') {
+            continue;
+        }
+
+        $itemPath = $path . DIRECTORY_SEPARATOR . $item;
+        if (is_dir($itemPath) && !is_link($itemPath)) {
+            removeDirectory($itemPath);
+            continue;
+        }
+
+        if (!unlink($itemPath)) {
+            throw new ValidationError(sprintf('No se pudo eliminar %s', $itemPath));
+        }
+    }
+
+    if (!rmdir($path)) {
+        throw new ValidationError(sprintf('No se pudo eliminar la carpeta %s', $path));
+    }
+}
+
+function copyDirectory(string $sourceDir, string $targetDir): void
+{
+    if (!is_dir($targetDir) && !mkdir($targetDir, 0777, true) && !is_dir($targetDir)) {
+        throw new ValidationError(sprintf('No se pudo crear la carpeta %s', $targetDir));
+    }
+
+    $items = scandir($sourceDir);
+    if ($items === false) {
+        throw new ValidationError(sprintf('No se pudo listar la carpeta %s', $sourceDir));
+    }
+
+    foreach ($items as $item) {
+        if ($item === '.' || $item === '..') {
+            continue;
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . $item;
+        $targetPath = $targetDir . DIRECTORY_SEPARATOR . $item;
+
+        if (is_dir($sourcePath) && !is_link($sourcePath)) {
+            copyDirectory($sourcePath, $targetPath);
+            continue;
+        }
+
+        if (!is_dir(dirname($targetPath)) && !mkdir(dirname($targetPath), 0777, true) && !is_dir(dirname($targetPath))) {
+            throw new ValidationError(sprintf('No se pudo crear la carpeta %s', dirname($targetPath)));
+        }
+
+        if (!copy($sourcePath, $targetPath)) {
+            throw new ValidationError(sprintf('No se pudo copiar %s hacia %s', $sourcePath, $targetPath));
+        }
+    }
 }
 
 /**
@@ -177,6 +245,7 @@ ROOTFS_DIR="${1:-}"
 OUTPUT_DIR="${2:-}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FILES_DIR="${SCRIPT_DIR}/files"
+OVERLAY_FILES_DIR="${FILES_DIR}/system-overlay"
 PROFILE_ID="%PROFILE_ID%"
 PROFILE_NAME="%PROFILE_NAME%"
 LIVE_USER="%LIVE_USER%"
@@ -299,6 +368,46 @@ unmount_work_rootfs() {
   umount -lf "${WORK_ROOTFS}/dev" 2>/dev/null || true
 }
 
+apply_system_overlay() {
+  local rootfs_dir="${1}"
+
+  if [[ ! -d "${OVERLAY_FILES_DIR}" ]]; then
+    echo "ERROR: el bundle live no incluye files/system-overlay" >&2
+    exit 1
+  fi
+
+  rsync -aHAX "${OVERLAY_FILES_DIR}/" "${rootfs_dir}/"
+
+  mkdir -p "${rootfs_dir}/etc/w4" "${rootfs_dir}/usr/local/lib/w4" "${rootfs_dir}/var/lib/w4"
+  chown root:root "${rootfs_dir}" "${rootfs_dir}/etc" "${rootfs_dir}/usr" "${rootfs_dir}/usr/local" "${rootfs_dir}/usr/local/lib" 2>/dev/null || true
+  chown -R root:root \
+    "${rootfs_dir}/etc/hostname" \
+    "${rootfs_dir}/etc/hosts" \
+    "${rootfs_dir}/etc/issue" \
+    "${rootfs_dir}/etc/issue.net" \
+    "${rootfs_dir}/etc/motd" \
+    "${rootfs_dir}/etc/w4" \
+    "${rootfs_dir}/etc/default" \
+    "${rootfs_dir}/etc/systemd" \
+    "${rootfs_dir}/etc/skel" \
+    "${rootfs_dir}/usr/local/lib/w4" \
+    "${rootfs_dir}/var/lib/w4" 2>/dev/null || true
+
+  [[ -f "${rootfs_dir}/usr/local/lib/w4/w4-firstboot.sh" ]] && chmod 0755 "${rootfs_dir}/usr/local/lib/w4/w4-firstboot.sh"
+  [[ -f "${rootfs_dir}/usr/local/lib/w4/w4-live-prep.sh" ]] && chmod 0755 "${rootfs_dir}/usr/local/lib/w4/w4-live-prep.sh"
+
+  mkdir -p "${rootfs_dir}/etc/systemd/system/multi-user.target.wants"
+  if [[ -f "${rootfs_dir}/etc/systemd/system/w4-firstboot.service" ]]; then
+    ln -sfn ../w4-firstboot.service "${rootfs_dir}/etc/systemd/system/multi-user.target.wants/w4-firstboot.service"
+  fi
+  if [[ -f "${rootfs_dir}/etc/systemd/system/w4-live-prep.service" ]]; then
+    ln -sfn ../w4-live-prep.service "${rootfs_dir}/etc/systemd/system/multi-user.target.wants/w4-live-prep.service"
+  fi
+
+  printf '%s\n' "${PROFILE_ID}" > "${rootfs_dir}/var/lib/w4/system-overlay-profile"
+  printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "${rootfs_dir}/var/lib/w4/system-overlay-applied-at"
+}
+
 prepare_live_identity() {
   local rootfs_dir="${1}"
   local profile_env="${rootfs_dir}/etc/w4/profile.env"
@@ -402,6 +511,9 @@ mkdir -p "${STAGE_OUTPUT_DIR}/image-root/live" "${STAGE_OUTPUT_DIR}/image-root/b
 
 echo "==> Preparando copia de trabajo del rootfs"
 rsync -aHAX --delete "${ROOTFS_DIR}/" "${WORK_ROOTFS}/"
+
+echo "==> Aplicando overlay de sistema en la copia de trabajo"
+apply_system_overlay "${WORK_ROOTFS}"
 
 echo "==> Asegurando keyring Debian dentro de la copia de trabajo"
 ensure_debian_keyring_in_rootfs "${WORK_ROOTFS}"
@@ -556,6 +668,12 @@ try {
     }
 
     $vars = liveVariables($buildInput, $overlayManifest);
+    $overlayDir = dirname($overlayManifestPath);
+    $overlayFilesDir = $overlayDir . DIRECTORY_SEPARATOR . 'files';
+
+    if (!is_dir($overlayFilesDir)) {
+        throw new ValidationError(sprintf('No existe el payload de overlay: %s', $overlayFilesDir));
+    }
 
     $files = [
         'files/.disk/info' => buildDiskInfo($vars),
@@ -576,6 +694,10 @@ try {
         }
     }
 
+    $overlayPayloadOutputDir = $outputPath . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay';
+    removeDirectory($overlayPayloadOutputDir);
+    copyDirectory($overlayFilesDir, $overlayPayloadOutputDir);
+
     $liveManifest = [
         'live_bundle_schema_version' => 1,
         'kind' => 'live-bundle',
@@ -584,13 +706,14 @@ try {
         'base_manifest_id' => $buildInput['base_manifest_id'],
         'source_build_input' => basename($inputPath),
         'source_overlay_manifest' => basename($overlayManifestPath),
+        'source_overlay_payload' => 'files/system-overlay',
         'branding' => $vars,
         'live_stack' => [
             'packages' => ['live-boot', 'live-config'],
             'bootloader_ready' => false,
             'iso_tooling_required' => ['xorriso', 'grub-mkstandalone'],
         ],
-        'generated_files' => array_keys($files),
+        'generated_files' => array_merge(array_keys($files), ['files/system-overlay/']),
         'next_steps' => [
             'componer image-root y filesystem.squashfs',
             'validar live-boot en VM',
@@ -608,7 +731,7 @@ try {
         'status' => 'ok',
         'profile_id' => $resolvedProfileId,
         'output_directory' => $outputPath,
-        'generated_files' => array_merge(['live-manifest.json'], array_keys($files)),
+        'generated_files' => array_merge(['live-manifest.json'], array_keys($files), ['files/system-overlay/']),
     ]);
     exit(0);
 } catch (ValidationError $exception) {

@@ -1,0 +1,63 @@
+{
+    "security_baseline_report_schema_version": 1,
+    "kind": "security-baseline-report",
+    "profile_id": "w4-os-server",
+    "generated_at": "2026-09-30T17:38:59+00:00",
+    "results": [
+        {
+            "id": "encrypted-root",
+            "status": "passed",
+            "detail": "La raiz esta montada desde /dev/mapper/cryptroot[/@]"
+        },
+        {
+            "id": "standard-account",
+            "status": "passed",
+            "detail": "La cuenta w4admin existe y no usa UID 0"
+        },
+        {
+            "id": "auditable-admin-path",
+            "status": "passed",
+            "detail": "sudo esta disponible en /usr/bin/sudo"
+        },
+        {
+            "id": "remote-admin-disabled-by-default",
+            "status": "failed",
+            "detail": "ssh aparece habilitado: enabled"
+        },
+        {
+            "id": "firewall-control-plane",
+            "status": "passed",
+            "detail": "Herramienta de firewall disponible: /usr/sbin/ufw"
+        },
+        {
+            "id": "firewall-default-deny-incoming",
+            "status": "failed",
+            "detail": "UFW esperado ENABLED=yes y DEFAULT_INPUT_POLICY=DROP; obtenido ENABLED=no DEFAULT_INPUT_POLICY=DROP"
+        },
+        {
+            "id": "mac-enforcement",
+            "status": "passed",
+            "detail": "AppArmor aparece activo en el kernel"
+        },
+        {
+            "id": "apparmor-enforced-profiles",
+            "status": "passed",
+            "detail": "AppArmor reporta 3 perfiles en enforce"
+        },
+        {
+            "id": "critical-filesystem-permissions",
+            "status": "passed",
+            "detail": "Permisos criticos del sistema alineados con la baseline"
+        },
+        {
+            "id": "authenticated-updates",
+            "status": "skipped",
+            "detail": "Control validado por pipeline firmado; revisar security-baseline.json y evidencia de MX-004"
+        }
+    ],
+    "summary": {
+        "passed": 7,
+        "failed": 2,
+        "skipped": 1
+    }
+}

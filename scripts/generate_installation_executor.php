@@ -765,11 +765,11 @@ fi
 mkdir -p "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants"
 if [[ -f "${TARGET_ROOT}/lib/systemd/system/w4-firstboot.service" ]]; then
   ln -sf /lib/systemd/system/w4-firstboot.service "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants/w4-firstboot.service"
+elif [[ -f "${TARGET_ROOT}/etc/systemd/system/w4-firstboot.service" ]]; then
+  ln -sf ../w4-firstboot.service "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants/w4-firstboot.service"
 fi
 
-if [[ -f "${TARGET_ROOT}/lib/systemd/system/w4-live-prep.service" ]]; then
-  rm -f "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants/w4-live-prep.service"
-fi
+rm -f "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants/w4-live-prep.service"
 
 mount_chroot_support
 ensure_kernel_boot_artifacts

@@ -1,6 +1,6 @@
 # W4 OS Server — bootstrap desde Business y desarrollo independiente
 
-**Documento operativo y de arquitectura · 30 de septiembre de 2026 · revisión 4**
+**Documento operativo y de arquitectura · 30 de septiembre de 2026 · revisión 5**
 
 **Workspace Windows previsto:** `C:\W4\Packages\W4-OS SERVER`
 
@@ -8,7 +8,7 @@
 
 ## 1. Alcance, evidencia y significado de «clonar»
 
-Este documento entrega en una sola pieza el procedimiento de bootstrap, la arquitectura objetivo, los archivos que deben crearse, los cambios del motor compartido y los criterios para construir y validar Server. La revisión inicial documentaba la ejecución esperada; al cierre de `C-092` ya existe un primer corte técnico P0 en este checkout común: perfil Server, política separada, Base sin desktop obligatorio, propagación de `codename=trixie`, overlay con identidad Server, recetas `rootfs`/`live`/`iso` generadas y publisher con `--package-set server`. En `C-093` se añadió el perfil de instalación Server MVP, inventario Hyper-V de laboratorio, bundle `build/install/w4-os-server` y cobertura PHPUnit del instalador. En `C-094` se materializaron en WSL el `rootfs`, el arbol live y la ISO Server `build/iso-output/w4-os-server/w4-os-server-live-amd64.iso`, con checksum `152b1690a29ad660ad6eb69e6a2d004c66e335b0fcf9108b69d4bc93f58ddca4` y manifiesto sin paquetes desktop prohibidos. Todavía no se ha probado una instalación Server en VM.
+Este documento entrega en una sola pieza el procedimiento de bootstrap, la arquitectura objetivo, los archivos que deben crearse, los cambios del motor compartido y los criterios para construir y validar Server. La revisión inicial documentaba la ejecución esperada; al cierre de `C-092` ya existe un primer corte técnico P0 en este checkout común: perfil Server, política separada, Base sin desktop obligatorio, propagación de `codename=trixie`, overlay con identidad Server, recetas `rootfs`/`live`/`iso` generadas y publisher con `--package-set server`. En `C-093` se añadió el perfil de instalación Server MVP, inventario Hyper-V de laboratorio, bundle `build/install/w4-os-server` y cobertura PHPUnit del instalador. En `C-094` se materializaron en WSL el `rootfs`, el arbol live y la ISO Server `build/iso-output/w4-os-server/w4-os-server-live-amd64.iso`, con checksum `152b1690a29ad660ad6eb69e6a2d004c66e335b0fcf9108b69d4bc93f58ddca4` y manifiesto sin paquetes desktop prohibidos. En `C-095` ese checksum y el contrato headless quedaron cubiertos por `tests/ServerIsoArtifactTest.php`. En `C-096` se añadió `preflight_server_vm_validation.php` y la ISO arrancó en VirtualBox EFI hasta TTY con autologin `w4live`, identidad `W4 OS Server`, SSH activo y disco desechable visible. En `C-097` Server completó instalación destructiva sobre VDI desechable, verificación local, primer boot LUKS, login `w4-server-vm` y validación SSH con `w4admin`. En `C-098` se ejecutó baseline runtime Server: el primer reporte detectó ausencia de `w4-firstboot.service` en la instalación y UFW inactivo; se corrigió el generador live para transportar/aplicar `files/system-overlay` antes del squashfs y el instalador para reconocer firstboot bajo `/etc/systemd/system`. La VM remediada ya valida UFW/AppArmor/permisos, quedando pendiente reinstalar desde ISO regenerada y decidir el contrato SSH Server.
 
 Se recuperó la conversación «Análisis del repositorio» y se consultaron directamente archivos de `Sagat1200/W4-OS-SYSTEM` en su rama predeterminada. La inspección es selectiva, no una auditoría completa ni una reproducción de sus pruebas. Las validaciones Home/Business que describe el README son evidencia declarada por el proyecto; deben repetirse para Server.
 
@@ -992,11 +992,13 @@ Cada ADR debe registrar contexto, alternativas, consecuencias, responsable, fech
 10. [x] Adaptar instalador al perfil Server y validar en modo plan.
 11. [x] Ejecutar validación, generar recetas y materializar `rootfs`, live e ISO en Linux/WSL.
 12. [x] Inspeccionar paquetes/servicios de rootfs y live/ISO: no desktop.
-13. [ ] Instalar en VM UEFI con disco virtual desechable y probar reboot LUKS/SSH.
-14. [ ] Probar seguridad desde consola y segunda VM.
-15. [ ] Ejecutar update firmado, fallo controlado y recovery completo.
-16. [ ] Ejecutar regresión Home/Business y guardar evidencias sanitizadas.
-17. [ ] Cerrar PoC con limitaciones explícitas; continuar gates de V1.
-18. [ ] Integrar correcciones comunes en Base y mantener roadmap Server propio.
+13. [x] Automatizar gate de checksum y manifiesto headless para la ISO Server.
+14. [x] Ejecutar preflight VM y validar arranque live Server en VirtualBox EFI.
+15. [x] Instalar en VM UEFI con disco virtual desechable y probar reboot LUKS/SSH.
+16. [x] Probar seguridad runtime Server desde consola/SSH y registrar gaps.
+17. [ ] Ejecutar update firmado, fallo controlado y recovery completo.
+18. [ ] Ejecutar regresión Home/Business y guardar evidencias sanitizadas.
+19. [ ] Cerrar PoC con limitaciones explícitas; continuar gates de V1.
+20. [ ] Integrar correcciones comunes en Base y mantener roadmap Server propio.
 
 **Definición final del producto:** W4 OS Server es una composición headless independiente sobre W4 Linux Base. Business aporta el punto de partida técnico y la experiencia de validación; Base conserva los motores comunes; Server es dueño de su política operativa, paquetes específicos, aceptación y evolución.

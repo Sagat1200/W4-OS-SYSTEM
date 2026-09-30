@@ -9,3 +9,10 @@
 /build/install-transfer/
 /build/install/**/runtime/disk-passphrase.txt
 /build/install/**/runtime/local-user-password.txt
+/build/vbox-server-smoke/
+/build/vbox-server-smoke-runner/
+*.vdi
+*.vmdk
+*.vhd
+*.vhdx
+*.nvram

@@ -1,0 +1,16 @@
+W4 OS Installation Summary
+
+Perfil: W4 OS Server
+Destino: /dev/sda (32.00 GiB)
+Layout: GPT + ESP + /boot + LUKS2 + Btrfs
+Usuario inicial: w4admin
+Hostname: w4-server-vm
+Resumen destructivo: si
+Espacio estimado para root cifrada: 29.48 GiB
+
+Subvolumenes declarados:
+- @ -> /
+- @srv -> /srv
+- @log -> /var/log
+- @cache -> /var/cache
+- @data -> /var/lib/w4
