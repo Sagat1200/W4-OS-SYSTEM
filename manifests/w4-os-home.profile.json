@@ -6,6 +6,7 @@
   "inherits": "w4-linux-base",
   "meta_packages": {
     "required": [
+      "w4-desktop-meta",
       "w4-home-meta"
     ],
     "recommended": []
@@ -14,6 +15,7 @@
     "required": [
       "firefox-esr",
       "libreoffice",
+      "os-prober",
       "pipewire",
       "xdg-desktop-portal"
     ],

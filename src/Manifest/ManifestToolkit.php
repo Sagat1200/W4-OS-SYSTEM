@@ -188,6 +188,7 @@ final class ManifestToolkit
             'upstream' => [
                 'distribution' => $upstream['distribution'],
                 'track' => $upstream['track'],
+                'codename' => $upstream['codename'] ?? $upstream['track'],
                 'architectures' => $upstream['architectures'],
                 'boot_modes' => $upstream['boot_modes'],
             ],
@@ -280,6 +281,13 @@ final class ManifestToolkit
             $value = $upstream[$field] ?? null;
             if (!is_string($value) || $value === '') {
                 throw new ValidationError(sprintf("%s: upstream.%s es obligatorio", $manifest['_path'], $field));
+            }
+        }
+
+        if (array_key_exists('codename', $upstream)) {
+            $codename = $upstream['codename'];
+            if (!is_string($codename) || $codename === '') {
+                throw new ValidationError(sprintf("%s: upstream.codename debe ser un string no vacio", $manifest['_path']));
             }
         }
 

@@ -64,6 +64,50 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertStringContainsString('ufw --force enable', $firstbootScript);
     }
 
+    public function testGenerateSystemOverlayUsesServerBrandingWithoutHomeFallback(): void
+    {
+        $buildInputPath = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-server.build-input.json';
+        $outputDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-server';
+
+        $buildInput = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'generate_build_input.php',
+            [
+                '--profile',
+                'w4-os-server',
+                '--output',
+                $buildInputPath,
+            ]
+        );
+        self::assertSame(0, $buildInput['exitCode'], $buildInput['stderr']);
+
+        $overlay = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'generate_system_overlay.php',
+            [
+                '--input',
+                $buildInputPath,
+                '--output',
+                $outputDir,
+            ]
+        );
+        self::assertSame(0, $overlay['exitCode'], $overlay['stderr']);
+
+        $manifest = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'overlay-manifest.json');
+        self::assertSame('w4-os-server', $manifest['profile_id']);
+        self::assertSame('Server', $manifest['branding']['edition']);
+        self::assertSame('w4-server', $manifest['branding']['hostname']);
+        self::assertSame('w4-server-live', $manifest['branding']['live_hostname']);
+
+        $motd = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'motd');
+        self::assertNotFalse($motd);
+        self::assertStringContainsString('W4 OS Server', $motd);
+        self::assertStringContainsString('entorno headless', $motd);
+        self::assertStringNotContainsString('escritorio personal', $motd);
+
+        $hosts = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'hosts');
+        self::assertNotFalse($hosts);
+        self::assertStringContainsString('127.0.1.1 w4-server', $hosts);
+    }
+
     /**
      * @param list<string> $arguments
      * @return array{exitCode:int,stdout:string,stderr:string}

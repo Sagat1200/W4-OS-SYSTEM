@@ -1,0 +1,101 @@
+{
+    "rootfs_schema_version": 1,
+    "kind": "rootfs-bundle",
+    "profile_id": "w4-os-server",
+    "profile_name": "W4 OS Server",
+    "base_manifest_id": "w4-linux-base",
+    "source_build_input": "w4-os-server.build-input.json",
+    "target": {
+        "release_channel": "testing",
+        "image_format": "iso"
+    },
+    "upstream": {
+        "distribution": "debian",
+        "track": "stable",
+        "codename": "trixie",
+        "architectures": [
+            "amd64"
+        ],
+        "boot_modes": [
+            "uefi"
+        ]
+    },
+    "repositories": [
+        "debian-main",
+        "debian-security",
+        "w4-main"
+    ],
+    "packages": {
+        "required": [
+            "apparmor",
+            "apt",
+            "base-files",
+            "bash",
+            "btrfs-progs",
+            "ca-certificates",
+            "cryptsetup-initramfs",
+            "curl",
+            "grub-efi-amd64",
+            "iproute2",
+            "jq",
+            "linux-image-amd64",
+            "network-manager",
+            "openssh-server",
+            "php-cli",
+            "shim-signed",
+            "sudo",
+            "systemd",
+            "systemd-sysv",
+            "systemd-timesyncd",
+            "ufw"
+        ],
+        "recommended": []
+    },
+    "meta_packages": {
+        "required": [
+            "w4-base-meta",
+            "w4-server-meta"
+        ],
+        "recommended": []
+    },
+    "features": [
+        "server-baseline",
+        "headless-default",
+        "ssh-administration",
+        "btrfs-recovery"
+    ],
+    "rootfs_directories": [
+        "\/boot",
+        "\/boot\/efi",
+        "\/dev",
+        "\/etc",
+        "\/etc\/apt",
+        "\/etc\/apt\/sources.list.d",
+        "\/etc\/default",
+        "\/etc\/systemd\/system",
+        "\/home",
+        "\/proc",
+        "\/root",
+        "\/run",
+        "\/sys",
+        "\/tmp",
+        "\/usr",
+        "\/usr\/local",
+        "\/var",
+        "\/var\/cache\/apt",
+        "\/var\/lib\/apt",
+        "\/var\/lib\/dpkg",
+        "\/var\/log",
+        "\/var\/tmp"
+    ],
+    "identity_cleanup": [
+        "\/etc\/machine-id",
+        "\/var\/lib\/dbus\/machine-id"
+    ],
+    "next_steps": [
+        "configurar primer inicio",
+        "anadir instalador y componentes live",
+        "generar formato de imagen",
+        "ejecutar pruebas de arranque"
+    ]
+}

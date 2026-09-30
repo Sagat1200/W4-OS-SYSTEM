@@ -1,0 +1,76 @@
+{
+    "build_schema_version": 1,
+    "kind": "build-input",
+    "profile_id": "w4-os-server",
+    "profile_name": "W4 OS Server",
+    "base_manifest_id": "w4-linux-base",
+    "upstream": {
+        "distribution": "debian",
+        "track": "stable",
+        "codename": "trixie",
+        "architectures": [
+            "amd64"
+        ],
+        "boot_modes": [
+            "uefi"
+        ]
+    },
+    "target": {
+        "release_channel": "testing",
+        "image_format": "iso"
+    },
+    "repositories": [
+        "debian-main",
+        "debian-security",
+        "w4-main"
+    ],
+    "meta_packages": {
+        "required": [
+            "w4-base-meta",
+            "w4-server-meta"
+        ],
+        "recommended": []
+    },
+    "packages": {
+        "required": [
+            "apparmor",
+            "apt",
+            "base-files",
+            "bash",
+            "btrfs-progs",
+            "ca-certificates",
+            "cryptsetup-initramfs",
+            "curl",
+            "grub-efi-amd64",
+            "iproute2",
+            "jq",
+            "linux-image-amd64",
+            "network-manager",
+            "openssh-server",
+            "php-cli",
+            "shim-signed",
+            "sudo",
+            "systemd",
+            "systemd-sysv",
+            "systemd-timesyncd",
+            "ufw"
+        ],
+        "recommended": []
+    },
+    "features": [
+        "server-baseline",
+        "headless-default",
+        "ssh-administration",
+        "btrfs-recovery"
+    ],
+    "source_manifests": {
+        "base": "w4-linux-base.manifest.json",
+        "profile": "w4-os-server.profile.json"
+    },
+    "counts": {
+        "required_meta_packages": 2,
+        "recommended_meta_packages": 0,
+        "required_packages": 21,
+        "recommended_packages": 0
+    }
+}

@@ -98,6 +98,7 @@ echo "==> W4 OS System rootfs assembly"
 echo "Profile: w4-os-business"
 echo "Distribution: debian"
 echo "Track: stable"
+echo "Codename: trixie"
 echo "Output: ${ROOTFS_DIR}"
 
 if ! command -v mmdebstrap >/dev/null 2>&1 && ! command -v debootstrap >/dev/null 2>&1; then
@@ -120,11 +121,11 @@ if command -v mmdebstrap >/dev/null 2>&1; then
     --variant=minbase \
     --include=apparmor,apt,base-files,bash,btrfs-progs,ca-certificates,curl,grub-efi-amd64,jq,linux-image-amd64,network-manager,os-prober,php-cli,pipewire,shim-signed,sudo,systemd,ufw,xdg-desktop-portal \
     --aptopt='Acquire::Retries "3"' \
-    stable "${ROOTFS_DIR}" \
-    "deb [signed-by=${HOST_BOOTSTRAP_KEYRING}] https://deb.debian.org/debian stable main"
+    trixie "${ROOTFS_DIR}" \
+    "deb [signed-by=${HOST_BOOTSTRAP_KEYRING}] https://deb.debian.org/debian trixie main"
 else
   echo "==> Bootstrap base Debian con debootstrap"
-  debootstrap --keyring="${HOST_BOOTSTRAP_KEYRING}" --merged-usr --variant=minbase stable "${ROOTFS_DIR}" https://deb.debian.org/debian/
+  debootstrap --keyring="${HOST_BOOTSTRAP_KEYRING}" --merged-usr --variant=minbase trixie "${ROOTFS_DIR}" https://deb.debian.org/debian/
 
   echo "==> Asegurando keyring Debian dentro del rootfs"
   ensure_debian_keyring_in_rootfs "${ROOTFS_DIR}"

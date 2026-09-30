@@ -364,6 +364,56 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('deb [signed-by=__W4_REPO_ROOT__/keyrings/w4-update-archive-keyring.gpg] file:__W4_REPO_ROOT__ testing main', $signedAptSource);
     }
 
+    public function testGenerateUpdateRepositoryBundleSupportsServerPackageSet(): void
+    {
+        $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'repo-bundle-server';
+
+        $result = $this->runPhpScript(
+            $this->fixturePath('scripts/generate_update_repository_bundle.php'),
+            [
+                '--snapshot-id',
+                'w4-main-server-p0',
+                '--channel',
+                'testing',
+                '--target-version',
+                '0.1.0-server-p0',
+                '--package-set',
+                'server',
+                '--output-dir',
+                $bundleDir,
+            ]
+        );
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('ok', $payload['status']);
+        self::assertSame('server', $payload['package_set']);
+        self::assertSame(3, $payload['package_count']);
+
+        $manifest = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'repository-manifest.json');
+        $packageNames = array_column($manifest['packages'], 'name');
+        self::assertContains('w4-base-meta', $packageNames);
+        self::assertContains('w4-recovery-tools', $packageNames);
+        self::assertContains('w4-server-meta', $packageNames);
+        self::assertNotContains('w4-desktop-meta', $packageNames);
+        self::assertSame('w4-os-server', $manifest['source_profiles']['server']);
+
+        $serverMeta = null;
+        foreach ($manifest['packages'] as $package) {
+            if ($package['name'] === 'w4-server-meta') {
+                $serverMeta = $package;
+                break;
+            }
+        }
+
+        self::assertIsArray($serverMeta);
+        self::assertStringContainsString('w4-base-meta', $serverMeta['depends']);
+        self::assertStringContainsString('openssh-server', $serverMeta['depends']);
+        self::assertStringNotContainsString('w4-desktop-meta', $serverMeta['depends']);
+        self::assertStringNotContainsString('pipewire', $serverMeta['depends']);
+    }
+
     public function testSignedRepositoryRunnerSupportsCheckOnlyPreview(): void
     {
         $distribution = $this->detectWslDistribution();

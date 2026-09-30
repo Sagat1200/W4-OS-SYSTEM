@@ -1,0 +1,54 @@
+{
+    "repository_bundle_schema_version": 1,
+    "kind": "update-repository-bundle",
+    "repository_snapshot": {
+        "id": "w4-main-server-p0",
+        "channel": "testing"
+    },
+    "target_version": "0.1.0-server-p0",
+    "package_set": "server",
+    "package_strategy": "derived-from-manifests",
+    "source_profiles": {
+        "base": "w4-linux-base",
+        "home": "w4-os-home",
+        "business": "w4-os-business",
+        "server": "w4-os-server"
+    },
+    "packages": [
+        {
+            "name": "w4-base-meta",
+            "version": "0.1.0-server-p0",
+            "architecture": "all",
+            "depends": "apparmor, apt, base-files, bash, btrfs-progs, ca-certificates, grub-efi-amd64, linux-image-amd64, network-manager, php-cli, shim-signed, sudo, systemd, ufw",
+            "description": "W4 OS base metapackage derived from the base manifest",
+            "profile_scope": "base",
+            "source": "w4-linux-base.packages.required"
+        },
+        {
+            "name": "w4-recovery-tools",
+            "version": "0.1.0-server-p0",
+            "architecture": "all",
+            "depends": "bash, btrfs-progs",
+            "description": "W4 OS recovery tools package for update validation",
+            "profile_scope": "base",
+            "source": "update-recovery-tooling"
+        },
+        {
+            "name": "w4-server-meta",
+            "version": "0.1.0-server-p0",
+            "architecture": "all",
+            "depends": "w4-base-meta, cryptsetup-initramfs, curl, iproute2, jq, openssh-server, systemd-sysv, systemd-timesyncd",
+            "description": "W4 OS Server headless metapackage derived from the server edition profile",
+            "profile_scope": "server",
+            "source": "w4-os-server"
+        }
+    ],
+    "generated_artifacts": [
+        "build-repo.sh",
+        "repository-manifest.json",
+        "apt-source.list.template",
+        "apt-source.dists.list.template",
+        "apt-source.signed.list.template",
+        "REPOSITORY_BUNDLE_README.txt"
+    ]
+}

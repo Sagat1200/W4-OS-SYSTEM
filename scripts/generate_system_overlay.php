@@ -64,12 +64,29 @@ function overlayVariables(array $buildInput): array
     $profileId = (string) $buildInput['profile_id'];
     $profileName = (string) $buildInput['profile_name'];
     $edition = str_replace('W4 OS ', '', $profileName);
-    $hostname = $profileId === 'w4-os-business' ? 'w4-business' : 'w4-home';
+    $editionCatalog = [
+        'w4-os-home' => [
+            'hostname' => 'w4-home',
+            'motd_role' => 'entorno orientado a escritorio personal',
+        ],
+        'w4-os-business' => [
+            'hostname' => 'w4-business',
+            'motd_role' => 'entorno orientado a piloto empresarial',
+        ],
+        'w4-os-server' => [
+            'hostname' => 'w4-server',
+            'motd_role' => 'entorno headless orientado a administracion remota y servicios',
+        ],
+    ];
+
+    if (!array_key_exists($profileId, $editionCatalog)) {
+        throw new ValidationError(sprintf('Perfil sin politica de overlay registrada: %s', $profileId));
+    }
+
+    $hostname = $editionCatalog[$profileId]['hostname'];
     $liveHostname = $hostname . '-live';
     $liveUser = 'w4live';
-    $motdRole = $profileId === 'w4-os-business'
-        ? 'entorno orientado a piloto empresarial'
-        : 'entorno orientado a escritorio personal';
+    $motdRole = $editionCatalog[$profileId]['motd_role'];
 
     return [
         'profile_id' => $profileId,

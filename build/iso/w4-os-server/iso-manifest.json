@@ -1,0 +1,32 @@
+{
+    "iso_bundle_schema_version": 1,
+    "kind": "iso-bundle",
+    "profile_id": "w4-os-server",
+    "profile_name": "W4 OS Server",
+    "base_manifest_id": "w4-linux-base",
+    "source_live_manifest": "live-manifest.json",
+    "branding": {
+        "profile_id": "w4-os-server",
+        "profile_name": "W4 OS Server",
+        "edition": "Server",
+        "distribution_name": "W4 OS",
+        "volume_id": "W4_OS_SERVER_LIVE",
+        "iso_filename": "w4-os-server-live-amd64.iso"
+    },
+    "iso_tooling_required": [
+        "xorriso",
+        "grub-mkrescue|grub-mkstandalone",
+        "mtools",
+        "dosfstools"
+    ],
+    "generated_files": [
+        "README-ISO.txt",
+        "compose-iso.sh"
+    ],
+    "next_steps": [
+        "instalar tooling ISO en WSL si aplica",
+        "componer ISO arrancable UEFI",
+        "verificar checksum del artefacto",
+        "probar arranque en VM"
+    ]
+}

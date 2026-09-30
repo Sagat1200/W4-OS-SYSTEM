@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "profile_id": "w4-os-server",
+  "branding": {
+    "edition": "Server",
+    "hostname_prefix": "w4-server"
+  },
+  "upstream_policy": {
+    "distribution": "debian",
+    "codename": "trixie"
+  },
+  "boot": {
+    "architecture": "amd64",
+    "firmware": "uefi",
+    "default_target": "multi-user.target"
+  },
+  "network": {
+    "backend": "NetworkManager",
+    "configuration": "installer-required"
+  },
+  "ssh": {
+    "enabled": true,
+    "root_login": false,
+    "authentication": "publickey"
+  },
+  "firewall": {
+    "backend": "ufw",
+    "incoming": "deny",
+    "outgoing": "allow",
+    "admin_cidrs": []
+  },
+  "storage": {
+    "root_filesystem": "btrfs",
+    "encryption_default": "luks2",
+    "unlock": "console"
+  },
+  "update": {
+    "automatic_reboot": false,
+    "snapshot_backend": "btrfs"
+  },
+  "roles": [],
+  "enterprise_agent": {
+    "installed": false,
+    "enrolled": false
+  }
+}

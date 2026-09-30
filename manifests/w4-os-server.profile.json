@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "kind": "edition-profile",
+  "id": "w4-os-server",
+  "name": "W4 OS Server",
+  "inherits": "w4-linux-base",
+  "meta_packages": {
+    "required": [
+      "w4-server-meta"
+    ],
+    "recommended": []
+  },
+  "packages": {
+    "required": [
+      "cryptsetup-initramfs",
+      "curl",
+      "iproute2",
+      "jq",
+      "openssh-server",
+      "systemd-sysv",
+      "systemd-timesyncd"
+    ],
+    "recommended": [],
+    "remove": [
+      "flatpak",
+      "fwupd",
+      "snapper"
+    ]
+  },
+  "features": [
+    "server-baseline",
+    "headless-default",
+    "ssh-administration",
+    "btrfs-recovery"
+  ],
+  "notes": [
+    "Business se utiliza solo como referencia de bootstrap.",
+    "NetworkManager y UFW se reutilizan desde W4 Linux Base.",
+    "Las features requieren consumidores y pruebas; no habilitan servicios por si solas.",
+    "Agent, VPN y roles de workloads son opcionales y posteriores."
+  ]
+}

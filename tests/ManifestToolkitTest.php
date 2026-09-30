@@ -25,18 +25,20 @@ final class ManifestToolkitTest extends TestCase
         $resolved = $toolkit->resolveProfile($manifests, 'w4-os-home');
 
         self::assertSame(
-            ['w4-linux-base', 'w4-os-business', 'w4-os-home'],
+            ['w4-linux-base', 'w4-os-business', 'w4-os-home', 'w4-os-server'],
             array_keys($manifests)
         );
         self::assertSame('resolved-profile', $resolved['kind']);
         self::assertSame('w4-os-home', $resolved['id']);
         self::assertContains('w4-base-meta', $resolved['required_meta_packages']);
+        self::assertContains('w4-desktop-meta', $resolved['required_meta_packages']);
         self::assertContains('w4-home-meta', $resolved['required_meta_packages']);
         self::assertContains('apt', $resolved['required_packages']);
         self::assertContains('apparmor', $resolved['required_packages']);
         self::assertContains('btrfs-progs', $resolved['required_packages']);
         self::assertContains('php-cli', $resolved['required_packages']);
         self::assertContains('ufw', $resolved['required_packages']);
+        self::assertContains('os-prober', $resolved['required_packages']);
         self::assertContains('firefox-esr', $resolved['required_packages']);
         self::assertContains('vlc', $resolved['recommended_packages']);
         self::assertContains('home-onboarding', $resolved['features']);
@@ -54,6 +56,8 @@ final class ManifestToolkitTest extends TestCase
         self::assertSame('stable', $buildInput['target']['release_channel']);
         self::assertSame('iso', $buildInput['target']['image_format']);
         self::assertContains('w4-main', $buildInput['repositories']);
+        self::assertSame('stable', $buildInput['upstream']['track']);
+        self::assertSame('trixie', $buildInput['upstream']['codename']);
         self::assertContains('apparmor', $buildInput['packages']['required']);
         self::assertContains('btrfs-progs', $buildInput['packages']['required']);
         self::assertContains('firefox-esr', $buildInput['packages']['required']);
@@ -68,5 +72,32 @@ final class ManifestToolkitTest extends TestCase
             'w4-os-home.profile.json',
             $buildInput['source_manifests']['profile']
         );
+    }
+
+    public function testServerProfileResolvesHeadlessWithoutBusinessInheritance(): void
+    {
+        $toolkit = new ManifestToolkit($this->rootDir);
+
+        $manifests = $toolkit->loadManifests();
+        $toolkit->validateAll($manifests);
+        $resolved = $toolkit->resolveProfile($manifests, 'w4-os-server');
+
+        self::assertSame('w4-os-server', $resolved['id']);
+        self::assertSame('w4-linux-base', $resolved['inherits']);
+        self::assertContains('w4-base-meta', $resolved['required_meta_packages']);
+        self::assertContains('w4-server-meta', $resolved['required_meta_packages']);
+        self::assertNotContains('w4-desktop-meta', $resolved['required_meta_packages']);
+        self::assertContains('openssh-server', $resolved['required_packages']);
+        self::assertContains('cryptsetup-initramfs', $resolved['required_packages']);
+        self::assertContains('network-manager', $resolved['required_packages']);
+        self::assertContains('ufw', $resolved['required_packages']);
+        self::assertNotContains('os-prober', $resolved['required_packages']);
+        self::assertNotContains('pipewire', $resolved['required_packages']);
+        self::assertNotContains('xdg-desktop-portal', $resolved['required_packages']);
+        self::assertNotContains('flatpak', $resolved['recommended_packages']);
+        self::assertNotContains('fwupd', $resolved['recommended_packages']);
+        self::assertNotContains('snapper', $resolved['recommended_packages']);
+        self::assertContains('headless-default', $resolved['features']);
+        self::assertContains('ssh-administration', $resolved['features']);
     }
 }

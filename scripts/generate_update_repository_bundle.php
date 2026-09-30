@@ -39,18 +39,21 @@ function sortedStringIntersection(array $left, array $right): array
  * @param array<string, mixed> $baseManifest
  * @param array<string, mixed> $homeProfile
  * @param array<string, mixed> $businessProfile
+ * @param array<string, mixed> $serverProfile
  * @return array<int, array{name:string,version:string,architecture:string,depends:string,description:string,profile_scope:string,source:string}>
  */
 function buildRepositoryPackageCatalog(
     array $baseManifest,
     array $homeProfile,
     array $businessProfile,
+    array $serverProfile,
     string $targetVersion
 ): array {
     /** @var array<string> $baseRequiredPackages */
     $baseRequiredPackages = $baseManifest['packages']['required'];
     $homeRequiredPackages = $homeProfile['required_packages'];
     $businessRequiredPackages = $businessProfile['required_packages'];
+    $serverRequiredPackages = $serverProfile['required_packages'];
 
     $desktopSharedPackages = sortedStringIntersection(
         sortedStringDifference($homeRequiredPackages, $baseRequiredPackages),
@@ -64,6 +67,10 @@ function buildRepositoryPackageCatalog(
     $businessEditionPackages = sortedStringDifference(
         sortedStringDifference($businessRequiredPackages, $baseRequiredPackages),
         $desktopSharedPackages
+    );
+    $serverEditionPackages = sortedStringDifference(
+        $serverRequiredPackages,
+        $baseRequiredPackages
     );
 
     return [
@@ -111,6 +118,15 @@ function buildRepositoryPackageCatalog(
             'description' => 'W4 OS Business metapackage derived from the business edition profile',
             'profile_scope' => 'business',
             'source' => 'w4-os-business',
+        ],
+        [
+            'name' => 'w4-server-meta',
+            'version' => $targetVersion,
+            'architecture' => 'all',
+            'depends' => implode(', ', array_merge(['w4-base-meta'], $serverEditionPackages)),
+            'description' => 'W4 OS Server headless metapackage derived from the server edition profile',
+            'profile_scope' => 'server',
+            'source' => 'w4-os-server',
         ],
     ];
 }
@@ -461,8 +477,8 @@ try {
         throw new ValidationError('channel contiene caracteres no soportados');
     }
 
-    if (!in_array($packageSet, ['home', 'business', 'both'], true)) {
-        throw new ValidationError('package-set debe ser home, business o both');
+    if (!in_array($packageSet, ['home', 'business', 'server', 'both', 'all'], true)) {
+        throw new ValidationError('package-set debe ser home, business, server, both o all');
     }
 
     $manifestToolkit = new ManifestToolkit($rootDir);
@@ -473,22 +489,32 @@ try {
     $baseManifest = $manifests['w4-linux-base'];
     $homeProfile = $manifestToolkit->resolveProfile($manifests, 'w4-os-home');
     $businessProfile = $manifestToolkit->resolveProfile($manifests, 'w4-os-business');
+    $serverProfile = $manifestToolkit->resolveProfile($manifests, 'w4-os-server');
 
     $packageCatalog = buildRepositoryPackageCatalog(
         $baseManifest,
         $homeProfile,
         $businessProfile,
+        $serverProfile,
         $targetVersion
     );
 
     $packages = array_values(array_filter(
         $packageCatalog,
         static function (array $package) use ($packageSet): bool {
-            if ($packageSet === 'both') {
+            if ($packageSet === 'all') {
                 return true;
             }
 
-            if (in_array($package['profile_scope'], ['base', 'desktop'], true)) {
+            if ($packageSet === 'both' && in_array($package['profile_scope'], ['base', 'desktop', 'home', 'business'], true)) {
+                return true;
+            }
+
+            if ($package['profile_scope'] === 'base') {
+                return true;
+            }
+
+            if ($packageSet !== 'server' && $package['profile_scope'] === 'desktop') {
                 return true;
             }
 
@@ -518,6 +544,7 @@ try {
             'base' => 'w4-linux-base',
             'home' => 'w4-os-home',
             'business' => 'w4-os-business',
+            'server' => 'w4-os-server',
         ],
         'packages' => $packages,
         'generated_artifacts' => [

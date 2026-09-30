@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.84 | 2026-09-30 | Activa | Apertura tecnica de `W4 OS Server` P0 con Base sin desktop obligatorio, perfil Server headless, politica Server inicial, `codename=trixie` propagado a build/rootfs, overlay sin fallback Home, bundles live/ISO generables y publisher con `--package-set server` |
 | TECH | TECH-1.83 | 2026-09-29 | Activa | Cierre de `MX-005` con playbook y controles runtime firewall/AppArmor |
 | TECH | TECH-1.82 | 2026-09-27 | Activa | Control runtime de permisos criticos en `MX-005` |
 | TECH | TECH-1.81 | 2026-09-27 | Activa | Revalidacion runtime de `MX-005` cerrada en `Business` reinstalado |
@@ -85,6 +86,7 @@ Mantener trazabilidad entre:
 
 | Fecha | Tipo | Version | Cambio | Impacto | Referencias |
 | --- | --- | --- | --- | --- | --- |
+| 2026-09-30 | TECH | TECH-1.84 | Apertura tecnica de `W4 OS Server` P0 | Se ejecuto el primer corte de separacion Server: `w4-linux-base` dejo de exigir `w4-desktop-meta` y `os-prober`, Home/Business los conservan explicitamente, se agregaron `w4-os-server.profile.json` y `config/editions/server/policy.json`, y los generadores ya propagan `codename=trixie`, branding Server y `--package-set server`. Los artefactos inmediatos `build-input`, `rootfs`, `overlay`, `live`, `iso` y bundle de repositorio Server quedaron generados; `composer test` cerro con `51` tests, `753` assertions y `4` skips esperados | `manifests/w4-linux-base.manifest.json`, `manifests/w4-os-home.profile.json`, `manifests/w4-os-business.profile.json`, `manifests/w4-os-server.profile.json`, `config/editions/server/policy.json`, `src/Manifest/ManifestToolkit.php`, `scripts/generate_rootfs_bundle.php`, `scripts/generate_system_overlay.php`, `scripts/generate_update_repository_bundle.php`, `tests/ManifestToolkitTest.php`, `tests/SystemOverlayGenerationTest.php`, `tests/UpdateScriptsIntegrationTest.php`, `build/inputs/w4-os-server.build-input.json`, `build/rootfs/w4-os-server/`, `build/overlays/w4-os-server/`, `build/live/w4-os-server/`, `build/iso/w4-os-server/`, `build/update/repositories/w4-main-server-p0/` |
 | 2026-09-09 | DOC | DOC-0.1 | Alta inicial de documentos `DEVELOPMENT_*` y `EXECUTIVE_IMPLEMENTATION_PLAN` | Se establece la base operativa del proyecto para seguimiento de desarrollo | `DEVELOPMENT_TABLE.md`, `DEVELOPMENT_MATRIX.md`, `DEVELOPMENT_VERSIONS.md`, `DEVELOPMENT_GUIDELINES.md`, `EXECUTIVE_IMPLEMENTATION_PLAN.md` |
 | 2026-09-09 | DOC | DOC-0.2 | Creacion del `README.md` introductorio del proyecto `W4 OS System` | Se define una presentacion base del repositorio con vision, familia de productos y documentos clave | `README.md` |
 | 2026-09-09 | PLAN | PLAN-0.1 | Definicion inicial del orden de implementacion V1 | Se prioriza H0-H5 con foco en MVP recuperable | `DEVELOPMENT_TABLE.md`, `EXECUTIVE_IMPLEMENTATION_PLAN.md` |

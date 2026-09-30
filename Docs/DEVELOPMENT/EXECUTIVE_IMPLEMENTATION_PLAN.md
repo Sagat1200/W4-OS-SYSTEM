@@ -135,7 +135,33 @@ Salida obligatoria:
 8. Business piloto.
 9. Compliance, soporte y release.
 
-## Siguiente ciclo recomendado · MX-004
+## Siguiente ciclo recomendado · MX-012
+
+Objetivo del ciclo:
+abrir `W4 OS Server` como composicion headless sobre `W4 Linux Base`, sin clonar motores ni heredar `Business` como dependencia permanente.
+
+Resultado ejecutivo esperado:
+
+- Base comun sin dependencia obligatoria de desktop.
+- Home y Business conservando su composicion grafica de forma explicita.
+- Perfil `w4-os-server` resoluble, con SSH permanente y sin paquetes desktop.
+- Politica Server separada de los manifests para evitar que el cargador actual la interprete como perfil.
+- `build-input`, `rootfs bundle`, overlay y repositorio W4 capaces de distinguir Server por identidad.
+- Pruebas PHPUnit que impidan fallback Home y arrastre de `w4-desktop-meta`.
+
+Entregables tecnicos obligatorios:
+
+1. `w4-linux-base.manifest.json` neutralizado para Base.
+2. `w4-os-home.profile.json` y `w4-os-business.profile.json` con desktop y `os-prober` explicitos.
+3. `w4-os-server.profile.json` con composicion headless inicial.
+4. `config/editions/server/policy.json` como contrato operativo inicial.
+5. Generadores comunes actualizados para `codename=trixie`, branding Server y `--package-set server`.
+6. Artefactos inmediatos regenerados y suite PHPUnit completa en verde.
+
+Siguiente paso despues de este corte:
+materializar `rootfs`, `live` e ISO Server en Linux/WSL, agregar perfil de instalacion Server y ejecutar regresion de composicion Home/Business.
+
+## Referencia historica · MX-004
 
 Objetivo del ciclo:
 materializar el primer tramo verificable de `Update y recovery` sobre la base ya validada de instalacion, sin reabrir alcance de escritorio ni gestion Business.

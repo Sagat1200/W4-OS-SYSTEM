@@ -100,6 +100,7 @@ function buildRootfsScript(array $buildInput, array $directories): string
     $profileId = $buildInput['profile_id'];
     $distribution = $buildInput['upstream']['distribution'];
     $track = $buildInput['upstream']['track'];
+    $codename = $buildInput['upstream']['codename'] ?? $track;
     $requiredPackages = implode(' ', $buildInput['packages']['required']);
     $requiredPackagesForMmdebstrap = implode(',', $buildInput['packages']['required']);
     $recommendedPackages = implode(' ', $buildInput['packages']['recommended']);
@@ -210,6 +211,7 @@ echo "==> W4 OS System rootfs assembly"
 echo "Profile: {$profileId}"
 echo "Distribution: {$distribution}"
 echo "Track: {$track}"
+echo "Codename: {$codename}"
 echo "Output: \${ROOTFS_DIR}"
 
 if ! command -v mmdebstrap >/dev/null 2>&1 && ! command -v debootstrap >/dev/null 2>&1; then
@@ -230,11 +232,11 @@ if command -v mmdebstrap >/dev/null 2>&1; then
     --variant=minbase \
     --include={$requiredPackagesForMmdebstrap} \
     --aptopt='Acquire::Retries "3"' \
-    {$track} "\${ROOTFS_DIR}" \
-    "deb [signed-by=\${HOST_BOOTSTRAP_KEYRING}] https://deb.debian.org/debian {$track} main"
+    {$codename} "\${ROOTFS_DIR}" \
+    "deb [signed-by=\${HOST_BOOTSTRAP_KEYRING}] https://deb.debian.org/debian {$codename} main"
 else
   echo "==> Bootstrap base Debian con debootstrap"
-  debootstrap --keyring="\${HOST_BOOTSTRAP_KEYRING}" --merged-usr --variant=minbase {$track} "\${ROOTFS_DIR}" https://deb.debian.org/debian/
+  debootstrap --keyring="\${HOST_BOOTSTRAP_KEYRING}" --merged-usr --variant=minbase {$codename} "\${ROOTFS_DIR}" https://deb.debian.org/debian/
 
   echo "==> Asegurando keyring Debian dentro del rootfs"
   ensure_debian_keyring_in_rootfs "\${ROOTFS_DIR}"

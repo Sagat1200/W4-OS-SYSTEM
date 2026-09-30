@@ -21,6 +21,7 @@ La arquitectura documental actual del proyecto plantea una familia construida so
 - `W4 Linux Base`: nucleo comun de integracion del sistema.
 - `W4 OS Home`: orientado a uso personal, familiar y domestico.
 - `W4 OS Business`: orientado a administracion, control y operacion en entornos organizacionales.
+- `W4 OS Server`: composicion headless en bootstrap para administracion remota y servicios sobre la misma base comun.
 
 ## Que contiene este repositorio
 
@@ -57,6 +58,7 @@ Actualmente, **W4 OS System** ya supero la fase puramente documental inicial y c
 - endurecimiento tecnico reciente de `UpdateToolkit` para estabilizar el contrato JSON de los CLI, alinear `apply_mode=live-apt`, iniciar `health-report.json` en `planned` y persistir metadata real del snapshot cuando el backend es `snapper`,
 - `php-cli` formalizado en el baseline base para sostener el runtime actual del coordinador de `Update y recovery`,
 - `btrfs-progs` formalizado en el baseline base para sostener snapshots Btrfs durante `MX-004`,
+- apertura tecnica de `W4 OS Server` con Base sin desktop obligatorio, perfil Server headless, politica inicial separada, propagacion de Debian `trixie` como codename efectivo y publisher capaz de generar `--package-set server`,
 - base PHP estructurada como paquete Composer,
 - y suite PHPUnit para toolkits y scripts principales.
 
@@ -77,7 +79,15 @@ La prioridad del proyecto es construir, en este orden:
 
 ## Siguiente ciclo
 
-El siguiente ciclo tecnico recomendado corresponde a `MX-004 · Update y recovery` y se centra en:
+El siguiente ciclo tecnico activo corresponde a `MX-012 · W4 OS Server bootstrap` y se centra en:
+
+- separar la composicion headless de Server sin clonar motores comunes,
+- mantener Home y Business funcionales con desktop explicito,
+- fijar Debian `trixie` como codename efectivo del bootstrap,
+- generar `build-input`, `rootfs bundle`, overlay, live, ISO y repositorio W4 para `w4-os-server`,
+- y validar por PHPUnit que Server no hereda `w4-desktop-meta`, `os-prober`, PipeWire ni portales XDG.
+
+La referencia historica de `MX-004 · Update y recovery` se centro en:
 
 - coordinador durable de actualizacion con `operation_id`,
 - snapshot previo a aplicar cambios,

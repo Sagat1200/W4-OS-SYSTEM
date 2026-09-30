@@ -12,6 +12,7 @@
     "upstream": {
         "distribution": "debian",
         "track": "stable",
+        "codename": "trixie",
         "architectures": [
             "amd64"
         ],
