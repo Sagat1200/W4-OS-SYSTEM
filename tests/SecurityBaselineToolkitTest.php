@@ -111,6 +111,29 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertStringContainsString('php ./verify-security-baseline.php', $readme);
     }
 
+    public function testCreateBaselineForServerAllowsSshWhenEditionPolicyEnablesIt(): void
+    {
+        $toolkit = new SecurityBaselineToolkit($this->rootDir);
+
+        $baseline = $toolkit->createBaseline(
+            'w4-os-server',
+            $this->fixturePath('installer-profiles/w4-os-server.vm-install.json')
+        );
+
+        self::assertSame('w4-os-server', $baseline['profile_id']);
+        self::assertSame(10, $baseline['summary']['implemented']);
+        self::assertSame(0, $baseline['summary']['gap']);
+
+        $controls = $this->indexControls($baseline['controls']);
+        self::assertArrayHasKey('remote-admin-server-policy', $controls);
+        self::assertArrayNotHasKey('remote-admin-disabled-by-default', $controls);
+        self::assertSame('implemented', $controls['remote-admin-server-policy']['implementation_state']);
+        self::assertTrue($controls['remote-admin-server-policy']['expected']['policy_enabled']);
+        self::assertSame(['enabled', 'enabled-runtime'], $controls['remote-admin-server-policy']['expected']['enabled_states_allowed']);
+        self::assertFalse($controls['remote-admin-server-policy']['expected']['root_login']);
+        self::assertSame('publickey', $controls['remote-admin-server-policy']['expected']['authentication']);
+    }
+
     public function testRunSecurityBaselineViaParamikoSupportsDryRun(): void
     {
         $bundleDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-home-baseline';

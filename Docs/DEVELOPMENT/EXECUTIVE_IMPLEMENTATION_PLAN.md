@@ -152,6 +152,7 @@ Resultado ejecutivo esperado:
 - Preflight VM y smoke live Server confirmados en VirtualBox EFI con SSH activo y disco desechable visible.
 - Instalacion Server completada en VM desechable con LUKS2, Btrfs, primer boot desde disco y SSH validado.
 - Baseline runtime Server ejecutado; el fix de overlay live/firstboot queda implementado en generadores y cubierto por PHPUnit.
+- Reinstalacion fresca desde ISO regenerada validada con `w4-firstboot.service`, UFW `DEFAULT_INPUT_POLICY=DROP` y contrato SSH Server alineado a politica.
 - Pruebas PHPUnit que impidan fallback Home y arrastre de `w4-desktop-meta`.
 
 Entregables tecnicos obligatorios:
@@ -167,9 +168,10 @@ Entregables tecnicos obligatorios:
 9. Preflight y smoke live Server trazados con VM desechable `W4-OS-Server-Smoke`.
 10. Instalacion Server validada con `verify-installation.sh`, primer boot LUKS y SSH `w4admin`.
 11. Baseline runtime Server con evidencia inicial/remediada y correccion de transporte del `system-overlay` al live bundle.
+12. VM fresca reinstalada desde la ISO corregida, con UFW activo sin remediacion manual y baseline runtime final en `9 passed`, `0 failed`, `1 skipped`.
 
 Siguiente paso despues de este corte:
-regenerar live/ISO Server con el fix de overlay, reinstalar una VM fresca para validar `w4-firstboot`/UFW sin remediacion manual, decidir el contrato SSH Server y despues ejecutar regresion de composicion Home/Business.
+ejecutar regresion de composicion Home/Business y decidir si los paquetes faltantes de la live instaladora (`gdisk`, `parted`, `dosfstools`, `e2fsprogs`, `squashfs-tools`) deben incorporarse de forma nativa a la ISO Server para eliminar el bootstrap temporal por APT.
 
 ## Referencia historica · MX-004
 

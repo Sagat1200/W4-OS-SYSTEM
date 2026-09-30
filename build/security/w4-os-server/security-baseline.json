@@ -59,25 +59,25 @@
             ]
         },
         {
-            "id": "remote-admin-disabled-by-default",
-            "title": "Administracion remota deshabilitada por defecto",
+            "id": "remote-admin-server-policy",
+            "title": "Administracion remota Server alineada a politica",
             "severity": "required",
             "category": "services",
-            "implementation_state": "gap",
+            "implementation_state": "implemented",
             "validation_scope": "runtime",
-            "description": "La imagen no debe habilitar SSH server como camino normal de administracion inicial.",
+            "description": "La edicion Server debe exponer SSH cuando su politica declara administracion remota habilitada.",
             "expected": {
                 "service": "ssh",
-                "enabled_states_forbidden": [
+                "policy_enabled": true,
+                "enabled_states_allowed": [
                     "enabled",
-                    "enabled-runtime",
-                    "linked",
-                    "linked-runtime",
-                    "alias"
-                ]
+                    "enabled-runtime"
+                ],
+                "root_login": false,
+                "authentication": "publickey"
             },
             "evidence": [
-                "manifests/w4-linux-base.manifest.json",
+                "config/editions/server/policy.json",
                 "installer-profiles/w4-os-server.vm-install.json"
             ]
         },
@@ -257,7 +257,7 @@
         }
     ],
     "summary": {
-        "implemented": 9,
-        "gap": 1
+        "implemented": 10,
+        "gap": 0
     }
 }

@@ -6,7 +6,7 @@
     "disks": [
         {
             "device": "\/dev\/sda",
-            "serial": "VBOX_HARDDISK_VB411f3f48-4e00630d",
+            "serial": "VBOX_HARDDISK_VBcffb5596-de88949f",
             "wwid": null,
             "by_path": "pci-0000:00:0d.0-ata-1.0",
             "size_bytes": 34359738368,
@@ -20,7 +20,7 @@
             "serial": "virtualbox-server-smoke-install-media",
             "wwid": null,
             "by_path": "pci-0000:00:0d.0-ata-2.0",
-            "size_bytes": 307200000,
+            "size_bytes": 307275776,
             "is_installation_media": true,
             "has_partitions": true,
             "has_filesystem_signatures": true,

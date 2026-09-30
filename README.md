@@ -65,6 +65,7 @@ Actualmente, **W4 OS System** ya supero la fase puramente documental inicial y c
 - preflight y smoke live de `W4 OS Server` en VirtualBox EFI con autologin `w4live`, identidad Server, SSH activo y disco desechable visible,
 - instalacion de `W4 OS Server` en VM VirtualBox desechable con LUKS2, Btrfs, subvolumen `/srv`, primer boot cifrado y SSH validado con `w4admin`,
 - baseline runtime de `W4 OS Server` ejecutado en VM instalada, con fix aplicado para que el live bundle transporte/aplique `system-overlay` antes del squashfs y el instalador preserve `w4-firstboot.service` en el target,
+- reinstalacion fresca de `W4 OS Server` desde ISO regenerada con `w4-firstboot.service` activo, UFW habilitado con `DEFAULT_INPUT_POLICY=DROP`, contrato SSH Server formalizado y baseline runtime en `9 passed`, `0 failed`, `1 skipped`,
 - base PHP estructurada como paquete Composer,
 - y suite PHPUnit para toolkits y scripts principales.
 
@@ -93,9 +94,10 @@ El siguiente ciclo tecnico activo corresponde a `MX-012 · W4 OS Server bootstra
 - generar `build-input`, `rootfs bundle`, overlay, live, ISO y repositorio W4 para `w4-os-server`,
 - preparar el primer perfil de instalacion Server,
 - materializar la ISO Server real en WSL,
+- validar instalacion fresca en VM con LUKS, `w4-firstboot`, UFW y baseline runtime,
 - y validar por PHPUnit y manifiesto que Server no hereda `w4-desktop-meta`, `os-prober`, PipeWire ni portales XDG.
 
-El siguiente paso operativo de `MX-012` es arrancar esa ISO en VM UEFI con disco desechable, capturar inventario real, ejecutar el instalador Server y verificar primer boot con LUKS/SSH.
+El siguiente paso operativo de `MX-012` es ejecutar regresion de composicion Home/Business y decidir si la ISO Server debe incorporar nativamente las herramientas de instalacion VM que hoy se resuelven con bootstrap temporal por APT.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 

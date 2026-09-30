@@ -6,7 +6,7 @@ use PHPUnit\Framework\TestCase;
 
 final class ServerIsoArtifactTest extends TestCase
 {
-    private const EXPECTED_ISO_SHA256 = '152b1690a29ad660ad6eb69e6a2d004c66e335b0fcf9108b69d4bc93f58ddca4';
+    private const EXPECTED_ISO_SHA256 = 'b281695569fac65149558b7900c22b31c369ae04494e3d6bb7903c7b7a56d797';
 
     /**
      * @var list<string>

@@ -213,12 +213,13 @@ $acceptedFirewallCommands = array (
   0 => 'ufw',
   1 => 'nft',
 );
-$forbiddenEnabledStates = array (
+$remoteAdminControlId = 'remote-admin-server-policy';
+$sshPolicyEnabled = true;
+$allowedEnabledStates = array (
   0 => 'enabled',
   1 => 'enabled-runtime',
-  2 => 'linked',
-  3 => 'linked-runtime',
-  4 => 'alias',
+);
+$forbiddenEnabledStates = array (
 );
 $criticalPermissionPaths = array (
   0 => 
@@ -329,12 +330,18 @@ if ($sudo['exit_code'] === 0 && $sudo['stdout'] !== '') {
 }
 
 $sshService = runCommand('systemctl is-enabled ssh 2>/dev/null || systemctl is-enabled ssh.service 2>/dev/null');
-if ($sshService['exit_code'] !== 0) {
-    addResult($results, 'remote-admin-disabled-by-default', 'passed', 'ssh no esta habilitado por defecto');
+if ($sshPolicyEnabled) {
+    if ($sshService['exit_code'] === 0 && in_array($sshService['stdout'], $allowedEnabledStates, true)) {
+        addResult($results, $remoteAdminControlId, 'passed', 'ssh esta habilitado conforme a la politica Server: ' . $sshService['stdout']);
+    } else {
+        addResult($results, $remoteAdminControlId, 'failed', 'ssh no esta habilitado conforme a la politica Server');
+    }
+} elseif ($sshService['exit_code'] !== 0) {
+    addResult($results, $remoteAdminControlId, 'passed', 'ssh no esta habilitado por defecto');
 } elseif (in_array($sshService['stdout'], $forbiddenEnabledStates, true)) {
-    addResult($results, 'remote-admin-disabled-by-default', 'failed', 'ssh aparece habilitado: ' . $sshService['stdout']);
+    addResult($results, $remoteAdminControlId, 'failed', 'ssh aparece habilitado: ' . $sshService['stdout']);
 } else {
-    addResult($results, 'remote-admin-disabled-by-default', 'passed', 'ssh no esta habilitado por defecto (' . $sshService['stdout'] . ')');
+    addResult($results, $remoteAdminControlId, 'passed', 'ssh no esta habilitado por defecto (' . $sshService['stdout'] . ')');
 }
 
 $firewallCommand = resolveBinary($acceptedFirewallCommands);

@@ -1,4 +1,4 @@
-# Comandos de operación de PSHELL en VB
+﻿# Comandos de operación de PSHELL en VB
 
 ## Maquinas Virtuales
 
@@ -6,6 +6,7 @@
 | --- | --- |
 | W4-OS-Home-Test | VirtualBox |
 | W4-OS-Business-Test | VirtualBox |
+| W4-OS-Server-Test | VirtualBox |
 
 ## PowerShell
 
@@ -21,15 +22,25 @@
 ## Procedimiento de operación para conección de terminal PowerShell con maquina virtual VB
 
 1- Iniciar la maquina virtual VB
+
 2- Dentro de debian ejecuta el comando whoami para mostrar tu usuario actual.
+
 3- Confirmar si el usuario tiene contraseña ejecutando el comando passwd
+
 5- Si tiene contraseña, ejecuta el comando sudo passwd tu_usuario para cambiar la contraseña.
+
 6- Ejecuta el comando sudo apt update para actualizar el repositorio de paquetes.
+
 7- Ejecuta el comando sudo apt install -y openssh-server para instalar el servidor SSH
+
 8- Levanta el servidor ssh ejecutando el comando sudo systemctl enable --now ssh
+
 9- Ejecuta el comando ip addr para obtener la dirección IP de la maquina virtual VB.
+
 10- En la terminal PowerShell ejecuta el comando ssh -p 2222 w4live@127.0.0.1 para conectarte a la maquina virtual VB.
+
 11- Ingresa la contraseña para poder conectarte desde power shell a la maquina virtual.
+
 12- Si llega a fallar la conexion con la maquina virtual en Power Shell ejecuta en Power Shell ssh-keygen -R "[127.0.0.1]:2222" para eliminar la clave del host en la terminal PowerShell.
 
 ## Flujo de instalacion W4 OS en VirtualBox
@@ -608,7 +619,7 @@ Preflight no destructivo antes de usar una VM Server:
 ```powershell
 php "c:\W4\Packages\W4-OS SYSTEM\scripts\preflight_server_vm_validation.php" `
   --profile w4-os-server `
-  --expected-sha256 152b1690a29ad660ad6eb69e6a2d004c66e335b0fcf9108b69d4bc93f58ddca4
+  --expected-sha256 b281695569fac65149558b7900c22b31c369ae04494e3d6bb7903c7b7a56d797
 ```
 
 Resultado confirmado en `C-096`:
@@ -628,7 +639,8 @@ Instalacion validada en `C-097`:
 
 - Bundle retargeteado: `build/install/w4-os-server-vbox-smoke`.
 - Inventario usado: `examples/install/virtualbox-server-smoke.inventory.json`.
-- VDI final: `VBOX_HARDDISK_VB411f3f48-4e00630d`.
+- VDI final de `C-097`: `VBOX_HARDDISK_VB411f3f48-4e00630d`.
+- VDI fresco de `C-099`: `VBOX_HARDDISK_VBcffb5596-de88949f`.
 - El instalador de la live minima requirio instalar temporalmente `gdisk`, `parted`, `dosfstools`, `e2fsprogs` y `squashfs-tools`; para no llenar el overlay se uso el VDI como scratch Btrfs temporal de APT y luego se limpio con `wipefs` antes de instalar.
 - El cierre valido uso `W4_INSTALL_SOURCE_ROOTFS=/run/live/rootfs/filesystem.squashfs` y `W4_INSTALL_SOURCE_SQUASHFS=/run/live/medium/live/filesystem.squashfs`.
 - Los archivos de secretos deben escribirse como ASCII sin BOM y sin terminador final. Un intento con `Set-Content` en encoding UTF-16 produjo fallo de desbloqueo LUKS aunque la cadena visible era correcta.
@@ -671,4 +683,15 @@ Resultados de `C-098`:
 sudo ufw allow 22/tcp
 ```
 
-El fallo restante es de contrato: `config/editions/server/policy.json` declara `ssh.enabled=true`, mientras el control heredado de `MX-005` espera administracion remota deshabilitada por defecto. La siguiente corrida debe decidir si Server mantiene SSH administrable por politica o si se ajusta el baseline Server.
+El fallo restante de `C-098` era de contrato: `config/editions/server/policy.json` declara `ssh.enabled=true`, mientras el control heredado de `MX-005` esperaba administracion remota deshabilitada por defecto. En `C-099` Server mantiene SSH administrable por politica y el baseline se ajusta a ese contrato.
+
+Revalidacion fresca en `C-099`:
+
+- ISO regenerada con checksum `b281695569fac65149558b7900c22b31c369ae04494e3d6bb7903c7b7a56d797`.
+- `generate_live_bundle.php` normaliza permisos criticos del squashfs: `/`, `/etc`, `/usr`, `/etc/default` y `/etc/ufw`.
+- Instalacion sobre VDI fresco `VBOX_HARDDISK_VBcffb5596-de88949f` con `INSTALL_EXIT=0` y `verify-installation.sh` exitoso.
+- Primer boot desde disco cifrado: prompt LUKS, unlock de `cryptroot` y login `w4-server-vm`.
+- `w4-firstboot.service` quedo `active`; UFW quedo `ENABLED=yes` con `DEFAULT_INPUT_POLICY="DROP"` sin remediacion manual.
+- El baseline Server actualizado formaliza SSH habilitado como contrato de edicion cuando `config/editions/server/policy.json` declara `ssh.enabled=true`.
+- Reporte fresco: `build/security/validation/w4-os-server-fresh-firstboot/security-baseline-report.json` con `9 passed`, `0 failed`, `1 skipped`.
+- La regla temporal `ufw allow 22/tcp` usada solo para extraer evidencia por NAT fue retirada antes de apagar la VM.

@@ -7,7 +7,7 @@
     "build_profile_id": "w4-os-server",
     "target": {
         "disk_selector": {
-            "serial": "VBOX_HARDDISK_VB411f3f48-4e00630d",
+            "serial": "VBOX_HARDDISK_VBcffb5596-de88949f",
             "by_path": "pci-0000:00:0d.0-ata-1.0"
         },
         "expected_state": "empty",

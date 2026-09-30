@@ -51,6 +51,9 @@ final class SecurityBaselineToolkit
         $account = $installationProfile['identity']['account'];
         /** @var array<string, mixed> $encryption */
         $encryption = $installationProfile['security']['encryption'];
+        $editionPolicy = $this->loadEditionPolicyForProfile($profileId);
+        /** @var array<string, mixed> $sshPolicy */
+        $sshPolicy = $editionPolicy['ssh'] ?? [];
 
         $controls = [
             $this->buildControl(
@@ -100,23 +103,7 @@ final class SecurityBaselineToolkit
                     'manifests/w4-linux-base.manifest.json',
                 ]
             ),
-            $this->buildControl(
-                id: 'remote-admin-disabled-by-default',
-                title: 'Administracion remota deshabilitada por defecto',
-                severity: 'required',
-                category: 'services',
-                implementationState: $this->containsPackage($requiredPackages, $recommendedPackages, 'openssh-server') ? 'gap' : 'implemented',
-                validationScope: 'runtime',
-                description: 'La imagen no debe habilitar SSH server como camino normal de administracion inicial.',
-                expected: [
-                    'service' => 'ssh',
-                    'enabled_states_forbidden' => ['enabled', 'enabled-runtime', 'linked', 'linked-runtime', 'alias'],
-                ],
-                evidence: [
-                    'manifests/w4-linux-base.manifest.json',
-                    $this->relativePath($installerProfilePath),
-                ]
-            ),
+            $this->buildRemoteAdminControl($profileId, $requiredPackages, $recommendedPackages, $installerProfilePath, $sshPolicy),
             $this->buildControl(
                 id: 'firewall-control-plane',
                 title: 'Control de firewall presente',
@@ -290,7 +277,14 @@ final class SecurityBaselineToolkit
         $username = $this->phpLiteral((string) $this->controlExpectedValue($baseline, 'standard-account', 'username'));
         $rootPrefix = $this->phpLiteral((string) $this->controlExpectedValue($baseline, 'encrypted-root', 'root_source_prefix'));
         $acceptedFirewallCommands = var_export((array) $this->controlExpectedValue($baseline, 'firewall-control-plane', 'accepted_commands'), true);
-        $forbiddenEnabledStates = var_export((array) $this->controlExpectedValue($baseline, 'remote-admin-disabled-by-default', 'enabled_states_forbidden'), true);
+        $remoteAdminControlId = $this->hasControl($baseline, 'remote-admin-server-policy')
+            ? 'remote-admin-server-policy'
+            : 'remote-admin-disabled-by-default';
+        $remoteAdminExpected = $this->controlExpected($baseline, $remoteAdminControlId);
+        $remoteAdminControlIdLiteral = $this->phpLiteral($remoteAdminControlId);
+        $sshPolicyEnabled = ($remoteAdminExpected['policy_enabled'] ?? false) === true ? 'true' : 'false';
+        $allowedEnabledStates = var_export((array) ($remoteAdminExpected['enabled_states_allowed'] ?? []), true);
+        $forbiddenEnabledStates = var_export((array) ($remoteAdminExpected['enabled_states_forbidden'] ?? []), true);
         $criticalPermissionPaths = var_export((array) $this->controlExpectedValue($baseline, 'critical-filesystem-permissions', 'paths'), true);
         $firewallDenyExpected = var_export((array) $this->controlExpected($baseline, 'firewall-default-deny-incoming'), true);
         $apparmorProfilesExpected = var_export((array) $this->controlExpected($baseline, 'apparmor-enforced-profiles'), true);
@@ -508,6 +502,9 @@ function findPermissionViolations(array \$expectedPaths): array
 \$username = {$username};
 \$rootPrefix = {$rootPrefix};
 \$acceptedFirewallCommands = {$acceptedFirewallCommands};
+\$remoteAdminControlId = {$remoteAdminControlIdLiteral};
+\$sshPolicyEnabled = {$sshPolicyEnabled};
+\$allowedEnabledStates = {$allowedEnabledStates};
 \$forbiddenEnabledStates = {$forbiddenEnabledStates};
 \$criticalPermissionPaths = {$criticalPermissionPaths};
 \$firewallDenyExpected = {$firewallDenyExpected};
@@ -535,12 +532,18 @@ if (\$sudo['exit_code'] === 0 && \$sudo['stdout'] !== '') {
 }
 
 \$sshService = runCommand('systemctl is-enabled ssh 2>/dev/null || systemctl is-enabled ssh.service 2>/dev/null');
-if (\$sshService['exit_code'] !== 0) {
-    addResult(\$results, 'remote-admin-disabled-by-default', 'passed', 'ssh no esta habilitado por defecto');
+if (\$sshPolicyEnabled) {
+    if (\$sshService['exit_code'] === 0 && in_array(\$sshService['stdout'], \$allowedEnabledStates, true)) {
+        addResult(\$results, \$remoteAdminControlId, 'passed', 'ssh esta habilitado conforme a la politica Server: ' . \$sshService['stdout']);
+    } else {
+        addResult(\$results, \$remoteAdminControlId, 'failed', 'ssh no esta habilitado conforme a la politica Server');
+    }
+} elseif (\$sshService['exit_code'] !== 0) {
+    addResult(\$results, \$remoteAdminControlId, 'passed', 'ssh no esta habilitado por defecto');
 } elseif (in_array(\$sshService['stdout'], \$forbiddenEnabledStates, true)) {
-    addResult(\$results, 'remote-admin-disabled-by-default', 'failed', 'ssh aparece habilitado: ' . \$sshService['stdout']);
+    addResult(\$results, \$remoteAdminControlId, 'failed', 'ssh aparece habilitado: ' . \$sshService['stdout']);
 } else {
-    addResult(\$results, 'remote-admin-disabled-by-default', 'passed', 'ssh no esta habilitado por defecto (' . \$sshService['stdout'] . ')');
+    addResult(\$results, \$remoteAdminControlId, 'passed', 'ssh no esta habilitado por defecto (' . \$sshService['stdout'] . ')');
 }
 
 \$firewallCommand = resolveBinary(\$acceptedFirewallCommands);
@@ -657,6 +660,22 @@ TXT;
 
     /**
      * @param array<string, mixed> $baseline
+     */
+    private function hasControl(array $baseline, string $controlId): bool
+    {
+        /** @var list<array<string, mixed>> $controls */
+        $controls = $baseline['controls'];
+        foreach ($controls as $control) {
+            if (($control['id'] ?? null) === $controlId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array<string, mixed> $baseline
      * @return array<string, mixed>
      */
     private function controlExpected(array $baseline, string $controlId): array
@@ -700,6 +719,62 @@ TXT;
             'expected' => $expected,
             'evidence' => $evidence,
         ];
+    }
+
+    /**
+     * @param list<string> $requiredPackages
+     * @param list<string> $recommendedPackages
+     * @param array<string, mixed> $sshPolicy
+     * @return array<string, mixed>
+     */
+    private function buildRemoteAdminControl(
+        string $profileId,
+        array $requiredPackages,
+        array $recommendedPackages,
+        string $installerProfilePath,
+        array $sshPolicy
+    ): array {
+        if (($sshPolicy['enabled'] ?? false) === true) {
+            return $this->buildControl(
+                id: 'remote-admin-server-policy',
+                title: 'Administracion remota Server alineada a politica',
+                severity: 'required',
+                category: 'services',
+                implementationState: $this->containsPackage($requiredPackages, $recommendedPackages, 'openssh-server') ? 'implemented' : 'gap',
+                validationScope: 'runtime',
+                description: 'La edicion Server debe exponer SSH cuando su politica declara administracion remota habilitada.',
+                expected: [
+                    'service' => 'ssh',
+                    'policy_enabled' => true,
+                    'enabled_states_allowed' => ['enabled', 'enabled-runtime'],
+                    'root_login' => (bool) ($sshPolicy['root_login'] ?? false),
+                    'authentication' => (string) ($sshPolicy['authentication'] ?? ''),
+                ],
+                evidence: [
+                    sprintf('config/editions/%s/policy.json', $this->editionDirectoryName($profileId)),
+                    $this->relativePath($installerProfilePath),
+                ]
+            );
+        }
+
+        return $this->buildControl(
+            id: 'remote-admin-disabled-by-default',
+            title: 'Administracion remota deshabilitada por defecto',
+            severity: 'required',
+            category: 'services',
+            implementationState: $this->containsPackage($requiredPackages, $recommendedPackages, 'openssh-server') ? 'gap' : 'implemented',
+            validationScope: 'runtime',
+            description: 'La imagen no debe habilitar SSH server como camino normal de administracion inicial.',
+            expected: [
+                'service' => 'ssh',
+                'policy_enabled' => false,
+                'enabled_states_forbidden' => ['enabled', 'enabled-runtime', 'linked', 'linked-runtime', 'alias'],
+            ],
+            evidence: [
+                'manifests/w4-linux-base.manifest.json',
+                $this->relativePath($installerProfilePath),
+            ]
+        );
     }
 
     /**
@@ -760,6 +835,42 @@ TXT;
         }
 
         return str_replace(DIRECTORY_SEPARATOR, '/', $normalizedPath);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function loadEditionPolicyForProfile(string $profileId): array
+    {
+        $policyPaths = glob($this->rootDir . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'editions' . DIRECTORY_SEPARATOR . '*' . DIRECTORY_SEPARATOR . 'policy.json');
+        if ($policyPaths === false) {
+            return [];
+        }
+
+        foreach ($policyPaths as $policyPath) {
+            $raw = file_get_contents($policyPath);
+            if ($raw === false) {
+                continue;
+            }
+
+            try {
+                /** @var array<string, mixed> $policy */
+                $policy = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                continue;
+            }
+
+            if (($policy['profile_id'] ?? null) === $profileId) {
+                return $policy;
+            }
+        }
+
+        return [];
+    }
+
+    private function editionDirectoryName(string $profileId): string
+    {
+        return str_replace('w4-os-', '', $profileId);
     }
 
     /**

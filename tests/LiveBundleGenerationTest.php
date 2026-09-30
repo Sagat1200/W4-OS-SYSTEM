@@ -76,6 +76,9 @@ final class LiveBundleGenerationTest extends TestCase
         self::assertNotFalse($composeScript);
         self::assertStringContainsString('OVERLAY_FILES_DIR="${FILES_DIR}/system-overlay"', $composeScript);
         self::assertStringContainsString('apply_system_overlay "${WORK_ROOTFS}"', $composeScript);
+        self::assertStringContainsString('chmod 0755 "${rootfs_dir}" "${rootfs_dir}/etc" "${rootfs_dir}/usr"', $composeScript);
+        self::assertStringContainsString('chmod 0755 "${rootfs_dir}/etc/ufw"', $composeScript);
+        self::assertStringContainsString('chmod 0644 "${rootfs_dir}/etc/ufw/ufw.conf"', $composeScript);
     }
 
     /**

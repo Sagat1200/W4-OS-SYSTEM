@@ -140,6 +140,7 @@ apply_system_overlay() {
 
   mkdir -p "${rootfs_dir}/etc/w4" "${rootfs_dir}/usr/local/lib/w4" "${rootfs_dir}/var/lib/w4"
   chown root:root "${rootfs_dir}" "${rootfs_dir}/etc" "${rootfs_dir}/usr" "${rootfs_dir}/usr/local" "${rootfs_dir}/usr/local/lib" 2>/dev/null || true
+  chmod 0755 "${rootfs_dir}" "${rootfs_dir}/etc" "${rootfs_dir}/usr" "${rootfs_dir}/usr/local" "${rootfs_dir}/usr/local/lib" 2>/dev/null || true
   chown -R root:root \
     "${rootfs_dir}/etc/hostname" \
     "${rootfs_dir}/etc/hosts" \
@@ -148,6 +149,7 @@ apply_system_overlay() {
     "${rootfs_dir}/etc/motd" \
     "${rootfs_dir}/etc/w4" \
     "${rootfs_dir}/etc/default" \
+    "${rootfs_dir}/etc/ufw" \
     "${rootfs_dir}/etc/systemd" \
     "${rootfs_dir}/etc/skel" \
     "${rootfs_dir}/usr/local/lib/w4" \
@@ -155,6 +157,10 @@ apply_system_overlay() {
 
   [[ -f "${rootfs_dir}/usr/local/lib/w4/w4-firstboot.sh" ]] && chmod 0755 "${rootfs_dir}/usr/local/lib/w4/w4-firstboot.sh"
   [[ -f "${rootfs_dir}/usr/local/lib/w4/w4-live-prep.sh" ]] && chmod 0755 "${rootfs_dir}/usr/local/lib/w4/w4-live-prep.sh"
+  [[ -d "${rootfs_dir}/etc/default" ]] && chmod 0755 "${rootfs_dir}/etc/default"
+  [[ -d "${rootfs_dir}/etc/ufw" ]] && chmod 0755 "${rootfs_dir}/etc/ufw"
+  [[ -f "${rootfs_dir}/etc/default/ufw" ]] && chmod 0644 "${rootfs_dir}/etc/default/ufw"
+  [[ -f "${rootfs_dir}/etc/ufw/ufw.conf" ]] && chmod 0644 "${rootfs_dir}/etc/ufw/ufw.conf"
 
   mkdir -p "${rootfs_dir}/etc/systemd/system/multi-user.target.wants"
   if [[ -f "${rootfs_dir}/etc/systemd/system/w4-firstboot.service" ]]; then
