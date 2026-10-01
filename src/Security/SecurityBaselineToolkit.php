@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace W4\OS\Security;
 
+use W4\OS\Installer\EditionPolicyToolkit;
 use W4\OS\Installer\InstallerToolkit;
 use W4\OS\Manifest\ManifestToolkit;
 use W4\OS\Support\ValidationError;
@@ -137,7 +138,7 @@ final class SecurityBaselineToolkit
                     'input_policy_value' => 'DROP',
                     'output_policy_key' => 'DEFAULT_OUTPUT_POLICY',
                     'output_policy_value' => 'ALLOW',
-                    'edition_policy_env' => '/etc/w4/edition-policy.env',
+                    'edition_policy_env' => EditionPolicyToolkit::TARGET_ENV_PATH,
                     'env_backend_key' => 'W4_FIREWALL_BACKEND',
                     'env_backend_value' => (string) ($editionPolicy['firewall']['backend'] ?? 'ufw'),
                     'env_input_key' => 'W4_FIREWALL_INCOMING',
@@ -788,7 +789,7 @@ TXT;
                     'enabled_states_allowed' => ['enabled', 'enabled-runtime'],
                     'root_login' => (bool) ($sshPolicy['root_login'] ?? false),
                     'authentication' => (string) ($sshPolicy['authentication'] ?? ''),
-                    'edition_policy_env' => '/etc/w4/edition-policy.env',
+                    'edition_policy_env' => EditionPolicyToolkit::TARGET_ENV_PATH,
                     'env_enabled_key' => 'W4_SSH_ENABLED',
                     'env_enabled_value' => '1',
                     'env_authentication_key' => 'W4_SSH_AUTHENTICATION',
@@ -815,7 +816,7 @@ TXT;
                 'service' => 'ssh',
                 'policy_enabled' => false,
                 'enabled_states_forbidden' => ['enabled', 'enabled-runtime', 'linked', 'linked-runtime', 'alias'],
-                    'edition_policy_env' => '/etc/w4/edition-policy.env',
+                    'edition_policy_env' => EditionPolicyToolkit::TARGET_ENV_PATH,
                     'env_enabled_key' => 'W4_SSH_ENABLED',
                     'env_enabled_value' => '0',
             ],

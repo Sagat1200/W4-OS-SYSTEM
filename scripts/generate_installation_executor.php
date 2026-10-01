@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use W4\OS\Support\ValidationError;
+use W4\OS\Installer\EditionPolicyToolkit;
 require_once __DIR__ . '/lib/InstallerToolkit.php';
 
 $rootDir = dirname(__DIR__);
@@ -78,41 +79,7 @@ function normalizeLf(string $content): string
  */
 function installationPolicy(array $plan): array
 {
-    /** @var array<string, mixed> $policy */
-    $policy = is_array($plan['edition_policy'] ?? null) ? $plan['edition_policy'] : [];
-    /** @var array<string, mixed> $branding */
-    $branding = is_array($policy['branding'] ?? null) ? $policy['branding'] : [];
-    /** @var array<string, mixed> $boot */
-    $boot = is_array($policy['boot'] ?? null) ? $policy['boot'] : [];
-    /** @var array<string, mixed> $ssh */
-    $ssh = is_array($policy['ssh'] ?? null) ? $policy['ssh'] : [];
-    /** @var array<string, mixed> $firewall */
-    $firewall = is_array($policy['firewall'] ?? null) ? $policy['firewall'] : [];
-
-    $edition = (string) (($plan['installation_profile']['edition'] ?? $plan['summary']['edition'] ?? 'home'));
-    $defaultTarget = (string) ($boot['default_target'] ?? ($edition === 'server' ? 'multi-user.target' : 'graphical.target'));
-    $hostnamePrefix = (string) ($branding['hostname_prefix'] ?? ('w4-' . strtolower($edition)));
-    $sshEnabled = ($ssh['enabled'] ?? ($edition === 'server')) === true;
-
-    return [
-        'path' => (string) ($policy['path'] ?? 'edition-policy.json'),
-        'branding' => [
-            'hostname_prefix' => $hostnamePrefix,
-        ],
-        'boot' => [
-            'default_target' => $defaultTarget,
-        ],
-        'ssh' => [
-            'enabled' => $sshEnabled,
-            'root_login' => ($ssh['root_login'] ?? false) === true,
-            'authentication' => (string) ($ssh['authentication'] ?? ($sshEnabled ? 'publickey' : 'disabled')),
-        ],
-        'firewall' => [
-            'backend' => (string) ($firewall['backend'] ?? 'ufw'),
-            'incoming' => (string) ($firewall['incoming'] ?? 'deny'),
-            'outgoing' => (string) ($firewall['outgoing'] ?? 'allow'),
-        ],
-    ];
+    return (new EditionPolicyToolkit())->normalizeFromPlan($plan);
 }
 
 /**

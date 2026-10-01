@@ -288,7 +288,12 @@ final class InstallerToolkit
         $installer = $installationProfile['installer'];
         /** @var array<string, mixed> $security */
         $security = $installationProfile['security'];
-        $normalizedEditionPolicy = $this->normalizeEditionPolicy($buildInputId, $installationProfile, $editionPolicy, $editionPolicyPath);
+        $normalizedEditionPolicy = (new EditionPolicyToolkit())->normalizeForProfile(
+            $buildInputId,
+            $installationProfile,
+            $editionPolicy,
+            $editionPolicyPath
+        );
 
         $hostname = (string) $identity['hostname'];
         $hostnamePrefix = (string) $normalizedEditionPolicy['branding']['hostname_prefix'];
@@ -375,7 +380,7 @@ final class InstallerToolkit
         array $editionPolicy = [],
         ?string $editionPolicyPath = null
     ): array {
-        $normalizedEditionPolicy = $this->normalizeEditionPolicy(
+        $normalizedEditionPolicy = (new EditionPolicyToolkit())->normalizeForProfile(
             (string) $buildInput['profile_id'],
             $installationProfile,
             $editionPolicy,
@@ -571,92 +576,6 @@ final class InstallerToolkit
                 'cryptroot-unlock',
                 'btrfs-mounts',
                 'first-boot',
-            ],
-        ];
-    }
-
-    /**
-     * @param array<string, mixed> $installationProfile
-     * @param array<string, mixed> $editionPolicy
-     * @return array<string, mixed>
-     */
-    private function normalizeEditionPolicy(
-        string $profileId,
-        array $installationProfile,
-        array $editionPolicy,
-        ?string $editionPolicyPath
-    ): array {
-        $editionName = ucfirst((string) $installationProfile['edition']);
-        $hostnamePrefix = 'w4-' . strtolower((string) $installationProfile['edition']);
-        $defaultTarget = ((string) $installationProfile['edition']) === 'server' ? 'multi-user.target' : 'graphical.target';
-        $sshEnabled = ((string) $installationProfile['edition']) === 'server';
-
-        if ($editionPolicy !== []) {
-            if (($editionPolicy['profile_id'] ?? null) !== $profileId) {
-                throw new ValidationError(sprintf(
-                    'La politica de edicion no corresponde al profile_id %s',
-                    $profileId
-                ));
-            }
-
-            /** @var array<string, mixed> $branding */
-            $branding = is_array($editionPolicy['branding'] ?? null) ? $editionPolicy['branding'] : [];
-            /** @var array<string, mixed> $boot */
-            $boot = is_array($editionPolicy['boot'] ?? null) ? $editionPolicy['boot'] : [];
-            /** @var array<string, mixed> $ssh */
-            $ssh = is_array($editionPolicy['ssh'] ?? null) ? $editionPolicy['ssh'] : [];
-            /** @var array<string, mixed> $firewall */
-            $firewall = is_array($editionPolicy['firewall'] ?? null) ? $editionPolicy['firewall'] : [];
-
-            $editionName = (string) ($branding['edition'] ?? $editionName);
-            $hostnamePrefix = (string) ($branding['hostname_prefix'] ?? $hostnamePrefix);
-            $defaultTarget = (string) ($boot['default_target'] ?? $defaultTarget);
-            $sshEnabled = ($ssh['enabled'] ?? $sshEnabled) === true;
-
-            return [
-                'profile_id' => $profileId,
-                'path' => $editionPolicyPath ?? sprintf('config/editions/%s/policy.json', str_replace('w4-os-', '', $profileId)),
-                'branding' => [
-                    'edition' => $editionName,
-                    'hostname_prefix' => $hostnamePrefix,
-                ],
-                'boot' => [
-                    'default_target' => $defaultTarget,
-                    'firmware' => (string) ($boot['firmware'] ?? 'uefi'),
-                ],
-                'ssh' => [
-                    'enabled' => $sshEnabled,
-                    'root_login' => ($ssh['root_login'] ?? false) === true,
-                    'authentication' => (string) ($ssh['authentication'] ?? ($sshEnabled ? 'publickey' : 'disabled')),
-                ],
-                'firewall' => [
-                    'backend' => (string) ($firewall['backend'] ?? 'ufw'),
-                    'incoming' => (string) ($firewall['incoming'] ?? 'deny'),
-                    'outgoing' => (string) ($firewall['outgoing'] ?? 'allow'),
-                ],
-            ];
-        }
-
-        return [
-            'profile_id' => $profileId,
-            'path' => $editionPolicyPath ?? sprintf('config/editions/%s/policy.json', str_replace('w4-os-', '', $profileId)),
-            'branding' => [
-                'edition' => $editionName,
-                'hostname_prefix' => $hostnamePrefix,
-            ],
-            'boot' => [
-                'default_target' => $defaultTarget,
-                'firmware' => 'uefi',
-            ],
-            'ssh' => [
-                'enabled' => $sshEnabled,
-                'root_login' => false,
-                'authentication' => $sshEnabled ? 'publickey' : 'disabled',
-            ],
-            'firewall' => [
-                'backend' => 'ufw',
-                'incoming' => 'deny',
-                'outgoing' => 'allow',
             ],
         ];
     }

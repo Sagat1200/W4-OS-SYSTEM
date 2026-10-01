@@ -27,6 +27,7 @@ Entregar un V1 centrado en una imagen de escritorio instalable, actualizable y r
 9. Los validadores de artefactos y preflight deben contrastar la metadata emitida por `live`/`iso` con la politica efectiva de la edicion siempre que esa comparacion aporte una verificacion objetiva del contrato.
 10. La instalacion unattended debe tratar `edition-policy.json` como contrato operativo del target y no solo como documentacion: cualquier decision sobre `default_target`, hostname o hardening base debe derivarse desde esa politica o quedar trazablemente justificada fuera de ella.
 11. Las capas `runtime/transfer` y la validacion posterior al primer arranque deben conservar suficiente metadata de politica para demostrar que el sistema desplegado sigue alineado con `edition-policy.json` y no solo con defaults implicitos del instalador.
+12. Cuando dos o mas etapas del pipeline necesiten reinterpretar `edition-policy.json`, esa normalizacion debe vivir en una sola clase compartida para evitar drift entre manifests, scripts y baseline runtime.
 
 ## Alcance ejecutivo V1
 
