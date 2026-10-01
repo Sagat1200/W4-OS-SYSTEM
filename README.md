@@ -73,6 +73,7 @@ Actualmente, **W4 OS System** ya supero la fase puramente documental inicial y c
 
 La documentacion sigue siendo el contrato rector del proyecto, pero el repositorio ya contiene implementacion verificable y evidencia operativa para `Supply`, `Build` e `Instalacion`.
 Tambien queda explicitado que la especificacion amplia de `W4-Linux-Base` describe en varias areas una arquitectura objetivo mas avanzada que el estado tecnico hoy validado en este repositorio; la comparacion trazable entre ambas capas se registra en `Docs/DEVELOPMENT/W4_LINUX_BASE_GAP_MATRIX.md`.
+Como ajuste inmediato derivado de esa revision, `manifests/w4-linux-base.manifest.json` ya declara de forma explicita que `w4-linux-base` es base reusable de Home, Business y Server.
 
 ## Ruta inicial
 

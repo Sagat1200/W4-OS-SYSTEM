@@ -22,6 +22,7 @@ Entregar un V1 centrado en una imagen de escritorio instalable, actualizable y r
 4. La prioridad tecnica del proyecto es `instalar -> actualizar -> fallar -> recuperar`.
 5. Home y Business comparten base; Business no debe bloquear el MVP local.
 6. La especificacion base puede adelantar capacidades objetivo; la gobernanza del repo solo reconoce como estado real aquello que ya tenga artefacto, prueba y evidencia enlazada.
+7. Los manifiestos y contratos declarativos del tronco comun deben reflejar la topologia real vigente entre Home, Business y Server para no introducir deuda de lectura en el roadmap tecnico.
 
 ## Alcance ejecutivo V1
 

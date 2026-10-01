@@ -60,7 +60,7 @@
     ]
   },
   "notes": [
-    "Este manifiesto define una base reusable para Home y Business.",
+    "Este manifiesto define una base reusable para Home, Business y Server.",
     "Los paquetes w4-* representan contratos propuestos y podran materializarse como metapaquetes reales en fases posteriores."
   ]
 }
