@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use W4\OS\Support\ValidationError;
 use W4\OS\Installer\EditionPolicyToolkit;
+use W4\OS\Support\ArtifactMetadataToolkit;
 
 require_once __DIR__ . '/bootstrap.php';
 
@@ -647,10 +648,13 @@ try {
     @chmod($runtimeDir . DIRECTORY_SEPARATOR . 'run-installation.sh', 0755);
 
     $editionPolicyView = (new EditionPolicyToolkit())->compactRuntimeView($editionPolicy);
-    $runtimeManifest = [
-        'installation_runtime_schema_version' => 1,
-        'kind' => 'installation-runtime',
-        'profile_id' => $profileId,
+    $metadataToolkit = new ArtifactMetadataToolkit();
+    $runtimeManifest = $metadataToolkit->createManifest(
+        'installation_runtime_schema_version',
+        'installation-runtime',
+        $profileId,
+        null,
+        [
         'bundle_dir' => $bundleDir,
         'runtime_dir' => $runtimeDir,
         'selected_disk' => $plan['plan_binding']['selected_disk']['device'] ?? null,
@@ -671,14 +675,15 @@ try {
             'check_only' => 'bash run-check-only.sh',
             'install' => 'bash run-installation.sh',
         ],
-    ];
+        ]
+    );
 
     writeJsonFile($runtimeDir . DIRECTORY_SEPARATOR . 'installation-runtime.json', $runtimeManifest);
     writeJsonFile($bundleManifestPath, mergeRuntimeArtifacts($bundleManifest));
 
-    printJson([
-        'status' => 'ok',
-        'profile_id' => $profileId,
+    printJson($metadataToolkit->createSuccessPayload(
+        $profileId,
+        [
         'bundle_dir' => $bundleDir,
         'runtime_dir' => $runtimeDir,
         'selected_disk' => $plan['plan_binding']['selected_disk']['device'] ?? null,
@@ -697,7 +702,8 @@ try {
         ],
         'check_only_command' => 'bash run-check-only.sh',
         'install_command' => 'bash run-installation.sh',
-    ]);
+        ]
+    ));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));

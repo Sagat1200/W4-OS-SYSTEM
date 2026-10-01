@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ArtifactMetadataToolkit;
+
 require_once __DIR__ . '/lib/ManifestToolkit.php';
 
 $rootDir = dirname(__DIR__);
@@ -321,36 +323,40 @@ try {
         }
     }
 
-    $isoManifest = [
-        'iso_bundle_schema_version' => 1,
-        'kind' => 'iso-bundle',
-        'profile_id' => $liveManifest['profile_id'],
-        'profile_name' => $liveManifest['profile_name'],
+    $metadataToolkit = new ArtifactMetadataToolkit();
+    $isoManifest = $metadataToolkit->createManifest(
+        'iso_bundle_schema_version',
+        'iso-bundle',
+        (string) $liveManifest['profile_id'],
+        (string) $liveManifest['profile_name'],
+        [
         'base_manifest_id' => $liveManifest['base_manifest_id'],
         'source_live_manifest' => basename($liveManifestPath),
         'branding' => $vars,
         'edition_policy' => $liveManifest['edition_policy'] ?? [],
         'iso_tooling_required' => ['xorriso', 'grub-mkrescue|grub-mkstandalone', 'mtools', 'dosfstools'],
-        'generated_files' => array_keys($files),
+        'generated_files' => $metadataToolkit->normalizeGeneratedFiles(array_keys($files)),
         'next_steps' => [
             'instalar tooling ISO en WSL si aplica',
             'componer ISO arrancable UEFI',
             'verificar checksum del artefacto',
             'probar arranque en VM',
         ],
-    ];
+        ]
+    );
 
     $manifestPath = $outputPath . DIRECTORY_SEPARATOR . 'iso-manifest.json';
     if (file_put_contents($manifestPath, json_encode($isoManifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n") === false) {
         throw new ValidationError(sprintf('No se pudo escribir el archivo %s', $manifestPath));
     }
 
-    printJson([
-        'status' => 'ok',
-        'profile_id' => $resolvedProfileId,
+    printJson($metadataToolkit->createSuccessPayload(
+        $resolvedProfileId,
+        [
         'output_directory' => $outputPath,
-        'generated_files' => array_merge(['iso-manifest.json'], array_keys($files)),
-    ]);
+        'generated_files' => $metadataToolkit->normalizeGeneratedFiles(array_merge(['iso-manifest.json'], array_keys($files))),
+        ]
+    ));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ArtifactMetadataToolkit;
 use W4\OS\Support\ValidationError;
 
 require_once __DIR__ . '/lib/ManifestToolkit.php';
@@ -709,11 +710,13 @@ try {
     removeDirectory($overlayPayloadOutputDir);
     copyDirectory($overlayFilesDir, $overlayPayloadOutputDir);
 
-    $liveManifest = [
-        'live_bundle_schema_version' => 1,
-        'kind' => 'live-bundle',
-        'profile_id' => $buildInput['profile_id'],
-        'profile_name' => $buildInput['profile_name'],
+    $metadataToolkit = new ArtifactMetadataToolkit();
+    $liveManifest = $metadataToolkit->createManifest(
+        'live_bundle_schema_version',
+        'live-bundle',
+        (string) $buildInput['profile_id'],
+        (string) $buildInput['profile_name'],
+        [
         'base_manifest_id' => $buildInput['base_manifest_id'],
         'source_build_input' => basename($inputPath),
         'source_overlay_manifest' => basename($overlayManifestPath),
@@ -725,26 +728,28 @@ try {
             'bootloader_ready' => false,
             'iso_tooling_required' => ['xorriso', 'grub-mkstandalone'],
         ],
-        'generated_files' => array_merge(array_keys($files), ['files/system-overlay/']),
         'next_steps' => [
             'componer image-root y filesystem.squashfs',
             'validar live-boot en VM',
             'instalar tooling de ISO si aplica',
             'empaquetar ISO arrancable',
         ],
-    ];
+        'generated_files' => $metadataToolkit->normalizeGeneratedFiles(array_merge(array_keys($files), ['files/system-overlay/'])),
+        ]
+    );
 
     $manifestPath = $outputPath . DIRECTORY_SEPARATOR . 'live-manifest.json';
     if (file_put_contents($manifestPath, json_encode($liveManifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n") === false) {
         throw new ValidationError(sprintf('No se pudo escribir el archivo %s', $manifestPath));
     }
 
-    printJson([
-        'status' => 'ok',
-        'profile_id' => $resolvedProfileId,
+    printJson($metadataToolkit->createSuccessPayload(
+        $resolvedProfileId,
+        [
         'output_directory' => $outputPath,
-        'generated_files' => array_merge(['live-manifest.json'], array_keys($files), ['files/system-overlay/']),
-    ]);
+        'generated_files' => $metadataToolkit->normalizeGeneratedFiles(array_merge(['live-manifest.json'], array_keys($files), ['files/system-overlay/'])),
+        ]
+    ));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));

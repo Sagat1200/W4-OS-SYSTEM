@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use W4\OS\Installer\EditionPolicyToolkit;
+use W4\OS\Support\ArtifactMetadataToolkit;
 use W4\OS\Support\ValidationError;
 
 require_once __DIR__ . '/bootstrap.php';
@@ -306,11 +307,14 @@ function buildTransferRuntimeManifest(
 ): array
 {
     $editionPolicyView = (new EditionPolicyToolkit())->compactRuntimeView($editionPolicy, '../edition-policy.json');
+    $metadataToolkit = new ArtifactMetadataToolkit();
 
-    return [
-        'installation_runtime_schema_version' => 1,
-        'kind' => 'installation-runtime',
-        'profile_id' => $profileId,
+    return $metadataToolkit->createManifest(
+        'installation_runtime_schema_version',
+        'installation-runtime',
+        $profileId,
+        null,
+        [
         'bundle_dir' => dirname($runtimeDir),
         'runtime_dir' => $runtimeDir,
         'selected_disk' => $plan['plan_binding']['selected_disk']['device'] ?? null,
@@ -329,7 +333,8 @@ function buildTransferRuntimeManifest(
             'install' => 'bash run-installation.sh',
         ],
         'transfer_dir' => $transferDir,
-    ];
+        ]
+    );
 }
 
 /**
@@ -543,10 +548,13 @@ try {
     @chmod($transferRuntimeDir . DIRECTORY_SEPARATOR . 'run-installation.sh', 0755);
 
     $transferPolicyView = (new EditionPolicyToolkit())->compactRuntimeView($editionPolicy, 'edition-policy.json');
-    $transferManifest = [
-        'installation_transfer_schema_version' => 1,
-        'kind' => 'installation-transfer',
-        'profile_id' => $profileId,
+    $metadataToolkit = new ArtifactMetadataToolkit();
+    $transferManifest = $metadataToolkit->createManifest(
+        'installation_transfer_schema_version',
+        'installation-transfer',
+        $profileId,
+        null,
+        [
         'bundle_dir' => $bundleDir,
         'transfer_dir' => $transferDir,
         'selected_disk' => $plan['plan_binding']['selected_disk']['device'] ?? null,
@@ -569,7 +577,8 @@ try {
             'check_only' => 'cd ~/w4-transfer/runtime && bash run-check-only.sh',
             'install' => 'cd ~/w4-transfer/runtime && bash run-installation.sh',
         ],
-    ];
+        ]
+    );
 
     writeJsonFile($transferDir . DIRECTORY_SEPARATOR . 'transfer-manifest.json', $transferManifest);
     if (file_put_contents(
@@ -579,16 +588,17 @@ try {
         throw new ValidationError('No se pudo escribir TRANSFER_PREPARATION.txt');
     }
 
-    printJson([
-        'status' => 'ok',
-        'profile_id' => $profileId,
+    printJson($metadataToolkit->createSuccessPayload(
+        $profileId,
+        [
         'bundle_dir' => $bundleDir,
         'transfer_dir' => $transferDir,
         'selected_disk' => $plan['plan_binding']['selected_disk']['device'] ?? null,
         'edition_policy' => $transferManifest['edition_policy'],
         'source' => $transferManifest['source'],
         'secrets' => $transferManifest['secrets'],
-    ]);
+        ]
+    ));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));

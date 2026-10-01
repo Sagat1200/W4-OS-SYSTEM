@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ArtifactMetadataToolkit;
+
 require_once __DIR__ . '/lib/ManifestToolkit.php';
 
 $rootDir = dirname(__DIR__);
@@ -653,11 +655,13 @@ try {
         }
     }
 
-    $overlayManifest = [
-        'overlay_schema_version' => 1,
-        'kind' => 'system-overlay',
-        'profile_id' => $buildInput['profile_id'],
-        'profile_name' => $buildInput['profile_name'],
+    $metadataToolkit = new ArtifactMetadataToolkit();
+    $overlayManifest = $metadataToolkit->createManifest(
+        'overlay_schema_version',
+        'system-overlay',
+        (string) $buildInput['profile_id'],
+        (string) $buildInput['profile_name'],
+        [
         'base_manifest_id' => $buildInput['base_manifest_id'],
         'source_build_input' => basename($inputPath),
         'branding' => [
@@ -691,26 +695,28 @@ try {
                 ],
             ],
         ],
-        'generated_files' => array_keys($files),
+        'generated_files' => $metadataToolkit->normalizeGeneratedFiles(array_keys($files)),
         'next_steps' => [
             'aplicar overlay al rootfs',
             'verificar primer inicio',
             'integrar entorno live con la imagen final',
             'probar boot en VM',
         ],
-    ];
+        ]
+    );
 
     $manifestPath = $outputPath . DIRECTORY_SEPARATOR . 'overlay-manifest.json';
     if (file_put_contents($manifestPath, json_encode($overlayManifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n") === false) {
         throw new ValidationError(sprintf('No se pudo escribir el archivo %s', $manifestPath));
     }
 
-    printJson([
-        'status' => 'ok',
-        'profile_id' => $buildInput['profile_id'],
+    printJson($metadataToolkit->createSuccessPayload(
+        (string) $buildInput['profile_id'],
+        [
         'output_directory' => $outputPath,
-        'generated_files' => array_merge(['overlay-manifest.json'], array_keys($files)),
-    ]);
+        'generated_files' => $metadataToolkit->normalizeGeneratedFiles(array_merge(['overlay-manifest.json'], array_keys($files))),
+        ]
+    ));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));
