@@ -41,14 +41,19 @@
             "ca-certificates",
             "cryptsetup-initramfs",
             "curl",
+            "dosfstools",
+            "e2fsprogs",
+            "gdisk",
             "grub-efi-amd64",
             "iproute2",
             "jq",
             "linux-image-amd64",
             "network-manager",
             "openssh-server",
+            "parted",
             "php-cli",
             "shim-signed",
+            "squashfs-tools",
             "sudo",
             "systemd",
             "systemd-sysv",
@@ -61,6 +66,7 @@
         "server-baseline",
         "headless-default",
         "ssh-administration",
+        "self-contained-live-installer",
         "btrfs-recovery"
     ],
     "source_manifests": {
@@ -70,7 +76,7 @@
     "counts": {
         "required_meta_packages": 2,
         "recommended_meta_packages": 0,
-        "required_packages": 21,
+        "required_packages": 26,
         "recommended_packages": 0
     }
 }

@@ -66,6 +66,8 @@ Actualmente, **W4 OS System** ya supero la fase puramente documental inicial y c
 - instalacion de `W4 OS Server` en VM VirtualBox desechable con LUKS2, Btrfs, subvolumen `/srv`, primer boot cifrado y SSH validado con `w4admin`,
 - baseline runtime de `W4 OS Server` ejecutado en VM instalada, con fix aplicado para que el live bundle transporte/aplique `system-overlay` antes del squashfs y el instalador preserve `w4-firstboot.service` en el target,
 - reinstalacion fresca de `W4 OS Server` desde ISO regenerada con `w4-firstboot.service` activo, UFW habilitado con `DEFAULT_INPUT_POLICY=DROP`, contrato SSH Server formalizado y baseline runtime en `9 passed`, `0 failed`, `1 skipped`,
+- decision `C-100` aplicada y materializada para que la ISO Server incorpore nativamente las herramientas de instalacion VM (`gdisk`, `parted`, `dosfstools`, `e2fsprogs`, `squashfs-tools`) y elimine el bootstrap temporal por APT; la ISO autocontenida vigente queda en SHA256 `b5fbb8915e6af8760298c9e5b3b7f9eb797f20e1ddabd4c51fd2c6db925c3f21`,
+- instalacion VM repetida desde la ISO Server autocontenida sin ejecutar bootstrap temporal por APT, con `INSTALL_EXIT=0`, primer boot LUKS correcto, `w4-firstboot.service` activo, UFW en `DEFAULT_INPUT_POLICY=DROP` y baseline runtime en `9 passed`, `0 failed`, `1 skipped`,
 - base PHP estructurada como paquete Composer,
 - y suite PHPUnit para toolkits y scripts principales.
 
@@ -95,9 +97,10 @@ El siguiente ciclo tecnico activo corresponde a `MX-012 · W4 OS Server bootstra
 - preparar el primer perfil de instalacion Server,
 - materializar la ISO Server real en WSL,
 - validar instalacion fresca en VM con LUKS, `w4-firstboot`, UFW y baseline runtime,
+- incorporar herramientas nativas de instalacion VM en la ISO Server,
 - y validar por PHPUnit y manifiesto que Server no hereda `w4-desktop-meta`, `os-prober`, PipeWire ni portales XDG.
 
-El siguiente paso operativo de `MX-012` es ejecutar regresion de composicion Home/Business y decidir si la ISO Server debe incorporar nativamente las herramientas de instalacion VM que hoy se resuelven con bootstrap temporal por APT.
+El siguiente paso operativo de `MX-012` es cerrar el bloque Server o abrir una regresion ampliada Home/Business antes de promover un candidato de release.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 

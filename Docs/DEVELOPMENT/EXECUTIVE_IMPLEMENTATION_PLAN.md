@@ -153,6 +153,7 @@ Resultado ejecutivo esperado:
 - Instalacion Server completada en VM desechable con LUKS2, Btrfs, primer boot desde disco y SSH validado.
 - Baseline runtime Server ejecutado; el fix de overlay live/firstboot queda implementado en generadores y cubierto por PHPUnit.
 - Reinstalacion fresca desde ISO regenerada validada con `w4-firstboot.service`, UFW `DEFAULT_INPUT_POLICY=DROP` y contrato SSH Server alineado a politica.
+- ISO Server autocontenida regenerada y validada en VM con `gdisk`, `parted`, `dosfstools`, `e2fsprogs` y `squashfs-tools` nativos, eliminando el bootstrap temporal por APT.
 - Pruebas PHPUnit que impidan fallback Home y arrastre de `w4-desktop-meta`.
 
 Entregables tecnicos obligatorios:
@@ -169,9 +170,11 @@ Entregables tecnicos obligatorios:
 10. Instalacion Server validada con `verify-installation.sh`, primer boot LUKS y SSH `w4admin`.
 11. Baseline runtime Server con evidencia inicial/remediada y correccion de transporte del `system-overlay` al live bundle.
 12. VM fresca reinstalada desde la ISO corregida, con UFW activo sin remediacion manual y baseline runtime final en `9 passed`, `0 failed`, `1 skipped`.
+13. ISO Server autocontenida materializada con checksum SHA256 `b5fbb8915e6af8760298c9e5b3b7f9eb797f20e1ddabd4c51fd2c6db925c3f21` y manifiesto que incluye las herramientas nativas de instalacion VM.
+14. Instalacion VM repetida sobre VDI `VBOX_HARDDISK_VBd65f4f6b-647952f8` sin `prepare-live-install-tools.sh` ni APT temporal en la live, con `INSTALL_EXIT=0`, `verify-installation.sh` aprobado y baseline runtime `9 passed`, `0 failed`, `1 skipped`.
 
 Siguiente paso despues de este corte:
-ejecutar regresion de composicion Home/Business y decidir si los paquetes faltantes de la live instaladora (`gdisk`, `parted`, `dosfstools`, `e2fsprogs`, `squashfs-tools`) deben incorporarse de forma nativa a la ISO Server para eliminar el bootstrap temporal por APT.
+cerrar `MX-012` o abrir una regresion ampliada Home/Business antes de promover un candidato de release.
 
 ## Referencia historica · MX-004
 

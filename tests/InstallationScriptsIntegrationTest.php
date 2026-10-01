@@ -127,7 +127,7 @@ final class InstallationScriptsIntegrationTest extends TestCase
         $payload = $this->decodeJson($result['stdout']);
         self::assertSame('ok', $payload['status']);
         self::assertSame('/dev/sda', $payload['selected_disk']);
-        self::assertSame('VBOX_HARDDISK_VBcffb5596-de88949f', $payload['selector']['serial']);
+        self::assertSame('VBOX_HARDDISK_VBd65f4f6b-647952f8', $payload['selector']['serial']);
 
         $derivedProfile = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-profile.derived.json');
         self::assertSame('w4-os-server', $derivedProfile['build_profile_id']);

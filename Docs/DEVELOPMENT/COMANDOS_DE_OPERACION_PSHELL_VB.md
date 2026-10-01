@@ -1,4 +1,4 @@
-﻿# Comandos de operación de PSHELL en VB
+# Comandos de operación de PSHELL en VB
 
 ## Maquinas Virtuales
 
@@ -619,7 +619,7 @@ Preflight no destructivo antes de usar una VM Server:
 ```powershell
 php "c:\W4\Packages\W4-OS SYSTEM\scripts\preflight_server_vm_validation.php" `
   --profile w4-os-server `
-  --expected-sha256 b281695569fac65149558b7900c22b31c369ae04494e3d6bb7903c7b7a56d797
+  --expected-sha256 b5fbb8915e6af8760298c9e5b3b7f9eb797f20e1ddabd4c51fd2c6db925c3f21
 ```
 
 Resultado confirmado en `C-096`:
@@ -641,6 +641,7 @@ Instalacion validada en `C-097`:
 - Inventario usado: `examples/install/virtualbox-server-smoke.inventory.json`.
 - VDI final de `C-097`: `VBOX_HARDDISK_VB411f3f48-4e00630d`.
 - VDI fresco de `C-099`: `VBOX_HARDDISK_VBcffb5596-de88949f`.
+- VDI fresco de `C-100`: `VBOX_HARDDISK_VBd65f4f6b-647952f8`.
 - El instalador de la live minima requirio instalar temporalmente `gdisk`, `parted`, `dosfstools`, `e2fsprogs` y `squashfs-tools`; para no llenar el overlay se uso el VDI como scratch Btrfs temporal de APT y luego se limpio con `wipefs` antes de instalar.
 - El cierre valido uso `W4_INSTALL_SOURCE_ROOTFS=/run/live/rootfs/filesystem.squashfs` y `W4_INSTALL_SOURCE_SQUASHFS=/run/live/medium/live/filesystem.squashfs`.
 - Los archivos de secretos deben escribirse como ASCII sin BOM y sin terminador final. Un intento con `Set-Content` en encoding UTF-16 produjo fallo de desbloqueo LUKS aunque la cadena visible era correcta.
@@ -695,3 +696,12 @@ Revalidacion fresca en `C-099`:
 - El baseline Server actualizado formaliza SSH habilitado como contrato de edicion cuando `config/editions/server/policy.json` declara `ssh.enabled=true`.
 - Reporte fresco: `build/security/validation/w4-os-server-fresh-firstboot/security-baseline-report.json` con `9 passed`, `0 failed`, `1 skipped`.
 - La regla temporal `ufw allow 22/tcp` usada solo para extraer evidencia por NAT fue retirada antes de apagar la VM.
+
+Decision operativa en `C-100`:
+
+- La ISO Server debe ser autocontenida para instalacion VM y ya no debe depender de instalar herramientas por APT dentro de la live.
+- `w4-os-server.profile.json` incorpora nativamente `gdisk`, `parted`, `dosfstools`, `e2fsprogs` y `squashfs-tools`.
+- La regresion de manifests protege que Home y Business conserven desktop explicito y que Server mantenga el contrato headless.
+- `ServerIsoArtifactTest` exige que el `filesystem.manifest` de la ISO Server contenga esas herramientas antes de considerar valido el artefacto.
+- La ISO autocontenida regenerada pesa `309141504` bytes y su checksum SHA256 es `b5fbb8915e6af8760298c9e5b3b7f9eb797f20e1ddabd4c51fd2c6db925c3f21`.
+- Validacion VM completada en `C-100` sobre VDI fresco `VBOX_HARDDISK_VBd65f4f6b-647952f8`: no se ejecuto `prepare-live-install-tools.sh`, no se instalaron herramientas por APT dentro de la live, `INSTALL_EXIT=0`, `verify-installation.sh` paso, el primer boot desbloqueo LUKS, `w4-firstboot.service` quedo `active`, UFW quedo `ENABLED=yes` con `DEFAULT_INPUT_POLICY=DROP`, y el baseline `build/security/validation/w4-os-server-c100-self-contained/security-baseline-report.json` cerro con `9 passed`, `0 failed`, `1 skipped`.

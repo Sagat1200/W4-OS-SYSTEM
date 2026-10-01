@@ -14,9 +14,14 @@
     "required": [
       "cryptsetup-initramfs",
       "curl",
+      "dosfstools",
+      "e2fsprogs",
+      "gdisk",
       "iproute2",
       "jq",
       "openssh-server",
+      "parted",
+      "squashfs-tools",
       "systemd-sysv",
       "systemd-timesyncd"
     ],
@@ -31,11 +36,13 @@
     "server-baseline",
     "headless-default",
     "ssh-administration",
+    "self-contained-live-installer",
     "btrfs-recovery"
   ],
   "notes": [
     "Business se utiliza solo como referencia de bootstrap.",
     "NetworkManager y UFW se reutilizan desde W4 Linux Base.",
+    "Las herramientas de particionado, formateo y extraccion squashfs hacen que la ISO Server pueda instalar en VM sin bootstrap temporal por APT.",
     "Las features requieren consumidores y pruebas; no habilitan servicios por si solas.",
     "Agent, VPN y roles de workloads son opcionales y posteriores."
   ]

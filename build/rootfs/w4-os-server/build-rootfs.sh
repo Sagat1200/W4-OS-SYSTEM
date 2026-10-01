@@ -119,7 +119,7 @@ if command -v mmdebstrap >/dev/null 2>&1; then
   echo "==> Bootstrap base Debian con mmdebstrap"
   mmdebstrap \
     --variant=minbase \
-    --include=apparmor,apt,base-files,bash,btrfs-progs,ca-certificates,cryptsetup-initramfs,curl,grub-efi-amd64,iproute2,jq,linux-image-amd64,network-manager,openssh-server,php-cli,shim-signed,sudo,systemd,systemd-sysv,systemd-timesyncd,ufw \
+    --include=apparmor,apt,base-files,bash,btrfs-progs,ca-certificates,cryptsetup-initramfs,curl,dosfstools,e2fsprogs,gdisk,grub-efi-amd64,iproute2,jq,linux-image-amd64,network-manager,openssh-server,parted,php-cli,shim-signed,squashfs-tools,sudo,systemd,systemd-sysv,systemd-timesyncd,ufw \
     --aptopt='Acquire::Retries "3"' \
     trixie "${ROOTFS_DIR}" \
     "deb [signed-by=${HOST_BOOTSTRAP_KEYRING}] https://deb.debian.org/debian trixie main"
@@ -162,7 +162,7 @@ mkdir -p "${ROOTFS_DIR}/var/tmp"
 
   echo "==> Instalacion de paquetes requeridos"
   chroot "${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 update
-  chroot "${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 install -y apparmor apt base-files bash btrfs-progs ca-certificates cryptsetup-initramfs curl grub-efi-amd64 iproute2 jq linux-image-amd64 network-manager openssh-server php-cli shim-signed sudo systemd systemd-sysv systemd-timesyncd ufw
+  chroot "${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 install -y apparmor apt base-files bash btrfs-progs ca-certificates cryptsetup-initramfs curl dosfstools e2fsprogs gdisk grub-efi-amd64 iproute2 jq linux-image-amd64 network-manager openssh-server parted php-cli shim-signed squashfs-tools sudo systemd systemd-sysv systemd-timesyncd ufw
 fi
 
 echo "==> Asegurando keyring Debian dentro del rootfs"

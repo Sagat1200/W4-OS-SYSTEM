@@ -6,7 +6,7 @@ use PHPUnit\Framework\TestCase;
 
 final class ServerIsoArtifactTest extends TestCase
 {
-    private const EXPECTED_ISO_SHA256 = 'b281695569fac65149558b7900c22b31c369ae04494e3d6bb7903c7b7a56d797';
+    private const EXPECTED_ISO_SHA256 = 'b5fbb8915e6af8760298c9e5b3b7f9eb797f20e1ddabd4c51fd2c6db925c3f21';
 
     /**
      * @var list<string>
@@ -16,6 +16,17 @@ final class ServerIsoArtifactTest extends TestCase
         'os-prober',
         'pipewire',
         'xdg-desktop-portal',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    private const INSTALLER_PACKAGES = [
+        'dosfstools',
+        'e2fsprogs',
+        'gdisk',
+        'parted',
+        'squashfs-tools',
     ];
 
     public function testServerIsoArtifactIsHeadlessAndChecksummedWhenMaterialized(): void
@@ -48,6 +59,10 @@ final class ServerIsoArtifactTest extends TestCase
 
         foreach (self::FORBIDDEN_PACKAGES as $packageName) {
             self::assertNotContains($packageName, $manifestPackages);
+        }
+
+        foreach (self::INSTALLER_PACKAGES as $packageName) {
+            self::assertContains($packageName, $manifestPackages);
         }
     }
 

@@ -91,6 +91,11 @@ final class ManifestToolkitTest extends TestCase
         self::assertContains('cryptsetup-initramfs', $resolved['required_packages']);
         self::assertContains('network-manager', $resolved['required_packages']);
         self::assertContains('ufw', $resolved['required_packages']);
+        self::assertContains('gdisk', $resolved['required_packages']);
+        self::assertContains('parted', $resolved['required_packages']);
+        self::assertContains('dosfstools', $resolved['required_packages']);
+        self::assertContains('e2fsprogs', $resolved['required_packages']);
+        self::assertContains('squashfs-tools', $resolved['required_packages']);
         self::assertNotContains('os-prober', $resolved['required_packages']);
         self::assertNotContains('pipewire', $resolved['required_packages']);
         self::assertNotContains('xdg-desktop-portal', $resolved['required_packages']);
@@ -99,5 +104,25 @@ final class ManifestToolkitTest extends TestCase
         self::assertNotContains('snapper', $resolved['recommended_packages']);
         self::assertContains('headless-default', $resolved['features']);
         self::assertContains('ssh-administration', $resolved['features']);
+        self::assertContains('self-contained-live-installer', $resolved['features']);
+    }
+
+    public function testHomeAndBusinessKeepDesktopCompositionExplicitly(): void
+    {
+        $toolkit = new ManifestToolkit($this->rootDir);
+
+        $manifests = $toolkit->loadManifests();
+        $toolkit->validateAll($manifests);
+
+        foreach (['w4-os-home', 'w4-os-business'] as $profileId) {
+            $resolved = $toolkit->resolveProfile($manifests, $profileId);
+
+            self::assertContains('w4-desktop-meta', $resolved['required_meta_packages']);
+            self::assertContains('os-prober', $resolved['required_packages']);
+            self::assertContains('pipewire', $resolved['required_packages']);
+            self::assertContains('xdg-desktop-portal', $resolved['required_packages']);
+            self::assertNotContains('w4-server-meta', $resolved['required_meta_packages']);
+            self::assertNotContains('self-contained-live-installer', $resolved['features']);
+        }
     }
 }

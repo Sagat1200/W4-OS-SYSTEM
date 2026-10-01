@@ -1,6 +1,6 @@
 # W4 OS Server — bootstrap desde Business y desarrollo independiente
 
-**Documento operativo y de arquitectura · 30 de septiembre de 2026 · revisión 6**
+**Documento operativo y de arquitectura · 30 de septiembre de 2026 · revisión 7**
 
 **Workspace Windows previsto:** `C:\W4\Packages\W4-OS SERVER`
 
@@ -8,12 +8,12 @@
 
 ## 1. Alcance, evidencia y significado de «clonar»
 
-Este documento entrega en una sola pieza el procedimiento de bootstrap, la arquitectura objetivo, los archivos que deben crearse, los cambios del motor compartido y los criterios para construir y validar Server. La revisión inicial documentaba la ejecución esperada; al cierre de `C-092` ya existe un primer corte técnico P0 en este checkout común: perfil Server, política separada, Base sin desktop obligatorio, propagación de `codename=trixie`, overlay con identidad Server, recetas `rootfs`/`live`/`iso` generadas y publisher con `--package-set server`. En `C-093` se añadió el perfil de instalación Server MVP, inventario Hyper-V de laboratorio, bundle `build/install/w4-os-server` y cobertura PHPUnit del instalador. En `C-094` se materializaron en WSL el `rootfs`, el arbol live y la ISO Server `build/iso-output/w4-os-server/w4-os-server-live-amd64.iso`, con manifiesto sin paquetes desktop prohibidos. En `C-095` ese contrato headless quedó cubierto por `tests/ServerIsoArtifactTest.php`. En `C-096` se añadió `preflight_server_vm_validation.php` y la ISO arrancó en VirtualBox EFI hasta TTY con autologin `w4live`, identidad `W4 OS Server`, SSH activo y disco desechable visible. En `C-097` Server completó instalación destructiva sobre VDI desechable, verificación local, primer boot LUKS, login `w4-server-vm` y validación SSH con `w4admin`. En `C-098` se ejecutó baseline runtime Server: el primer reporte detectó ausencia de `w4-firstboot.service` en la instalación y UFW inactivo; se corrigió el generador live para transportar/aplicar `files/system-overlay` antes del squashfs y el instalador para reconocer firstboot bajo `/etc/systemd/system`. En `C-099` se regeneró live/ISO Server con esos fixes, se corrigió la normalización de permisos raíz críticos en el squashfs, se reinstaló una VM fresca sobre VDI `VBOX_HARDDISK_VBcffb5596-de88949f`, `w4-firstboot.service` habilitó UFW sin remediación manual y el baseline runtime Server actualizado cerró con `9 passed`, `0 failed`, `1 skipped`; el contrato SSH Server queda formalizado como administración remota habilitada por política de edición.
+Este documento entrega en una sola pieza el procedimiento de bootstrap, la arquitectura objetivo, los archivos que deben crearse, los cambios del motor compartido y los criterios para construir y validar Server. La revisión inicial documentaba la ejecución esperada; al cierre de `C-092` ya existe un primer corte técnico P0 en este checkout común: perfil Server, política separada, Base sin desktop obligatorio, propagación de `codename=trixie`, overlay con identidad Server, recetas `rootfs`/`live`/`iso` generadas y publisher con `--package-set server`. En `C-093` se añadió el perfil de instalación Server MVP, inventario Hyper-V de laboratorio, bundle `build/install/w4-os-server` y cobertura PHPUnit del instalador. En `C-094` se materializaron en WSL el `rootfs`, el arbol live y la ISO Server `build/iso-output/w4-os-server/w4-os-server-live-amd64.iso`, con manifiesto sin paquetes desktop prohibidos. En `C-095` ese contrato headless quedó cubierto por `tests/ServerIsoArtifactTest.php`. En `C-096` se añadió `preflight_server_vm_validation.php` y la ISO arrancó en VirtualBox EFI hasta TTY con autologin `w4live`, identidad `W4 OS Server`, SSH activo y disco desechable visible. En `C-097` Server completó instalación destructiva sobre VDI desechable, verificación local, primer boot LUKS, login `w4-server-vm` y validación SSH con `w4admin`. En `C-098` se ejecutó baseline runtime Server: el primer reporte detectó ausencia de `w4-firstboot.service` en la instalación y UFW inactivo; se corrigió el generador live para transportar/aplicar `files/system-overlay` antes del squashfs y el instalador para reconocer firstboot bajo `/etc/systemd/system`. En `C-099` se regeneró live/ISO Server con esos fixes, se corrigió la normalización de permisos raíz críticos en el squashfs, se reinstaló una VM fresca sobre VDI `VBOX_HARDDISK_VBcffb5596-de88949f`, `w4-firstboot.service` habilitó UFW sin remediación manual y el baseline runtime Server actualizado cerró con `9 passed`, `0 failed`, `1 skipped`; el contrato SSH Server queda formalizado como administración remota habilitada por política de edición. En `C-100` la ISO Server queda autocontenida para instalación VM al incluir nativamente `gdisk`, `parted`, `dosfstools`, `e2fsprogs` y `squashfs-tools`; se regeneraron rootfs, live e ISO, con SHA256 `b5fbb8915e6af8760298c9e5b3b7f9eb797f20e1ddabd4c51fd2c6db925c3f21`, y se repitió la instalación en VirtualBox sobre VDI fresco `VBOX_HARDDISK_VBd65f4f6b-647952f8` sin bootstrap temporal por APT, cerrando con `INSTALL_EXIT=0`, primer boot LUKS, `w4-firstboot.service` activo, UFW `DEFAULT_INPUT_POLICY=DROP` y baseline `9 passed`, `0 failed`, `1 skipped`.
 
 Se recuperó la conversación «Análisis del repositorio» y se consultaron directamente archivos de `Sagat1200/W4-OS-SYSTEM` en su rama predeterminada. La inspección es selectiva, no una auditoría completa ni una reproducción de sus pruebas. Las validaciones Home/Business que describe el README son evidencia declarada por el proyecto; deben repetirse para Server.
 
 | Evidencia consultada | Hallazgo que condiciona el trabajo |
-|---|---|
+| --- | --- |
 | [Perfil Business](https://github.com/Sagat1200/W4-OS-SYSTEM/blob/main/manifests/w4-os-business.profile.json) | Hereda Base; exige `curl`, `jq`, `pipewire`, `xdg-desktop-portal`; recomienda VPN. |
 | [Manifiesto Base](https://github.com/Sagat1200/W4-OS-SYSTEM/blob/main/manifests/w4-linux-base.manifest.json) | En la inspección inicial exigía **`w4-desktop-meta`** y `os-prober`; en `C-092` queda neutralizado para Server y conserva NetworkManager, UFW, PHP CLI y Btrfs. |
 | [ManifestToolkit](https://github.com/Sagat1200/W4-OS-SYSTEM/blob/main/src/Manifest/ManifestToolkit.php) | Combina meta-paquetes por unión; `packages.remove` no retira meta-paquetes y no permite eliminar paquetes requeridos por Base. `inherits` debe apuntar a una base, no a Business. |
@@ -61,7 +61,7 @@ Debian Stable, fijado a trixie
 ```
 
 | Componente | Propietario | Regla de reutilización |
-|---|---|---|
+| --- | --- | --- |
 | Debian, kernel, GRUB, initramfs, integración LUKS/Btrfs | Base | Implementación única; políticas de instalación parametrizadas. |
 | Resolver y generadores rootfs/live/ISO | Base | Reciben perfil y entradas validadas; rechazan edición desconocida. |
 | InstallerToolkit, UpdateToolkit, SecurityBaselineToolkit | Base | Compartidos; Server aporta políticas y pruebas específicas. |
@@ -97,7 +97,7 @@ Server mantiene su propia versión de producto y registra `base_version`, `base_
 ## 5. Inventario: copiar, reutilizar, excluir y refactorizar
 
 | Elemento actual | Acción |
-|---|---|
+| --- | --- |
 | `manifests/w4-os-business.profile.json` | Usar como referencia; crear `w4-os-server.profile.json` con identidad y lista propias. |
 | Base, `src/`, toolkits, `scripts/lib/`, bootstrap/autoload | Reutilizar; no duplicar por edición. |
 | `scripts/generate_*`, `prepare_*`, publicación y update | Parametrizar donde aún existan supuestos Home/Business. |
@@ -394,7 +394,7 @@ Para empaquetado formal, completar identidad de mantenedor, licencia, `debian/co
 Generar la parte de dependencias procedente de Base/perfil; comprobar por tests que no diverge del JSON. Los paquetes funcionales comunes y `w4-server-defaults` se añaden mediante un catálogo explícito. Nunca crear un metapaquete vacío para que APT «pase» mientras falten runtime/recovery reales.
 
 | Paquete | Contenido/contrato |
-|---|---|
+| --- | --- |
 | `w4-base-meta` | Dependencias comunes mínimas, sin desktop ni meta-paquetes de edición. |
 | `w4-desktop-meta` | Composición desktop exclusivamente; nunca dependencia de runtime o enterprise. |
 | `w4-server-meta` | Selección Server, sin archivos de datos de usuario. |
@@ -532,7 +532,7 @@ Interfaz mínima: CLI/TUI por consola local y consola serial de VM. «Headless»
 ### Entradas requeridas
 
 | Entrada | Validación |
-|---|---|
+| --- | --- |
 | Perfil | Exactamente `w4-os-server` y hash de política conocido. |
 | Disco | Identidad estable, serial, tamaño, writable y distinto del medio live/disco host. |
 | Destrucción de datos | Mostrar plan y exigir confirmación que identifique el disco antes de particionar. |
@@ -683,7 +683,7 @@ La raíz seleccionada por GRUB, `rootflags=subvol=...`, fstab y mecanismo de rol
 ## 19. Baseline de seguridad
 
 | Control | Implementación | Evidencia |
-|---|---|---|
+| --- | --- | --- |
 | Sin GUI | Perfil y cierre APT headless | Manifest de paquetes y procesos. |
 | AppArmor | Instalado, activo y perfiles relevantes enforce | `aa-status`; casos de denegación esperados. |
 | Firewall | UFW, deny incoming, allow outgoing inicial | Reglas efectivas IPv4/IPv6 y test desde otra VM. |
@@ -808,7 +808,7 @@ Posterior: syslog remoto con transporte seguro, métricas opt-in y exporters res
 ## 23. Pruebas y evidencia
 
 | Nivel | Casos mínimos | Criterio |
-|---|---|---|
+| --- | --- | --- |
 | Resolver | Perfil Server, IDs inválidos, dependencias y remociones | Sin desktop-meta; no fallback Home; errores claros. |
 | Regresión | Home/Business antes/después | Mismo conjunto funcional esperado, desktop conservado. |
 | Paquetes | Instalar meta desde APT limpio | Runtime/recovery reales, dependencias resueltas sin GUI. |
@@ -854,7 +854,7 @@ Cada corrida produce: commit fuente, hashes de perfiles/políticas, lock de paqu
 Implementar sobre los comandos y runners comunes verificados en el checkout. Este documento define jobs y gates; no presenta un workflow YAML ficticio como pipeline ya operativo.
 
 | Job | Ejecuta | Acceso |
-|---|---|---|
+| --- | --- | --- |
 | `validate` | Composer, lint PHP, PHPUnit, manifests, política Server | Sin secretos. |
 | `compose` | Matriz Home/Business/Server y comparación de dependencias | Sin claves productivas. |
 | `package` | Paquetes y repo efímero firmado con clave de test | Entorno desechable. |
@@ -913,7 +913,7 @@ No fijar una fecha de V1 antes de medir estos gates. Ser instalable no equivale 
 ### P3 — roles y plataforma empresarial
 
 | Rol opcional | Trabajo adicional necesario |
-|---|---|
+| --- | --- |
 | Web | Servidor HTTP elegido, TLS, puertos, logs, backups y checks HTTP. |
 | Database | Motor/versiones, volúmenes, consistencia, backup/restore y migraciones. |
 | Virtualization | KVM/libvirt, IOMMU si aplica, bridges, políticas de acceso y backups VM. |
@@ -943,7 +943,7 @@ Para migrar máquinas Business existentes en el futuro: exportar configuración/
 ## 27. Riesgos y rollback del desarrollo
 
 | Riesgo | Prevención | Recuperación |
-|---|---|---|
+| --- | --- | --- |
 | Desktop entra por meta-paquete | Refactor Base y test del cierre APT | Rechazar imagen; corregir receta y reconstruir. |
 | Server identificado como Home | Catálogo de edición y tests negativos | Revertir cambio de overlay con commit correctivo. |
 | Cambio Stable→nueva Debian | Codename/lock y gate de sources | Reconstruir con entradas registradas. |
@@ -962,7 +962,7 @@ Si la clonación falla a mitad, no volver a ejecutar sobre la misma carpeta con 
 ## 28. ADRs iniciales
 
 | ADR | Decisión | Motivo y consecuencia |
-|---|---|---|
+| --- | --- | --- |
 | SERVER-001 | Server hereda Base, no Business | Bootstrap compartido sin dependencia permanente del desktop empresarial. |
 | SERVER-002 | Monorepo lógico durante bootstrap | Compatible con rutas actuales; extracción posterior exige API de composición externa. |
 | SERVER-003 | Headless como contrato verificable | Ausencia de GUI tanto en composición como en runtime. |
