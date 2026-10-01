@@ -82,6 +82,7 @@ La convergencia tambien llega a `runtime/` y a la validacion posterior: `prepare
 Para reducir drift interno del repositorio, la normalizacion de `edition-policy.json` ya vive en [EditionPolicyToolkit.php](file:///C:/W4/Packages/W4-OS%20SYSTEM/src/Installer/EditionPolicyToolkit.php): `InstallerToolkit`, `generate_installation_executor.php`, `prepare_installation_runtime.php`, `prepare_installation_transfer.php` y `SecurityBaselineToolkit` consumen el mismo contrato canónico local en vez de mantener variantes paralelas.
 En la misma linea, la metadata base de `overlay`, `live`, `iso`, `runtime` y `transfer` ya empieza a converger sobre [ArtifactMetadataToolkit.php](file:///C:/W4/Packages/W4-OS%20SYSTEM/src/Support/ArtifactMetadataToolkit.php), para que los manifests y payloads de exito compartan el mismo sobre canonico sin reabrir el pipeline ni alterar los contenidos funcionales ya validados.
 Esa convergencia ya alcanza tambien a `rootfs` y a `prepare_installation_bundle.php`: `rootfs-manifest.json`, los `generated_files` del bundle de rootfs y el payload final de preparacion de instalacion pasan por el mismo helper y quedan ordenados bajo el mismo criterio canonico.
+Tambien queda ya cubierto el eje de `update/repository`: `generate_update_repository_bundle.php` y `publish_update_repository.php` reutilizan la misma envoltura canonica para manifests y payloads sin forzar un `profile_id` artificial cuando la identidad real del artefacto es `repository_snapshot` o `publication_profile`.
 
 ## Ruta inicial
 

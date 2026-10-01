@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 
 use W4\OS\Manifest\ManifestToolkit;
+use W4\OS\Support\ArtifactMetadataToolkit;
 
 $rootDir = dirname(__DIR__);
 $defaultBundleRoot = $rootDir . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'update' . DIRECTORY_SEPARATOR . 'repositories';
@@ -530,32 +531,39 @@ try {
         throw new ValidationError(sprintf('No se pudo crear la carpeta del bundle: %s', $outputDir));
     }
 
-    $manifest = [
-        'repository_bundle_schema_version' => 1,
-        'kind' => 'update-repository-bundle',
-        'repository_snapshot' => [
-            'id' => $snapshotId,
-            'channel' => $channel,
+    $metadataToolkit = new ArtifactMetadataToolkit();
+    $generatedArtifacts = $metadataToolkit->normalizeGeneratedFiles([
+        'build-repo.sh',
+        'repository-manifest.json',
+        'apt-source.list.template',
+        'apt-source.dists.list.template',
+        'apt-source.signed.list.template',
+        'REPOSITORY_BUNDLE_README.txt',
+    ]);
+
+    $manifest = $metadataToolkit->createManifestEnvelope(
+        'repository_bundle_schema_version',
+        'update-repository-bundle',
+        [
+            'repository_snapshot' => [
+                'id' => $snapshotId,
+                'channel' => $channel,
+            ],
         ],
-        'target_version' => $targetVersion,
-        'package_set' => $packageSet,
-        'package_strategy' => 'derived-from-manifests',
-        'source_profiles' => [
-            'base' => 'w4-linux-base',
-            'home' => 'w4-os-home',
-            'business' => 'w4-os-business',
-            'server' => 'w4-os-server',
-        ],
-        'packages' => $packages,
-        'generated_artifacts' => [
-            'build-repo.sh',
-            'repository-manifest.json',
-            'apt-source.list.template',
-            'apt-source.dists.list.template',
-            'apt-source.signed.list.template',
-            'REPOSITORY_BUNDLE_README.txt',
-        ],
-    ];
+        [
+            'target_version' => $targetVersion,
+            'package_set' => $packageSet,
+            'package_strategy' => 'derived-from-manifests',
+            'source_profiles' => [
+                'base' => 'w4-linux-base',
+                'home' => 'w4-os-home',
+                'business' => 'w4-os-business',
+                'server' => 'w4-os-server',
+            ],
+            'packages' => $packages,
+            'generated_artifacts' => $generatedArtifacts,
+        ]
+    );
 
     $manifestPath = $outputDir . DIRECTORY_SEPARATOR . 'repository-manifest.json';
     $scriptPath = $outputDir . DIRECTORY_SEPARATOR . 'build-repo.sh';
@@ -617,15 +625,15 @@ TEXT;
         throw new ValidationError(sprintf('No se pudo escribir %s', $readmePath));
     }
 
-    printJson([
-        'status' => 'ok',
+    printJson($metadataToolkit->createStatusPayload([
         'bundle_dir' => $outputDir,
         'snapshot_id' => $snapshotId,
         'channel' => $channel,
         'target_version' => $targetVersion,
         'package_set' => $packageSet,
         'package_count' => count($packages),
-    ]);
+        'generated_artifacts' => $generatedArtifacts,
+    ]));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));

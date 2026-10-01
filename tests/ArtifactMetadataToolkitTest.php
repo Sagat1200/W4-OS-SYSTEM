@@ -32,6 +32,32 @@ final class ArtifactMetadataToolkitTest extends TestCase
         self::assertSame(['compose-live.sh', 'files/system-overlay/'], $manifest['generated_files']);
     }
 
+    public function testCreateManifestEnvelopeSupportsNonProfileArtifacts(): void
+    {
+        $toolkit = new ArtifactMetadataToolkit();
+
+        $manifest = $toolkit->createManifestEnvelope(
+            'repository_bundle_schema_version',
+            'update-repository-bundle',
+            [
+                'repository_snapshot' => [
+                    'id' => 'w4-main-2026-10-01T120000Z',
+                    'channel' => 'testing',
+                ],
+            ],
+            [
+                'target_version' => '1.0.3',
+            ]
+        );
+
+        self::assertSame(1, $manifest['repository_bundle_schema_version']);
+        self::assertSame('update-repository-bundle', $manifest['kind']);
+        self::assertSame('w4-main-2026-10-01T120000Z', $manifest['repository_snapshot']['id']);
+        self::assertSame('testing', $manifest['repository_snapshot']['channel']);
+        self::assertSame('1.0.3', $manifest['target_version']);
+        self::assertArrayNotHasKey('profile_id', $manifest);
+    }
+
     public function testNormalizeGeneratedFilesSortsAndDeduplicatesEntries(): void
     {
         $toolkit = new ArtifactMetadataToolkit();
@@ -61,5 +87,20 @@ final class ArtifactMetadataToolkitTest extends TestCase
         self::assertSame('ok', $payload['status']);
         self::assertSame('w4-os-home', $payload['profile_id']);
         self::assertSame('/tmp/w4-os-home', $payload['output_directory']);
+    }
+
+    public function testCreateStatusPayloadSupportsGenericArtifacts(): void
+    {
+        $toolkit = new ArtifactMetadataToolkit();
+
+        $payload = $toolkit->createStatusPayload([
+            'bundle_dir' => '/tmp/repository-bundle',
+            'snapshot_id' => 'w4-main-2026-10-01T120000Z',
+        ]);
+
+        self::assertSame('ok', $payload['status']);
+        self::assertSame('/tmp/repository-bundle', $payload['bundle_dir']);
+        self::assertSame('w4-main-2026-10-01T120000Z', $payload['snapshot_id']);
+        self::assertArrayNotHasKey('profile_id', $payload);
     }
 }

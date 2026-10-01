@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/bootstrap.php';
 
+use W4\OS\Support\ArtifactMetadataToolkit;
 use W4\OS\Support\ValidationError;
 use W4\OS\Update\RepositoryPublicationToolkit;
 
@@ -128,6 +129,7 @@ try {
     }
 
     $toolkit = new RepositoryPublicationToolkit();
+    $metadataToolkit = new ArtifactMetadataToolkit();
     $bundleManifest = $toolkit->readRepositoryBundleManifest($bundleDir);
 
     $outputDir ??= $toolkit->determineDefaultOutputDir($rootDir, $bundleManifest, 'prod');
@@ -190,12 +192,13 @@ try {
     $verification = $toolkit->validatePublishedRepository($outputDir, $bundleManifest);
     $publicationManifestPath = $outputDir . DIRECTORY_SEPARATOR . 'publication-manifest.json';
 
-    $toolkit->writePublicationRecord(
-        $publicationManifestPath,
+    $publicationRecord = $metadataToolkit->createManifestEnvelope(
+        'publication_manifest_schema_version',
+        'published-update-repository',
         [
-            'publication_manifest_schema_version' => 1,
-            'kind' => 'published-update-repository',
             'publication_profile' => 'official-prod',
+        ],
+        [
             'signing_profile' => 'prod',
             'bundle_dir' => $bundleDir,
             'output_dir' => $outputDir,
@@ -207,8 +210,9 @@ try {
         ]
     );
 
-    printJson([
-        'status' => 'ok',
+    $toolkit->writePublicationRecord($publicationManifestPath, $publicationRecord);
+
+    printJson($metadataToolkit->createStatusPayload([
         'publication_profile' => 'official-prod',
         'bundle_dir' => $bundleDir,
         'output_dir' => $outputDir,
@@ -223,7 +227,7 @@ try {
             'gpg_key_id' => $runnerPayload['gpg_key_id'] ?? null,
             'gpg_homedir_wsl' => $runnerPayload['gpg_homedir_wsl'] ?? null,
         ],
-    ]);
+    ]));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));

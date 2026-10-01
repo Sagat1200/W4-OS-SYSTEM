@@ -7,24 +7,23 @@ namespace W4\OS\Support;
 final class ArtifactMetadataToolkit
 {
     /**
+     * @param array<string, mixed> $identity
      * @param array<string, mixed> $attributes
      * @return array<string, mixed>
      */
-    public function createManifest(
+    public function createManifestEnvelope(
         string $schemaField,
         string $kind,
-        string $profileId,
-        ?string $profileName,
+        array $identity = [],
         array $attributes = []
     ): array {
         $manifest = [
             $schemaField => 1,
             'kind' => $kind,
-            'profile_id' => $profileId,
         ];
 
-        if ($profileName !== null && $profileName !== '') {
-            $manifest['profile_name'] = $profileName;
+        foreach ($identity as $key => $value) {
+            $manifest[$key] = $value;
         }
 
         foreach ($attributes as $key => $value) {
@@ -38,14 +37,51 @@ final class ArtifactMetadataToolkit
      * @param array<string, mixed> $attributes
      * @return array<string, mixed>
      */
-    public function createSuccessPayload(string $profileId, array $attributes = []): array
+    public function createManifest(
+        string $schemaField,
+        string $kind,
+        string $profileId,
+        ?string $profileName,
+        array $attributes = []
+    ): array {
+        $identity = [
+            'profile_id' => $profileId,
+        ];
+
+        if ($profileName !== null && $profileName !== '') {
+            $identity['profile_name'] = $profileName;
+        }
+
+        return $this->createManifestEnvelope($schemaField, $kind, $identity, $attributes);
+    }
+
+    /**
+     * @param array<string, mixed> $attributes
+     * @return array<string, mixed>
+     */
+    public function createStatusPayload(array $attributes = [], string $status = 'ok'): array
     {
         return array_merge(
             [
-                'status' => 'ok',
-                'profile_id' => $profileId,
+                'status' => $status,
             ],
             $attributes
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $attributes
+     * @return array<string, mixed>
+     */
+    public function createSuccessPayload(string $profileId, array $attributes = []): array
+    {
+        return $this->createStatusPayload(
+            array_merge(
+                [
+                    'profile_id' => $profileId,
+                ],
+                $attributes
+            )
         );
     }
 

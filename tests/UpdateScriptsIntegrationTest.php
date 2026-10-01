@@ -316,6 +316,14 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertSame('w4-main-2026-09-20T120000Z', $payload['snapshot_id']);
         self::assertSame('testing', $payload['channel']);
         self::assertSame(5, $payload['package_count']);
+        self::assertSame([
+            'REPOSITORY_BUNDLE_README.txt',
+            'apt-source.dists.list.template',
+            'apt-source.list.template',
+            'apt-source.signed.list.template',
+            'build-repo.sh',
+            'repository-manifest.json',
+        ], $payload['generated_artifacts']);
 
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'build-repo.sh');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'repository-manifest.json');
@@ -333,6 +341,7 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertSame('derived-from-manifests', $manifest['package_strategy']);
         self::assertSame('w4-linux-base', $manifest['source_profiles']['base']);
         self::assertCount(5, $manifest['packages']);
+        self::assertSame($payload['generated_artifacts'], $manifest['generated_artifacts']);
 
         $buildScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'build-repo.sh');
         self::assertNotFalse($buildScript);
