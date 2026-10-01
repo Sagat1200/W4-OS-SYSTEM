@@ -174,7 +174,7 @@ Entregables tecnicos obligatorios:
 14. Instalacion VM repetida sobre VDI `VBOX_HARDDISK_VBd65f4f6b-647952f8` sin `prepare-live-install-tools.sh` ni APT temporal en la live, con `INSTALL_EXIT=0`, `verify-installation.sh` aprobado y baseline runtime `9 passed`, `0 failed`, `1 skipped`.
 
 Siguiente paso despues de este corte:
-cerrar `MX-012` o abrir una regresion ampliada Home/Business antes de promover un candidato de release.
+abrir el siguiente frente operativo de producto o release sobre la base Server ya cerrada.
 
 ## Referencia historica · MX-004
 
