@@ -57,6 +57,8 @@ function isoVariables(array $liveManifest): array
 {
     /** @var array<string, mixed> $branding */
     $branding = is_array($liveManifest['branding'] ?? null) ? $liveManifest['branding'] : [];
+    /** @var array<string, mixed> $editionPolicy */
+    $editionPolicy = is_array($liveManifest['edition_policy'] ?? null) ? $liveManifest['edition_policy'] : [];
 
     $profileId = (string) $liveManifest['profile_id'];
     $profileName = (string) $liveManifest['profile_name'];
@@ -64,6 +66,7 @@ function isoVariables(array $liveManifest): array
     $distributionName = (string) ($branding['distribution_name'] ?? 'W4 OS');
     $volumeId = (string) ($branding['volume_id'] ?? strtoupper(str_replace(['-', ' '], '_', $profileId . '_LIVE')));
     $isoFilename = sprintf('%s-live-amd64.iso', $profileId);
+    $defaultTarget = (string) ($editionPolicy['default_target'] ?? ($branding['default_target'] ?? 'multi-user.target'));
 
     return [
         'profile_id' => $profileId,
@@ -72,6 +75,7 @@ function isoVariables(array $liveManifest): array
         'distribution_name' => $distributionName,
         'volume_id' => substr($volumeId, 0, 32),
         'iso_filename' => $isoFilename,
+        'default_target' => $defaultTarget,
     ];
 }
 
@@ -216,6 +220,7 @@ W4_PROFILE_ID="${PROFILE_ID}"
 W4_PROFILE_NAME="${PROFILE_NAME}"
 W4_ISO_FILENAME="${ISO_FILENAME}"
 W4_VOLUME_ID="${VOLUME_ID}"
+W4_DEFAULT_TARGET="%DEFAULT_TARGET%"
 W4_IMAGE_ROOT="${IMAGE_ROOT_DIR}"
 W4_STAGE_DIR="${ISO_STAGE_DIR}"
 W4_GENERATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -231,8 +236,8 @@ echo "Resultado: ${OUTPUT_DIR}/${ISO_FILENAME}"
 BASH;
 
     $script = str_replace(
-        ['%PROFILE_ID%', '%PROFILE_NAME%', '%ISO_FILENAME%', '%VOLUME_ID%'],
-        [$vars['profile_id'], $vars['profile_name'], $vars['iso_filename'], $vars['volume_id']],
+        ['%PROFILE_ID%', '%PROFILE_NAME%', '%ISO_FILENAME%', '%VOLUME_ID%', '%DEFAULT_TARGET%'],
+        [$vars['profile_id'], $vars['profile_name'], $vars['iso_filename'], $vars['volume_id'], $vars['default_target']],
         $script
     );
 
@@ -324,6 +329,7 @@ try {
         'base_manifest_id' => $liveManifest['base_manifest_id'],
         'source_live_manifest' => basename($liveManifestPath),
         'branding' => $vars,
+        'edition_policy' => $liveManifest['edition_policy'] ?? [],
         'iso_tooling_required' => ['xorriso', 'grub-mkrescue|grub-mkstandalone', 'mtools', 'dosfstools'],
         'generated_files' => array_keys($files),
         'next_steps' => [

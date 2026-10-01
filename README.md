@@ -76,6 +76,7 @@ Tambien queda explicitado que la especificacion amplia de `W4-Linux-Base` descri
 Como ajuste inmediato derivado de esa revision, `manifests/w4-linux-base.manifest.json` ya declara de forma explicita que `w4-linux-base` es base reusable de Home, Business y Server.
 Tambien quedaron materializadas politicas explicitas para `Home` y `Business` en `config/editions/home/policy.json` y `config/editions/business/policy.json`, alineando la capa declarativa de las tres ediciones aunque la paridad funcional completa siga pendiente.
 Ademas, `generate_system_overlay.php` ya consume esa capa de politica para derivar `hostname_prefix` y `boot.default_target`, y `w4-firstboot.sh` aplica el target por defecto declarado en cada edicion.
+La propagacion ya llega tambien a `generate_live_bundle.php` y `generate_iso_bundle.php`: ambos preservan `default_target` en sus manifests/metadata, y `preflight_server_vm_validation.php` lo contrasta contra `config/editions/server/policy.json` antes de declarar lista una ISO Server.
 
 ## Ruta inicial
 

@@ -145,6 +145,8 @@ function liveVariables(array $buildInput, array $overlayManifest): array
 {
     /** @var array<string, mixed> $branding */
     $branding = is_array($overlayManifest['branding'] ?? null) ? $overlayManifest['branding'] : [];
+    /** @var array<string, mixed> $editionPolicy */
+    $editionPolicy = is_array($overlayManifest['edition_policy'] ?? null) ? $overlayManifest['edition_policy'] : [];
 
     $profileId = (string) $buildInput['profile_id'];
     $profileName = (string) $buildInput['profile_name'];
@@ -152,6 +154,7 @@ function liveVariables(array $buildInput, array $overlayManifest): array
     $liveUser = (string) ($branding['live_user'] ?? 'w4live');
     $liveHostname = (string) ($branding['live_hostname'] ?? ($profileId . '-live'));
     $distributionName = (string) ($branding['distribution_name'] ?? 'W4 OS');
+    $defaultTarget = (string) ($editionPolicy['default_target'] ?? 'multi-user.target');
     $volumeId = strtoupper(str_replace(['-', ' '], '_', $profileId . '_LIVE'));
 
     return [
@@ -161,6 +164,7 @@ function liveVariables(array $buildInput, array $overlayManifest): array
         'live_user' => $liveUser,
         'live_hostname' => $liveHostname,
         'distribution_name' => $distributionName,
+        'default_target' => $defaultTarget,
         'volume_id' => substr($volumeId, 0, 32),
     ];
 }
@@ -571,6 +575,7 @@ W4_PROFILE_ID="${PROFILE_ID}"
 W4_PROFILE_NAME="${PROFILE_NAME}"
 W4_LIVE_USER="${LIVE_USER}"
 W4_LIVE_HOSTNAME="${LIVE_HOSTNAME}"
+W4_DEFAULT_TARGET="${W4_DEFAULT_TARGET:-%DEFAULT_TARGET%}"
 W4_KERNEL_BASENAME="$(basename "${KERNEL_SRC}")"
 W4_INITRD_BASENAME="$(basename "${INITRD_SRC}")"
 W4_PREPARED_LIVE_STACK="${PREPARE_LIVE_STACK}"
@@ -595,8 +600,8 @@ echo "Resultado: ${OUTPUT_DIR}/image-root"
 BASH;
 
     $script = str_replace(
-        ['%PROFILE_ID%', '%PROFILE_NAME%', '%LIVE_USER%', '%LIVE_HOSTNAME%', '%DIST_NAME%', '%EDITION%'],
-        [$profileId, $profileName, $liveUser, $liveHostname, $vars['distribution_name'], $vars['edition']],
+        ['%PROFILE_ID%', '%PROFILE_NAME%', '%LIVE_USER%', '%LIVE_HOSTNAME%', '%DEFAULT_TARGET%', '%DIST_NAME%', '%EDITION%'],
+        [$profileId, $profileName, $liveUser, $liveHostname, $vars['default_target'], $vars['distribution_name'], $vars['edition']],
         $script
     );
 
@@ -714,6 +719,7 @@ try {
         'source_overlay_manifest' => basename($overlayManifestPath),
         'source_overlay_payload' => 'files/system-overlay',
         'branding' => $vars,
+        'edition_policy' => $overlayManifest['edition_policy'] ?? [],
         'live_stack' => [
             'packages' => ['live-boot', 'live-config'],
             'bootloader_ready' => false,

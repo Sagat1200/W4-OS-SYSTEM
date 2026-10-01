@@ -59,6 +59,7 @@ final class ServerVmPreflightTest extends TestCase
         self::assertSame($fixture['sha256'], $payload['iso_sha256']);
         self::assertTrue($payload['checks']['iso_sha256_matches']);
         self::assertTrue($payload['checks']['manifest_headless']);
+        self::assertTrue($payload['checks']['summary_default_target_matches_policy']);
         self::assertTrue($payload['checks']['hypervisor_ready']);
         self::assertSame([], $payload['forbidden_packages_found']);
     }
@@ -108,11 +109,44 @@ final class ServerVmPreflightTest extends TestCase
         self::assertStringContainsString('--hypervisor debe ser auto, virtualbox, hyperv o none', $result['stderr']);
     }
 
+    public function testPreflightBlocksWhenSummaryDefaultTargetDoesNotMatchPolicy(): void
+    {
+        $fixture = $this->createArtifactFixture([
+            'bash 5.2',
+            'openssh-server 1:10.0p1-7',
+        ], 'graphical.target');
+
+        $result = $this->runPhpScript($this->fixturePath('scripts/preflight_server_vm_validation.php'), [
+            '--profile',
+            'w4-os-server',
+            '--hypervisor',
+            'none',
+            '--expected-sha256',
+            $fixture['sha256'],
+            '--iso-path',
+            $fixture['iso'],
+            '--manifest-path',
+            $fixture['manifest'],
+            '--checksum-path',
+            $fixture['checksum'],
+            '--summary-path',
+            $fixture['summary'],
+            '--bundle-dir',
+            $fixture['bundle'],
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('blocked', $payload['status']);
+        self::assertFalse($payload['checks']['summary_default_target_matches_policy']);
+    }
+
     /**
      * @param list<string> $manifestLines
      * @return array{iso:string,manifest:string,checksum:string,summary:string,bundle:string,sha256:string}
      */
-    private function createArtifactFixture(array $manifestLines): array
+    private function createArtifactFixture(array $manifestLines, string $defaultTarget = 'multi-user.target'): array
     {
         $isoPath = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-server-live-amd64.iso';
         $manifestPath = $this->tempDir . DIRECTORY_SEPARATOR . 'filesystem.manifest';
@@ -129,6 +163,7 @@ final class ServerVmPreflightTest extends TestCase
         self::assertNotFalse(file_put_contents($summaryPath, implode(PHP_EOL, [
             'W4_PROFILE_ID="w4-os-server"',
             'W4_VOLUME_ID="W4_OS_SERVER_LIVE"',
+            sprintf('W4_DEFAULT_TARGET="%s"', $defaultTarget),
         ]) . PHP_EOL));
         self::assertTrue(mkdir($bundleDir, 0777, true));
         self::assertNotFalse(file_put_contents($bundleDir . DIRECTORY_SEPARATOR . 'apply-installation.sh', '#!/usr/bin/env bash' . PHP_EOL));

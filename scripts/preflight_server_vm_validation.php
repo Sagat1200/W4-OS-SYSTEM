@@ -13,6 +13,7 @@ $manifestPath = null;
 $checksumPath = null;
 $summaryPath = null;
 $bundleDir = null;
+$policyPath = null;
 
 try {
     $arguments = $argv ?? [];
@@ -59,6 +60,10 @@ try {
                 $bundleDir = $value;
                 break;
 
+            case '--policy-path':
+                $policyPath = $value;
+                break;
+
             default:
                 throw new ValidationError(sprintf('Argumento no soportado: %s', $argument));
         }
@@ -74,12 +79,18 @@ try {
     $checksumPath ??= $defaultIsoOutputDir . DIRECTORY_SEPARATOR . 'metadata' . DIRECTORY_SEPARATOR . 'SHA256SUMS';
     $summaryPath ??= $defaultIsoOutputDir . DIRECTORY_SEPARATOR . 'metadata' . DIRECTORY_SEPARATOR . 'iso-summary.env';
     $bundleDir ??= $rootDir . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'install' . DIRECTORY_SEPARATOR . $profileId;
+    $policyPath ??= $rootDir
+        . DIRECTORY_SEPARATOR . 'config'
+        . DIRECTORY_SEPARATOR . 'editions'
+        . DIRECTORY_SEPARATOR . str_replace('w4-os-', '', $profileId)
+        . DIRECTORY_SEPARATOR . 'policy.json';
 
     $checks = [
         'iso_exists' => file_exists($isoPath) && is_file($isoPath),
         'manifest_exists' => file_exists($manifestPath) && is_file($manifestPath),
         'checksums_exists' => file_exists($checksumPath) && is_file($checksumPath),
         'summary_exists' => file_exists($summaryPath) && is_file($summaryPath),
+        'edition_policy_exists' => is_file($policyPath),
         'installation_bundle_exists' => is_dir($bundleDir),
         'apply_script_exists' => is_file($bundleDir . DIRECTORY_SEPARATOR . 'apply-installation.sh'),
         'verify_script_exists' => is_file($bundleDir . DIRECTORY_SEPARATOR . 'verify-installation.sh'),
@@ -99,6 +110,10 @@ try {
 
     $summaryValues = $checks['summary_exists'] ? parseEnvFile($summaryPath) : [];
     $checks['summary_profile_matches'] = ($summaryValues['W4_PROFILE_ID'] ?? null) === $profileId;
+    $policyValues = $checks['edition_policy_exists'] ? readEditionPolicy($policyPath, $profileId) : [];
+    $checks['summary_default_target_matches_policy'] = $checks['summary_exists']
+        && $checks['edition_policy_exists']
+        && (($summaryValues['W4_DEFAULT_TARGET'] ?? null) === ($policyValues['boot']['default_target'] ?? null));
 
     $hypervisorChecks = detectHypervisors($hypervisor);
     $checks['hypervisor_ready'] = $hypervisor === 'none' || $hypervisorChecks['ready'];
@@ -112,6 +127,7 @@ try {
         'iso_sha256' => $actualSha256,
         'expected_sha256' => $expectedSha256,
         'manifest_path' => $manifestPath,
+        'policy_path' => $policyPath,
         'forbidden_packages_found' => $forbiddenFound,
         'bundle_dir' => $bundleDir,
         'hypervisor' => $hypervisorChecks,
@@ -176,6 +192,30 @@ function parseEnvFile(string $path): array
     }
 
     return $values;
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function readEditionPolicy(string $path, string $expectedProfileId): array
+{
+    $contents = file_get_contents($path);
+    if ($contents === false) {
+        throw new ValidationError(sprintf('No se pudo leer la politica de edicion: %s', $path));
+    }
+
+    try {
+        /** @var array<string, mixed> $policy */
+        $policy = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('Politica de edicion invalida en %s: %s', $path, $exception->getMessage()));
+    }
+
+    if (($policy['profile_id'] ?? null) !== $expectedProfileId) {
+        throw new ValidationError(sprintf('La politica %s no corresponde al profile_id %s', $path, $expectedProfileId));
+    }
+
+    return $policy;
 }
 
 /**

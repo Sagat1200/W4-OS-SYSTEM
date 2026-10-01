@@ -6,7 +6,7 @@ namespace W4\OS\Tests;
 
 use PHPUnit\Framework\TestCase;
 
-final class LiveBundleGenerationTest extends TestCase
+final class IsoBundleGenerationTest extends TestCase
 {
     private string $rootDir;
     private string $tempDir;
@@ -14,7 +14,7 @@ final class LiveBundleGenerationTest extends TestCase
     protected function setUp(): void
     {
         $this->rootDir = dirname(__DIR__);
-        $this->tempDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-os-live-tests-' . bin2hex(random_bytes(6));
+        $this->tempDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-os-iso-tests-' . bin2hex(random_bytes(6));
 
         self::assertTrue(mkdir($this->tempDir, 0777, true), 'No se pudo crear el directorio temporal');
     }
@@ -24,11 +24,12 @@ final class LiveBundleGenerationTest extends TestCase
         $this->removeDirectory($this->tempDir);
     }
 
-    public function testGenerateLiveBundleCarriesAndAppliesSystemOverlay(): void
+    public function testGenerateIsoBundleCarriesEditionPolicyIntoIsoMetadata(): void
     {
         $buildInputPath = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-server.build-input.json';
         $overlayDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-server-overlay';
         $liveDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-server-live';
+        $isoDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-server-iso';
 
         $buildInput = $this->runPhpScript(
             $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'generate_build_input.php',
@@ -65,23 +66,25 @@ final class LiveBundleGenerationTest extends TestCase
         );
         self::assertSame(0, $live['exitCode'], $live['stderr']);
 
-        $manifest = $this->decodeJsonFile($liveDir . DIRECTORY_SEPARATOR . 'live-manifest.json');
-        self::assertSame('files/system-overlay', $manifest['source_overlay_payload']);
-        self::assertContains('files/system-overlay/', $manifest['generated_files']);
+        $iso = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'generate_iso_bundle.php',
+            [
+                '--live-manifest',
+                $liveDir . DIRECTORY_SEPARATOR . 'live-manifest.json',
+                '--output',
+                $isoDir,
+            ]
+        );
+        self::assertSame(0, $iso['exitCode'], $iso['stderr']);
+
+        $manifest = $this->decodeJsonFile($isoDir . DIRECTORY_SEPARATOR . 'iso-manifest.json');
         self::assertSame('multi-user.target', $manifest['edition_policy']['default_target']);
         self::assertSame('config/editions/server/policy.json', $manifest['edition_policy']['path']);
+        self::assertSame('multi-user.target', $manifest['branding']['default_target']);
 
-        self::assertFileExists($liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'systemd' . DIRECTORY_SEPARATOR . 'system' . DIRECTORY_SEPARATOR . 'w4-firstboot.service');
-        self::assertFileExists($liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'w4-firstboot.sh');
-
-        $composeScript = file_get_contents($liveDir . DIRECTORY_SEPARATOR . 'compose-live.sh');
+        $composeScript = file_get_contents($isoDir . DIRECTORY_SEPARATOR . 'compose-iso.sh');
         self::assertNotFalse($composeScript);
-        self::assertStringContainsString('OVERLAY_FILES_DIR="${FILES_DIR}/system-overlay"', $composeScript);
-        self::assertStringContainsString('apply_system_overlay "${WORK_ROOTFS}"', $composeScript);
-        self::assertStringContainsString('chmod 0755 "${rootfs_dir}" "${rootfs_dir}/etc" "${rootfs_dir}/usr"', $composeScript);
-        self::assertStringContainsString('chmod 0755 "${rootfs_dir}/etc/ufw"', $composeScript);
-        self::assertStringContainsString('chmod 0644 "${rootfs_dir}/etc/ufw/ufw.conf"', $composeScript);
-        self::assertStringContainsString('W4_DEFAULT_TARGET="${W4_DEFAULT_TARGET:-multi-user.target}"', $composeScript);
+        self::assertStringContainsString('W4_DEFAULT_TARGET="multi-user.target"', $composeScript);
     }
 
     /**

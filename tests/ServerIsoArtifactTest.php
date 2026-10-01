@@ -42,11 +42,13 @@ final class ServerIsoArtifactTest extends TestCase
         $manifestPath = $outputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'live' . DIRECTORY_SEPARATOR . 'filesystem.manifest';
         $checksumPath = $outputDir . DIRECTORY_SEPARATOR . 'metadata' . DIRECTORY_SEPARATOR . 'SHA256SUMS';
         $summaryPath = $outputDir . DIRECTORY_SEPARATOR . 'metadata' . DIRECTORY_SEPARATOR . 'iso-summary.env';
+        $policyPath = $rootDir . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'editions' . DIRECTORY_SEPARATOR . 'server' . DIRECTORY_SEPARATOR . 'policy.json';
 
         self::assertFileExists($isoPath);
         self::assertFileExists($manifestPath);
         self::assertFileExists($checksumPath);
         self::assertFileExists($summaryPath);
+        self::assertFileExists($policyPath);
 
         self::assertSame(self::EXPECTED_ISO_SHA256, hash_file('sha256', $isoPath));
         self::assertStringContainsString(self::EXPECTED_ISO_SHA256 . '  w4-os-server-live-amd64.iso', $this->readFile($checksumPath));
@@ -54,6 +56,9 @@ final class ServerIsoArtifactTest extends TestCase
         $summary = $this->readFile($summaryPath);
         self::assertStringContainsString('W4_PROFILE_ID="w4-os-server"', $summary);
         self::assertStringContainsString('W4_VOLUME_ID="W4_OS_SERVER_LIVE"', $summary);
+        if (str_contains($summary, 'W4_DEFAULT_TARGET=')) {
+            self::assertStringContainsString(sprintf('W4_DEFAULT_TARGET="%s"', $this->readPolicyDefaultTarget($policyPath)), $summary);
+        }
 
         $manifestPackages = $this->readManifestPackageNames($manifestPath);
 
@@ -97,5 +102,16 @@ final class ServerIsoArtifactTest extends TestCase
         self::assertIsString($contents, sprintf('No se pudo leer el archivo: %s', $path));
 
         return $contents;
+    }
+
+    private function readPolicyDefaultTarget(string $path): string
+    {
+        /** @var array<string, mixed> $policy */
+        $policy = json_decode($this->readFile($path), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('w4-os-server', $policy['profile_id'] ?? null);
+        self::assertIsString($policy['boot']['default_target'] ?? null);
+
+        return $policy['boot']['default_target'];
     }
 }
