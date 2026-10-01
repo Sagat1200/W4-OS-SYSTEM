@@ -88,19 +88,15 @@ La prioridad del proyecto es construir, en este orden:
 
 ## Siguiente ciclo
 
-El siguiente ciclo tecnico activo corresponde a `MX-012 · W4 OS Server bootstrap` y se centra en:
+El siguiente ciclo tecnico activo corresponde a `MX-006 · Escritorio oficial` y se centra en:
 
-- separar la composicion headless de Server sin clonar motores comunes,
-- mantener Home y Business funcionales con desktop explicito,
-- fijar Debian `trixie` como codename efectivo del bootstrap,
-- generar `build-input`, `rootfs bundle`, overlay, live, ISO y repositorio W4 para `w4-os-server`,
-- preparar el primer perfil de instalacion Server,
-- materializar la ISO Server real en WSL,
-- validar instalacion fresca en VM con LUKS, `w4-firstboot`, UFW y baseline runtime,
-- incorporar herramientas nativas de instalacion VM en la ISO Server,
-- y validar por PHPUnit y manifiesto que Server no hereda `w4-desktop-meta`, `os-prober`, PipeWire ni portales XDG.
+- comparar KDE y GNOME como candidatos reales de V1,
+- medir impacto en ISO, memoria base, accesibilidad y mantenimiento,
+- fijar el escritorio oficial unico para Home,
+- traducir esa decision al alcance de `shell`, branding, onboarding y apps base,
+- y desbloquear de forma ordenada `MX-007`, `MX-008` y `MX-009`.
 
-El siguiente paso operativo de `MX-012` es cerrar el bloque Server o abrir una regresion ampliada Home/Business antes de promover un candidato de release.
+El siguiente paso operativo es ejecutar la matriz comparativa y aprobar el ADR del escritorio oficial antes de abrir implementacion UX.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 

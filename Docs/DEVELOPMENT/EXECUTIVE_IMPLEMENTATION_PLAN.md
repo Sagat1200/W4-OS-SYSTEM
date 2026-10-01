@@ -135,46 +135,29 @@ Salida obligatoria:
 8. Business piloto.
 9. Compliance, soporte y release.
 
-## Siguiente ciclo recomendado · MX-012
+## Siguiente ciclo recomendado · MX-006
 
 Objetivo del ciclo:
-abrir `W4 OS Server` como composicion headless sobre `W4 Linux Base`, sin clonar motores ni heredar `Business` como dependencia permanente.
+fijar el escritorio oficial V1 para Home sobre la base ya instalable, actualizable, endurecida y separada de Server, evitando abrir `shell`, `control center` y `MX-009` sin una decision de plataforma visible.
 
 Resultado ejecutivo esperado:
 
-- Base comun sin dependencia obligatoria de desktop.
-- Home y Business conservando su composicion grafica de forma explicita.
-- Perfil `w4-os-server` resoluble, con SSH permanente y sin paquetes desktop.
-- Politica Server separada de los manifests para evitar que el cargador actual la interprete como perfil.
-- `build-input`, `rootfs bundle`, overlay y repositorio W4 capaces de distinguir Server por identidad.
-- Perfil de instalacion Server MVP generado con layout cifrado y subvolumen `/srv`.
-- Rootfs Debian `trixie`, arbol live e ISO Server materializados en WSL con manifiesto headless verificable.
-- Preflight VM y smoke live Server confirmados en VirtualBox EFI con SSH activo y disco desechable visible.
-- Instalacion Server completada en VM desechable con LUKS2, Btrfs, primer boot desde disco y SSH validado.
-- Baseline runtime Server ejecutado; el fix de overlay live/firstboot queda implementado en generadores y cubierto por PHPUnit.
-- Reinstalacion fresca desde ISO regenerada validada con `w4-firstboot.service`, UFW `DEFAULT_INPUT_POLICY=DROP` y contrato SSH Server alineado a politica.
-- ISO Server autocontenida regenerada y validada en VM con `gdisk`, `parted`, `dosfstools`, `e2fsprogs` y `squashfs-tools` nativos, eliminando el bootstrap temporal por APT.
-- Pruebas PHPUnit que impidan fallback Home y arrastre de `w4-desktop-meta`.
+- Decision ADR de escritorio V1 aprobada.
+- Matriz comparativa de KDE vs GNOME cerrada con criterios tecnicos y de producto.
+- Criterios minimos de accesibilidad, consumo base y mantenibilidad explicitados para Home.
+- Direccion clara para `w4-desktop-meta`, branding, `shell` y `control center`.
+- Dependencias y regresiones esperadas sobre Home/Business documentadas antes de abrir implementacion UX.
 
 Entregables tecnicos obligatorios:
 
-1. `w4-linux-base.manifest.json` neutralizado para Base.
-2. `w4-os-home.profile.json` y `w4-os-business.profile.json` con desktop y `os-prober` explicitos.
-3. `w4-os-server.profile.json` con composicion headless inicial.
-4. `config/editions/server/policy.json` como contrato operativo inicial.
-5. Generadores comunes actualizados para `codename=trixie`, branding Server y `--package-set server`.
-6. Artefactos inmediatos regenerados y suite PHPUnit completa en verde.
-7. Perfil y bundle de instalacion Server preparados para VM vacia.
-8. ISO Server materializada en `build/iso-output/w4-os-server/w4-os-server-live-amd64.iso`.
-9. Preflight y smoke live Server trazados con VM desechable `W4-OS-Server-Smoke`.
-10. Instalacion Server validada con `verify-installation.sh`, primer boot LUKS y SSH `w4admin`.
-11. Baseline runtime Server con evidencia inicial/remediada y correccion de transporte del `system-overlay` al live bundle.
-12. VM fresca reinstalada desde la ISO corregida, con UFW activo sin remediacion manual y baseline runtime final en `9 passed`, `0 failed`, `1 skipped`.
-13. ISO Server autocontenida materializada con checksum SHA256 `b5fbb8915e6af8760298c9e5b3b7f9eb797f20e1ddabd4c51fd2c6db925c3f21` y manifiesto que incluye las herramientas nativas de instalacion VM.
-14. Instalacion VM repetida sobre VDI `VBOX_HARDDISK_VBd65f4f6b-647952f8` sin `prepare-live-install-tools.sh` ni APT temporal en la live, con `INSTALL_EXIT=0`, `verify-installation.sh` aprobado y baseline runtime `9 passed`, `0 failed`, `1 skipped`.
+1. Matriz comparativa V1 entre KDE y GNOME con criterios de producto y operacion.
+2. ADR de escritorio oficial aprobada y enlazada al roadmap.
+3. Criterios minimos para `shell`, branding, onboarding y apps base delimitados a partir de la decision.
+4. Riesgos y dependencias de `MX-007`, `MX-008` y `MX-009` actualizados contra la decision tomada.
+5. Trazabilidad ejecutiva y matriz de desarrollo alineadas al escritorio elegido.
 
 Siguiente paso despues de este corte:
-abrir el siguiente frente operativo de producto o release sobre la base Server ya cerrada.
+abrir implementacion de `MX-007`, `MX-008` y despues `MX-009` sobre el escritorio oficial ya fijado.
 
 ## Referencia historica · MX-004
 
