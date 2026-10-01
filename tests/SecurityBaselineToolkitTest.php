@@ -53,6 +53,9 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertSame('runtime', $controls['critical-filesystem-permissions']['validation_scope']);
         self::assertSame('/etc/default/ufw', $controls['critical-filesystem-permissions']['expected']['paths'][5]['path']);
         self::assertSame('/etc/ufw/ufw.conf', $controls['critical-filesystem-permissions']['expected']['paths'][6]['path']);
+        self::assertSame('implemented', $controls['remote-admin-disabled-by-default']['implementation_state']);
+        self::assertFalse($controls['remote-admin-disabled-by-default']['expected']['policy_enabled']);
+        self::assertContains('config/editions/home/policy.json', $controls['remote-admin-disabled-by-default']['evidence']);
         self::assertSame('implemented', $controls['authenticated-updates']['implementation_state']);
         self::assertSame('pipeline', $controls['authenticated-updates']['validation_scope']);
         self::assertSame('w4', $controls['standard-account']['expected']['username']);
@@ -88,6 +91,8 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertSame('w4-os-business', $baseline['profile_id']);
         self::assertSame(10, $baseline['summary']['implemented']);
         self::assertSame(0, $baseline['summary']['gap']);
+        $controls = $this->indexControls($baseline['controls']);
+        self::assertContains('config/editions/business/policy.json', $controls['remote-admin-disabled-by-default']['evidence']);
 
         $verifier = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'verify-security-baseline.php');
         self::assertNotFalse($verifier);
@@ -132,6 +137,7 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertSame(['enabled', 'enabled-runtime'], $controls['remote-admin-server-policy']['expected']['enabled_states_allowed']);
         self::assertFalse($controls['remote-admin-server-policy']['expected']['root_login']);
         self::assertSame('publickey', $controls['remote-admin-server-policy']['expected']['authentication']);
+        self::assertContains('config/editions/server/policy.json', $controls['remote-admin-server-policy']['evidence']);
     }
 
     public function testRunSecurityBaselineViaParamikoSupportsDryRun(): void

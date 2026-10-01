@@ -41,7 +41,7 @@ Siguen pendientes o en fase anterior de madurez:
 - `w4ctl`,
 - GUI/Home integration real,
 - Agent/Business piloto,
-- y la paridad operativa plena entre Home, Business y Server bajo un mismo contrato de plataforma.
+- y la paridad operativa plena entre Home, Business y Server bajo un mismo contrato de plataforma, aunque las tres ediciones ya cuentan con ancla explicita de politica.
 
 ## Matriz de brechas
 
@@ -51,7 +51,7 @@ Siguen pendientes o en fase anterior de madurez:
 | GAP-002 | Integracion Home | `362_W4_OS_HOME_INTEGRATION.md` | Home conecta `Settings` y experiencia de escritorio a una API comun; incluso se propone validar updates desde GUI y seguir el mismo trabajo por CLI | El proyecto todavia no ha fijado el escritorio oficial V1; `MX-006` sigue en analisis y `MX-007`, `MX-008`, `MX-009` siguen sin iniciar | Desalineado | Alto | Mantener Home integration como objetivo futuro y no como capacidad ya disponible; usar esta matriz como guardrail para la documentacion UX hasta que cierre `MX-006` |
 | GAP-003 | Perfil Business | `359_BUSINESS_PROFILE.md` | Business ya se describe con Agent y politicas, con instalacion sin enrolar pero con comportamiento empresarial delimitado | El manifiesto actual solo declara preparacion (`device-enrollment-ready`, `inventory-ready`) y aclara que no habilita gestion remota arbitraria; `MX-010` sigue `No iniciado` | Desalineado | Alto | Reforzar en docs/roadmap que Business actual es base preparada, no piloto materializado; no promocionar Agent/politicas como evidencia implementada antes de abrir y cerrar `MX-010` |
 | GAP-004 | Base comun Home/Business/Server | `361_W4_OS_INTEGRATION_ARCHITECTURE.md` y manifiestos actuales | La especificacion pide una base comun real para los tres productos | El repo ya hace heredar Server desde `w4-linux-base`, pero el manifiesto base aun anota que la base reusable es para Home y Business, lo que ya no refleja la realidad del proyecto | Parcial | Medio | Corregir la redaccion del manifiesto base para declarar explicitamente que `w4-linux-base` es base reusable de Home, Business y Server |
-| GAP-005 | Paridad entre ediciones | `361_W4_OS_INTEGRATION_ARCHITECTURE.md` y `536_V1_RELEASE_CRITERIA.md` | Misma base, tres productos, clientes coherentes, hashes compartidos, misma operacion vista por GUI/CLI/Agent y desacoplamiento comprobado | Server ya cuenta con politica explicita, gates y evidencia headless; Home y Business tienen manifests, instalacion, update y seguridad, pero no una capa equivalente visible de politica por edicion ni clientes GUI/API/Agent materializados | Parcial | Medio | Tratar la paridad actual como parcial: base compartida ya existe, pero no todavia la equivalencia funcional completa descrita por la especificacion |
+| GAP-005 | Paridad entre ediciones | `361_W4_OS_INTEGRATION_ARCHITECTURE.md` y `536_V1_RELEASE_CRITERIA.md` | Misma base, tres productos, clientes coherentes, hashes compartidos, misma operacion vista por GUI/CLI/Agent y desacoplamiento comprobado | Las tres ediciones ya cuentan con ancla explicita de politica y base compartida; aun asi, la equivalencia funcional sigue siendo parcial porque solo Server usa hoy esa politica para un contrato runtime diferenciado y Home/Business siguen sin clientes GUI/API/Agent materializados | Parcial | Medio | Tratar la paridad actual como parcial: la capa declarativa ya converge mejor, pero la equivalencia funcional completa sigue pendiente |
 
 ## Evidencia principal usada
 
@@ -70,6 +70,8 @@ Siguen pendientes o en fase anterior de madurez:
 - `manifests/w4-linux-base.manifest.json`
 - `manifests/w4-os-business.profile.json`
 - `manifests/w4-os-server.profile.json`
+- `config/editions/home/policy.json`
+- `config/editions/business/policy.json`
 - `config/editions/server/policy.json`
 - `tests/ServerIsoArtifactTest.php`
 - `tests/ServerVmPreflightTest.php`

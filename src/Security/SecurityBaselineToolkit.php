@@ -103,7 +103,7 @@ final class SecurityBaselineToolkit
                     'manifests/w4-linux-base.manifest.json',
                 ]
             ),
-            $this->buildRemoteAdminControl($profileId, $requiredPackages, $recommendedPackages, $installerProfilePath, $sshPolicy),
+            $this->buildRemoteAdminControl($profileId, $requiredPackages, $recommendedPackages, $installerProfilePath, $editionPolicy, $sshPolicy),
             $this->buildControl(
                 id: 'firewall-control-plane',
                 title: 'Control de firewall presente',
@@ -732,8 +732,11 @@ TXT;
         array $requiredPackages,
         array $recommendedPackages,
         string $installerProfilePath,
+        array $editionPolicy,
         array $sshPolicy
     ): array {
+        $policyEvidence = $this->policyEvidenceForProfile($profileId, $editionPolicy);
+
         if (($sshPolicy['enabled'] ?? false) === true) {
             return $this->buildControl(
                 id: 'remote-admin-server-policy',
@@ -750,10 +753,12 @@ TXT;
                     'root_login' => (bool) ($sshPolicy['root_login'] ?? false),
                     'authentication' => (string) ($sshPolicy['authentication'] ?? ''),
                 ],
-                evidence: [
-                    sprintf('config/editions/%s/policy.json', $this->editionDirectoryName($profileId)),
-                    $this->relativePath($installerProfilePath),
-                ]
+                evidence: array_merge(
+                    $policyEvidence,
+                    [
+                        $this->relativePath($installerProfilePath),
+                    ]
+                )
             );
         }
 
@@ -770,11 +775,28 @@ TXT;
                 'policy_enabled' => false,
                 'enabled_states_forbidden' => ['enabled', 'enabled-runtime', 'linked', 'linked-runtime', 'alias'],
             ],
-            evidence: [
-                'manifests/w4-linux-base.manifest.json',
-                $this->relativePath($installerProfilePath),
-            ]
+            evidence: array_merge(
+                $policyEvidence !== [] ? $policyEvidence : ['manifests/w4-linux-base.manifest.json'],
+                [
+                    $this->relativePath($installerProfilePath),
+                ]
+            )
         );
+    }
+
+    /**
+     * @param array<string, mixed> $editionPolicy
+     * @return list<string>
+     */
+    private function policyEvidenceForProfile(string $profileId, array $editionPolicy): array
+    {
+        if (($editionPolicy['profile_id'] ?? null) !== $profileId) {
+            return [];
+        }
+
+        return [
+            sprintf('config/editions/%s/policy.json', $this->editionDirectoryName($profileId)),
+        ];
     }
 
     /**

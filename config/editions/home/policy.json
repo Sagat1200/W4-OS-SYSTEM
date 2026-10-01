@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "profile_id": "w4-os-home",
+  "branding": {
+    "edition": "Home",
+    "hostname_prefix": "w4-home"
+  },
+  "upstream_policy": {
+    "distribution": "debian",
+    "codename": "trixie"
+  },
+  "boot": {
+    "architecture": "amd64",
+    "firmware": "uefi",
+    "default_target": "graphical.target"
+  },
+  "network": {
+    "backend": "NetworkManager",
+    "configuration": "desktop-default"
+  },
+  "ssh": {
+    "enabled": false,
+    "root_login": false,
+    "authentication": "disabled"
+  },
+  "firewall": {
+    "backend": "ufw",
+    "incoming": "deny",
+    "outgoing": "allow",
+    "admin_cidrs": []
+  },
+  "storage": {
+    "root_filesystem": "btrfs",
+    "encryption_default": "luks2",
+    "unlock": "console"
+  },
+  "update": {
+    "automatic_reboot": false,
+    "snapshot_backend": "btrfs"
+  },
+  "roles": [],
+  "enterprise_agent": {
+    "installed": false,
+    "enrolled": false
+  }
+}
