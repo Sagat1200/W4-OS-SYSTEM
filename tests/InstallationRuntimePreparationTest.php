@@ -66,6 +66,11 @@ final class InstallationRuntimePreparationTest extends TestCase
         self::assertStringContainsString('export W4_INSTALL_SOURCE_SQUASHFS=', $installEnv);
         self::assertStringContainsString('export W4_DISK_PASSPHRASE_FILE=', $installEnv);
         self::assertStringContainsString('export W4_LOCAL_USER_PASSWORD_FILE=', $installEnv);
+        self::assertStringContainsString('export W4_EDITION_POLICY_FILE=', $installEnv);
+        self::assertStringContainsString('export W4_DEFAULT_TARGET="graphical.target"', $installEnv);
+        self::assertStringContainsString('export W4_HOSTNAME_PREFIX="w4-home"', $installEnv);
+        self::assertStringContainsString('export W4_FIREWALL_INCOMING="deny"', $installEnv);
+        self::assertStringContainsString('export W4_FIREWALL_OUTGOING="allow"', $installEnv);
 
         self::assertFileExists($runtimeDir . DIRECTORY_SEPARATOR . 'disk-passphrase.txt');
         self::assertFileExists($runtimeDir . DIRECTORY_SEPARATOR . 'local-user-password.txt');
@@ -80,6 +85,12 @@ final class InstallationRuntimePreparationTest extends TestCase
         self::assertNotFalse($installRunner);
         self::assertStringContainsString('ENV_FILE="${SCRIPT_DIR}/install.env"', $installRunner);
         self::assertStringNotContainsString('\${SCRIPT_DIR}/install.env', $installRunner);
+
+        $runtimeManifest = $this->decodeJsonFile($runtimeDir . DIRECTORY_SEPARATOR . 'installation-runtime.json');
+        self::assertSame('graphical.target', $runtimeManifest['edition_policy']['default_target']);
+        self::assertSame('w4-home', $runtimeManifest['edition_policy']['hostname_prefix']);
+        self::assertFalse($runtimeManifest['edition_policy']['ssh_enabled']);
+        self::assertSame('ufw', $runtimeManifest['edition_policy']['firewall_backend']);
 
         $bundleManifest = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-bundle.json');
         self::assertContains('runtime/install.env', $bundleManifest['generated_artifacts']);

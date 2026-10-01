@@ -135,10 +135,20 @@ final class SecurityBaselineToolkit
                     'enabled_value' => 'yes',
                     'input_policy_key' => 'DEFAULT_INPUT_POLICY',
                     'input_policy_value' => 'DROP',
+                    'output_policy_key' => 'DEFAULT_OUTPUT_POLICY',
+                    'output_policy_value' => 'ALLOW',
+                    'edition_policy_env' => '/etc/w4/edition-policy.env',
+                    'env_backend_key' => 'W4_FIREWALL_BACKEND',
+                    'env_backend_value' => (string) ($editionPolicy['firewall']['backend'] ?? 'ufw'),
+                    'env_input_key' => 'W4_FIREWALL_INCOMING',
+                    'env_input_value' => strtoupper((string) ($editionPolicy['firewall']['incoming'] ?? 'deny')),
+                    'env_output_key' => 'W4_FIREWALL_OUTGOING',
+                    'env_output_value' => strtoupper((string) ($editionPolicy['firewall']['outgoing'] ?? 'allow')),
                 ],
                 evidence: [
                     'Docs/W4-OS/159_W4_OS_FIREWALL_SYSTEM.md',
                     'scripts/generate_system_overlay.php',
+                    'scripts/generate_installation_executor.php',
                 ]
             ),
             $this->buildControl(
@@ -532,13 +542,28 @@ if (\$sudo['exit_code'] === 0 && \$sudo['stdout'] !== '') {
 }
 
 \$sshService = runCommand('systemctl is-enabled ssh 2>/dev/null || systemctl is-enabled ssh.service 2>/dev/null');
+\$editionPolicyEnvPath = (string) (\$remoteAdminExpected['edition_policy_env'] ?? '/etc/w4/edition-policy.env');
+\$policySshEnabledKey = (string) (\$remoteAdminExpected['env_enabled_key'] ?? 'W4_SSH_ENABLED');
+\$policySshEnabledValue = readConfigValue(\$editionPolicyEnvPath, \$policySshEnabledKey);
+\$policySshAuthValue = null;
+if (isset(\$remoteAdminExpected['env_authentication_key'])) {
+    \$policySshAuthValue = readConfigValue(\$editionPolicyEnvPath, (string) \$remoteAdminExpected['env_authentication_key']);
+}
 if (\$sshPolicyEnabled) {
-    if (\$sshService['exit_code'] === 0 && in_array(\$sshService['stdout'], \$allowedEnabledStates, true)) {
+    if (
+        \$sshService['exit_code'] === 0
+        && in_array(\$sshService['stdout'], \$allowedEnabledStates, true)
+        && (string) \$policySshEnabledValue === (string) (\$remoteAdminExpected['env_enabled_value'] ?? '1')
+        && (
+            !isset(\$remoteAdminExpected['env_authentication_value'])
+            || (string) \$policySshAuthValue === (string) \$remoteAdminExpected['env_authentication_value']
+        )
+    ) {
         addResult(\$results, \$remoteAdminControlId, 'passed', 'ssh esta habilitado conforme a la politica Server: ' . \$sshService['stdout']);
     } else {
         addResult(\$results, \$remoteAdminControlId, 'failed', 'ssh no esta habilitado conforme a la politica Server');
     }
-} elseif (\$sshService['exit_code'] !== 0) {
+} elseif (\$sshService['exit_code'] !== 0 && (string) \$policySshEnabledValue === (string) (\$remoteAdminExpected['env_enabled_value'] ?? '0')) {
     addResult(\$results, \$remoteAdminControlId, 'passed', 'ssh no esta habilitado por defecto');
 } elseif (in_array(\$sshService['stdout'], \$forbiddenEnabledStates, true)) {
     addResult(\$results, \$remoteAdminControlId, 'failed', 'ssh aparece habilitado: ' . \$sshService['stdout']);
@@ -555,10 +580,21 @@ if (\$firewallCommand !== '') {
 
 \$enabledValue = readConfigValue((string) \$firewallDenyExpected['ufw_conf'], (string) \$firewallDenyExpected['enabled_key']);
 \$inputPolicy = readConfigValue((string) \$firewallDenyExpected['ufw_default'], (string) \$firewallDenyExpected['input_policy_key']);
-if (strcasecmp((string) \$enabledValue, (string) \$firewallDenyExpected['enabled_value']) === 0 && strtoupper((string) \$inputPolicy) === (string) \$firewallDenyExpected['input_policy_value']) {
+\$outputPolicy = readConfigValue((string) \$firewallDenyExpected['ufw_default'], (string) \$firewallDenyExpected['output_policy_key']);
+\$policyFirewallBackend = readConfigValue((string) \$firewallDenyExpected['edition_policy_env'], (string) \$firewallDenyExpected['env_backend_key']);
+\$policyFirewallInput = readConfigValue((string) \$firewallDenyExpected['edition_policy_env'], (string) \$firewallDenyExpected['env_input_key']);
+\$policyFirewallOutput = readConfigValue((string) \$firewallDenyExpected['edition_policy_env'], (string) \$firewallDenyExpected['env_output_key']);
+if (
+    strcasecmp((string) \$enabledValue, (string) \$firewallDenyExpected['enabled_value']) === 0
+    && strtoupper((string) \$inputPolicy) === (string) \$firewallDenyExpected['input_policy_value']
+    && strtoupper((string) \$outputPolicy) === (string) \$firewallDenyExpected['output_policy_value']
+    && strcasecmp((string) \$policyFirewallBackend, (string) \$firewallDenyExpected['env_backend_value']) === 0
+    && strtoupper((string) \$policyFirewallInput) === (string) \$firewallDenyExpected['env_input_value']
+    && strtoupper((string) \$policyFirewallOutput) === (string) \$firewallDenyExpected['env_output_value']
+) {
     addResult(\$results, 'firewall-default-deny-incoming', 'passed', 'UFW habilitado por configuracion con DEFAULT_INPUT_POLICY=' . \$inputPolicy);
 } else {
-    addResult(\$results, 'firewall-default-deny-incoming', 'failed', 'UFW esperado ENABLED=' . \$firewallDenyExpected['enabled_value'] . ' y DEFAULT_INPUT_POLICY=' . \$firewallDenyExpected['input_policy_value'] . '; obtenido ENABLED=' . (string) \$enabledValue . ' DEFAULT_INPUT_POLICY=' . (string) \$inputPolicy);
+    addResult(\$results, 'firewall-default-deny-incoming', 'failed', 'UFW esperado ENABLED=' . \$firewallDenyExpected['enabled_value'] . ', DEFAULT_INPUT_POLICY=' . \$firewallDenyExpected['input_policy_value'] . ' y DEFAULT_OUTPUT_POLICY=' . \$firewallDenyExpected['output_policy_value'] . '; obtenido ENABLED=' . (string) \$enabledValue . ' DEFAULT_INPUT_POLICY=' . (string) \$inputPolicy . ' DEFAULT_OUTPUT_POLICY=' . (string) \$outputPolicy);
 }
 
 \$apparmor = runCommand("test -r /sys/module/apparmor/parameters/enabled && grep -qx 'Y' /sys/module/apparmor/parameters/enabled");
@@ -752,6 +788,11 @@ TXT;
                     'enabled_states_allowed' => ['enabled', 'enabled-runtime'],
                     'root_login' => (bool) ($sshPolicy['root_login'] ?? false),
                     'authentication' => (string) ($sshPolicy['authentication'] ?? ''),
+                    'edition_policy_env' => '/etc/w4/edition-policy.env',
+                    'env_enabled_key' => 'W4_SSH_ENABLED',
+                    'env_enabled_value' => '1',
+                    'env_authentication_key' => 'W4_SSH_AUTHENTICATION',
+                    'env_authentication_value' => (string) ($sshPolicy['authentication'] ?? ''),
                 ],
                 evidence: array_merge(
                     $policyEvidence,
@@ -774,6 +815,9 @@ TXT;
                 'service' => 'ssh',
                 'policy_enabled' => false,
                 'enabled_states_forbidden' => ['enabled', 'enabled-runtime', 'linked', 'linked-runtime', 'alias'],
+                    'edition_policy_env' => '/etc/w4/edition-policy.env',
+                    'env_enabled_key' => 'W4_SSH_ENABLED',
+                    'env_enabled_value' => '0',
             ],
             evidence: array_merge(
                 $policyEvidence !== [] ? $policyEvidence : ['manifests/w4-linux-base.manifest.json'],

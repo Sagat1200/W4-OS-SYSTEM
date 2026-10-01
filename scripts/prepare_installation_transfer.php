@@ -150,6 +150,48 @@ function relativePath(string $fromDir, string $targetPath): string
 }
 
 /**
+ * @param array<string, mixed> $plan
+ * @return array<string, mixed>
+ */
+function installationPolicy(array $plan): array
+{
+    /** @var array<string, mixed> $policy */
+    $policy = is_array($plan['edition_policy'] ?? null) ? $plan['edition_policy'] : [];
+    /** @var array<string, mixed> $branding */
+    $branding = is_array($policy['branding'] ?? null) ? $policy['branding'] : [];
+    /** @var array<string, mixed> $boot */
+    $boot = is_array($policy['boot'] ?? null) ? $policy['boot'] : [];
+    /** @var array<string, mixed> $ssh */
+    $ssh = is_array($policy['ssh'] ?? null) ? $policy['ssh'] : [];
+    /** @var array<string, mixed> $firewall */
+    $firewall = is_array($policy['firewall'] ?? null) ? $policy['firewall'] : [];
+
+    $edition = (string) ($plan['installation_profile']['edition'] ?? $plan['summary']['edition'] ?? 'home');
+    $defaultTarget = (string) ($boot['default_target'] ?? ($edition === 'server' ? 'multi-user.target' : 'graphical.target'));
+    $hostnamePrefix = (string) ($branding['hostname_prefix'] ?? ('w4-' . strtolower($edition)));
+    $sshEnabled = ($ssh['enabled'] ?? ($edition === 'server')) === true;
+
+    return [
+        'path' => (string) ($policy['path'] ?? 'edition-policy.json'),
+        'branding' => [
+            'hostname_prefix' => $hostnamePrefix,
+        ],
+        'boot' => [
+            'default_target' => $defaultTarget,
+        ],
+        'ssh' => [
+            'enabled' => $sshEnabled,
+            'authentication' => (string) ($ssh['authentication'] ?? ($sshEnabled ? 'publickey' : 'disabled')),
+        ],
+        'firewall' => [
+            'backend' => (string) ($firewall['backend'] ?? 'ufw'),
+            'incoming' => (string) ($firewall['incoming'] ?? 'deny'),
+            'outgoing' => (string) ($firewall['outgoing'] ?? 'allow'),
+        ],
+    ];
+}
+
+/**
  * @return array{type:string,path:string}
  */
 function detectSource(string $bundleDir, ?string $sourceRootfs, ?string $sourceSquashfs): array
@@ -201,8 +243,9 @@ function detectSource(string $bundleDir, ?string $sourceRootfs, ?string $sourceS
 
 /**
  * @param list<string> $secretFiles
+ * @param array<string, mixed> $editionPolicy
  */
-function rewriteInstallEnv(string $runtimeDir, string $sourcePath, string $sourceType, array $secretFiles): string
+function rewriteInstallEnv(string $runtimeDir, string $sourcePath, string $sourceType, array $secretFiles, array $editionPolicy): string
 {
     $sourceVariable = $sourceType === 'rootfs' ? 'W4_INSTALL_SOURCE_ROOTFS' : 'W4_INSTALL_SOURCE_SQUASHFS';
     $lines = [
@@ -212,6 +255,14 @@ function rewriteInstallEnv(string $runtimeDir, string $sourcePath, string $sourc
         'export W4_INSTALL_EXECUTE=1',
         sprintf('export %s="%s"', $sourceVariable, relativePath($runtimeDir, $sourcePath)),
         'export W4_BUNDLE_DIR=".."',
+        'export W4_EDITION_POLICY_FILE="../edition-policy.json"',
+        sprintf('export W4_DEFAULT_TARGET="%s"', (string) $editionPolicy['boot']['default_target']),
+        sprintf('export W4_HOSTNAME_PREFIX="%s"', (string) $editionPolicy['branding']['hostname_prefix']),
+        sprintf('export W4_SSH_ENABLED="%s"', ($editionPolicy['ssh']['enabled'] ?? false) === true ? '1' : '0'),
+        sprintf('export W4_SSH_AUTHENTICATION="%s"', (string) $editionPolicy['ssh']['authentication']),
+        sprintf('export W4_FIREWALL_BACKEND="%s"', (string) $editionPolicy['firewall']['backend']),
+        sprintf('export W4_FIREWALL_INCOMING="%s"', (string) $editionPolicy['firewall']['incoming']),
+        sprintf('export W4_FIREWALL_OUTGOING="%s"', (string) $editionPolicy['firewall']['outgoing']),
     ];
 
     if (in_array('disk-passphrase.txt', $secretFiles, true)) {
@@ -233,17 +284,21 @@ function rewriteInstallEnv(string $runtimeDir, string $sourcePath, string $sourc
 
 /**
  * @param list<string> $secretFiles
+ * @param array<string, mixed> $editionPolicy
  */
-function buildTransferReadme(array $plan, string $sourceType, array $secretFiles): string
+function buildTransferReadme(array $plan, string $sourceType, array $secretFiles, array $editionPolicy): string
 {
     return str_replace(["\r\n", "\r"], "\n", sprintf(
         "W4 OS Installation Transfer Package\n\n".
         "Perfil: %s\n".
         "Disco objetivo: %s\n".
+        "Target por defecto: %s\n".
+        "Hostname prefix: %s\n".
         "Fuente empaquetada: %s\n".
         "Secretos incluidos: %s\n\n".
         "Contenido:\n".
         "- apply-installation.sh\n".
+        "- edition-policy.json\n".
         "- installation-plan.json\n".
         "- verify-installation.sh\n".
         "- runtime/\n".
@@ -251,10 +306,13 @@ function buildTransferReadme(array $plan, string $sourceType, array $secretFiles
         "Uso en la VM live:\n".
         "1. Copie este directorio al destino ~/w4-transfer.\n".
         "2. Entre a ~/w4-transfer/runtime.\n".
-        "3. Ejecute bash run-check-only.sh.\n".
+        "3. Revise install.env y edition-policy.json.\n".
+        "4. Ejecute bash run-check-only.sh.\n".
         "4. Ejecute bash run-installation.sh solo cuando quiera escribir en disco.\n",
         $plan['profile_name'],
         $plan['plan_binding']['selected_disk']['device'],
+        $editionPolicy['boot']['default_target'],
+        $editionPolicy['branding']['hostname_prefix'],
         $sourceType,
         $secretFiles !== [] ? 'si' : 'no'
     ));
@@ -263,6 +321,7 @@ function buildTransferReadme(array $plan, string $sourceType, array $secretFiles
 /**
  * @param array<string, mixed> $plan
  * @param list<string> $secretFiles
+ * @param array<string, mixed> $editionPolicy
  * @return array<string, mixed>
  */
 function buildTransferRuntimeManifest(
@@ -272,7 +331,8 @@ function buildTransferRuntimeManifest(
     string $runtimeDir,
     string $sourcePath,
     string $sourceType,
-    array $secretFiles
+    array $secretFiles,
+    array $editionPolicy
 ): array
 {
     return [
@@ -282,6 +342,15 @@ function buildTransferRuntimeManifest(
         'bundle_dir' => dirname($runtimeDir),
         'runtime_dir' => $runtimeDir,
         'selected_disk' => $plan['plan_binding']['selected_disk']['device'] ?? null,
+        'edition_policy' => [
+            'path' => '../edition-policy.json',
+            'default_target' => $editionPolicy['boot']['default_target'],
+            'hostname_prefix' => $editionPolicy['branding']['hostname_prefix'],
+            'ssh_enabled' => $editionPolicy['ssh']['enabled'],
+            'firewall_backend' => $editionPolicy['firewall']['backend'],
+            'firewall_incoming' => $editionPolicy['firewall']['incoming'],
+            'firewall_outgoing' => $editionPolicy['firewall']['outgoing'],
+        ],
         'source' => [
             'type' => $sourceType,
             'path' => $sourcePath,
@@ -302,8 +371,9 @@ function buildTransferRuntimeManifest(
 /**
  * @param array<string, mixed> $plan
  * @param list<string> $secretFiles
+ * @param array<string, mixed> $editionPolicy
  */
-function buildTransferRuntimeReadme(array $plan, string $sourceType, string $sourcePath, array $secretFiles): string
+function buildTransferRuntimeReadme(array $plan, string $sourceType, string $sourcePath, array $secretFiles, array $editionPolicy): string
 {
     $sourceVariable = $sourceType === 'rootfs' ? 'W4_INSTALL_SOURCE_ROOTFS' : 'W4_INSTALL_SOURCE_SQUASHFS';
 
@@ -311,16 +381,20 @@ function buildTransferRuntimeReadme(array $plan, string $sourceType, string $sou
         "W4 OS Installation Runtime\n\n".
         "Perfil: %s\n".
         "Disco objetivo: %s\n".
+        "Target por defecto: %s\n".
+        "Hostname prefix: %s\n".
         "Fuente empaquetada: %s\n".
         "Ruta de fuente empaquetada: %s\n".
         "Secretos incluidos: %s\n\n".
         "Uso recomendado en la sesion live:\n".
-        "1. Revise install.env y confirme la fuente %s.\n".
+        "1. Revise install.env, confirme la fuente %s y valide edition-policy.json.\n".
         "2. Si faltan secretos, cree disk-passphrase.txt y local-user-password.txt a partir de los templates.\n".
         "3. Ejecute bash run-check-only.sh para la ultima validacion.\n".
         "4. Ejecute bash run-installation.sh solo cuando quiera escribir en disco.\n",
         $plan['profile_name'],
         $plan['plan_binding']['selected_disk']['device'],
+        $editionPolicy['boot']['default_target'],
+        $editionPolicy['branding']['hostname_prefix'],
         $sourceType,
         $sourcePath,
         $secretFiles !== [] ? 'si' : 'no',
@@ -406,6 +480,7 @@ try {
     if ($profileId === '') {
         throw new ValidationError('No se pudo determinar el profile_id para el transfer');
     }
+    $editionPolicy = installationPolicy($plan);
 
     $transferDir ??= $defaultTransferRoot . DIRECTORY_SEPARATOR . $profileId;
     ensureDirectory($transferDir);
@@ -421,6 +496,7 @@ try {
     $transferRuntimeDir = $transferDir . DIRECTORY_SEPARATOR . 'runtime';
 
     copyFileOrFail($bundleDir . DIRECTORY_SEPARATOR . 'apply-installation.sh', $transferDir . DIRECTORY_SEPARATOR . 'apply-installation.sh');
+    copyFileOrFail($bundleDir . DIRECTORY_SEPARATOR . 'edition-policy.json', $transferDir . DIRECTORY_SEPARATOR . 'edition-policy.json');
     copyFileOrFail($bundleDir . DIRECTORY_SEPARATOR . 'installation-plan.json', $transferDir . DIRECTORY_SEPARATOR . 'installation-plan.json');
     copyFileOrFail($bundleDir . DIRECTORY_SEPARATOR . 'verify-installation.sh', $transferDir . DIRECTORY_SEPARATOR . 'verify-installation.sh');
 
@@ -464,7 +540,8 @@ try {
             $transferRuntimeDir,
             $targetSourcePath,
             $source['type'],
-            $copiedSecrets
+            $copiedSecrets,
+            $editionPolicy
         )
     ) === false) {
         throw new ValidationError('No se pudo escribir runtime/install.env en el transfer');
@@ -476,7 +553,8 @@ try {
             $plan,
             $source['type'],
             relativePath($transferRuntimeDir, $targetSourcePath),
-            $copiedSecrets
+            $copiedSecrets,
+            $editionPolicy
         )
     ) === false) {
         throw new ValidationError('No se pudo escribir runtime/RUNTIME_PREPARATION.txt en el transfer');
@@ -491,7 +569,8 @@ try {
             $transferRuntimeDir,
             relativePath($transferRuntimeDir, $targetSourcePath),
             $source['type'],
-            $copiedSecrets
+            $copiedSecrets,
+            $editionPolicy
         )
     );
 
@@ -505,6 +584,11 @@ try {
         'bundle_dir' => $bundleDir,
         'transfer_dir' => $transferDir,
         'selected_disk' => $plan['plan_binding']['selected_disk']['device'] ?? null,
+        'edition_policy' => [
+            'path' => 'edition-policy.json',
+            'default_target' => $editionPolicy['boot']['default_target'],
+            'hostname_prefix' => $editionPolicy['branding']['hostname_prefix'],
+        ],
         'source' => [
             'type' => $source['type'],
             'original_path' => $source['path'],
@@ -528,7 +612,7 @@ try {
     writeJsonFile($transferDir . DIRECTORY_SEPARATOR . 'transfer-manifest.json', $transferManifest);
     if (file_put_contents(
         $transferDir . DIRECTORY_SEPARATOR . 'TRANSFER_PREPARATION.txt',
-        buildTransferReadme($plan, $source['type'], $copiedSecrets)
+        buildTransferReadme($plan, $source['type'], $copiedSecrets, $editionPolicy)
     ) === false) {
         throw new ValidationError('No se pudo escribir TRANSFER_PREPARATION.txt');
     }
@@ -539,6 +623,7 @@ try {
         'bundle_dir' => $bundleDir,
         'transfer_dir' => $transferDir,
         'selected_disk' => $plan['plan_binding']['selected_disk']['device'] ?? null,
+        'edition_policy' => $transferManifest['edition_policy'],
         'source' => $transferManifest['source'],
         'secrets' => $transferManifest['secrets'],
     ]);

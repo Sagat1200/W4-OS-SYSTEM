@@ -254,10 +254,54 @@ function relativePath(string $fromDir, string $targetPath): string
 }
 
 /**
+ * @param array<string, mixed> $plan
+ * @return array<string, mixed>
+ */
+function installationPolicy(array $plan): array
+{
+    /** @var array<string, mixed> $policy */
+    $policy = is_array($plan['edition_policy'] ?? null) ? $plan['edition_policy'] : [];
+    /** @var array<string, mixed> $branding */
+    $branding = is_array($policy['branding'] ?? null) ? $policy['branding'] : [];
+    /** @var array<string, mixed> $boot */
+    $boot = is_array($policy['boot'] ?? null) ? $policy['boot'] : [];
+    /** @var array<string, mixed> $ssh */
+    $ssh = is_array($policy['ssh'] ?? null) ? $policy['ssh'] : [];
+    /** @var array<string, mixed> $firewall */
+    $firewall = is_array($policy['firewall'] ?? null) ? $policy['firewall'] : [];
+
+    $edition = (string) ($plan['installation_profile']['edition'] ?? $plan['summary']['edition'] ?? 'home');
+    $defaultTarget = (string) ($boot['default_target'] ?? ($edition === 'server' ? 'multi-user.target' : 'graphical.target'));
+    $hostnamePrefix = (string) ($branding['hostname_prefix'] ?? ('w4-' . strtolower($edition)));
+    $sshEnabled = ($ssh['enabled'] ?? ($edition === 'server')) === true;
+
+    return [
+        'path' => (string) ($policy['path'] ?? 'edition-policy.json'),
+        'branding' => [
+            'hostname_prefix' => $hostnamePrefix,
+        ],
+        'boot' => [
+            'default_target' => $defaultTarget,
+        ],
+        'ssh' => [
+            'enabled' => $sshEnabled,
+            'root_login' => ($ssh['root_login'] ?? false) === true,
+            'authentication' => (string) ($ssh['authentication'] ?? ($sshEnabled ? 'publickey' : 'disabled')),
+        ],
+        'firewall' => [
+            'backend' => (string) ($firewall['backend'] ?? 'ufw'),
+            'incoming' => (string) ($firewall['incoming'] ?? 'deny'),
+            'outgoing' => (string) ($firewall['outgoing'] ?? 'allow'),
+        ],
+    ];
+}
+
+/**
  * @param array{type:string,path:string,auto_detected:bool} $source
  * @param array{disk_passphrase?:string,local_user_password?:string} $generatedSecrets
+ * @param array<string, mixed> $editionPolicy
  */
-function buildRuntimeEnv(string $runtimeDir, string $bundleDir, array $source, array $generatedSecrets): string
+function buildRuntimeEnv(string $runtimeDir, string $bundleDir, array $source, array $generatedSecrets, array $editionPolicy): string
 {
     $exports = [
         '#!/usr/bin/env bash',
@@ -288,6 +332,14 @@ function buildRuntimeEnv(string $runtimeDir, string $bundleDir, array $source, a
     }
 
     $exports[] = sprintf('export W4_BUNDLE_DIR="%s"', relativePath($runtimeDir, $bundleDir));
+    $exports[] = sprintf('export W4_EDITION_POLICY_FILE="%s"', relativePath($runtimeDir, $bundleDir . DIRECTORY_SEPARATOR . 'edition-policy.json'));
+    $exports[] = sprintf('export W4_DEFAULT_TARGET="%s"', (string) $editionPolicy['boot']['default_target']);
+    $exports[] = sprintf('export W4_HOSTNAME_PREFIX="%s"', (string) $editionPolicy['branding']['hostname_prefix']);
+    $exports[] = sprintf('export W4_SSH_ENABLED="%s"', ($editionPolicy['ssh']['enabled'] ?? false) === true ? '1' : '0');
+    $exports[] = sprintf('export W4_SSH_AUTHENTICATION="%s"', (string) $editionPolicy['ssh']['authentication']);
+    $exports[] = sprintf('export W4_FIREWALL_BACKEND="%s"', (string) $editionPolicy['firewall']['backend']);
+    $exports[] = sprintf('export W4_FIREWALL_INCOMING="%s"', (string) $editionPolicy['firewall']['incoming']);
+    $exports[] = sprintf('export W4_FIREWALL_OUTGOING="%s"', (string) $editionPolicy['firewall']['outgoing']);
     $exports[] = '';
 
     return implode("\n", $exports) . "\n";
@@ -339,8 +391,9 @@ BASH
 /**
  * @param array<string, mixed> $plan
  * @param array{type:string,path:string,auto_detected:bool} $source
+ * @param array<string, mixed> $editionPolicy
  */
-function buildRuntimeReadme(array $plan, array $source, bool $secretsGenerated): string
+function buildRuntimeReadme(array $plan, array $source, bool $secretsGenerated, array $editionPolicy): string
 {
     $sourceVariable = $source['type'] === 'rootfs' ? 'W4_INSTALL_SOURCE_ROOTFS' : 'W4_INSTALL_SOURCE_SQUASHFS';
 
@@ -348,23 +401,28 @@ function buildRuntimeReadme(array $plan, array $source, bool $secretsGenerated):
         "W4 OS Installation Runtime\n\n".
         "Perfil: %s\n".
         "Disco objetivo: %s\n".
+        "Target por defecto: %s\n".
+        "Hostname prefix: %s\n".
         "Fuente detectada: %s\n".
         "Ruta de fuente: %s\n".
         "Deteccion automatica: %s\n".
         "Secretos efimeros generados: %s\n\n".
         "Archivos runtime:\n".
         "- install.env\n".
+        "- edition-policy.json (referenciado desde el bundle)\n".
         "- run-check-only.sh\n".
         "- run-installation.sh\n".
         "- disk-passphrase.txt.template\n".
         "- local-user-password.txt.template\n\n".
         "Uso recomendado en la sesion live:\n".
-        "1. Revise install.env y confirme la fuente %s.\n".
+        "1. Revise install.env y confirme la fuente %s y la politica de edicion.\n".
         "2. Si no se generaron secretos, cree disk-passphrase.txt y local-user-password.txt a partir de los templates.\n".
         "3. Ejecute bash run-check-only.sh para una validacion final.\n".
         "4. Ejecute bash run-installation.sh solo cuando quiera escribir en disco.\n",
         $plan['profile_name'],
         $plan['plan_binding']['selected_disk']['device'],
+        $editionPolicy['boot']['default_target'],
+        $editionPolicy['branding']['hostname_prefix'],
         $source['type'],
         $source['path'],
         $source['auto_detected'] ? 'si' : 'no',
@@ -537,6 +595,7 @@ try {
     if ($profileId === '') {
         throw new ValidationError('No se pudo determinar el profile_id del bundle');
     }
+    $editionPolicy = installationPolicy($plan);
 
     $runtimeDir ??= $bundleDir . DIRECTORY_SEPARATOR . 'runtime';
     if (!is_dir($runtimeDir) && !mkdir($runtimeDir, 0777, true) && !is_dir($runtimeDir)) {
@@ -591,7 +650,7 @@ try {
 
     if (file_put_contents(
         $runtimeDir . DIRECTORY_SEPARATOR . 'install.env',
-        buildRuntimeEnv($runtimeDir, $bundleDir, $source, $generatedSecrets)
+        buildRuntimeEnv($runtimeDir, $bundleDir, $source, $generatedSecrets, $editionPolicy)
     ) === false) {
         throw new ValidationError('No se pudo escribir install.env');
     }
@@ -612,7 +671,7 @@ try {
 
     if (file_put_contents(
         $runtimeDir . DIRECTORY_SEPARATOR . 'RUNTIME_PREPARATION.txt',
-        buildRuntimeReadme($plan, $source, $generateSecrets)
+        buildRuntimeReadme($plan, $source, $generateSecrets, $editionPolicy)
     ) === false) {
         throw new ValidationError('No se pudo escribir RUNTIME_PREPARATION.txt');
     }
@@ -627,6 +686,15 @@ try {
         'bundle_dir' => $bundleDir,
         'runtime_dir' => $runtimeDir,
         'selected_disk' => $plan['plan_binding']['selected_disk']['device'] ?? null,
+        'edition_policy' => [
+            'path' => $editionPolicy['path'],
+            'default_target' => $editionPolicy['boot']['default_target'],
+            'hostname_prefix' => $editionPolicy['branding']['hostname_prefix'],
+            'ssh_enabled' => $editionPolicy['ssh']['enabled'],
+            'firewall_backend' => $editionPolicy['firewall']['backend'],
+            'firewall_incoming' => $editionPolicy['firewall']['incoming'],
+            'firewall_outgoing' => $editionPolicy['firewall']['outgoing'],
+        ],
         'source' => $source,
         'generated_secrets' => [
             'enabled' => $generateSecrets,
@@ -654,6 +722,7 @@ try {
         'bundle_dir' => $bundleDir,
         'runtime_dir' => $runtimeDir,
         'selected_disk' => $plan['plan_binding']['selected_disk']['device'] ?? null,
+        'edition_policy' => $runtimeManifest['edition_policy'],
         'source' => $source,
         'generated_secrets' => [
             'enabled' => $generateSecrets,

@@ -46,6 +46,8 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertSame('implemented', $controls['firewall-control-plane']['implementation_state']);
         self::assertSame('implemented', $controls['firewall-default-deny-incoming']['implementation_state']);
         self::assertSame('DROP', $controls['firewall-default-deny-incoming']['expected']['input_policy_value']);
+        self::assertSame('ALLOW', $controls['firewall-default-deny-incoming']['expected']['output_policy_value']);
+        self::assertSame('/etc/w4/edition-policy.env', $controls['firewall-default-deny-incoming']['expected']['edition_policy_env']);
         self::assertSame('implemented', $controls['mac-enforcement']['implementation_state']);
         self::assertSame('implemented', $controls['apparmor-enforced-profiles']['implementation_state']);
         self::assertSame(1, $controls['apparmor-enforced-profiles']['expected']['minimum_enforced_profiles']);
@@ -55,6 +57,8 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertSame('/etc/ufw/ufw.conf', $controls['critical-filesystem-permissions']['expected']['paths'][6]['path']);
         self::assertSame('implemented', $controls['remote-admin-disabled-by-default']['implementation_state']);
         self::assertFalse($controls['remote-admin-disabled-by-default']['expected']['policy_enabled']);
+        self::assertSame('/etc/w4/edition-policy.env', $controls['remote-admin-disabled-by-default']['expected']['edition_policy_env']);
+        self::assertSame('0', $controls['remote-admin-disabled-by-default']['expected']['env_enabled_value']);
         self::assertContains('config/editions/home/policy.json', $controls['remote-admin-disabled-by-default']['evidence']);
         self::assertSame('implemented', $controls['authenticated-updates']['implementation_state']);
         self::assertSame('pipeline', $controls['authenticated-updates']['validation_scope']);
@@ -101,6 +105,10 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertStringContainsString("addResult(\$results, 'firewall-default-deny-incoming'", $verifier);
         self::assertStringContainsString('function readConfigValue(string $path, string $key): ?string', $verifier);
         self::assertStringContainsString("DEFAULT_INPUT_POLICY", $verifier);
+        self::assertStringContainsString("DEFAULT_OUTPUT_POLICY", $verifier);
+        self::assertStringContainsString("W4_FIREWALL_INCOMING", $verifier);
+        self::assertStringContainsString("W4_SSH_ENABLED", $verifier);
+        self::assertStringContainsString("'/etc/w4/edition-policy.env'", $verifier);
         self::assertStringContainsString("addResult(\$results, 'apparmor-enforced-profiles'", $verifier);
         self::assertStringContainsString('function countEnforcedAppArmorProfiles(string $profilesPath): int', $verifier);
         self::assertStringContainsString("addResult(\$results, 'critical-filesystem-permissions'", $verifier);
@@ -137,6 +145,8 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertSame(['enabled', 'enabled-runtime'], $controls['remote-admin-server-policy']['expected']['enabled_states_allowed']);
         self::assertFalse($controls['remote-admin-server-policy']['expected']['root_login']);
         self::assertSame('publickey', $controls['remote-admin-server-policy']['expected']['authentication']);
+        self::assertSame('1', $controls['remote-admin-server-policy']['expected']['env_enabled_value']);
+        self::assertSame('publickey', $controls['remote-admin-server-policy']['expected']['env_authentication_value']);
         self::assertContains('config/editions/server/policy.json', $controls['remote-admin-server-policy']['evidence']);
     }
 

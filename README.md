@@ -78,6 +78,7 @@ Tambien quedaron materializadas politicas explicitas para `Home` y `Business` en
 Ademas, `generate_system_overlay.php` ya consume esa capa de politica para derivar `hostname_prefix` y `boot.default_target`, y `w4-firstboot.sh` aplica el target por defecto declarado en cada edicion.
 La propagacion ya llega tambien a `generate_live_bundle.php` y `generate_iso_bundle.php`: ambos preservan `default_target` en sus manifests/metadata, y `preflight_server_vm_validation.php` lo contrasta contra `config/editions/server/policy.json` antes de declarar lista una ISO Server.
 La misma politica ya alcanza la instalacion: `prepare_installation_bundle.php` copia `edition-policy.json` al bundle, `installation-plan.json` la referencia de forma explicita, y `generate_installation_executor.php` la consume para aplicar `default_target`, validar `hostname_prefix` y escribir el hardening base de `ufw` en el target.
+La convergencia tambien llega a `runtime/` y a la validacion posterior: `prepare_installation_runtime.php` y `prepare_installation_transfer.php` exportan `W4_EDITION_POLICY_FILE`, `W4_DEFAULT_TARGET`, `W4_HOSTNAME_PREFIX` y las variables de SSH/firewall hacia `install.env` y sus manifests; ademas, `SecurityBaselineToolkit` ya verifica `/etc/w4/edition-policy.env` para contrastar que el sistema instalado conserve la politica efectiva de SSH y `ufw`.
 
 ## Ruta inicial
 

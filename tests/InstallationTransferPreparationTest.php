@@ -55,10 +55,14 @@ final class InstallationTransferPreparationTest extends TestCase
         self::assertSame('source/filesystem.squashfs', $payload['source']['transfer_relative_path']);
 
         self::assertFileExists($transferDir . DIRECTORY_SEPARATOR . 'source' . DIRECTORY_SEPARATOR . 'filesystem.squashfs');
+        self::assertFileExists($transferDir . DIRECTORY_SEPARATOR . 'edition-policy.json');
 
         $installEnv = file_get_contents($transferDir . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'install.env');
         self::assertNotFalse($installEnv);
         self::assertStringContainsString('export W4_INSTALL_SOURCE_SQUASHFS="../source/filesystem.squashfs"', $installEnv);
+        self::assertStringContainsString('export W4_EDITION_POLICY_FILE="../edition-policy.json"', $installEnv);
+        self::assertStringContainsString('export W4_DEFAULT_TARGET="graphical.target"', $installEnv);
+        self::assertStringContainsString('export W4_HOSTNAME_PREFIX="w4-home"', $installEnv);
         self::assertStringContainsString('# export W4_DISK_PASSPHRASE_FILE="disk-passphrase.txt"', $installEnv);
         self::assertStringContainsString('# export W4_LOCAL_USER_PASSWORD_FILE="local-user-password.txt"', $installEnv);
 
@@ -73,11 +77,15 @@ final class InstallationTransferPreparationTest extends TestCase
         self::assertTrue($runtimeManifest['source']['packaged']);
         self::assertFalse($runtimeManifest['generated_secrets']['enabled']);
         self::assertSame([], $runtimeManifest['generated_secrets']['files']);
+        self::assertSame('../edition-policy.json', $runtimeManifest['edition_policy']['path']);
+        self::assertSame('graphical.target', $runtimeManifest['edition_policy']['default_target']);
 
         $transferManifest = $this->decodeJsonFile($transferDir . DIRECTORY_SEPARATOR . 'transfer-manifest.json');
         self::assertSame('cd ~/w4-transfer/runtime && bash run-check-only.sh', $transferManifest['vm_commands']['check_only']);
         self::assertFalse($transferManifest['secrets']['requested']);
         self::assertFalse($transferManifest['secrets']['included']);
+        self::assertSame('edition-policy.json', $transferManifest['edition_policy']['path']);
+        self::assertSame('w4-home', $transferManifest['edition_policy']['hostname_prefix']);
     }
 
     public function testPrepareInstallationTransferCopiesRootfsAndIncludedSecrets(): void
@@ -118,6 +126,7 @@ final class InstallationTransferPreparationTest extends TestCase
         $installEnv = file_get_contents($transferDir . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'install.env');
         self::assertNotFalse($installEnv);
         self::assertStringContainsString('export W4_INSTALL_SOURCE_ROOTFS="../source/rootfs"', $installEnv);
+        self::assertStringContainsString('export W4_EDITION_POLICY_FILE="../edition-policy.json"', $installEnv);
         self::assertStringContainsString('export W4_DISK_PASSPHRASE_FILE="disk-passphrase.txt"', $installEnv);
         self::assertStringContainsString('export W4_LOCAL_USER_PASSWORD_FILE="local-user-password.txt"', $installEnv);
 
@@ -178,6 +187,16 @@ final class InstallationTransferPreparationTest extends TestCase
             copy(
                 $this->fixturePath('build/install/w4-os-home/' . $fileName),
                 $bundleDir . DIRECTORY_SEPARATOR . $fileName
+            );
+        }
+
+        $fixturePolicyPath = $this->fixturePath('build/install/w4-os-home/edition-policy.json');
+        if (is_file($fixturePolicyPath)) {
+            copy($fixturePolicyPath, $bundleDir . DIRECTORY_SEPARATOR . 'edition-policy.json');
+        } else {
+            copy(
+                $this->fixturePath('config/editions/home/policy.json'),
+                $bundleDir . DIRECTORY_SEPARATOR . 'edition-policy.json'
             );
         }
 
