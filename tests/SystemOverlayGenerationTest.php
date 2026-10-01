@@ -44,6 +44,8 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertSame('system-overlay', $manifest['kind']);
         self::assertSame('ufw', $manifest['security']['firewall']['tool']);
         self::assertSame('firstboot-enables-service', $manifest['security']['apparmor']['activation']);
+        self::assertSame('graphical.target', $manifest['edition_policy']['default_target']);
+        self::assertSame('config/editions/home/policy.json', $manifest['edition_policy']['path']);
 
         $grubDefaults = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'default' . DIRECTORY_SEPARATOR . 'grub.d' . DIRECTORY_SEPARATOR . '50-w4-security.cfg');
         self::assertNotFalse($grubDefaults);
@@ -59,9 +61,19 @@ final class SystemOverlayGenerationTest extends TestCase
 
         $firstbootScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'w4-firstboot.sh');
         self::assertNotFalse($firstbootScript);
+        self::assertStringContainsString('systemctl set-default "${TARGET_DEFAULT}"', $firstbootScript);
         self::assertStringContainsString('systemctl enable apparmor.service', $firstbootScript);
         self::assertStringContainsString('ufw default deny incoming', $firstbootScript);
         self::assertStringContainsString('ufw --force enable', $firstbootScript);
+
+        $profileEnv = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'profile.env');
+        self::assertNotFalse($profileEnv);
+        self::assertStringContainsString('W4_DEFAULT_TARGET="graphical.target"', $profileEnv);
+
+        $applyScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'apply-overlay.sh');
+        self::assertNotFalse($applyScript);
+        self::assertStringContainsString('DEFAULT_TARGET="graphical.target"', $applyScript);
+        self::assertStringContainsString('${DEFAULT_TARGET}.wants', $applyScript);
     }
 
     public function testGenerateSystemOverlayUsesServerBrandingWithoutHomeFallback(): void
@@ -96,6 +108,8 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertSame('Server', $manifest['branding']['edition']);
         self::assertSame('w4-server', $manifest['branding']['hostname']);
         self::assertSame('w4-server-live', $manifest['branding']['live_hostname']);
+        self::assertSame('multi-user.target', $manifest['edition_policy']['default_target']);
+        self::assertSame('config/editions/server/policy.json', $manifest['edition_policy']['path']);
 
         $motd = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'motd');
         self::assertNotFalse($motd);
@@ -106,6 +120,10 @@ final class SystemOverlayGenerationTest extends TestCase
         $hosts = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'hosts');
         self::assertNotFalse($hosts);
         self::assertStringContainsString('127.0.1.1 w4-server', $hosts);
+
+        $profileEnv = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'profile.env');
+        self::assertNotFalse($profileEnv);
+        self::assertStringContainsString('W4_DEFAULT_TARGET="multi-user.target"', $profileEnv);
     }
 
     /**

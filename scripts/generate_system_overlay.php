@@ -56,37 +56,80 @@ function validateBuildInput(array $buildInput, string $sourcePath): void
 }
 
 /**
+ * @return array<string, mixed>
+ */
+function readEditionPolicy(string $rootDir, string $profileId): array
+{
+    $editionDirectory = str_replace('w4-os-', '', $profileId);
+    $policyPath = $rootDir
+        . DIRECTORY_SEPARATOR . 'config'
+        . DIRECTORY_SEPARATOR . 'editions'
+        . DIRECTORY_SEPARATOR . $editionDirectory
+        . DIRECTORY_SEPARATOR . 'policy.json';
+
+    if (!is_file($policyPath)) {
+        return [];
+    }
+
+    $raw = file_get_contents($policyPath);
+    if ($raw === false) {
+        throw new ValidationError(sprintf('No se pudo leer la politica de edicion: %s', $policyPath));
+    }
+
+    try {
+        /** @var array<string, mixed> $policy */
+        $policy = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('Politica de edicion invalida: %s', $exception->getMessage()));
+    }
+
+    if (($policy['profile_id'] ?? null) !== $profileId) {
+        throw new ValidationError(sprintf('La politica de edicion no corresponde al profile_id %s', $profileId));
+    }
+
+    return $policy;
+}
+
+/**
  * @param array<string, mixed> $buildInput
+ * @param array<string, mixed> $editionPolicy
  * @return array<string, string>
  */
-function overlayVariables(array $buildInput): array
+function overlayVariables(array $buildInput, array $editionPolicy): array
 {
     $profileId = (string) $buildInput['profile_id'];
     $profileName = (string) $buildInput['profile_name'];
-    $edition = str_replace('W4 OS ', '', $profileName);
-    $editionCatalog = [
+    $edition = (string) (($editionPolicy['branding']['edition'] ?? null) ?: str_replace('W4 OS ', '', $profileName));
+    $roleCatalog = [
         'w4-os-home' => [
-            'hostname' => 'w4-home',
             'motd_role' => 'entorno orientado a escritorio personal',
         ],
         'w4-os-business' => [
-            'hostname' => 'w4-business',
             'motd_role' => 'entorno orientado a piloto empresarial',
         ],
         'w4-os-server' => [
-            'hostname' => 'w4-server',
             'motd_role' => 'entorno headless orientado a administracion remota y servicios',
         ],
     ];
 
-    if (!array_key_exists($profileId, $editionCatalog)) {
+    if (!array_key_exists($profileId, $roleCatalog)) {
         throw new ValidationError(sprintf('Perfil sin politica de overlay registrada: %s', $profileId));
     }
 
-    $hostname = $editionCatalog[$profileId]['hostname'];
+    $hostnamePrefix = (string) (($editionPolicy['branding']['hostname_prefix'] ?? null) ?: '');
+    if ($hostnamePrefix === '') {
+        throw new ValidationError(sprintf('La politica de edicion %s debe definir branding.hostname_prefix', $profileId));
+    }
+
+    $defaultTarget = (string) (($editionPolicy['boot']['default_target'] ?? null) ?: '');
+    if ($defaultTarget === '') {
+        throw new ValidationError(sprintf('La politica de edicion %s debe definir boot.default_target', $profileId));
+    }
+
+    $hostname = $hostnamePrefix;
     $liveHostname = $hostname . '-live';
     $liveUser = 'w4live';
-    $motdRole = $editionCatalog[$profileId]['motd_role'];
+    $motdRole = $roleCatalog[$profileId]['motd_role'];
 
     return [
         'profile_id' => $profileId,
@@ -98,6 +141,7 @@ function overlayVariables(array $buildInput): array
         'product_name' => 'W4 OS System',
         'distribution_name' => 'W4 OS',
         'motd_role' => $motdRole,
+        'default_target' => $defaultTarget,
     ];
 }
 
@@ -115,6 +159,7 @@ W4_EDITION="{$vars['edition']}"
 W4_HOSTNAME="{$vars['hostname']}"
 W4_LIVE_HOSTNAME="{$vars['live_hostname']}"
 W4_LIVE_USER="{$vars['live_user']}"
+W4_DEFAULT_TARGET="{$vars['default_target']}"
 W4_FEATURES="{$features}"
 ENV);
 }
@@ -250,7 +295,7 @@ ExecStart=/usr/local/lib/w4/w4-firstboot.sh
 RemainAfterExit=yes
 
 [Install]
-WantedBy=multi-user.target
+WantedBy={$vars['default_target']}
 UNIT);
 }
 
@@ -271,7 +316,7 @@ ExecStart=/usr/local/lib/w4/w4-live-prep.sh
 RemainAfterExit=yes
 
 [Install]
-WantedBy=multi-user.target
+WantedBy={$vars['default_target']}
 UNIT);
 }
 
@@ -291,6 +336,7 @@ STATE_DIR="/var/lib/w4"
 STATE_FILE="${STATE_DIR}/firstboot-complete"
 PROFILE_ENV="/etc/w4/profile.env"
 DEFAULT_HOSTNAME="%DEFAULT_HOSTNAME%"
+DEFAULT_TARGET="%DEFAULT_TARGET%"
 PROFILE_ID="%PROFILE_ID%"
 
 if [[ -f "${PROFILE_ENV}" ]]; then
@@ -309,6 +355,7 @@ if [[ ! -s /etc/machine-id ]]; then
 fi
 
 TARGET_HOSTNAME="${W4_HOSTNAME:-${DEFAULT_HOSTNAME}}"
+TARGET_DEFAULT="${W4_DEFAULT_TARGET:-${DEFAULT_TARGET}}"
 CURRENT_HOSTNAME="$(cat /etc/hostname 2>/dev/null || true)"
 
 if [[ -z "${CURRENT_HOSTNAME}" ]] || [[ "${CURRENT_HOSTNAME}" == "localhost" ]] || [[ "${CURRENT_HOSTNAME}" == "debian" ]]; then
@@ -320,6 +367,10 @@ if command -v aa-enabled >/dev/null 2>&1; then
 fi
 
 if command -v systemctl >/dev/null 2>&1; then
+  if [[ -n "${TARGET_DEFAULT}" ]]; then
+    systemctl set-default "${TARGET_DEFAULT}" >/dev/null 2>&1 || true
+  fi
+
   if systemctl list-unit-files apparmor.service >/dev/null 2>&1; then
     systemctl enable apparmor.service >/dev/null 2>&1 || true
     systemctl start apparmor.service >/dev/null 2>&1 || true
@@ -337,6 +388,7 @@ mkdir -p /etc/w4
 cat > /etc/w4/firstboot-state.env <<EOF
 W4_PROFILE_ID="${W4_PROFILE_ID:-${PROFILE_ID}}"
 W4_HOSTNAME_APPLIED="${TARGET_HOSTNAME}"
+W4_DEFAULT_TARGET_APPLIED="${TARGET_DEFAULT}"
 W4_FIRSTBOOT_COMPLETED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 EOF
 
@@ -344,8 +396,8 @@ printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "${STATE_FILE}"
 BASH;
 
     $script = str_replace(
-        ['%DEFAULT_HOSTNAME%', '%PROFILE_ID%'],
-        [$hostname, $profileId],
+        ['%DEFAULT_HOSTNAME%', '%DEFAULT_TARGET%', '%PROFILE_ID%'],
+        [$hostname, $vars['default_target'], $profileId],
         $script
     );
 
@@ -476,9 +528,11 @@ chown -R root:root \
 chmod 0755 "${ROOTFS_DIR}/usr/local/lib/w4/w4-firstboot.sh"
 chmod 0755 "${ROOTFS_DIR}/usr/local/lib/w4/w4-live-prep.sh"
 
-mkdir -p "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants"
-ln -sfn ../w4-firstboot.service "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/w4-firstboot.service"
-ln -sfn ../w4-live-prep.service "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/w4-live-prep.service"
+DEFAULT_TARGET="%DEFAULT_TARGET%"
+
+mkdir -p "${ROOTFS_DIR}/etc/systemd/system/${DEFAULT_TARGET}.wants"
+ln -sfn ../w4-firstboot.service "${ROOTFS_DIR}/etc/systemd/system/${DEFAULT_TARGET}.wants/w4-firstboot.service"
+ln -sfn ../w4-live-prep.service "${ROOTFS_DIR}/etc/systemd/system/${DEFAULT_TARGET}.wants/w4-live-prep.service"
 
 printf '%s\n' "%PROFILE_ID%" > "${ROOTFS_DIR}/var/lib/w4/system-overlay-profile"
 printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "${ROOTFS_DIR}/var/lib/w4/system-overlay-applied-at"
@@ -487,8 +541,8 @@ echo "Overlay aplicado a %PROFILE_NAME% en ${ROOTFS_DIR}"
 BASH;
 
     $script = str_replace(
-        ['%PROFILE_ID%', '%PROFILE_NAME%'],
-        [$vars['profile_id'], $vars['profile_name']],
+        ['%DEFAULT_TARGET%', '%PROFILE_ID%', '%PROFILE_NAME%'],
+        [$vars['default_target'], $vars['profile_id'], $vars['profile_name']],
         $script
     );
 
@@ -583,7 +637,8 @@ try {
         throw new ValidationError(sprintf('No se pudo crear la carpeta de salida: %s', $outputPath));
     }
 
-    $vars = overlayVariables($buildInput);
+    $editionPolicy = readEditionPolicy($rootDir, $resolvedProfileId);
+    $vars = overlayVariables($buildInput, $editionPolicy);
     $files = buildOverlayFiles($buildInput, $vars);
 
     foreach ($files as $relativePath => $contents) {
@@ -612,6 +667,10 @@ try {
             'hostname' => $vars['hostname'],
             'live_hostname' => $vars['live_hostname'],
             'live_user' => $vars['live_user'],
+        ],
+        'edition_policy' => [
+            'path' => sprintf('config/editions/%s/policy.json', str_replace('w4-os-', '', $resolvedProfileId)),
+            'default_target' => $vars['default_target'],
         ],
         'features' => $buildInput['features'],
         'services' => [
