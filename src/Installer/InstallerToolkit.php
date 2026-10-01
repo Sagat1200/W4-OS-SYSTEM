@@ -216,7 +216,13 @@ final class InstallerToolkit
      * @param array<string, mixed> $inventory
      * @return array<string, mixed>
      */
-    public function createInstallationPlan(array $installationProfile, array $buildInput, array $inventory): array
+    public function createInstallationPlan(
+        array $installationProfile,
+        array $buildInput,
+        array $inventory,
+        array $editionPolicy = [],
+        ?string $editionPolicyPath = null
+    ): array
     {
         $profileBuildId = (string) $installationProfile['build_profile_id'];
         $buildInputId = (string) $buildInput['profile_id'];
@@ -282,6 +288,18 @@ final class InstallerToolkit
         $installer = $installationProfile['installer'];
         /** @var array<string, mixed> $security */
         $security = $installationProfile['security'];
+        $normalizedEditionPolicy = $this->normalizeEditionPolicy($buildInputId, $installationProfile, $editionPolicy, $editionPolicyPath);
+
+        $hostname = (string) $identity['hostname'];
+        $hostnamePrefix = (string) $normalizedEditionPolicy['branding']['hostname_prefix'];
+        if (!str_starts_with($hostname, $hostnamePrefix)) {
+            throw new ValidationError(sprintf(
+                'El installation-profile (%s) define hostname %s fuera del prefijo de politica %s',
+                $installationProfile['id'],
+                $hostname,
+                $hostnamePrefix
+            ));
+        }
 
         return [
             'installation_plan_schema_version' => 1,
@@ -294,6 +312,7 @@ final class InstallerToolkit
                 'name' => $installationProfile['name'],
                 'edition' => $installationProfile['edition'],
             ],
+            'edition_policy' => $normalizedEditionPolicy,
             'plan_binding' => [
                 'selector' => $selector,
                 'selected_disk' => $diskBinding,
@@ -337,6 +356,7 @@ final class InstallerToolkit
                 'Este plan es destructivo y esta limitado a discos vacios.',
                 'La ejecucion real debe revalidar el binding_hash antes de escribir en disco.',
                 'El perfil unattended versiona solo referencias a secretos; no material secreto persistido.',
+                'La instalacion debe respetar la politica de edicion versionada para arranque, hostname y hardening base.',
             ],
         ];
     }
@@ -351,8 +371,17 @@ final class InstallerToolkit
         array $installationProfile,
         array $buildInput,
         array $inventory,
-        array $plan
+        array $plan,
+        array $editionPolicy = [],
+        ?string $editionPolicyPath = null
     ): array {
+        $normalizedEditionPolicy = $this->normalizeEditionPolicy(
+            (string) $buildInput['profile_id'],
+            $installationProfile,
+            $editionPolicy,
+            $editionPolicyPath
+        );
+
         return [
             'installation_bundle_schema_version' => 1,
             'kind' => 'installation-bundle',
@@ -360,9 +389,14 @@ final class InstallerToolkit
             'installation_profile_id' => $installationProfile['id'],
             'inventory_id' => $inventory['id'] ?? 'inventory',
             'plan_kind' => $plan['kind'] ?? 'installation-plan',
+            'edition_policy' => [
+                'path' => $normalizedEditionPolicy['path'],
+                'default_target' => $normalizedEditionPolicy['boot']['default_target'],
+            ],
             'generated_artifacts' => [
                 'installation-profile.json',
                 'disk-inventory.json',
+                'edition-policy.json',
                 'installation-plan.json',
                 'INSTALLATION_SUMMARY.txt',
             ],
@@ -382,6 +416,14 @@ final class InstallerToolkit
         $storage = $plan['storage'];
         /** @var array<string, mixed> $btrfs */
         $btrfs = $storage['btrfs'];
+        /** @var array<string, mixed> $editionPolicy */
+        $editionPolicy = is_array($plan['edition_policy'] ?? null) ? $plan['edition_policy'] : [];
+        /** @var array<string, mixed> $bootPolicy */
+        $bootPolicy = is_array($editionPolicy['boot'] ?? null) ? $editionPolicy['boot'] : [];
+        /** @var array<string, mixed> $sshPolicy */
+        $sshPolicy = is_array($editionPolicy['ssh'] ?? null) ? $editionPolicy['ssh'] : [];
+        /** @var array<string, mixed> $firewallPolicy */
+        $firewallPolicy = is_array($editionPolicy['firewall'] ?? null) ? $editionPolicy['firewall'] : [];
 
         $subvolumeLines = [];
         foreach ($btrfs['subvolumes'] as $subvolume) {
@@ -399,6 +441,9 @@ final class InstallerToolkit
             "Layout: GPT + ESP + /boot + LUKS2 + Btrfs\n".
             "Usuario inicial: %s\n".
             "Hostname: %s\n".
+            "Target por defecto: %s\n".
+            "SSH habilitado por politica: %s\n".
+            "Firewall por politica: %s (%s/%s)\n".
             "Resumen destructivo: %s\n".
             "Espacio estimado para root cifrada: %s GiB\n\n".
             "Subvolumenes declarados:\n%s\n",
@@ -407,6 +452,11 @@ final class InstallerToolkit
             number_format(((int) $disk['size_bytes']) / 1073741824, 2, '.', ''),
             $plan['identity']['user']['username'],
             $plan['identity']['hostname'],
+            (string) ($bootPolicy['default_target'] ?? 'multi-user.target'),
+            (($sshPolicy['enabled'] ?? false) === true) ? 'si' : 'no',
+            (string) ($firewallPolicy['backend'] ?? 'ufw'),
+            (string) ($firewallPolicy['incoming'] ?? 'deny'),
+            (string) ($firewallPolicy['outgoing'] ?? 'allow'),
             ($summary['destructive'] ?? false) === true ? 'si' : 'no',
             number_format(((int) $summary['encrypted_root_bytes']) / 1073741824, 2, '.', ''),
             implode("\n", $subvolumeLines)
@@ -521,6 +571,92 @@ final class InstallerToolkit
                 'cryptroot-unlock',
                 'btrfs-mounts',
                 'first-boot',
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $installationProfile
+     * @param array<string, mixed> $editionPolicy
+     * @return array<string, mixed>
+     */
+    private function normalizeEditionPolicy(
+        string $profileId,
+        array $installationProfile,
+        array $editionPolicy,
+        ?string $editionPolicyPath
+    ): array {
+        $editionName = ucfirst((string) $installationProfile['edition']);
+        $hostnamePrefix = 'w4-' . strtolower((string) $installationProfile['edition']);
+        $defaultTarget = ((string) $installationProfile['edition']) === 'server' ? 'multi-user.target' : 'graphical.target';
+        $sshEnabled = ((string) $installationProfile['edition']) === 'server';
+
+        if ($editionPolicy !== []) {
+            if (($editionPolicy['profile_id'] ?? null) !== $profileId) {
+                throw new ValidationError(sprintf(
+                    'La politica de edicion no corresponde al profile_id %s',
+                    $profileId
+                ));
+            }
+
+            /** @var array<string, mixed> $branding */
+            $branding = is_array($editionPolicy['branding'] ?? null) ? $editionPolicy['branding'] : [];
+            /** @var array<string, mixed> $boot */
+            $boot = is_array($editionPolicy['boot'] ?? null) ? $editionPolicy['boot'] : [];
+            /** @var array<string, mixed> $ssh */
+            $ssh = is_array($editionPolicy['ssh'] ?? null) ? $editionPolicy['ssh'] : [];
+            /** @var array<string, mixed> $firewall */
+            $firewall = is_array($editionPolicy['firewall'] ?? null) ? $editionPolicy['firewall'] : [];
+
+            $editionName = (string) ($branding['edition'] ?? $editionName);
+            $hostnamePrefix = (string) ($branding['hostname_prefix'] ?? $hostnamePrefix);
+            $defaultTarget = (string) ($boot['default_target'] ?? $defaultTarget);
+            $sshEnabled = ($ssh['enabled'] ?? $sshEnabled) === true;
+
+            return [
+                'profile_id' => $profileId,
+                'path' => $editionPolicyPath ?? sprintf('config/editions/%s/policy.json', str_replace('w4-os-', '', $profileId)),
+                'branding' => [
+                    'edition' => $editionName,
+                    'hostname_prefix' => $hostnamePrefix,
+                ],
+                'boot' => [
+                    'default_target' => $defaultTarget,
+                    'firmware' => (string) ($boot['firmware'] ?? 'uefi'),
+                ],
+                'ssh' => [
+                    'enabled' => $sshEnabled,
+                    'root_login' => ($ssh['root_login'] ?? false) === true,
+                    'authentication' => (string) ($ssh['authentication'] ?? ($sshEnabled ? 'publickey' : 'disabled')),
+                ],
+                'firewall' => [
+                    'backend' => (string) ($firewall['backend'] ?? 'ufw'),
+                    'incoming' => (string) ($firewall['incoming'] ?? 'deny'),
+                    'outgoing' => (string) ($firewall['outgoing'] ?? 'allow'),
+                ],
+            ];
+        }
+
+        return [
+            'profile_id' => $profileId,
+            'path' => $editionPolicyPath ?? sprintf('config/editions/%s/policy.json', str_replace('w4-os-', '', $profileId)),
+            'branding' => [
+                'edition' => $editionName,
+                'hostname_prefix' => $hostnamePrefix,
+            ],
+            'boot' => [
+                'default_target' => $defaultTarget,
+                'firmware' => 'uefi',
+            ],
+            'ssh' => [
+                'enabled' => $sshEnabled,
+                'root_login' => false,
+                'authentication' => $sshEnabled ? 'publickey' : 'disabled',
+            ],
+            'firewall' => [
+                'backend' => 'ufw',
+                'incoming' => 'deny',
+                'outgoing' => 'allow',
             ],
         ];
     }

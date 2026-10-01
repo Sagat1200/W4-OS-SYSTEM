@@ -47,6 +47,7 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertSame('ok', $payload['status']);
         self::assertSame('/dev/sda', $payload['selected_disk']);
         self::assertSame($bundleDir, $payload['bundle_dir']);
+        self::assertSame($bundleDir . DIRECTORY_SEPARATOR . 'edition-policy.json', $payload['edition_policy']);
 
         $derivedProfile = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-profile.derived.json');
         self::assertSame(
@@ -60,9 +61,15 @@ final class InstallationScriptsIntegrationTest extends TestCase
 
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'installation-plan.json');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'installation-bundle.json');
+        self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'edition-policy.json');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'apply-installation.sh');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'verify-installation.sh');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'CHECK_ONLY_PREPARATION.txt');
+
+        $plan = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-plan.json');
+        self::assertSame('graphical.target', $plan['edition_policy']['boot']['default_target']);
+        self::assertSame('w4-home', $plan['edition_policy']['branding']['hostname_prefix']);
+        self::assertFalse($plan['edition_policy']['ssh']['enabled']);
     }
 
     public function testPrepareInstallationBundleSupportsServerProfile(): void
@@ -96,6 +103,9 @@ final class InstallationScriptsIntegrationTest extends TestCase
         $plan = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-plan.json');
         self::assertSame('w4-os-server', $plan['profile_id']);
         self::assertSame('server', $plan['summary']['edition']);
+        self::assertSame('edition-policy.json', $plan['edition_policy']['path']);
+        self::assertSame('multi-user.target', $plan['edition_policy']['boot']['default_target']);
+        self::assertTrue($plan['edition_policy']['ssh']['enabled']);
         self::assertContains(
             ['name' => '@srv', 'mountpoint' => '/srv'],
             $plan['storage']['btrfs']['subvolumes']
@@ -140,6 +150,7 @@ final class InstallationScriptsIntegrationTest extends TestCase
         $plan = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-plan.json');
         self::assertSame(34359738368, $plan['plan_binding']['selected_disk']['size_bytes']);
         self::assertSame('server', $plan['summary']['edition']);
+        self::assertSame('w4-server', $plan['edition_policy']['branding']['hostname_prefix']);
         self::assertContains(
             ['name' => '@srv', 'mountpoint' => '/srv'],
             $plan['storage']['btrfs']['subvolumes']
@@ -284,9 +295,16 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('KEYMAP=${CONSOLE_KEYMAP_VALUE}', $applyScript);
         self::assertStringContainsString('cat > "${TARGET_ROOT}/etc/vconsole.conf" <<EOF', $applyScript);
         self::assertStringContainsString('cat > "${TARGET_ROOT}/etc/initramfs-tools/conf.d/w4-keyboard" <<EOF', $applyScript);
+        self::assertStringContainsString("DEFAULT_TARGET='graphical.target'", $applyScript);
+        self::assertStringContainsString("HOSTNAME_PREFIX='w4-home'", $applyScript);
+        self::assertStringContainsString('apply_policy_defaults() {', $applyScript);
+        self::assertStringContainsString('cat > "${TARGET_ROOT}/etc/w4/edition-policy.env" <<EOF', $applyScript);
+        self::assertStringContainsString('W4_DEFAULT_TARGET="${DEFAULT_TARGET}"', $applyScript);
+        self::assertStringContainsString('sed -i "s/^DEFAULT_INPUT_POLICY=.*/DEFAULT_INPUT_POLICY=\\"${FIREWALL_INCOMING^^}\\"/"', $applyScript);
+        self::assertStringContainsString('sed -i "s/^DEFAULT_OUTPUT_POLICY=.*/DEFAULT_OUTPUT_POLICY=\\"${FIREWALL_OUTGOING^^}\\"/"', $applyScript);
         self::assertStringContainsString('elif [[ -f "${TARGET_ROOT}/etc/systemd/system/w4-firstboot.service" ]]; then', $applyScript);
-        self::assertStringContainsString('ln -sf ../w4-firstboot.service "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants/w4-firstboot.service"', $applyScript);
-        self::assertStringContainsString('rm -f "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants/w4-live-prep.service"', $applyScript);
+        self::assertStringContainsString('ln -sf ../w4-firstboot.service "${TARGET_ROOT}/etc/systemd/system/${DEFAULT_TARGET}.wants/w4-firstboot.service"', $applyScript);
+        self::assertStringContainsString('rm -f "${TARGET_ROOT}/etc/systemd/system/${DEFAULT_TARGET}.wants/w4-live-prep.service"', $applyScript);
         self::assertStringContainsString('chroot "${TARGET_ROOT}" setupcon --save-only', $applyScript);
         self::assertStringContainsString('setupcon devolvio un error; se conserva la configuracion escrita en /etc/default/keyboard', $applyScript);
         $verifyScript = file_get_contents($bundleDir . DIRECTORY_SEPARATOR . 'verify-installation.sh');
@@ -296,6 +314,11 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertStringContainsString('mount_target_if_needed() {', $verifyScript);
         self::assertStringContainsString('cryptsetup open "${ROOT_PART}" "${CRYPT_NAME}" --key-file "${PASSPHRASE_FILE}"', $verifyScript);
         self::assertStringContainsString('mount -o subvol="${ROOT_SUBVOLUME}" "/dev/mapper/${CRYPT_NAME}" "${TARGET_ROOT}"', $verifyScript);
+        self::assertStringContainsString("EXPECTED_DEFAULT_TARGET='graphical.target'", $verifyScript);
+        self::assertStringContainsString("EXPECTED_HOSTNAME_PREFIX='w4-home'", $verifyScript);
+        self::assertStringContainsString('test -f "${TARGET_ROOT}/etc/w4/edition-policy.env"', $verifyScript);
+        self::assertStringContainsString('w4-firstboot.service no quedo enlazado al default target esperado', $verifyScript);
+        self::assertStringContainsString('ufw no conserva la politica de entrada esperada', $verifyScript);
         self::assertStringContainsString('Verificacion local completada para ${TARGET_ROOT}', $verifyScript);
         self::assertStringContainsString('mount "${ESP_PART}" "${TARGET_ROOT}/boot/efi"', $applyScript);
         $bootMkdirPosition = strpos($applyScript, 'mkdir -p "${TARGET_ROOT}/boot"');
@@ -314,6 +337,10 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertContains('verify-installation.sh', $bundleManifest['generated_artifacts']);
         self::assertContains('installation-executor.json', $bundleManifest['generated_artifacts']);
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'INSTALLATION_EXECUTOR_README.txt');
+
+        $executorManifest = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-executor.json');
+        self::assertSame('graphical.target', $executorManifest['edition_policy']['default_target']);
+        self::assertSame('w4-home', $executorManifest['edition_policy']['hostname_prefix']);
 
         self::assertStringContainsString('falta /boot/grub/grub.cfg', $verifyScript);
         self::assertStringContainsString('falta la ruta UEFI de fallback BOOTX64.EFI', $verifyScript);

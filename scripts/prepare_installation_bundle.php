@@ -49,6 +49,25 @@ function writeJsonFile(string $path, array $data): void
 }
 
 /**
+ * @return array<string, mixed>
+ */
+function readEditionPolicy(string $rootDir, string $profileId): array
+{
+    $policyPath = $rootDir
+        . DIRECTORY_SEPARATOR . 'config'
+        . DIRECTORY_SEPARATOR . 'editions'
+        . DIRECTORY_SEPARATOR . str_replace('w4-os-', '', $profileId)
+        . DIRECTORY_SEPARATOR . 'policy.json';
+
+    $policy = readJsonFile($policyPath);
+    if (($policy['profile_id'] ?? null) !== $profileId) {
+        throw new ValidationError(sprintf('La politica %s no corresponde al profile_id %s', $policyPath, $profileId));
+    }
+
+    return $policy;
+}
+
+/**
  * @param array<string, mixed> $plan
  */
 function validateInstallationPlan(array $plan, string $sourcePath): void
@@ -308,24 +327,42 @@ try {
 
     $derivedProfilePath = $bundleDir . DIRECTORY_SEPARATOR . 'installation-profile.derived.json';
     $inventoryCopyPath = $bundleDir . DIRECTORY_SEPARATOR . 'disk-inventory.json';
+    $editionPolicyPath = $bundleDir . DIRECTORY_SEPARATOR . 'edition-policy.json';
     $planPath = $bundleDir . DIRECTORY_SEPARATOR . 'installation-plan.json';
     $bundleManifestPath = $bundleDir . DIRECTORY_SEPARATOR . 'installation-bundle.json';
     $summaryPath = $bundleDir . DIRECTORY_SEPARATOR . 'INSTALLATION_SUMMARY.txt';
     $checkOnlyReadmePath = $bundleDir . DIRECTORY_SEPARATOR . 'CHECK_ONLY_PREPARATION.txt';
 
+    $editionPolicy = readEditionPolicy($rootDir, $profileId);
+
     writeJsonFile($derivedProfilePath, $retargetedProfile);
     writeJsonFile($inventoryCopyPath, $inventory);
+    writeJsonFile($editionPolicyPath, $editionPolicy);
 
-    $plan = $toolkit->createInstallationPlan($retargetedProfile, $buildInput, $inventory);
+    $plan = $toolkit->createInstallationPlan(
+        $retargetedProfile,
+        $buildInput,
+        $inventory,
+        $editionPolicy,
+        'edition-policy.json'
+    );
     validateInstallationPlan($plan, $planPath);
     writeJsonFile($planPath, $plan);
 
-    $bundleManifest = $toolkit->createInstallationBundleManifest($retargetedProfile, $buildInput, $inventory, $plan);
+    $bundleManifest = $toolkit->createInstallationBundleManifest(
+        $retargetedProfile,
+        $buildInput,
+        $inventory,
+        $plan,
+        $editionPolicy,
+        'edition-policy.json'
+    );
     validateInstallationBundle($bundleManifest, $bundleManifestPath);
     $bundleManifest['installation_profile_id'] = $retargetedProfile['id'];
     $bundleManifest['generated_artifacts'] = array_values(array_unique(array_merge(
         $bundleManifest['generated_artifacts'] ?? [],
         [
+            'edition-policy.json',
             'installation-profile.derived.json',
             'CHECK_ONLY_PREPARATION.txt',
         ]
@@ -364,6 +401,7 @@ try {
         'selected_disk' => $selectedDisk['device'],
         'selector' => $selector,
         'derived_install_profile' => $derivedProfilePath,
+        'edition_policy' => $editionPolicyPath,
         'inventory_copy' => $inventoryCopyPath,
         'plan' => $planPath,
         'executor' => $bundleDir . DIRECTORY_SEPARATOR . 'apply-installation.sh',

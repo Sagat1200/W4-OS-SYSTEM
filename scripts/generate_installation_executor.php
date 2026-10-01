@@ -74,6 +74,49 @@ function normalizeLf(string $content): string
 
 /**
  * @param array<string, mixed> $plan
+ * @return array<string, mixed>
+ */
+function installationPolicy(array $plan): array
+{
+    /** @var array<string, mixed> $policy */
+    $policy = is_array($plan['edition_policy'] ?? null) ? $plan['edition_policy'] : [];
+    /** @var array<string, mixed> $branding */
+    $branding = is_array($policy['branding'] ?? null) ? $policy['branding'] : [];
+    /** @var array<string, mixed> $boot */
+    $boot = is_array($policy['boot'] ?? null) ? $policy['boot'] : [];
+    /** @var array<string, mixed> $ssh */
+    $ssh = is_array($policy['ssh'] ?? null) ? $policy['ssh'] : [];
+    /** @var array<string, mixed> $firewall */
+    $firewall = is_array($policy['firewall'] ?? null) ? $policy['firewall'] : [];
+
+    $edition = (string) (($plan['installation_profile']['edition'] ?? $plan['summary']['edition'] ?? 'home'));
+    $defaultTarget = (string) ($boot['default_target'] ?? ($edition === 'server' ? 'multi-user.target' : 'graphical.target'));
+    $hostnamePrefix = (string) ($branding['hostname_prefix'] ?? ('w4-' . strtolower($edition)));
+    $sshEnabled = ($ssh['enabled'] ?? ($edition === 'server')) === true;
+
+    return [
+        'path' => (string) ($policy['path'] ?? 'edition-policy.json'),
+        'branding' => [
+            'hostname_prefix' => $hostnamePrefix,
+        ],
+        'boot' => [
+            'default_target' => $defaultTarget,
+        ],
+        'ssh' => [
+            'enabled' => $sshEnabled,
+            'root_login' => ($ssh['root_login'] ?? false) === true,
+            'authentication' => (string) ($ssh['authentication'] ?? ($sshEnabled ? 'publickey' : 'disabled')),
+        ],
+        'firewall' => [
+            'backend' => (string) ($firewall['backend'] ?? 'ufw'),
+            'incoming' => (string) ($firewall['incoming'] ?? 'deny'),
+            'outgoing' => (string) ($firewall['outgoing'] ?? 'allow'),
+        ],
+    ];
+}
+
+/**
+ * @param array<string, mixed> $plan
  */
 function validateInstallationPlan(array $plan, string $sourcePath): void
 {
@@ -96,6 +139,10 @@ function validateInstallationPlan(array $plan, string $sourcePath): void
         if (!is_array($plan[$field] ?? null)) {
             throw new ValidationError(sprintf('%s: %s debe ser un objeto', basename($sourcePath), $field));
         }
+    }
+
+    if (isset($plan['edition_policy']) && !is_array($plan['edition_policy'])) {
+        throw new ValidationError(sprintf('%s: edition_policy debe ser un objeto si esta presente', basename($sourcePath)));
     }
 }
 
@@ -149,6 +196,7 @@ function buildApplyScript(array $plan): string
     $encryption = $plan['security']['encryption'];
     $btrfs = $storage['btrfs'];
     $rootSubvolume = rootSubvolume($plan);
+    $editionPolicy = installationPolicy($plan);
 
     $espSizeMib = (int) round(((int) $storage['partitions'][0]['size_bytes']) / 1048576);
     $bootSizeMib = (int) round(((int) $storage['partitions'][1]['size_bytes']) / 1048576);
@@ -235,6 +283,15 @@ ROOT_LABEL=%ROOT_LABEL%
 ESP_LABEL=%ESP_LABEL%
 BOOT_LABEL=%BOOT_LABEL%
 ROOT_SUBVOLUME=%ROOT_SUBVOLUME%
+DEFAULT_TARGET=%DEFAULT_TARGET%
+HOSTNAME_PREFIX=%HOSTNAME_PREFIX%
+EDITION_POLICY_PATH=%EDITION_POLICY_PATH%
+SSH_POLICY_ENABLED=%SSH_POLICY_ENABLED%
+SSH_POLICY_AUTHENTICATION=%SSH_POLICY_AUTHENTICATION%
+SSH_POLICY_ROOT_LOGIN=%SSH_POLICY_ROOT_LOGIN%
+FIREWALL_BACKEND=%FIREWALL_BACKEND%
+FIREWALL_INCOMING=%FIREWALL_INCOMING%
+FIREWALL_OUTGOING=%FIREWALL_OUTGOING%
 ESP_SIZE_MIB=%ESP_SIZE_MIB%
 BOOT_SIZE_MIB=%BOOT_SIZE_MIB%
 TARGET_ROOT="${W4_TARGET_ROOT:-/mnt/w4-install-target}"
@@ -620,6 +677,26 @@ ensure_directories() {
     "${TARGET_ROOT}/var/lib/w4"
 }
 
+apply_policy_defaults() {
+  mkdir -p "${TARGET_ROOT}/etc/w4"
+  cat > "${TARGET_ROOT}/etc/w4/edition-policy.env" <<EOF
+W4_EDITION_POLICY_PATH="${EDITION_POLICY_PATH}"
+W4_DEFAULT_TARGET="${DEFAULT_TARGET}"
+W4_HOSTNAME_PREFIX="${HOSTNAME_PREFIX}"
+W4_SSH_ENABLED="${SSH_POLICY_ENABLED}"
+W4_SSH_AUTHENTICATION="${SSH_POLICY_AUTHENTICATION}"
+W4_SSH_ROOT_LOGIN="${SSH_POLICY_ROOT_LOGIN}"
+W4_FIREWALL_BACKEND="${FIREWALL_BACKEND}"
+W4_FIREWALL_INCOMING="${FIREWALL_INCOMING}"
+W4_FIREWALL_OUTGOING="${FIREWALL_OUTGOING}"
+EOF
+
+  if [[ "${FIREWALL_BACKEND}" == "ufw" ]] && [[ -f "${TARGET_ROOT}/etc/default/ufw" ]]; then
+    sed -i "s/^DEFAULT_INPUT_POLICY=.*/DEFAULT_INPUT_POLICY=\"${FIREWALL_INCOMING^^}\"/" "${TARGET_ROOT}/etc/default/ufw" || true
+    sed -i "s/^DEFAULT_OUTPUT_POLICY=.*/DEFAULT_OUTPUT_POLICY=\"${FIREWALL_OUTGOING^^}\"/" "${TARGET_ROOT}/etc/default/ufw" || true
+  fi
+}
+
 print_plan() {
   cat <<EOF
 W4 OS Executor
@@ -758,18 +835,20 @@ cat > "${TARGET_ROOT}/etc/fstab" <<EOF
 %FSTAB_BODY%
 EOF
 
+apply_policy_defaults
+
 if [[ -f "${TARGET_ROOT}/etc/locale.gen" ]]; then
   sed -i "s/^# *${LOCALE_VALUE} UTF-8/${LOCALE_VALUE} UTF-8/" "${TARGET_ROOT}/etc/locale.gen" || true
 fi
 
-mkdir -p "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants"
+mkdir -p "${TARGET_ROOT}/etc/systemd/system/${DEFAULT_TARGET}.wants"
 if [[ -f "${TARGET_ROOT}/lib/systemd/system/w4-firstboot.service" ]]; then
-  ln -sf /lib/systemd/system/w4-firstboot.service "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants/w4-firstboot.service"
+  ln -sf /lib/systemd/system/w4-firstboot.service "${TARGET_ROOT}/etc/systemd/system/${DEFAULT_TARGET}.wants/w4-firstboot.service"
 elif [[ -f "${TARGET_ROOT}/etc/systemd/system/w4-firstboot.service" ]]; then
-  ln -sf ../w4-firstboot.service "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants/w4-firstboot.service"
+  ln -sf ../w4-firstboot.service "${TARGET_ROOT}/etc/systemd/system/${DEFAULT_TARGET}.wants/w4-firstboot.service"
 fi
 
-rm -f "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants/w4-live-prep.service"
+rm -f "${TARGET_ROOT}/etc/systemd/system/${DEFAULT_TARGET}.wants/w4-live-prep.service"
 
 mount_chroot_support
 ensure_kernel_boot_artifacts
@@ -851,6 +930,15 @@ BASH;
             '%ESP_LABEL%',
             '%BOOT_LABEL%',
             '%ROOT_SUBVOLUME%',
+            '%DEFAULT_TARGET%',
+            '%HOSTNAME_PREFIX%',
+            '%EDITION_POLICY_PATH%',
+            '%SSH_POLICY_ENABLED%',
+            '%SSH_POLICY_AUTHENTICATION%',
+            '%SSH_POLICY_ROOT_LOGIN%',
+            '%FIREWALL_BACKEND%',
+            '%FIREWALL_INCOMING%',
+            '%FIREWALL_OUTGOING%',
             '%ESP_SIZE_MIB%',
             '%BOOT_SIZE_MIB%',
             '%SUBVOLUME_CREATE_LINES%',
@@ -878,6 +966,15 @@ BASH;
             shellLiteral((string) $storage['partitions'][0]['label']),
             shellLiteral((string) $storage['partitions'][1]['label']),
             shellLiteral($rootSubvolume['name']),
+            shellLiteral((string) $editionPolicy['boot']['default_target']),
+            shellLiteral((string) $editionPolicy['branding']['hostname_prefix']),
+            shellLiteral((string) $editionPolicy['path']),
+            shellLiteral(($editionPolicy['ssh']['enabled'] ?? false) === true ? '1' : '0'),
+            shellLiteral((string) $editionPolicy['ssh']['authentication']),
+            shellLiteral(($editionPolicy['ssh']['root_login'] ?? false) === true ? '1' : '0'),
+            shellLiteral((string) $editionPolicy['firewall']['backend']),
+            shellLiteral((string) $editionPolicy['firewall']['incoming']),
+            shellLiteral((string) $editionPolicy['firewall']['outgoing']),
             shellLiteral((string) $espSizeMib),
             shellLiteral((string) $bootSizeMib),
             implode("\n", $subvolumeCreateLines),
@@ -898,6 +995,7 @@ function buildVerificationScript(array $plan): string
     $user = $plan['identity']['user'];
     $identity = $plan['identity'];
     $rootSubvolume = rootSubvolume($plan);
+    $editionPolicy = installationPolicy($plan);
 
     $script = <<<'BASH'
 #!/usr/bin/env bash
@@ -907,7 +1005,12 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_ROOT="${W4_TARGET_ROOT:-/mnt/w4-install-target}"
 TARGET_DISK=%TARGET_DISK%
 EXPECTED_HOSTNAME=%HOSTNAME%
+EXPECTED_HOSTNAME_PREFIX=%HOSTNAME_PREFIX%
 EXPECTED_USER=%USERNAME%
+EXPECTED_DEFAULT_TARGET=%DEFAULT_TARGET%
+EXPECTED_FIREWALL_BACKEND=%FIREWALL_BACKEND%
+EXPECTED_FIREWALL_INCOMING=%FIREWALL_INCOMING%
+EXPECTED_FIREWALL_OUTGOING=%FIREWALL_OUTGOING%
 CRYPT_NAME=%CRYPT_NAME%
 ROOT_SUBVOLUME=%ROOT_SUBVOLUME%
 PASSPHRASE_FILE="${W4_DISK_PASSPHRASE_FILE:-${SCRIPT_DIR}/runtime/disk-passphrase.txt}"
@@ -988,22 +1091,37 @@ mount_target_if_needed
 [[ -f "${TARGET_ROOT}/etc/crypttab" ]] || fail "falta /etc/crypttab"
 grep -q "${CRYPT_NAME}" "${TARGET_ROOT}/etc/crypttab" || fail "crypttab no referencia ${CRYPT_NAME}"
 grep -q "${EXPECTED_HOSTNAME}" "${TARGET_ROOT}/etc/hostname" || fail "hostname no coincide"
+[[ "${EXPECTED_HOSTNAME}" == "${EXPECTED_HOSTNAME_PREFIX}"* ]] || fail "hostname no respeta el prefijo de politica"
 grep -q "^${EXPECTED_USER}:" "${TARGET_ROOT}/etc/passwd" || fail "el usuario esperado no existe"
 test -d "${TARGET_ROOT}/home" || fail "falta /home en el target"
 test -d "${TARGET_ROOT}/boot/efi" || fail "falta /boot/efi en el target"
 test -e "${TARGET_ROOT}/boot" || fail "falta /boot en el target"
 test -f "${TARGET_ROOT}/boot/grub/grub.cfg" || fail "falta /boot/grub/grub.cfg"
 test -e "${TARGET_ROOT}/boot/efi/EFI/BOOT/BOOTX64.EFI" || fail "falta la ruta UEFI de fallback BOOTX64.EFI"
+test -f "${TARGET_ROOT}/etc/w4/edition-policy.env" || fail "falta /etc/w4/edition-policy.env"
+grep -q "W4_DEFAULT_TARGET=\"${EXPECTED_DEFAULT_TARGET}\"" "${TARGET_ROOT}/etc/w4/edition-policy.env" || fail "edition-policy.env no conserva el default target"
+grep -q "W4_HOSTNAME_PREFIX=\"${EXPECTED_HOSTNAME_PREFIX}\"" "${TARGET_ROOT}/etc/w4/edition-policy.env" || fail "edition-policy.env no conserva el hostname prefix"
+test -L "${TARGET_ROOT}/etc/systemd/system/${EXPECTED_DEFAULT_TARGET}.wants/w4-firstboot.service" || fail "w4-firstboot.service no quedo enlazado al default target esperado"
+
+if [[ "${EXPECTED_FIREWALL_BACKEND}" == "ufw" ]] && [[ -f "${TARGET_ROOT}/etc/default/ufw" ]]; then
+  grep -q "DEFAULT_INPUT_POLICY=\"${EXPECTED_FIREWALL_INCOMING^^}\"" "${TARGET_ROOT}/etc/default/ufw" || fail "ufw no conserva la politica de entrada esperada"
+  grep -q "DEFAULT_OUTPUT_POLICY=\"${EXPECTED_FIREWALL_OUTGOING^^}\"" "${TARGET_ROOT}/etc/default/ufw" || fail "ufw no conserva la politica de salida esperada"
+fi
 
 echo "Verificacion local completada para ${TARGET_ROOT}"
 BASH;
 
     return str_replace(
-        ['%TARGET_DISK%', '%HOSTNAME%', '%USERNAME%', '%CRYPT_NAME%', '%ROOT_SUBVOLUME%'],
+        ['%TARGET_DISK%', '%HOSTNAME%', '%HOSTNAME_PREFIX%', '%USERNAME%', '%DEFAULT_TARGET%', '%FIREWALL_BACKEND%', '%FIREWALL_INCOMING%', '%FIREWALL_OUTGOING%', '%CRYPT_NAME%', '%ROOT_SUBVOLUME%'],
         [
             shellLiteral((string) $disk['device']),
             shellLiteral((string) $identity['hostname']),
+            shellLiteral((string) $editionPolicy['branding']['hostname_prefix']),
             shellLiteral((string) $user['username']),
+            shellLiteral((string) $editionPolicy['boot']['default_target']),
+            shellLiteral((string) $editionPolicy['firewall']['backend']),
+            shellLiteral((string) $editionPolicy['firewall']['incoming']),
+            shellLiteral((string) $editionPolicy['firewall']['outgoing']),
             shellLiteral((string) $plan['storage']['encryption']['mapping_name']),
             shellLiteral((string) $rootSubvolume['name']),
         ],
@@ -1016,10 +1134,14 @@ BASH;
  */
 function buildExecutorReadme(array $plan): string
 {
+    $editionPolicy = installationPolicy($plan);
+
     return str_replace(["\r\n", "\r"], "\n", sprintf(
         "W4 OS Installation Executor\n\n".
         "Perfil: %s\n".
         "Disco objetivo: %s\n".
+        "Target por defecto: %s\n".
+        "Hostname prefix: %s\n".
         "Modo por defecto: verificacion sin escritura\n\n".
         "Archivos generados:\n".
         "- apply-installation.sh\n".
@@ -1032,7 +1154,9 @@ function buildExecutorReadme(array $plan): string
         "- W4_LOCAL_USER_PASSWORD_FILE=/ruta/password.txt\n\n".
         "El script revalida el disco antes de escribir, rechaza particiones o firmas existentes y esta pensado para disco vacio en una sesion live.\n",
         $plan['profile_name'],
-        $plan['plan_binding']['selected_disk']['device']
+        $plan['plan_binding']['selected_disk']['device'],
+        $editionPolicy['boot']['default_target'],
+        $editionPolicy['branding']['hostname_prefix']
     ));
 }
 
@@ -1042,12 +1166,19 @@ function buildExecutorReadme(array $plan): string
  */
 function createExecutorManifest(array $plan): array
 {
+    $editionPolicy = installationPolicy($plan);
+
     return [
         'installation_executor_schema_version' => 1,
         'kind' => 'installation-executor',
         'profile_id' => $plan['profile_id'],
         'selected_disk' => $plan['plan_binding']['selected_disk']['device'],
         'default_mode' => 'check-only',
+        'edition_policy' => [
+            'path' => $editionPolicy['path'],
+            'default_target' => $editionPolicy['boot']['default_target'],
+            'hostname_prefix' => $editionPolicy['branding']['hostname_prefix'],
+        ],
         'required_env' => [
             'W4_INSTALL_EXECUTE',
             'W4_INSTALL_SOURCE_ROOTFS or W4_INSTALL_SOURCE_SQUASHFS',

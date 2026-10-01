@@ -25,6 +25,7 @@ Entregar un V1 centrado en una imagen de escritorio instalable, actualizable y r
 7. Los manifiestos y contratos declarativos del tronco comun deben reflejar la topologia real vigente entre Home, Business y Server para no introducir deuda de lectura en el roadmap tecnico.
 8. Cuando exista una politica de edicion versionada, los generadores del pipeline deben preferir consumirla antes que duplicar hostname, target o defaults equivalentes en catalogos hardcodeados.
 9. Los validadores de artefactos y preflight deben contrastar la metadata emitida por `live`/`iso` con la politica efectiva de la edicion siempre que esa comparacion aporte una verificacion objetiva del contrato.
+10. La instalacion unattended debe tratar `edition-policy.json` como contrato operativo del target y no solo como documentacion: cualquier decision sobre `default_target`, hostname o hardening base debe derivarse desde esa politica o quedar trazablemente justificada fuera de ella.
 
 ## Alcance ejecutivo V1
 
