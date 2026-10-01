@@ -72,6 +72,7 @@ Actualmente, **W4 OS System** ya supero la fase puramente documental inicial y c
 - y suite PHPUnit para toolkits y scripts principales.
 
 La documentacion sigue siendo el contrato rector del proyecto, pero el repositorio ya contiene implementacion verificable y evidencia operativa para `Supply`, `Build` e `Instalacion`.
+Tambien queda explicitado que la especificacion amplia de `W4-Linux-Base` describe en varias areas una arquitectura objetivo mas avanzada que el estado tecnico hoy validado en este repositorio; la comparacion trazable entre ambas capas se registra en `Docs/DEVELOPMENT/W4_LINUX_BASE_GAP_MATRIX.md`.
 
 ## Ruta inicial
 
@@ -146,6 +147,7 @@ Ese publisher oficial ya fue reejecutado sobre el bundle vigente y, a continuaci
 - `Docs/DEVELOPMENT/EXECUTIVE_IMPLEMENTATION_PLAN.md`
 - `Docs/DEVELOPMENT/DEVELOPMENT_MATRIX.md`
 - `Docs/DEVELOPMENT/DEVELOPMENT_VERSIONS.md`
+- `Docs/DEVELOPMENT/W4_LINUX_BASE_GAP_MATRIX.md`
 
 ## Enfoque
 

@@ -8,6 +8,7 @@ Plan ejecutivo para convertir la especificacion documental de W4 OS en una imple
 - `DEVELOPMENT_MATRIX.md`: seguimiento operativo del trabajo activo.
 - `DEVELOPMENT_VERSIONS.md`: registro de versiones documentales y tecnicas.
 - `DEVELOPMENT_GUIDELINES.md`: reglas de trabajo, evidencia y actualizacion.
+- `W4_LINUX_BASE_GAP_MATRIX.md`: brechas entre la arquitectura objetivo de `W4-Linux-Base` y el estado tecnico realmente validado en este repositorio.
 
 ## Objetivo ejecutivo
 
@@ -20,6 +21,7 @@ Entregar un V1 centrado en una imagen de escritorio instalable, actualizable y r
 3. Cada capacidad pasa por la secuencia `decision -> artefacto -> prueba -> evidencia -> cierre`.
 4. La prioridad tecnica del proyecto es `instalar -> actualizar -> fallar -> recuperar`.
 5. Home y Business comparten base; Business no debe bloquear el MVP local.
+6. La especificacion base puede adelantar capacidades objetivo; la gobernanza del repo solo reconoce como estado real aquello que ya tenga artefacto, prueba y evidencia enlazada.
 
 ## Alcance ejecutivo V1
 
