@@ -48,6 +48,9 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertSame('/dev/sda', $payload['selected_disk']);
         self::assertSame($bundleDir, $payload['bundle_dir']);
         self::assertSame($bundleDir . DIRECTORY_SEPARATOR . 'edition-policy.json', $payload['edition_policy']);
+        self::assertContains('CHECK_ONLY_PREPARATION.txt', $payload['generated_artifacts']);
+        self::assertContains('edition-policy.json', $payload['generated_artifacts']);
+        self::assertContains('installation-profile.derived.json', $payload['generated_artifacts']);
 
         $derivedProfile = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-profile.derived.json');
         self::assertSame(
@@ -70,6 +73,9 @@ final class InstallationScriptsIntegrationTest extends TestCase
         self::assertSame('graphical.target', $plan['edition_policy']['boot']['default_target']);
         self::assertSame('w4-home', $plan['edition_policy']['branding']['hostname_prefix']);
         self::assertFalse($plan['edition_policy']['ssh']['enabled']);
+
+        $bundleManifest = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-bundle.json');
+        self::assertSame($payload['generated_artifacts'], $bundleManifest['generated_artifacts']);
     }
 
     public function testPrepareInstallationBundleSupportsServerProfile(): void
@@ -94,6 +100,7 @@ final class InstallationScriptsIntegrationTest extends TestCase
         $payload = $this->decodeJson($result['stdout']);
         self::assertSame('ok', $payload['status']);
         self::assertSame('/dev/sda', $payload['selected_disk']);
+        self::assertContains('CHECK_ONLY_PREPARATION.txt', $payload['generated_artifacts']);
 
         $derivedProfile = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'installation-profile.derived.json');
         self::assertSame('w4-os-server', $derivedProfile['build_profile_id']);

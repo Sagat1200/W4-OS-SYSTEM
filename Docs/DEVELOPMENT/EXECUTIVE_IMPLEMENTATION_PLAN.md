@@ -29,6 +29,7 @@ Entregar un V1 centrado en una imagen de escritorio instalable, actualizable y r
 11. Las capas `runtime/transfer` y la validacion posterior al primer arranque deben conservar suficiente metadata de politica para demostrar que el sistema desplegado sigue alineado con `edition-policy.json` y no solo con defaults implicitos del instalador.
 12. Cuando dos o mas etapas del pipeline necesiten reinterpretar `edition-policy.json`, esa normalizacion debe vivir en una sola clase compartida para evitar drift entre manifests, scripts y baseline runtime.
 13. Cuando varias etapas publiquen manifests o payloads de exito equivalentes, la envoltura de metadata base debe salir de un helper comun para reducir drift sin reescribir el pipeline operativo.
+14. La extension de ese helper comun debe avanzar por anillos pequenos: primero las etapas ya estables y con pruebas focalizadas, despues los dominios con contratos mas amplios como update o publicacion.
 
 ## Alcance ejecutivo V1
 

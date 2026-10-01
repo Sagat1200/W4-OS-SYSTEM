@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ArtifactMetadataToolkit;
+
 require_once __DIR__ . '/lib/ManifestToolkit.php';
 
 $rootDir = dirname(__DIR__);
@@ -336,31 +338,7 @@ try {
     }
 
     $directories = defaultRootfsDirectories();
-    $rootfsManifest = [
-        'rootfs_schema_version' => 1,
-        'kind' => 'rootfs-bundle',
-        'profile_id' => $buildInput['profile_id'],
-        'profile_name' => $buildInput['profile_name'],
-        'base_manifest_id' => $buildInput['base_manifest_id'],
-        'source_build_input' => basename($inputPath),
-        'target' => $buildInput['target'],
-        'upstream' => $buildInput['upstream'],
-        'repositories' => $buildInput['repositories'],
-        'packages' => $buildInput['packages'],
-        'meta_packages' => $buildInput['meta_packages'],
-        'features' => $buildInput['features'],
-        'rootfs_directories' => $directories,
-        'identity_cleanup' => [
-            '/etc/machine-id',
-            '/var/lib/dbus/machine-id',
-        ],
-        'next_steps' => [
-            'configurar primer inicio',
-            'anadir instalador y componentes live',
-            'generar formato de imagen',
-            'ejecutar pruebas de arranque',
-        ],
-    ];
+    $metadataToolkit = new ArtifactMetadataToolkit();
 
     $requiredPackages = implode("\n", $buildInput['packages']['required']) . "\n";
     $recommendedPackages = implode("\n", $buildInput['packages']['recommended']) . "\n";
@@ -369,7 +347,6 @@ try {
     $rootfsScript = buildRootfsScript($buildInput, $directories);
 
     $filesToWrite = [
-        $outputPath . DIRECTORY_SEPARATOR . 'rootfs-manifest.json' => json_encode($rootfsManifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n",
         $outputPath . DIRECTORY_SEPARATOR . 'packages.required.list' => $requiredPackages,
         $outputPath . DIRECTORY_SEPARATOR . 'packages.recommended.list' => $recommendedPackages,
         $outputPath . DIRECTORY_SEPARATOR . 'repositories.list' => $repositories,
@@ -377,18 +354,51 @@ try {
         $outputPath . DIRECTORY_SEPARATOR . 'build-rootfs.sh' => $rootfsScript . "\n",
     ];
 
+    $rootfsManifest = $metadataToolkit->createManifest(
+        'rootfs_schema_version',
+        'rootfs-bundle',
+        (string) $buildInput['profile_id'],
+        (string) $buildInput['profile_name'],
+        [
+            'base_manifest_id' => $buildInput['base_manifest_id'],
+            'source_build_input' => basename($inputPath),
+            'target' => $buildInput['target'],
+            'upstream' => $buildInput['upstream'],
+            'repositories' => $buildInput['repositories'],
+            'packages' => $buildInput['packages'],
+            'meta_packages' => $buildInput['meta_packages'],
+            'features' => $buildInput['features'],
+            'rootfs_directories' => $directories,
+            'identity_cleanup' => [
+                '/etc/machine-id',
+                '/var/lib/dbus/machine-id',
+            ],
+            'generated_files' => $metadataToolkit->normalizeGeneratedFiles(array_map('basename', array_keys($filesToWrite))),
+            'next_steps' => [
+                'configurar primer inicio',
+                'anadir instalador y componentes live',
+                'generar formato de imagen',
+                'ejecutar pruebas de arranque',
+            ],
+        ]
+    );
+    $filesToWrite = [
+        $outputPath . DIRECTORY_SEPARATOR . 'rootfs-manifest.json' => json_encode($rootfsManifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n",
+    ] + $filesToWrite;
+
     foreach ($filesToWrite as $path => $contents) {
         if (file_put_contents($path, $contents) === false) {
             throw new ValidationError(sprintf('No se pudo escribir el archivo %s', $path));
         }
     }
 
-    printJson([
-        'status' => 'ok',
-        'profile_id' => $buildInput['profile_id'],
-        'output_directory' => $outputPath,
-        'generated_files' => array_map('basename', array_keys($filesToWrite)),
-    ]);
+    printJson($metadataToolkit->createSuccessPayload(
+        (string) $buildInput['profile_id'],
+        [
+            'output_directory' => $outputPath,
+            'generated_files' => $metadataToolkit->normalizeGeneratedFiles(array_map('basename', array_keys($filesToWrite))),
+        ]
+    ));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));

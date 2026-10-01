@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ArtifactMetadataToolkit;
+
 require_once __DIR__ . '/lib/InstallerToolkit.php';
 
 $rootDir = dirname(__DIR__);
@@ -299,6 +301,7 @@ try {
     $bundleDir ??= $defaultBundleDir . DIRECTORY_SEPARATOR . $profileId;
 
     $toolkit = new InstallerToolkit();
+    $metadataToolkit = new ArtifactMetadataToolkit();
 
     $buildInput = $toolkit->readJsonFile($buildInputPath);
     $toolkit->validateBuildInput($buildInput, $buildInputPath);
@@ -359,15 +362,14 @@ try {
     );
     validateInstallationBundle($bundleManifest, $bundleManifestPath);
     $bundleManifest['installation_profile_id'] = $retargetedProfile['id'];
-    $bundleManifest['generated_artifacts'] = array_values(array_unique(array_merge(
+    $bundleManifest['generated_artifacts'] = $metadataToolkit->normalizeGeneratedFiles(array_merge(
         $bundleManifest['generated_artifacts'] ?? [],
         [
             'edition-policy.json',
             'installation-profile.derived.json',
             'CHECK_ONLY_PREPARATION.txt',
         ]
-    )));
-    sort($bundleManifest['generated_artifacts']);
+    ));
     writeJsonFile($bundleManifestPath, $bundleManifest);
 
     $humanSummary = $toolkit->buildHumanSummary($plan);
@@ -394,18 +396,23 @@ try {
         throw new ValidationError(trim(implode(PHP_EOL, $executorOutput)) ?: 'No se pudo generar el ejecutor de instalacion');
     }
 
-    printJson([
-        'status' => 'ok',
-        'profile_id' => $profileId,
-        'bundle_dir' => $bundleDir,
-        'selected_disk' => $selectedDisk['device'],
-        'selector' => $selector,
-        'derived_install_profile' => $derivedProfilePath,
-        'edition_policy' => $editionPolicyPath,
-        'inventory_copy' => $inventoryCopyPath,
-        'plan' => $planPath,
-        'executor' => $bundleDir . DIRECTORY_SEPARATOR . 'apply-installation.sh',
-    ]);
+    $finalBundleManifest = readJsonFile($bundleManifestPath);
+    validateInstallationBundle($finalBundleManifest, $bundleManifestPath);
+
+    printJson($metadataToolkit->createSuccessPayload(
+        $profileId,
+        [
+            'bundle_dir' => $bundleDir,
+            'selected_disk' => $selectedDisk['device'],
+            'selector' => $selector,
+            'derived_install_profile' => $derivedProfilePath,
+            'edition_policy' => $editionPolicyPath,
+            'inventory_copy' => $inventoryCopyPath,
+            'plan' => $planPath,
+            'executor' => $bundleDir . DIRECTORY_SEPARATOR . 'apply-installation.sh',
+            'generated_artifacts' => $finalBundleManifest['generated_artifacts'] ?? [],
+        ]
+    ));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));
