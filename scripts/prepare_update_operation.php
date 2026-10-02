@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ArtifactMetadataToolkit;
+
 require_once __DIR__ . '/lib/UpdateToolkit.php';
 
 $rootDir = dirname(__DIR__);
@@ -49,13 +51,14 @@ try {
 
     $store = $toolkit->initializeOperationStore($plan, $storeDir);
 
-    printJson([
-        'status' => 'ok',
+    $metadataToolkit = new ArtifactMetadataToolkit();
+
+    printJson($metadataToolkit->createStatusPayload([
         'store_dir' => $store['store_dir'],
         'operation_id' => $store['operation']['operation_id'],
         'stage' => $store['operation']['stage'],
         'snapshot_name' => $store['operation']['snapshot']['snapshot_name'],
-    ]);
+    ]));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));

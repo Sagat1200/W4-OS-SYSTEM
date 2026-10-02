@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ArtifactMetadataToolkit;
+
 require_once __DIR__ . '/lib/UpdateToolkit.php';
 
 $rootDir = dirname(__DIR__);
@@ -68,13 +70,16 @@ try {
         throw new ValidationError(sprintf('No se pudo escribir el archivo de salida: %s', $outputPath));
     }
 
-    printJson([
-        'status' => 'ok',
-        'output' => $outputPath,
-        'operation_id' => $plan['operation_id'],
-        'profile_id' => $plan['profile_id'],
-        'target_version' => $plan['target_version'],
-    ]);
+    $metadataToolkit = new ArtifactMetadataToolkit();
+
+    printJson($metadataToolkit->createSuccessPayload(
+        (string) $plan['profile_id'],
+        [
+            'output' => $outputPath,
+            'operation_id' => $plan['operation_id'],
+            'target_version' => $plan['target_version'],
+        ]
+    ));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));

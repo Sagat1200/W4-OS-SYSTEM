@@ -31,6 +31,8 @@ Entregar un V1 centrado en una imagen de escritorio instalable, actualizable y r
 13. Cuando varias etapas publiquen manifests o payloads de exito equivalentes, la envoltura de metadata base debe salir de un helper comun para reducir drift sin reescribir el pipeline operativo.
 14. La extension de ese helper comun debe avanzar por anillos pequenos: primero las etapas ya estables y con pruebas focalizadas, despues los dominios con contratos mas amplios como update o publicacion.
 15. Ese helper comun no debe imponer identidades falsas a los artifacts: cuando una etapa publique `repository_snapshot`, `publication_profile` u otra clave primaria distinta de `profile_id`, la metadata canonica debe adaptarse al dominio real sin romper la consistencia transversal.
+16. Los entrypoints base del pipeline tambien deben alinearse con la envoltura canonica, pero los scripts acoplados al inventario real del sistema o a WSL deben moverse en ciclos separados con evidencia de entorno suficiente.
+17. Los flujos CLI operativos que ya tienen suites integradas estables, como `update`, deben converger a la misma envoltura antes de extraer contratos mas profundos de dominio, para reducir drift con el menor costo de fractura posible.
 
 ## Alcance ejecutivo V1
 

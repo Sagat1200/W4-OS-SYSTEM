@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ArtifactMetadataToolkit;
+
 require_once __DIR__ . '/lib/ManifestToolkit.php';
 
 $rootDir = dirname(__DIR__);
@@ -73,13 +75,16 @@ try {
         throw new ValidationError(sprintf('No se pudo escribir el archivo de salida: %s', $outputPath));
     }
 
-    printJson([
-        'status' => 'ok',
-        'output' => $outputPath,
-        'profile_id' => $profileId,
-        'release_channel' => $channel,
-        'image_format' => $imageFormat,
-    ]);
+    $metadataToolkit = new ArtifactMetadataToolkit();
+
+    printJson($metadataToolkit->createSuccessPayload(
+        $profileId,
+        [
+            'output' => $outputPath,
+            'release_channel' => $channel,
+            'image_format' => $imageFormat,
+        ]
+    ));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));

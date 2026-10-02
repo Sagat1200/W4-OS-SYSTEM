@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ArtifactMetadataToolkit;
+
 require_once __DIR__ . '/lib/UpdateToolkit.php';
 
 $rootDir = dirname(__DIR__);
@@ -125,12 +127,13 @@ TEXT;
         throw new ValidationError(sprintf('No se pudo escribir %s', $readmePath));
     }
 
-    printJson([
-        'status' => 'ok',
+    $metadataToolkit = new ArtifactMetadataToolkit();
+
+    printJson($metadataToolkit->createStatusPayload([
         'bundle_dir' => $bundleDir,
         'operation_id' => $plan['operation_id'],
         'generated_artifacts' => $manifest['generated_artifacts'],
-    ]);
+    ]));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));

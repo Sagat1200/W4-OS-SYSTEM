@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ArtifactMetadataToolkit;
+
 require_once __DIR__ . '/lib/ManifestToolkit.php';
 
 try {
@@ -30,10 +32,11 @@ try {
         exit(0);
     }
 
-    printJson([
-        'status' => 'ok',
+    $metadataToolkit = new ArtifactMetadataToolkit();
+
+    printJson($metadataToolkit->createStatusPayload([
         'manifests' => array_keys($manifests),
-    ]);
+    ]));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));

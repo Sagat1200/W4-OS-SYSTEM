@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ArtifactMetadataToolkit;
+
 require_once __DIR__ . '/lib/UpdateToolkit.php';
 
 try {
@@ -83,14 +85,15 @@ try {
     $toolkit = new UpdateToolkit();
     $result = $toolkit->reconcileOperationStore($storeDir, $observedStage, $component, $details, $observedError);
 
-    printJson([
-        'status' => 'ok',
+    $metadataToolkit = new ArtifactMetadataToolkit();
+
+    printJson($metadataToolkit->createStatusPayload([
         'store_dir' => $storeDir,
         'reconciled' => $result['reconciled'],
         'operation_id' => $result['operation']['operation_id'],
         'stage' => $result['operation']['stage'],
         'health_status' => $result['health_report']['status'],
-    ]);
+    ]));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));

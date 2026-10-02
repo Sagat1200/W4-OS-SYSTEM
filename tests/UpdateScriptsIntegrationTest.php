@@ -46,6 +46,8 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertSame('ok', $payload['status']);
         self::assertSame($outputPath, $payload['output']);
         self::assertSame('w4-update-cli-001', $payload['operation_id']);
+        self::assertSame('w4-os-home', $payload['profile_id']);
+        self::assertSame('1.0.1-lab', $payload['target_version']);
 
         $plan = $this->decodeJsonFile($outputPath);
         self::assertSame('update-plan', $plan['kind']);
@@ -233,6 +235,7 @@ final class UpdateScriptsIntegrationTest extends TestCase
         $payload = $this->decodeJson($generateExecutor['stdout']);
         self::assertSame('ok', $payload['status']);
         self::assertSame($bundleDir, $payload['bundle_dir']);
+        self::assertSame('w4-update-cli-004', $payload['operation_id']);
 
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'run-update-offline.sh');
         self::assertFileExists($bundleDir . DIRECTORY_SEPARATOR . 'run-update-with-repo-env.sh');
@@ -286,6 +289,9 @@ final class UpdateScriptsIntegrationTest extends TestCase
         self::assertNotFalse($readme);
         self::assertStringContainsString('run-update-with-repo-env.sh', $readme);
         self::assertStringContainsString('W4_UPDATE_REPOSITORY_DIR', $readme);
+
+        $manifest = $this->decodeJsonFile($bundleDir . DIRECTORY_SEPARATOR . 'update-executor.json');
+        self::assertSame($payload['generated_artifacts'], $manifest['generated_artifacts']);
     }
 
     public function testGenerateUpdateRepositoryBundleWritesLabRepoArtifacts(): void
