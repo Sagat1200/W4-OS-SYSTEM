@@ -239,6 +239,128 @@ function runPhpScript(string $scriptPath, array $arguments, ?string $cwd = null)
     return runChecked($command, $cwd);
 }
 
+/**
+ * @return array<string, mixed>
+ */
+function decodeJsonObject(string $json, string $label): array
+{
+    try {
+        /** @var array<string, mixed> $data */
+        $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('No se pudo decodificar JSON de %s: %s', $label, $exception->getMessage()));
+    }
+
+    if (!is_array($data)) {
+        throw new ValidationError(sprintf('La salida JSON de %s no es un objeto/array valido', $label));
+    }
+
+    return $data;
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function decodeLastJsonObject(string $output, string $label): array
+{
+    $trimmed = trim($output);
+    $offset = strrpos($trimmed, '{');
+
+    while ($offset !== false) {
+        $candidate = substr($trimmed, $offset);
+        try {
+            return decodeJsonObject($candidate, $label);
+        } catch (ValidationError $exception) {
+            $nextSearch = substr($trimmed, 0, $offset);
+            $offset = strrpos($nextSearch, '{');
+        }
+    }
+
+    throw new ValidationError(sprintf('No se encontro un JSON final valido en la salida de %s', $label));
+}
+
+function buildEvidenceLabel(string $vmSlug): string
+{
+    $label = preg_replace('/^w4-os-server-/', '', $vmSlug) ?? $vmSlug;
+    return $label !== '' ? $label : $vmSlug;
+}
+
+function waitForVmState(string $vboxManage, string $vmName, string $expectedState, int $timeoutSeconds): void
+{
+    $deadline = time() + max(1, $timeoutSeconds);
+
+    do {
+        $output = runChecked([$vboxManage, 'showvminfo', $vmName, '--machinereadable']);
+        if (preg_match('/^VMState="([^"]+)"/m', $output, $matches) === 1 && $matches[1] === $expectedState) {
+            return;
+        }
+
+        sleep(5);
+    } while (time() < $deadline);
+
+    throw new ValidationError(sprintf('La VM %s no llego al estado %s dentro del tiempo esperado', $vmName, $expectedState));
+}
+
+/**
+ * @param array<int, string> $runtimeLines
+ * @return array{hostname: string, ssh_status: string, firstboot_status: string}
+ */
+function parseRuntimeState(string $runtimeOutput): array
+{
+    $runtimeLines = array_values(array_filter(
+        array_map('trim', preg_split('/\r?\n/', $runtimeOutput) ?: []),
+        static fn (string $line): bool => $line !== ''
+    ));
+
+    return [
+        'hostname' => $runtimeLines[0] ?? '',
+        'ssh_status' => $runtimeLines[1] ?? '',
+        'firstboot_status' => $runtimeLines[2] ?? '',
+    ];
+}
+
+/**
+ * @param array<string, mixed> $baselinePayload
+ * @param array{hostname: string, ssh_status: string, firstboot_status: string} $runtimeState
+ */
+function buildValidationSummary(
+    string $vmName,
+    string $isoPath,
+    string $bundleDir,
+    string $inventoryPath,
+    string $beforeLuksScreenshotPath,
+    string $postloginScreenshotPath,
+    string $baselineReportPath,
+    array $baselinePayload,
+    array $runtimeState
+): string {
+    $summary = $baselinePayload['report_summary'] ?? [];
+
+    return implode(PHP_EOL, [
+        'Server VirtualBox install flow validation',
+        '=====================================',
+        sprintf('VM_NAME=%s', $vmName),
+        sprintf('ISO=%s', $isoPath),
+        sprintf('BUNDLE_DIR=%s', $bundleDir),
+        sprintf('INVENTORY=%s', $inventoryPath),
+        'RUNNER_STATUS=ok',
+        'INSTALLATION_EXIT=0',
+        sprintf('POST_BOOT_HOSTNAME=%s', $runtimeState['hostname']),
+        sprintf('SSH_STATUS=%s', $runtimeState['ssh_status']),
+        sprintf('FIRSTBOOT_STATUS=%s', $runtimeState['firstboot_status']),
+        sprintf('BASELINE_REPORT=%s', $baselineReportPath),
+        sprintf(
+            'BASELINE_SUMMARY=%d passed / %d failed / %d skipped',
+            (int) ($summary['passed'] ?? 0),
+            (int) ($summary['failed'] ?? 0),
+            (int) ($summary['skipped'] ?? 0)
+        ),
+        sprintf('SCREENSHOT_BEFORE_LUKS=%s', $beforeLuksScreenshotPath),
+        sprintf('SCREENSHOT_POSTLOGIN=%s', $postloginScreenshotPath),
+        '',
+    ]);
+}
+
 try {
     $rootDir = dirname(__DIR__);
     $metadataToolkit = new ArtifactMetadataToolkit();
@@ -259,6 +381,17 @@ try {
     $bundleDir = null;
     $inventoryPath = null;
     $livePassword = null;
+    $baselineBundleDir = $rootDir . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'security' . DIRECTORY_SEPARATOR . 'w4-os-server';
+    $baselineEvidenceDir = null;
+    $baselineRemoteRoot = null;
+    $runtimeUsername = 'w4admin';
+    $connectWait = 300;
+    $retryInterval = 5;
+    $unlockWait = 20;
+    $unlockRetryInterval = 10;
+    $unlockRetries = 12;
+    $unlockWindow = 180;
+    $runtimeValidation = true;
     $checkOnly = false;
 
     for ($index = 1, $count = count($arguments); $index < $count; $index++) {
@@ -266,6 +399,11 @@ try {
 
         if ($argument === '--check-only') {
             $checkOnly = true;
+            continue;
+        }
+
+        if ($argument === '--skip-runtime-validation') {
+            $runtimeValidation = false;
             continue;
         }
 
@@ -336,6 +474,46 @@ try {
                 $livePassword = $value;
                 break;
 
+            case '--baseline-bundle-dir':
+                $baselineBundleDir = $value;
+                break;
+
+            case '--baseline-evidence-dir':
+                $baselineEvidenceDir = $value;
+                break;
+
+            case '--baseline-remote-root':
+                $baselineRemoteRoot = $value;
+                break;
+
+            case '--runtime-username':
+                $runtimeUsername = $value;
+                break;
+
+            case '--connect-wait':
+                $connectWait = (int) $value;
+                break;
+
+            case '--retry-interval':
+                $retryInterval = (int) $value;
+                break;
+
+            case '--unlock-wait':
+                $unlockWait = (int) $value;
+                break;
+
+            case '--unlock-retry-interval':
+                $unlockRetryInterval = (int) $value;
+                break;
+
+            case '--unlock-retries':
+                $unlockRetries = (int) $value;
+                break;
+
+            case '--unlock-window':
+                $unlockWindow = (int) $value;
+                break;
+
             default:
                 throw new ValidationError(sprintf('Argumento no reconocido: %s', $argument));
         }
@@ -345,18 +523,25 @@ try {
         throw new ValidationError('ssh-port, memory-mib, cpus y disk-size-mib deben ser mayores que cero');
     }
 
-    if ($bootWait < 0 || $waitMs < 0) {
-        throw new ValidationError('boot-wait y wait-ms no pueden ser negativos');
+    if ($bootWait < 0 || $waitMs < 0 || $connectWait < 0 || $retryInterval < 0 || $unlockWait < 0 || $unlockRetryInterval < 0 || $unlockRetries < 0 || $unlockWindow < 0) {
+        throw new ValidationError('Los tiempos y contadores del flujo no pueden ser negativos');
     }
 
     $vmSlug = slugify($vmName);
+    $evidenceLabel = buildEvidenceLabel($vmSlug);
     $vmDir = $baseDir . DIRECTORY_SEPARATOR . $vmName;
     $diskPath = $vmDir . DIRECTORY_SEPARATOR . $vmName . '.vdi';
     $inventoryPath ??= $rootDir . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'install-inventory' . DIRECTORY_SEPARATOR . 'virtualbox-server-' . $vmSlug . '.json';
     $bundleDir ??= $rootDir . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'install' . DIRECTORY_SEPARATOR . 'w4-os-server-' . $vmSlug;
+    $baselineEvidenceDir ??= $rootDir . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'security' . DIRECTORY_SEPARATOR . 'validation' . DIRECTORY_SEPARATOR . 'w4-os-server-' . $vmSlug;
+    $baselineRemoteRoot ??= '/home/' . $runtimeUsername . '/w4-security-baseline-' . $vmSlug;
     $livePasswordPath = $secretsDir . DIRECTORY_SEPARATOR . 'live-password.txt';
     $localUserPasswordPath = $secretsDir . DIRECTORY_SEPARATOR . 'local-user-password.txt';
     $diskPassphrasePath = $secretsDir . DIRECTORY_SEPARATOR . 'disk-passphrase.txt';
+    $beforeLuksScreenshotPath = $baseDir . DIRECTORY_SEPARATOR . 'server-' . $evidenceLabel . '-before-luks.png';
+    $postloginScreenshotPath = $baseDir . DIRECTORY_SEPARATOR . 'server-' . $evidenceLabel . '-postlogin.png';
+    $validationSummaryPath = $baseDir . DIRECTORY_SEPARATOR . 'server-' . $evidenceLabel . '-install-validation.txt';
+    $baselineReportPath = $baselineEvidenceDir . DIRECTORY_SEPARATOR . 'security-baseline-report.json';
 
     if ($livePassword === null || trim($livePassword) === '') {
         $livePassword = readAsciiSecret($livePasswordPath);
@@ -367,6 +552,7 @@ try {
     $prepareBundleScript = __DIR__ . DIRECTORY_SEPARATOR . 'prepare_installation_bundle.php';
     $uploadTreeScript = __DIR__ . DIRECTORY_SEPARATOR . 'upload_tree_via_paramiko.php';
     $runRemoteScript = __DIR__ . DIRECTORY_SEPARATOR . 'run_remote_command_via_paramiko.php';
+    $runSecurityBaselineScript = __DIR__ . DIRECTORY_SEPARATOR . 'run_security_baseline_via_paramiko.php';
 
     $payloadBase = [
         'profile_id' => $profileId,
@@ -392,10 +578,26 @@ try {
         'prepare_bundle_script' => $prepareBundleScript,
         'upload_tree_script' => $uploadTreeScript,
         'run_remote_script' => $runRemoteScript,
+        'run_security_baseline_script' => $runSecurityBaselineScript,
         'remote_bundle_dir' => '/home/w4live/w4-install-server',
         'remote_secrets_dir' => '/home/w4live/w4-install-secrets',
         'nat_rule' => sprintf('guestssh,tcp,%s,%d,,22', $sshHost, $sshPort),
         'expected_disk_by_path' => 'pci-0000:00:0d.0-ata-1.0',
+        'runtime_validation_enabled' => $runtimeValidation,
+        'runtime_username' => $runtimeUsername,
+        'baseline_bundle_dir' => $baselineBundleDir,
+        'baseline_evidence_dir' => $baselineEvidenceDir,
+        'baseline_remote_root' => $baselineRemoteRoot,
+        'baseline_report_path' => $baselineReportPath,
+        'before_luks_screenshot_path' => $beforeLuksScreenshotPath,
+        'postlogin_screenshot_path' => $postloginScreenshotPath,
+        'validation_summary_path' => $validationSummaryPath,
+        'connect_wait' => $connectWait,
+        'retry_interval' => $retryInterval,
+        'unlock_wait' => $unlockWait,
+        'unlock_retry_interval' => $unlockRetryInterval,
+        'unlock_retries' => $unlockRetries,
+        'unlock_window' => $unlockWindow,
     ];
 
     if ($checkOnly) {
@@ -406,7 +608,7 @@ try {
     if (!is_file($isoPath)) {
         throw new ValidationError(sprintf('No existe la ISO indicada: %s', $isoPath));
     }
-    if (!is_file($prepareBundleScript) || !is_file($enableLiveSshScript) || !is_file($uploadTreeScript) || !is_file($runRemoteScript)) {
+    if (!is_file($prepareBundleScript) || !is_file($enableLiveSshScript) || !is_file($uploadTreeScript) || !is_file($runRemoteScript) || !is_file($runSecurityBaselineScript)) {
         throw new ValidationError('No se encontraron todos los scripts requeridos para el flujo host->VM');
     }
     if (is_dir($vmDir) || is_file($diskPath)) {
@@ -529,12 +731,104 @@ try {
         throw new ValidationError(sprintf('La instalacion remota devolvio install.exit=%s', $installExit));
     }
 
+    if (!$runtimeValidation) {
+        printJson($metadataToolkit->createSuccessPayload($profileId, array_merge(
+            $payloadBase,
+            [
+                'live_ssh_setup_output' => $enableLiveSshOutput,
+                'installation_exit' => $installExit,
+                'next_step' => 'reboot_and_validate_encrypted_boot',
+            ]
+        )));
+        exit(0);
+    }
+
+    runChecked([$vboxManage, 'controlvm', $vmName, 'acpipowerbutton']);
+    waitForVmState($vboxManage, $vmName, 'poweroff', 180);
+    runChecked([$vboxManage, 'storageattach', $vmName, '--storagectl', 'SATA', '--port', '1', '--device', '0', '--medium', 'none']);
+    runChecked([$vboxManage, 'modifyvm', $vmName, '--boot1', 'disk', '--boot2', 'none', '--boot3', 'none', '--boot4', 'none']);
+    runChecked([$vboxManage, 'startvm', $vmName, '--type', 'headless']);
+
+    if ($unlockWait > 0) {
+        sleep($unlockWait);
+    }
+
+    runChecked([$vboxManage, 'controlvm', $vmName, 'screenshotpng', $beforeLuksScreenshotPath]);
+
+    $baselineOutput = runPhpScript($runSecurityBaselineScript, [
+        '--host',
+        $sshHost,
+        '--port',
+        (string) $sshPort,
+        '--username',
+        $runtimeUsername,
+        '--password',
+        readAsciiSecret($localUserPasswordPath),
+        '--bundle-dir',
+        $baselineBundleDir,
+        '--remote-root',
+        $baselineRemoteRoot,
+        '--evidence-dir',
+        $baselineEvidenceDir,
+        '--sudo',
+        '--vm-name',
+        $vmName,
+        '--luks-passphrase',
+        readAsciiSecret($diskPassphrasePath),
+        '--unlock-wait',
+        (string) $unlockWait,
+        '--unlock-retry-interval',
+        (string) $unlockRetryInterval,
+        '--unlock-retries',
+        (string) $unlockRetries,
+        '--unlock-window',
+        (string) $unlockWindow,
+        '--connect-wait',
+        (string) $connectWait,
+        '--retry-interval',
+        (string) $retryInterval,
+    ], $rootDir);
+    $baselinePayload = decodeLastJsonObject($baselineOutput, 'run_security_baseline_via_paramiko.php');
+
+    runChecked([$vboxManage, 'controlvm', $vmName, 'screenshotpng', $postloginScreenshotPath]);
+
+    $runtimeOutput = runPhpScript($runRemoteScript, [
+        '--host',
+        $sshHost,
+        '--port',
+        (string) $sshPort,
+        '--username',
+        $runtimeUsername,
+        '--password',
+        readAsciiSecret($localUserPasswordPath),
+        '--command',
+        'hostname && systemctl is-active ssh && systemctl is-active w4-firstboot',
+    ], $rootDir);
+    $runtimeState = parseRuntimeState($runtimeOutput);
+
+    $validationSummary = buildValidationSummary(
+        $vmName,
+        $isoPath,
+        $bundleDir,
+        $inventoryPath,
+        $beforeLuksScreenshotPath,
+        $postloginScreenshotPath,
+        $baselineReportPath,
+        $baselinePayload,
+        $runtimeState
+    );
+    if (file_put_contents($validationSummaryPath, $validationSummary) === false) {
+        throw new ValidationError(sprintf('No se pudo escribir el resumen de validacion: %s', $validationSummaryPath));
+    }
+
     printJson($metadataToolkit->createSuccessPayload($profileId, array_merge(
         $payloadBase,
         [
             'live_ssh_setup_output' => $enableLiveSshOutput,
             'installation_exit' => $installExit,
-            'next_step' => 'reboot_and_validate_encrypted_boot',
+            'baseline_validation_output' => $baselinePayload,
+            'runtime_state' => $runtimeState,
+            'next_step' => 'complete',
         ]
     )));
 } catch (ValidationError $exception) {

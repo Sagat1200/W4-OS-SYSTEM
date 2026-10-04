@@ -152,7 +152,7 @@ function buildLiveSetupCommands(string $liveUser, string $livePassword): array
         ],
         [
             'label' => 'write_password_auth_override',
-            'command' => "printf 'PasswordAuthentication yes\nPermitEmptyPasswords no\n' | sudo tee /etc/ssh/sshd_config.d/99-w4-live-password.conf >/dev/null",
+            'command' => "printf 'PasswordAuthentication yes\nKbdInteractiveAuthentication yes\nPubkeyAuthentication yes\nAuthenticationMethods any\nUsePAM yes\nPermitEmptyPasswords no\n' | sudo tee /etc/ssh/sshd_config.d/99-w4-live-password.conf >/dev/null",
         ],
         [
             'label' => 'allow_ssh_in_ufw',

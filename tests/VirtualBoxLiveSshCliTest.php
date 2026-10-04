@@ -58,7 +58,7 @@ final class VirtualBoxLiveSshCliTest extends TestCase
         $steps = [
             'sudo mkdir -p /run/sshd /etc/ssh/sshd_config.d',
             "printf %s 'w4live:fixture-password' | sudo /usr/sbin/chpasswd",
-            "printf 'PasswordAuthentication yes\nPermitEmptyPasswords no\n' | sudo tee /etc/ssh/sshd_config.d/99-w4-live-password.conf >/dev/null",
+            "printf 'PasswordAuthentication yes\nKbdInteractiveAuthentication yes\nPubkeyAuthentication yes\nAuthenticationMethods any\nUsePAM yes\nPermitEmptyPasswords no\n' | sudo tee /etc/ssh/sshd_config.d/99-w4-live-password.conf >/dev/null",
             'sudo ufw allow 22/tcp',
             'sudo sshd -t && sudo systemctl restart ssh',
         ];

@@ -1,0 +1,30 @@
+{
+    "inventory_schema_version": 1,
+    "kind": "disk-inventory",
+    "id": "virtualbox-server-w4-os-server-c128-flow",
+    "generated_by": "run_server_virtualbox_install_flow.php",
+    "disks": [
+        {
+            "device": "/dev/sda",
+            "serial": null,
+            "wwid": null,
+            "by_path": "pci-0000:00:0d.0-ata-1.0",
+            "size_bytes": 34359738368,
+            "is_installation_media": false,
+            "has_partitions": false,
+            "has_filesystem_signatures": false,
+            "read_only": false
+        },
+        {
+            "device": "/dev/sr0",
+            "serial": null,
+            "wwid": null,
+            "by_path": "pci-0000:00:0d.0-ata-2.0",
+            "size_bytes": 309141504,
+            "is_installation_media": true,
+            "has_partitions": true,
+            "has_filesystem_signatures": true,
+            "read_only": true
+        }
+    ]
+}

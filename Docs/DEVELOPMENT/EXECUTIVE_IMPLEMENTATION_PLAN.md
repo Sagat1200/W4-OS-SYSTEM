@@ -48,6 +48,8 @@ Entregar un V1 centrado en una imagen de escritorio instalable, actualizable y r
 30. Una vez estabilizados los helpers puntuales del eje VM (`live SSH`, unlock LUKS, baseline remoto), el siguiente paso correcto es encapsularlos en runners host->VM mas altos para que la evidencia operativa pueda recapturarse con menos pasos sueltos y menor riesgo de deriva manual.
 31. Cuando un runner host->VM necesite recuperar un codigo remoto desde una tty compartida con `sudo`, no conviene confiar en la salida cruda del comando: hace falta emitir un marcador explicito y parseable (`__W4_INSTALL_EXIT__:<codigo>`) para no mezclar el exit status con warnings como `sudo: unable to resolve host ...`.
 32. El baseline runtime de Server debe correrse con `--sudo` cuando se quiera verificar `apparmor-enforced-profiles`, porque sin privilegios la lectura de `/sys/kernel/security/apparmor/profiles` produce falsos negativos aun cuando AppArmor ya esta en `enforce`.
+33. En la live Server endurecida no basta con publicar solo `PasswordAuthentication yes`: si la imagen efectiva impone `AuthenticationMethods publickey`, el helper temporal de laboratorio debe sobreescribir de forma completa `PasswordAuthentication`, `KbdInteractiveAuthentication`, `PubkeyAuthentication`, `AuthenticationMethods` y `UsePAM` para reabrir transporte por password sin alterar el contrato principal del sistema instalado.
+34. Cuando un runner reutiliza helpers que imprimen mas de un JSON en `stdout`, el parseo canonico debe tomar el ultimo objeto valido y no la salida completa; eso permite encadenar reporte operativo y payload final sin reescribir helpers ya validados ni romper el cierre "un solo comando".
 
 ## Alcance ejecutivo V1
 
