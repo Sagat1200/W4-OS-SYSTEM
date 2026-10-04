@@ -74,7 +74,12 @@
                     "enabled-runtime"
                 ],
                 "root_login": false,
-                "authentication": "publickey"
+                "authentication": "publickey",
+                "edition_policy_env": "/etc/w4/edition-policy.env",
+                "env_enabled_key": "W4_SSH_ENABLED",
+                "env_enabled_value": "1",
+                "env_authentication_key": "W4_SSH_AUTHENTICATION",
+                "env_authentication_value": "publickey"
             },
             "evidence": [
                 "config/editions/server/policy.json",
@@ -114,11 +119,21 @@
                 "enabled_key": "ENABLED",
                 "enabled_value": "yes",
                 "input_policy_key": "DEFAULT_INPUT_POLICY",
-                "input_policy_value": "DROP"
+                "input_policy_value": "DENY",
+                "output_policy_key": "DEFAULT_OUTPUT_POLICY",
+                "output_policy_value": "ALLOW",
+                "edition_policy_env": "/etc/w4/edition-policy.env",
+                "env_backend_key": "W4_FIREWALL_BACKEND",
+                "env_backend_value": "ufw",
+                "env_input_key": "W4_FIREWALL_INCOMING",
+                "env_input_value": "DENY",
+                "env_output_key": "W4_FIREWALL_OUTGOING",
+                "env_output_value": "ALLOW"
             },
             "evidence": [
                 "Docs/W4-OS/159_W4_OS_FIREWALL_SYSTEM.md",
-                "scripts/generate_system_overlay.php"
+                "scripts/generate_system_overlay.php",
+                "scripts/generate_installation_executor.php"
             ]
         },
         {

@@ -41,6 +41,9 @@ Entregar un V1 centrado en una imagen de escritorio instalable, actualizable y r
 23. La evidencia operativa vale mas cuando se captura en cadena sobre el mismo arbol de trabajo: `rootfs -> overlay -> live` produce una senal mucho mas util que validaciones aisladas, porque demuestra continuidad real entre etapas y deja artefactos inspeccionables en el workspace.
 24. Cuando esa misma cadena ya dispone de `image-root` real verificable, el cierre natural es ejecutar tambien `iso` sobre ese mismo estado y registrar checksum, metadata operativa y comando efectivo para no dejar la validacion WSL a medio camino.
 25. Cuando una ISO fresca se contrasta contra una VM historica, el estado EFI/NVRAM o el disco ya instalado pueden falsear la lectura del artefacto actual; para validar el live vigente conviene una VM efimera o un contexto de arranque limpiado explicitamente.
+26. En Server, el transporte host->live para corridas de instalacion sigue dependiendo de un setup minimo previo de SSH dentro de la sesion live; hasta automatizar ese paso, la evidencia real debe dejar trazado explicito de `/run/sshd`, el override de `PasswordAuthentication`, la regla temporal `ufw allow 22/tcp` y el reinicio de `ssh`.
+27. `verify-installation.sh` es fiable cuando el target esta totalmente desmontado o cuando `/boot` y `/boot/efi` vuelven a montarse explicitamente; si `cryptroot` sigue abierto y solo `/` permanece montado, el runner puede producir un falso negativo aunque la instalacion ya haya cerrado correctamente.
+28. Los verificadores runtime de seguridad no deben mezclar defaults historicos con politica efectiva de edicion; cuando `edition-policy.env` ya expone el contrato canonico de firewall, el baseline debe derivar de ahi la expectativa de `DEFAULT_INPUT_POLICY` y `DEFAULT_OUTPUT_POLICY` en vez de hardcodear valores heredados.
 
 ## Alcance ejecutivo V1
 

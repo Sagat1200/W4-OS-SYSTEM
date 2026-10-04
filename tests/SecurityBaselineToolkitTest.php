@@ -45,7 +45,7 @@ final class SecurityBaselineToolkitTest extends TestCase
         self::assertSame('runtime', $controls['encrypted-root']['validation_scope']);
         self::assertSame('implemented', $controls['firewall-control-plane']['implementation_state']);
         self::assertSame('implemented', $controls['firewall-default-deny-incoming']['implementation_state']);
-        self::assertSame('DROP', $controls['firewall-default-deny-incoming']['expected']['input_policy_value']);
+        self::assertSame('DENY', $controls['firewall-default-deny-incoming']['expected']['input_policy_value']);
         self::assertSame('ALLOW', $controls['firewall-default-deny-incoming']['expected']['output_policy_value']);
         self::assertSame('/etc/w4/edition-policy.env', $controls['firewall-default-deny-incoming']['expected']['edition_policy_env']);
         self::assertSame('implemented', $controls['mac-enforcement']['implementation_state']);
