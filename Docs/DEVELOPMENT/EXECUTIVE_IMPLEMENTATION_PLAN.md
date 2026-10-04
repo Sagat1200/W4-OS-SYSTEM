@@ -39,6 +39,7 @@ Entregar un V1 centrado en una imagen de escritorio instalable, actualizable y r
 21. Cuando varios runners WSL comparten la misma forma de preflight/ejecucion, conviene congelarlos como familia con fixtures comunes (`distros`, `wslpath`, ejecucion) antes de pasar a evidencia operativa real, para reducir drift transversal entre `rootfs`, `overlay`, `live` e `iso`.
 22. Una vez cerrada la capa de QA reproducible, el siguiente paso obligatorio es volver a capturar evidencia operativa real del mismo eje en una distro WSL valida o una sesion live, para confirmar que el contrato canonico sigue describiendo el comportamiento efectivo del entorno.
 23. La evidencia operativa vale mas cuando se captura en cadena sobre el mismo arbol de trabajo: `rootfs -> overlay -> live` produce una senal mucho mas util que validaciones aisladas, porque demuestra continuidad real entre etapas y deja artefactos inspeccionables en el workspace.
+24. Cuando esa misma cadena ya dispone de `image-root` real verificable, el cierre natural es ejecutar tambien `iso` sobre ese mismo estado y registrar checksum, metadata operativa y comando efectivo para no dejar la validacion WSL a medio camino.
 
 ## Alcance ejecutivo V1
 
