@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ArtifactMetadataToolkit;
+
 require_once __DIR__ . '/lib/InstallerToolkit.php';
 
 $rootDir = dirname(__DIR__);
@@ -107,16 +109,19 @@ try {
         throw new ValidationError(sprintf('No se pudo escribir el resumen legible en %s', $outputDir));
     }
 
-    printJson([
-        'status' => 'ok',
-        'profile_id' => $profileId,
-        'build_input' => $buildInputPath,
-        'installation_profile' => $installationProfilePath,
-        'disk_inventory' => $inventoryPath,
-        'output_dir' => $outputDir,
-        'selected_disk' => $plan['plan_binding']['selected_disk']['device'],
-        'binding_hash' => $plan['plan_binding']['binding_hash'],
-    ]);
+    $metadataToolkit = new ArtifactMetadataToolkit();
+
+    printJson($metadataToolkit->createSuccessPayload(
+        $profileId,
+        [
+            'build_input' => $buildInputPath,
+            'installation_profile' => $installationProfilePath,
+            'disk_inventory' => $inventoryPath,
+            'output_dir' => $outputDir,
+            'selected_disk' => $plan['plan_binding']['selected_disk']['device'],
+            'binding_hash' => $plan['plan_binding']['binding_hash'],
+        ]
+    ));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));

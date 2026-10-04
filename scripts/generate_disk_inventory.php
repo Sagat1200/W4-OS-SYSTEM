@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ArtifactMetadataToolkit;
+
 require_once __DIR__ . '/lib/InstallerToolkit.php';
 
 function quoteForShell(string $value): string
@@ -21,6 +23,43 @@ function quoteWslDistribution(string $value): string
     }
 
     return quoteForWindowsCommand($value);
+}
+
+/**
+ * @return array<string, mixed>|null
+ */
+function readJsonFixtureFromEnv(string $variable): ?array
+{
+    $raw = getenv($variable);
+    if ($raw === false || trim($raw) === '') {
+        return null;
+    }
+
+    try {
+        /** @var array<string, mixed> $data */
+        $data = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('Fixture JSON invalido en %s: %s', $variable, $exception->getMessage()));
+    }
+
+    if (!is_array($data)) {
+        throw new ValidationError(sprintf('%s debe contener un objeto JSON', $variable));
+    }
+
+    return $data;
+}
+
+/**
+ * @return string
+ */
+function inventoryHost(?string $wslDistribution): string
+{
+    $override = getenv('W4_DISK_INVENTORY_HOST_OVERRIDE');
+    if ($override !== false && trim($override) !== '') {
+        return trim($override);
+    }
+
+    return $wslDistribution === null ? php_uname('n') : $wslDistribution;
 }
 
 /**
@@ -67,10 +106,51 @@ function readJsonFromCommand(string $command, ?string $wslDistribution): array
 }
 
 /**
+ * @return array<string, mixed>
+ */
+function readLsblkData(?string $wslDistribution): array
+{
+    $fixture = readJsonFixtureFromEnv('W4_DISK_INVENTORY_LSBLK_JSON');
+    if ($fixture !== null) {
+        return $fixture;
+    }
+
+    return readJsonFromCommand(
+        'lsblk -J -b -o NAME,PATH,TYPE,SIZE,SERIAL,WWN,MODEL,TRAN,RM,RO,FSTYPE,MOUNTPOINT',
+        $wslDistribution
+    );
+}
+
+/**
  * @return array<string, string>
  */
 function readUdevProperties(string $devicePath, ?string $wslDistribution): array
 {
+    $fixtureMap = readJsonFixtureFromEnv('W4_DISK_INVENTORY_UDEV_MAP_JSON');
+    if ($fixtureMap !== null) {
+        $fixture = $fixtureMap[$devicePath] ?? null;
+        if ($fixture === null) {
+            return [];
+        }
+
+        if (!is_array($fixture)) {
+            throw new ValidationError(sprintf(
+                'W4_DISK_INVENTORY_UDEV_MAP_JSON[%s] debe ser un objeto JSON',
+                $devicePath
+            ));
+        }
+
+        /** @var array<string, string> $properties */
+        $properties = [];
+        foreach ($fixture as $key => $value) {
+            if (is_string($key) && is_scalar($value)) {
+                $properties[$key] = (string) $value;
+            }
+        }
+
+        return $properties;
+    }
+
     $properties = [];
     $command = sprintf('udevadm info --query=property --name=%s', quoteForShell($devicePath));
     $output = runInventoryCommand($command, $wslDistribution);
@@ -96,6 +176,23 @@ function readUdevProperties(string $devicePath, ?string $wslDistribution): array
  */
 function readWipefsData(string $devicePath, ?string $wslDistribution): array
 {
+    $fixtureMap = readJsonFixtureFromEnv('W4_DISK_INVENTORY_WIPEFS_MAP_JSON');
+    if ($fixtureMap !== null) {
+        $fixture = $fixtureMap[$devicePath] ?? null;
+        if ($fixture === null) {
+            return ['signatures' => []];
+        }
+
+        if (!is_array($fixture)) {
+            throw new ValidationError(sprintf(
+                'W4_DISK_INVENTORY_WIPEFS_MAP_JSON[%s] debe ser un objeto JSON',
+                $devicePath
+            ));
+        }
+
+        return $fixture;
+    }
+
     $command = sprintf('wipefs -J %s', quoteForShell($devicePath));
     $output = [];
     $exitCode = 0;
@@ -248,10 +345,7 @@ function buildDiskRecord(array $device, ?string $wslDistribution): array
  */
 function buildInventory(string $inventoryId, ?string $wslDistribution): array
 {
-    $lsblk = readJsonFromCommand(
-        'lsblk -J -b -o NAME,PATH,TYPE,SIZE,SERIAL,WWN,MODEL,TRAN,RM,RO,FSTYPE,MOUNTPOINT',
-        $wslDistribution
-    );
+    $lsblk = readLsblkData($wslDistribution);
     $blockDevices = $lsblk['blockdevices'] ?? null;
     if (!is_array($blockDevices)) {
         throw new ValidationError('lsblk no devolvio blockdevices');
@@ -282,7 +376,7 @@ function buildInventory(string $inventoryId, ?string $wslDistribution): array
         'id' => $inventoryId,
         'generated_by' => 'generate_disk_inventory.php',
         'generated_at' => gmdate('c'),
-        'host' => $wslDistribution === null ? php_uname('n') : $wslDistribution,
+        'host' => inventoryHost($wslDistribution),
         'disks' => $disks,
     ];
 }
@@ -341,13 +435,13 @@ try {
             throw new ValidationError(sprintf('No se pudo escribir el inventario: %s', $outputPath));
         }
 
-        printJson([
-            'status' => 'ok',
+        $metadataToolkit = new ArtifactMetadataToolkit();
+        printJson($metadataToolkit->createStatusPayload([
             'inventory_id' => $inventoryId,
             'output' => $outputPath,
             'disk_count' => count($inventory['disks']),
             'source' => $wslDistribution ?? 'local-linux',
-        ]);
+        ]));
     }
 
     exit(0);

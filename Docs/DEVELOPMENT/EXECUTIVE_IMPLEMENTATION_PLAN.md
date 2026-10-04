@@ -33,6 +33,9 @@ Entregar un V1 centrado en una imagen de escritorio instalable, actualizable y r
 15. Ese helper comun no debe imponer identidades falsas a los artifacts: cuando una etapa publique `repository_snapshot`, `publication_profile` u otra clave primaria distinta de `profile_id`, la metadata canonica debe adaptarse al dominio real sin romper la consistencia transversal.
 16. Los entrypoints base del pipeline tambien deben alinearse con la envoltura canonica, pero los scripts acoplados al inventario real del sistema o a WSL deben moverse en ciclos separados con evidencia de entorno suficiente.
 17. Los flujos CLI operativos que ya tienen suites integradas estables, como `update`, deben converger a la misma envoltura antes de extraer contratos mas profundos de dominio, para reducir drift con el menor costo de fractura posible.
+18. En instalacion, los entrypoints que aceptan fixtures controlables deben converger antes que los que dependen del inventario real del host; por eso `generate_installation_plan.php` puede cerrarse antes que `generate_disk_inventory.php`.
+19. Cuando un entrypoint depende de comandos del host (`lsblk`, `udevadm`, `wipefs`), la automatizacion debe usar fixtures inyectables solo para QA repetible, manteniendo intacto el camino operativo real para evidencia de entorno.
+20. Los wrappers Windows->WSL deben seguir la misma regla: su QA puede simular distros disponibles y salidas del colector, pero la evidencia tecnica operativa sigue dependiendo de ejecucion real contra una distro WSL valida o una sesion live.
 
 ## Alcance ejecutivo V1
 
