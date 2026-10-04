@@ -11,8 +11,10 @@
         "edition": "Server",
         "distribution_name": "W4 OS",
         "volume_id": "W4_OS_SERVER_LIVE",
-        "iso_filename": "w4-os-server-live-amd64.iso"
+        "iso_filename": "w4-os-server-live-amd64.iso",
+        "default_target": "multi-user.target"
     },
+    "edition_policy": [],
     "iso_tooling_required": [
         "xorriso",
         "grub-mkrescue|grub-mkstandalone",

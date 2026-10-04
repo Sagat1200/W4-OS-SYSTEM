@@ -40,6 +40,7 @@ Entregar un V1 centrado en una imagen de escritorio instalable, actualizable y r
 22. Una vez cerrada la capa de QA reproducible, el siguiente paso obligatorio es volver a capturar evidencia operativa real del mismo eje en una distro WSL valida o una sesion live, para confirmar que el contrato canonico sigue describiendo el comportamiento efectivo del entorno.
 23. La evidencia operativa vale mas cuando se captura en cadena sobre el mismo arbol de trabajo: `rootfs -> overlay -> live` produce una senal mucho mas util que validaciones aisladas, porque demuestra continuidad real entre etapas y deja artefactos inspeccionables en el workspace.
 24. Cuando esa misma cadena ya dispone de `image-root` real verificable, el cierre natural es ejecutar tambien `iso` sobre ese mismo estado y registrar checksum, metadata operativa y comando efectivo para no dejar la validacion WSL a medio camino.
+25. Cuando una ISO fresca se contrasta contra una VM historica, el estado EFI/NVRAM o el disco ya instalado pueden falsear la lectura del artefacto actual; para validar el live vigente conviene una VM efimera o un contexto de arranque limpiado explicitamente.
 
 ## Alcance ejecutivo V1
 
