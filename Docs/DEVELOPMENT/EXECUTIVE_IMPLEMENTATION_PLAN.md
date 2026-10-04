@@ -44,6 +44,7 @@ Entregar un V1 centrado en una imagen de escritorio instalable, actualizable y r
 26. En Server, el transporte host->live para corridas de instalacion sigue dependiendo de un setup minimo previo de SSH dentro de la sesion live; hasta automatizar ese paso, la evidencia real debe dejar trazado explicito de `/run/sshd`, el override de `PasswordAuthentication`, la regla temporal `ufw allow 22/tcp` y el reinicio de `ssh`.
 27. `verify-installation.sh` es fiable cuando el target esta totalmente desmontado o cuando `/boot` y `/boot/efi` vuelven a montarse explicitamente; si `cryptroot` sigue abierto y solo `/` permanece montado, el runner puede producir un falso negativo aunque la instalacion ya haya cerrado correctamente.
 28. Los verificadores runtime de seguridad no deben mezclar defaults historicos con politica efectiva de edicion; cuando `edition-policy.env` ya expone el contrato canonico de firewall, el baseline debe derivar de ahi la expectativa de `DEFAULT_INPUT_POLICY` y `DEFAULT_OUTPUT_POLICY` en vez de hardcodear valores heredados.
+29. En la tty Server de VirtualBox, el Enter extendido `e0 1c e0 9c` es el scancode fiable para ejecutar comandos inyectados por consola; asumir `1c 9c` como Enter universal vuelve fragil el flujo host->live.
 
 ## Alcance ejecutivo V1
 
