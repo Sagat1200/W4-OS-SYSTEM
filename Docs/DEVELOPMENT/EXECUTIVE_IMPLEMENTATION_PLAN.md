@@ -46,6 +46,8 @@ Entregar un V1 centrado en una imagen de escritorio instalable, actualizable y r
 28. Los verificadores runtime de seguridad no deben mezclar defaults historicos con politica efectiva de edicion; cuando `edition-policy.env` ya expone el contrato canonico de firewall, el baseline debe derivar de ahi la expectativa de `DEFAULT_INPUT_POLICY` y `DEFAULT_OUTPUT_POLICY` en vez de hardcodear valores heredados.
 29. En la tty Server de VirtualBox, el Enter extendido `e0 1c e0 9c` es el scancode fiable para ejecutar comandos inyectados por consola; asumir `1c 9c` como Enter universal vuelve fragil el flujo host->live.
 30. Una vez estabilizados los helpers puntuales del eje VM (`live SSH`, unlock LUKS, baseline remoto), el siguiente paso correcto es encapsularlos en runners host->VM mas altos para que la evidencia operativa pueda recapturarse con menos pasos sueltos y menor riesgo de deriva manual.
+31. Cuando un runner host->VM necesite recuperar un codigo remoto desde una tty compartida con `sudo`, no conviene confiar en la salida cruda del comando: hace falta emitir un marcador explicito y parseable (`__W4_INSTALL_EXIT__:<codigo>`) para no mezclar el exit status con warnings como `sudo: unable to resolve host ...`.
+32. El baseline runtime de Server debe correrse con `--sudo` cuando se quiera verificar `apparmor-enforced-profiles`, porque sin privilegios la lectura de `/sys/kernel/security/apparmor/profiles` produce falsos negativos aun cuando AppArmor ya esta en `enforce`.
 
 ## Alcance ejecutivo V1
 

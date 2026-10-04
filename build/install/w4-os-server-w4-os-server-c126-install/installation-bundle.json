@@ -1,0 +1,25 @@
+{
+    "installation_bundle_schema_version": 1,
+    "kind": "installation-bundle",
+    "profile_id": "w4-os-server",
+    "installation_profile_id": "w4-os-server-vm-empty-disk-dev-sda",
+    "inventory_id": "virtualbox-server-w4-os-server-c126-install",
+    "plan_kind": "installation-plan",
+    "edition_policy": {
+        "path": "edition-policy.json",
+        "default_target": "multi-user.target"
+    },
+    "generated_artifacts": [
+        "CHECK_ONLY_PREPARATION.txt",
+        "INSTALLATION_EXECUTOR_README.txt",
+        "INSTALLATION_SUMMARY.txt",
+        "apply-installation.sh",
+        "disk-inventory.json",
+        "edition-policy.json",
+        "installation-executor.json",
+        "installation-plan.json",
+        "installation-profile.derived.json",
+        "installation-profile.json",
+        "verify-installation.sh"
+    ]
+}

@@ -504,7 +504,7 @@ try {
         . "W4_DISK_PASSPHRASE_FILE=/home/w4live/w4-install-secrets/disk-passphrase.txt "
         . "W4_LOCAL_USER_PASSWORD_FILE=/home/w4live/w4-install-secrets/local-user-password.txt "
         . "bash ./apply-installation.sh > install.log 2>&1; "
-        . "code=$?; printf \"%s\\n\" \"\$code\" > install.exit; cat install.exit'";
+        . "code=$?; echo \"\$code\" > install.exit; echo __W4_INSTALL_EXIT__:\$code'";
 
     $installExit = runPhpScript($runRemoteScript, [
         '--host',
@@ -520,7 +520,11 @@ try {
         '--pty',
     ], $rootDir);
 
-    $installExit = trim($installExit);
+    $installOutput = trim($installExit);
+    if (!preg_match('/__W4_INSTALL_EXIT__:(\d+)/', $installOutput, $matches)) {
+        throw new ValidationError(sprintf('No se pudo extraer install.exit de la salida remota: %s', $installOutput));
+    }
+    $installExit = $matches[1];
     if ($installExit !== '0') {
         throw new ValidationError(sprintf('La instalacion remota devolvio install.exit=%s', $installExit));
     }
