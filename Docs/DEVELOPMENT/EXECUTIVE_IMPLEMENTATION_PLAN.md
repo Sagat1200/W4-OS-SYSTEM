@@ -50,6 +50,7 @@ Entregar un V1 centrado en una imagen de escritorio instalable, actualizable y r
 32. El baseline runtime de Server debe correrse con `--sudo` cuando se quiera verificar `apparmor-enforced-profiles`, porque sin privilegios la lectura de `/sys/kernel/security/apparmor/profiles` produce falsos negativos aun cuando AppArmor ya esta en `enforce`.
 33. En la live Server endurecida no basta con publicar solo `PasswordAuthentication yes`: si la imagen efectiva impone `AuthenticationMethods publickey`, el helper temporal de laboratorio debe sobreescribir de forma completa `PasswordAuthentication`, `KbdInteractiveAuthentication`, `PubkeyAuthentication`, `AuthenticationMethods` y `UsePAM` para reabrir transporte por password sin alterar el contrato principal del sistema instalado.
 34. Cuando un runner reutiliza helpers que imprimen mas de un JSON en `stdout`, el parseo canonico debe tomar el ultimo objeto valido y no la salida completa; eso permite encadenar reporte operativo y payload final sin reescribir helpers ya validados ni romper el cierre "un solo comando".
+35. Cuando un runner CLI ya fue validado en real de punta a punta, el siguiente endurecimiento correcto no es repetir mas pasos manuales, sino congelar tambien su payload `ok` bajo `fixture map`, incluyendo archivos derivados clave como inventario generado y resumen textual; asi el contrato integrado queda protegido contra drift aunque los helpers externos no se ejecuten de verdad en cada prueba.
 
 ## Alcance ejecutivo V1
 
