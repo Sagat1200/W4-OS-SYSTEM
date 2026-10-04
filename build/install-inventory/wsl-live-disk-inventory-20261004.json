@@ -1,0 +1,66 @@
+{
+    "inventory_schema_version": 1,
+    "kind": "disk-inventory",
+    "id": "wsl-live-disk-inventory-20261004",
+    "generated_by": "generate_disk_inventory.php",
+    "generated_at": "2026-10-04T09:45:11+00:00",
+    "host": "Ubuntu",
+    "disks": [
+        {
+            "device": "\/dev\/sda",
+            "serial": null,
+            "wwid": null,
+            "by_path": null,
+            "size_bytes": 758038528,
+            "is_installation_media": false,
+            "has_partitions": false,
+            "has_filesystem_signatures": true,
+            "model": "Virtual Disk    ",
+            "transport": "",
+            "read_only": true,
+            "removable": false
+        },
+        {
+            "device": "\/dev\/sdb",
+            "serial": null,
+            "wwid": null,
+            "by_path": null,
+            "size_bytes": 101179392,
+            "is_installation_media": false,
+            "has_partitions": false,
+            "has_filesystem_signatures": true,
+            "model": "Virtual Disk    ",
+            "transport": "",
+            "read_only": true,
+            "removable": false
+        },
+        {
+            "device": "\/dev\/sdc",
+            "serial": null,
+            "wwid": null,
+            "by_path": null,
+            "size_bytes": 4294971392,
+            "is_installation_media": false,
+            "has_partitions": false,
+            "has_filesystem_signatures": true,
+            "model": "Virtual Disk    ",
+            "transport": "",
+            "read_only": false,
+            "removable": false
+        },
+        {
+            "device": "\/dev\/sdd",
+            "serial": null,
+            "wwid": null,
+            "by_path": null,
+            "size_bytes": 274877906944,
+            "is_installation_media": false,
+            "has_partitions": false,
+            "has_filesystem_signatures": true,
+            "model": "Virtual Disk    ",
+            "transport": "",
+            "read_only": false,
+            "removable": false
+        }
+    ]
+}

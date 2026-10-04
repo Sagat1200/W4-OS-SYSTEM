@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ArtifactMetadataToolkit;
+
 require_once __DIR__ . '/lib/ManifestToolkit.php';
 
 $rootDir = dirname(__DIR__);
@@ -10,10 +12,49 @@ $defaultLiveOutputRoot = $rootDir . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SE
 $defaultOutputRoot = $rootDir . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'iso-output';
 
 /**
+ * @return array<string, mixed>|null
+ */
+function readJsonFixtureFromEnv(string $variable): ?array
+{
+    $raw = getenv($variable);
+    if ($raw === false || trim($raw) === '') {
+        return null;
+    }
+
+    try {
+        /** @var array<string, mixed> $data */
+        $data = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('Fixture JSON invalido en %s: %s', $variable, $exception->getMessage()));
+    }
+
+    if (!is_array($data)) {
+        throw new ValidationError(sprintf('%s debe contener un objeto o arreglo JSON', $variable));
+    }
+
+    return $data;
+}
+
+/**
  * @return string
  */
 function runWindowsCommand(string $command): string
 {
+    $fixtureMap = readJsonFixtureFromEnv('W4_WSL_RUNNER_COMMAND_MAP_JSON');
+    if ($fixtureMap !== null) {
+        $fixture = $fixtureMap[$command] ?? null;
+        if ($fixture !== null) {
+            if (!is_scalar($fixture)) {
+                throw new ValidationError(sprintf(
+                    'W4_WSL_RUNNER_COMMAND_MAP_JSON[%s] debe ser escalar',
+                    $command
+                ));
+            }
+
+            return trim((string) $fixture);
+        }
+    }
+
     $output = [];
     $exitCode = 0;
     exec($command . ' 2>&1', $output, $exitCode);
@@ -30,6 +71,19 @@ function runWindowsCommand(string $command): string
  */
 function listWslDistros(): array
 {
+    $fixture = readJsonFixtureFromEnv('W4_WSL_RUNNER_DISTROS_JSON');
+    if ($fixture !== null) {
+        /** @var array<int, string> $distros */
+        $distros = [];
+        foreach ($fixture as $value) {
+            if (is_string($value) && trim($value) !== '') {
+                $distros[] = trim($value);
+            }
+        }
+
+        return $distros;
+    }
+
     $output = runWindowsCommand('wsl -l -q');
     $lines = preg_split('/\r?\n/', $output) ?: [];
     $distros = [];
@@ -190,24 +244,27 @@ try {
     );
 
     if ($checkOnly) {
-        printJson([
-            'status' => 'ready',
-            'distribution' => $distribution,
-            'bundle_path_windows' => $bundlePath,
-            'bundle_path_wsl' => $wslBundlePath,
-            'image_root_windows' => isWslNativePath($imageRootDir) ? null : $imageRootDir,
-            'image_root_wsl' => $wslImageRootDir,
-            'output_dir_windows' => isWslNativePath($outputDir) ? null : $outputDir,
-            'output_dir_wsl' => $wslOutputDir,
-            'run_command' => $runCommand,
-        ]);
+        $metadataToolkit = new ArtifactMetadataToolkit();
+        printJson($metadataToolkit->createStatusPayload(
+            [
+                'distribution' => $distribution,
+                'bundle_path_windows' => $bundlePath,
+                'bundle_path_wsl' => $wslBundlePath,
+                'image_root_windows' => isWslNativePath($imageRootDir) ? null : $imageRootDir,
+                'image_root_wsl' => $wslImageRootDir,
+                'output_dir_windows' => isWslNativePath($outputDir) ? null : $outputDir,
+                'output_dir_wsl' => $wslOutputDir,
+                'run_command' => $runCommand,
+            ],
+            'ready'
+        ));
         exit(0);
     }
 
     $executionOutput = runWindowsCommand($runCommand);
 
-    printJson([
-        'status' => 'ok',
+    $metadataToolkit = new ArtifactMetadataToolkit();
+    printJson($metadataToolkit->createStatusPayload([
         'distribution' => $distribution,
         'bundle_path_windows' => $bundlePath,
         'image_root_windows' => isWslNativePath($imageRootDir) ? null : $imageRootDir,
@@ -215,7 +272,7 @@ try {
         'output_dir_windows' => isWslNativePath($outputDir) ? null : $outputDir,
         'output_dir_wsl' => $wslOutputDir,
         'execution_output' => $executionOutput,
-    ]);
+    ]));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));

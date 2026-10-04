@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use W4\OS\Support\ArtifactMetadataToolkit;
 use W4\OS\Support\ValidationError;
 
 require_once __DIR__ . '/lib/ManifestToolkit.php';
@@ -10,10 +11,49 @@ $rootDir = dirname(__DIR__);
 $defaultBundleRoot = $rootDir . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'rootfs';
 
 /**
+ * @return array<string, mixed>|null
+ */
+function readJsonFixtureFromEnv(string $variable): ?array
+{
+    $raw = getenv($variable);
+    if ($raw === false || trim($raw) === '') {
+        return null;
+    }
+
+    try {
+        /** @var array<string, mixed> $data */
+        $data = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('Fixture JSON invalido en %s: %s', $variable, $exception->getMessage()));
+    }
+
+    if (!is_array($data)) {
+        throw new ValidationError(sprintf('%s debe contener un objeto o arreglo JSON', $variable));
+    }
+
+    return $data;
+}
+
+/**
  * @return string
  */
 function runWindowsCommand(string $command): string
 {
+    $fixtureMap = readJsonFixtureFromEnv('W4_WSL_RUNNER_COMMAND_MAP_JSON');
+    if ($fixtureMap !== null) {
+        $fixture = $fixtureMap[$command] ?? null;
+        if ($fixture !== null) {
+            if (!is_scalar($fixture)) {
+                throw new ValidationError(sprintf(
+                    'W4_WSL_RUNNER_COMMAND_MAP_JSON[%s] debe ser escalar',
+                    $command
+                ));
+            }
+
+            return trim((string) $fixture);
+        }
+    }
+
     $output = [];
     $exitCode = 0;
     exec($command . ' 2>&1', $output, $exitCode);
@@ -30,6 +70,19 @@ function runWindowsCommand(string $command): string
  */
 function listWslDistros(): array
 {
+    $fixture = readJsonFixtureFromEnv('W4_WSL_RUNNER_DISTROS_JSON');
+    if ($fixture !== null) {
+        /** @var array<int, string> $distros */
+        $distros = [];
+        foreach ($fixture as $value) {
+            if (is_string($value) && trim($value) !== '') {
+                $distros[] = trim($value);
+            }
+        }
+
+        return $distros;
+    }
+
     $output = runWindowsCommand('wsl -l -q');
     $lines = preg_split('/\r?\n/', $output) ?: [];
     $distros = [];
@@ -70,6 +123,11 @@ function isWslNativePath(string $path): bool
 
 function canUseSudoWithoutPassword(string $distribution): bool
 {
+    $override = getenv('W4_WSL_RUNNER_CAN_USE_SUDO');
+    if ($override !== false && trim($override) !== '') {
+        return in_array(strtolower(trim($override)), ['1', 'true', 'yes'], true);
+    }
+
     $output = [];
     $exitCode = 0;
     $command = sprintf(
@@ -235,6 +293,7 @@ try {
     }
 
     if ($checkOnly) {
+        $metadataToolkit = new ArtifactMetadataToolkit();
         $runCommand = $canUseSudo
             ? sprintf(
                 'wsl -d %s -- bash -lc %s',
@@ -255,18 +314,20 @@ try {
                 )
             );
 
-        printJson([
-            'status' => $missing === [] ? 'ready' : 'missing_dependencies',
-            'distribution' => $distribution,
-            'bundle_path_windows' => $bundlePath,
-            'bundle_path_wsl' => $wslBundlePath,
-            'rootfs_dir_windows' => isWslNativePath($rootfsDir) ? null : $rootfsDir,
-            'rootfs_dir_wsl' => $wslRootfsDir,
-            'dependencies' => $dependencies,
-            'sudo_non_interactive' => $canUseSudo,
-            'missing_dependencies' => $missing,
-            'run_command' => $runCommand,
-        ]);
+        printJson($metadataToolkit->createStatusPayload(
+            [
+                'distribution' => $distribution,
+                'bundle_path_windows' => $bundlePath,
+                'bundle_path_wsl' => $wslBundlePath,
+                'rootfs_dir_windows' => isWslNativePath($rootfsDir) ? null : $rootfsDir,
+                'rootfs_dir_wsl' => $wslRootfsDir,
+                'dependencies' => $dependencies,
+                'sudo_non_interactive' => $canUseSudo,
+                'missing_dependencies' => $missing,
+                'run_command' => $runCommand,
+            ],
+            $missing === [] ? 'ready' : 'missing_dependencies'
+        ));
         exit(0);
     }
 
@@ -300,14 +361,14 @@ try {
 
     $executionOutput = runWindowsCommand($runCommand);
 
-    printJson([
-        'status' => 'ok',
+    $metadataToolkit = new ArtifactMetadataToolkit();
+    printJson($metadataToolkit->createStatusPayload([
         'distribution' => $distribution,
         'bundle_path_windows' => $bundlePath,
         'rootfs_dir_windows' => isWslNativePath($rootfsDir) ? null : $rootfsDir,
         'rootfs_dir_wsl' => $wslRootfsDir,
         'execution_output' => $executionOutput,
-    ]);
+    ]));
     exit(0);
 } catch (ValidationError $exception) {
     fwrite(STDERR, sprintf("ERROR: %s\n", $exception->getMessage()));

@@ -36,6 +36,8 @@ Entregar un V1 centrado en una imagen de escritorio instalable, actualizable y r
 18. En instalacion, los entrypoints que aceptan fixtures controlables deben converger antes que los que dependen del inventario real del host; por eso `generate_installation_plan.php` puede cerrarse antes que `generate_disk_inventory.php`.
 19. Cuando un entrypoint depende de comandos del host (`lsblk`, `udevadm`, `wipefs`), la automatizacion debe usar fixtures inyectables solo para QA repetible, manteniendo intacto el camino operativo real para evidencia de entorno.
 20. Los wrappers Windows->WSL deben seguir la misma regla: su QA puede simular distros disponibles y salidas del colector, pero la evidencia tecnica operativa sigue dependiendo de ejecucion real contra una distro WSL valida o una sesion live.
+21. Cuando varios runners WSL comparten la misma forma de preflight/ejecucion, conviene congelarlos como familia con fixtures comunes (`distros`, `wslpath`, ejecucion) antes de pasar a evidencia operativa real, para reducir drift transversal entre `rootfs`, `overlay`, `live` e `iso`.
+22. Una vez cerrada la capa de QA reproducible, el siguiente paso obligatorio es volver a capturar evidencia operativa real del mismo eje en una distro WSL valida o una sesion live, para confirmar que el contrato canonico sigue describiendo el comportamiento efectivo del entorno.
 
 ## Alcance ejecutivo V1
 
