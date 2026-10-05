@@ -7,18 +7,18 @@ Alcance: `W4 OS Server` sobre la base ya instalada, actualizable, endurecida y v
 Decisión de producto vigente:
 - `Server` no incluye interfaz gráfica por defecto.
 - La ruta predeterminada de `Server` es `headless`.
-- Cualquier variante gráfica futura queda fuera del camino base de `V1` y solo podría aparecer como excepción controlada en medios explícitamente calificados.
+- `Server` puede exponer durante la instalación opciones gráficas controladas cuando el medio las incluya y las califique, pero la selección inicial debe permanecer en `headless`.
 
 ## Objetivo
 
-Comparar la ruta `headless` frente a alternativas gráficas hipotéticas como `KDE Plasma`, `GNOME`, `XFCE` y `Cinnamon`, para dejar claro por qué `Server V1` debe permanecer sin interfaz gráfica por defecto y por qué el instalador no debe ofrecer selector gráfico en la ruta estándar del producto.
+Comparar la ruta `headless` frente a alternativas gráficas como `KDE Plasma`, `GNOME`, `XFCE` y `Cinnamon`, para dejar claro por qué `Server V1` debe permanecer sin interfaz gráfica por defecto y al mismo tiempo permitir que el instalador exponga esas variantes como opciones controladas para escenarios locales o de baja experiencia operativa.
 
 ## Supuestos de trabajo
 
 - `Server V1` prioriza operación remota, TTY, `SSH`, hardening, instalación reproducible y recuperación cifrada.
 - La composición `Server` ya fue validada como perfil headless y no debe contaminarse con dependencias desktop.
 - `Home` y `Business` ya tienen políticas gráficas propias; `Server` no necesita converger visualmente con ellas.
-- Si alguna vez existiera una variante gráfica de laboratorio, tendría que declararse como medio excepcional y no como comportamiento por defecto.
+- Si el instalador expone un selector de interfaz para `Server`, la opcion inicial debe seguir siendo `headless` y las variantes gráficas deben aparecer como composiciones opcionales y controladas.
 
 ## Criterios de evaluación
 
@@ -52,7 +52,7 @@ Escala usada:
 
 La lectura es nítida: `Server V1` debe permanecer `headless`.
 
-Las alternativas gráficas podrían servir como herramientas de laboratorio, soporte físico muy excepcional o medios experimentales, pero no mejoran el contrato principal del producto. En cambio, sí aumentan:
+Las alternativas gráficas pueden servir para laboratorios, virtualización local, administradores con poca experiencia o despliegues donde se prefiera una operación inicial más asistida. Aun así, no deben cambiar el contrato principal del producto. En cambio, sí aumentan:
 
 - superficie de ataque,
 - tamaño de imagen,
@@ -65,26 +65,28 @@ Las alternativas gráficas podrían servir como herramientas de laboratorio, sop
 Propuesta para ADR:
 
 - `Server V1` no incluye interfaz gráfica por defecto.
-- La instalación estándar de `Server` no expone selector de interfaz gráfica.
-- La ruta base se resuelve mediante `w4-server-meta` sin `w4-desktop-meta`, `pipewire`, `xdg-desktop-portal` ni display manager.
-- Cualquier GUI futura para `Server` queda fuera del producto base y requerirá medio separado, política específica y evidencia independiente.
+- El instalador de `Server` puede exponer selector de interfaz gráfica cuando el medio incluya variantes calificadas.
+- Si el usuario no cambia la selección, `Server` debe instalarse en modo `headless`.
+- La ruta base se resuelve mediante `w4-server-meta` sin `w4-desktop-meta`; si el usuario elige GUI, la composición debe añadir el metapaquete gráfico aprobado correspondiente.
+- Las variantes gráficas aprobadas para selección son `KDE Plasma`, `GNOME`, `XFCE` y `Cinnamon`, siempre como opciones controladas y no como default.
 
-La ADR asociada debe dejar claro que `Server` no comparte el catálogo gráfico de `Home` y `Business`.
+La ADR asociada debe dejar claro que `Server` mantiene un default distinto al de `Home` y `Business`: puede compartir opciones gráficas disponibles, pero su selección inicial oficial sigue siendo `headless`.
 
 ## Implicaciones para el proyecto
 
-- `Server` mantiene una identidad headless fuerte y separada.
+- `Server` mantiene una identidad headless fuerte y separada, aunque pueda ofrecer variantes gráficas opcionales en instalación.
 - `Home` y `Business` pueden evolucionar en UX sin contaminar la composición de `Server`.
-- La política de medios debe impedir que un ISO estándar de `Server` anuncie o arrastre una GUI por accidente.
+- La política de medios debe impedir que un ISO de `Server` seleccione una GUI por defecto o arrastre variantes no calificadas por accidente.
 
 ## Riesgos a vigilar
 
 - no reintroducir dependencias desktop en `w4-linux-base` que vuelvan a contaminar `Server`,
 - no abrir “excepciones temporales” que terminen convertidas en soporte implícito,
-- y no documentar interfaces gráficas para `Server` como si fueran parte del `MVP` cuando no existe evidencia operativa equivalente.
+- no hacer que el selector gráfico cambie el default real del producto,
+- y no documentar interfaces gráficas para `Server` como si ya tuvieran evidencia operativa equivalente cuando solo estén calificadas como variantes.
 
 ## Siguiente paso recomendado
 
 1. Aprobar ADR de política de interfaz para `Server`.
 2. Mantener `w4-server-meta` y `w4-os-server` como ruta headless explícita.
-3. Tratar cualquier variante gráfica futura como laboratorio o medio especializado fuera del producto base.
+3. Definir cómo se compondrán en instalación las variantes `KDE Plasma`, `GNOME`, `XFCE` y `Cinnamon` sin perder el default `headless`.

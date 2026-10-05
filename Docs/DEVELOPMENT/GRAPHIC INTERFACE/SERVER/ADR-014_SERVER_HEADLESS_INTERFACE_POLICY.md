@@ -6,7 +6,7 @@ Alcance: `W4 OS Server V1`
 
 ## Proposito
 
-Cerrar la decision arquitectonica de interfaz para `Server` y dejar explícito que la ruta base del producto es `headless`, sin interfaz gráfica por defecto ni selector gráfico en la instalación estándar.
+Cerrar la decision arquitectonica de interfaz para `Server` y dejar explícito que la ruta base del producto es `headless`, sin interfaz gráfica por defecto, pero permitiendo selector gráfico durante la instalación cuando el medio incluya variantes calificadas.
 
 ## Contexto
 
@@ -14,25 +14,25 @@ Cerrar la decision arquitectonica de interfaz para `Server` y dejar explícito q
 - El producto ya tiene evidencia real de instalación, reboot cifrado, `SSH`, `w4-firstboot`, baseline y flujo automatizado sin GUI.
 - `Home` y `Business` ya documentan sus propias políticas gráficas; `Server` no debe heredar esas decisiones.
 - El contrato headless de `Server` ya excluye `w4-desktop-meta`, `pipewire`, `xdg-desktop-portal` y otras dependencias desktop del artefacto ISO.
+- Existe un caso de uso válido para administración local o virtualización en laboratorio donde el usuario puede preferir instalar `Server` con una GUI opcional, sin que eso cambie el default del producto.
 
 ## Decision
 
 1. `Server V1` no incluye interfaz gráfica por defecto.
-2. La instalación estándar de `Server` no expone selector de interfaz gráfica.
-3. La ruta predeterminada de composición se resuelve mediante `w4-server-meta` y dependencias headless, sin `w4-desktop-meta`.
-4. `Server` no comparte el catálogo gráfico de `Home` ni de `Business`.
-5. Cualquier variante gráfica futura para `Server` queda fuera del producto base y requerirá:
-   - un medio separado o política explícita del medio,
-   - composición de paquetes diferenciada,
-   - evidencia propia de arranque, sesión, update y recovery,
-   - y aprobación documental independiente.
-6. La documentación de instalación, perfiles y alcance de `Server` debe tratar `headless` como única ruta oficial de `V1`.
+2. El instalador de `Server` puede exponer un selector de interfaz gráfica cuando el medio incluya variantes calificadas.
+3. Si el usuario no cambia la selección, o si el medio no incluye selector, la instalación debe resolver `headless`.
+4. La ruta predeterminada de composición se resuelve mediante `w4-server-meta` y dependencias headless, sin `w4-desktop-meta`.
+5. Las variantes gráficas opcionales aprobadas para `Server` son `KDE Plasma`, `GNOME`, `XFCE` y `Cinnamon`, siempre como opciones controladas y no como default.
+6. Cuando el usuario elija una variante gráfica, la composición debe resolver `w4-server-meta` más el metapaquete gráfico aprobado correspondiente.
+7. `Server` no comparte el mismo default gráfico de `Home` ni de `Business`, aunque pueda reutilizar parte de sus metapaquetes gráficos.
+8. La documentación de instalación, perfiles y alcance de `Server` debe tratar `headless` como la ruta oficial predeterminada de `V1`, con GUI opcional bajo selección explícita del usuario.
 
 ## Motivos
 
 - La identidad funcional de `Server` es operación remota y mínima superficie local.
 - La evidencia operativa real ya está cerrada sobre el camino headless.
 - Añadir GUI al perfil base aumentaría complejidad, tamaño de imagen, superficie de ataque y deriva frente al contrato ya validado.
+- Permitir GUI solo bajo selección explícita del usuario cubre casos de laboratorio o baja experiencia sin romper el default del producto.
 - `Home` y `Business` ya cubren las necesidades de UX gráfica del producto.
 
 ## Alternativas consideradas
@@ -41,31 +41,31 @@ Cerrar la decision arquitectonica de interfaz para `Server` y dejar explícito q
 
 Se descarta. Aunque podría facilitar algunos casos locales de administración, contradice la identidad headless del producto y reabre dependencias desktop innecesarias.
 
-### 2. `GNOME`, `XFCE` o `Cinnamon` como opciones seleccionables
+### 2. `KDE Plasma`, `GNOME`, `XFCE` o `Cinnamon` como opciones seleccionables
 
-Se descartan para la instalación estándar de `V1`. El producto base no necesita selector gráfico y no existe evidencia operativa equivalente para sostenerlo.
+Se aceptan solo como variantes opcionales. No deben sustituir el default `headless` ni anunciarse en medios que no las incluyan y califiquen.
 
 ### 3. Mantener una GUI opcional silenciosa dentro del mismo medio
 
-Se descarta. Introducir paquetes gráficos “por si acaso” erosiona el contrato headless y confunde el soporte oficial.
+Se descarta. Si existe GUI opcional, debe aparecer como elección explícita del usuario y no como carga silenciosa del medio.
 
 ## Consecuencias
 
 - `Server` queda formalmente separado de las decisiones gráficas de `Home` y `Business`.
-- El instalador debe resolver directamente el perfil headless sin ofrecer selección visual.
+- El instalador puede ofrecer selección visual para `Server`, pero con `headless` preseleccionado.
 - `w4-linux-base` no debe volver a contaminar a `Server` con dependencias desktop implícitas.
-- Cualquier GUI futura para `Server` será una excepción controlada, no parte del comportamiento por defecto.
+- Las variantes gráficas de `Server` quedan como opciones controladas del producto, no como comportamiento por defecto.
 
 ## Regla operativa para medios
 
 Un medio oficial estándar de `Server`:
 
-1. no debe incluir selector de interfaz gráfica,
-2. no debe instalar display manager,
-3. no debe arrastrar `w4-desktop-meta`,
-4. no debe prometer una sesión gráfica local como parte del soporte base.
+1. puede incluir selector de interfaz gráfica si el medio empaqueta variantes calificadas,
+2. debe dejar `headless` como selección inicial predeterminada,
+3. no debe instalar display manager ni `w4-desktop-meta` cuando el usuario mantiene la opción `headless`,
+4. no debe prometer una sesión gráfica local como parte del soporte base si el usuario no la selecciona.
 
-Si en el futuro existiera un medio especializado de `Server` con GUI, deberá declararse como variante explícita y no como ISO estándar del producto.
+Si un medio de `Server` expone variantes gráficas, debe declararlas explícitamente y mantener evidencia propia para cada una.
 
 ## Impacto en roadmap
 

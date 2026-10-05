@@ -10,7 +10,7 @@ Guiar instalación sin ocultar cifrado, borrado ni limitaciones de conectividad.
 
 ## Alcance, arquitectura y decisiones
 
-Pasos: idioma, accesibilidad, producto, interfaz gráfica cuando aplique, destino, particionado, cifrado, cuenta y resumen. En `Home` y `Business`, el instalador puede ofrecer una selección explícita de interfaz entre perfiles aprobados del medio; si no existe selección o el usuario no la cambia, la ruta predeterminada debe ser `GNOME` para `Home` y `KDE Plasma` para `Business`. En `Server`, la instalación estándar no debe ofrecer selector gráfico y debe resolver directamente la ruta `headless`. Descargas opcionales no deben hacer imposible una instalación base desde medio completo.
+Pasos: idioma, accesibilidad, producto, interfaz gráfica cuando aplique, destino, particionado, cifrado, cuenta y resumen. En `Home` y `Business`, el instalador puede ofrecer una selección explícita de interfaz entre perfiles aprobados del medio; si no existe selección o el usuario no la cambia, la ruta predeterminada debe ser `GNOME` para `Home` y `KDE Plasma` para `Business`. En `Server`, el instalador puede ofrecer `headless`, `KDE Plasma`, `GNOME`, `XFCE` y `Cinnamon` cuando el medio las incluya, pero la selección inicial predeterminada debe ser siempre `headless`. Descargas opcionales no deben hacer imposible una instalación base desde medio completo.
 
 ## Componentes y flujo operativo
 

@@ -10,7 +10,7 @@ Convertir las ediciones en conjuntos de paquetes reconstruibles.
 
 ## Alcance, arquitectura y decisiones
 
-Proponer `w4-base-meta`, `w4-desktop-meta`, `w4-home-meta`, `w4-business-meta` y `w4-server-meta` con dependencias explícitas, y permitir perfiles gráficos adicionales mediante metapaquetes de interfaz como `w4-desktop-gnome-meta`, `w4-desktop-kde-meta`, `w4-desktop-xfce-meta` y `w4-desktop-cinnamon-meta` cuando el producto aprobado lo requiera. Para `Home`, `w4-desktop-gnome-meta` pasa a ser la ruta predeterminada de composición; para `Business`, `w4-desktop-kde-meta` pasa a ser la ruta predeterminada; para `Server`, la ruta predeterminada es `headless` mediante `w4-server-meta` sin `w4-desktop-meta`. Separar requisitos indispensables de recomendaciones removibles.
+Proponer `w4-base-meta`, `w4-desktop-meta`, `w4-home-meta`, `w4-business-meta` y `w4-server-meta` con dependencias explícitas, y permitir perfiles gráficos adicionales mediante metapaquetes de interfaz como `w4-desktop-gnome-meta`, `w4-desktop-kde-meta`, `w4-desktop-xfce-meta` y `w4-desktop-cinnamon-meta` cuando el producto aprobado lo requiera. Para `Home`, `w4-desktop-gnome-meta` pasa a ser la ruta predeterminada de composición; para `Business`, `w4-desktop-kde-meta` pasa a ser la ruta predeterminada; para `Server`, la ruta predeterminada es `headless` mediante `w4-server-meta` sin `w4-desktop-meta`, pero el instalador puede componer opcionalmente `w4-server-meta` con uno de los metapaquetes gráficos aprobados cuando el usuario lo seleccione y el medio lo soporte. Separar requisitos indispensables de recomendaciones removibles.
 
 ## Componentes y flujo operativo
 

@@ -64,7 +64,7 @@ Registro inicial en esta colección; las decisiones de interfaz de `Home`, `Busi
 | ADR-011 | Propuesto | Cuenta local suficiente y servicios cloud opcionales |
 | ADR-012 | Evaluación | OBS como orquestador frente a pipeline Debian de referencia |
 | ADR-013 | Confirmado por solicitud | `KDE Plasma` como interfaz predeterminada de `Business`; `GNOME`, `XFCE` y `Cinnamon` como variantes controladas; el instalador puede exponer selector solo cuando el medio incluya variantes calificadas |
-| ADR-014 | Confirmado por solicitud | `Server` sin interfaz gráfica por defecto; instalación estándar headless sin selector gráfico; cualquier GUI futura requiere medio y evidencia independientes |
+| ADR-014 | Confirmado por solicitud | `Server` sin interfaz gráfica por defecto; instalación con `headless` preseleccionado y selector opcional para `KDE Plasma`, `GNOME`, `XFCE` y `Cinnamon` cuando el medio las incluya |
 
 Cada aceptación futura debe adjuntar alternativas evaluadas, pruebas y consecuencias. Una decisión reemplazada conserva su estado histórico y enlaza a la que la sustituye. Los documentos de producto se actualizan para reflejar el resultado; no se mantienen dos afirmaciones incompatibles bajo el mismo estado de aprobación.
 
