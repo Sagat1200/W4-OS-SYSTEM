@@ -19,6 +19,8 @@ La comparacion se concentro en los contratos que afectan directamente:
 - el estado real de `System API`, `w4ctl`, GUI, Agent y politicas,
 - y la trazabilidad ejecutiva actual (`MX-006`, `MX-009`, `MX-010`, `MX-012`).
 
+Para una lectura resumida por edicion sobre que ya esta realmente al mismo nivel tecnico, ver tambien `Docs/DEVELOPMENT/EDITION_IMPLEMENTATION_STATUS_MATRIX.md`.
+
 ## Convenciones
 
 - `Alineado`: la documentacion objetivo y el estado real ya convergen razonablemente.

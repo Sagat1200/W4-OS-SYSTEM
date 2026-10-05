@@ -2,6 +2,8 @@
 
 Tabla priorizada de implementacion para convertir la coleccion documental en entregables tecnicos verificables. Esta tabla separa claramente decision pendiente, primer entregable tecnico y riesgo principal para evitar confundir estado documental con estado de producto.
 
+La lectura transversal por edicion se resume en `Docs/DEVELOPMENT/EDITION_IMPLEMENTATION_STATUS_MATRIX.md`, para no mezclar el avance de `Home`, `Business` y `Server` cuando una misma fila del roadmap agrupa capacidades distintas.
+
 ## Criterios
 
 - `P0`: bloquea MVP recuperable o decisiones base.

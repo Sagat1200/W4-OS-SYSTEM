@@ -6,6 +6,7 @@ Plan ejecutivo para convertir la especificacion documental de W4 OS en una imple
 
 - `DEVELOPMENT_TABLE.md`: prioridades y entregables por area.
 - `DEVELOPMENT_MATRIX.md`: seguimiento operativo del trabajo activo.
+- `EDITION_IMPLEMENTATION_STATUS_MATRIX.md`: comparacion ejecutiva por edicion para separar madurez de base tecnica y deuda de producto.
 - `DEVELOPMENT_VERSIONS.md`: registro de versiones documentales y tecnicas.
 - `DEVELOPMENT_GUIDELINES.md`: reglas de trabajo, evidencia y actualizacion.
 - `W4_LINUX_BASE_GAP_MATRIX.md`: brechas entre la arquitectura objetivo de `W4-Linux-Base` y el estado tecnico realmente validado en este repositorio.
