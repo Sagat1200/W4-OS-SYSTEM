@@ -10,7 +10,7 @@ Hacer visibles las diferencias de edición sin introducir privilegios comerciale
 
 ## Alcance, arquitectura y decisiones
 
-La matriz compara aplicaciones, defaults, administración y soporte. Seguridad base, cifrado y recuperación permanecen comunes; Business activa capacidades mediante perfil e inscripción autorizada.
+La matriz compara aplicaciones, defaults, administración y soporte. Seguridad base, cifrado y recuperación permanecen comunes; `Home` ya fija `GNOME` como default, `Business` fija `KDE Plasma` como default y `Server` fija una ruta `headless` sin interfaz gráfica por defecto, mientras Business activa además capacidades mediante perfil e inscripción autorizada.
 
 ## Componentes y flujo operativo
 

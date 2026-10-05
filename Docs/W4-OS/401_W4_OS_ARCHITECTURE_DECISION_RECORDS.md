@@ -45,7 +45,7 @@ Contratos relacionados que deben mantenerse coherentes al implementar o cambiar 
 
 ## Roadmap y condiciones de evolución
 
-Registro inicial en esta colección; la decisión de escritorio de `Home` ya queda cerrada mediante `ADR-006`, mientras cargador y atomicidad siguen propuestas.
+Registro inicial en esta colección; las decisiones de interfaz de `Home`, `Business` y `Server` ya quedan cerradas mediante `ADR-006`, `ADR-013` y `ADR-014`, mientras cargador y atomicidad siguen propuestas.
 
 ## Registro inicial de decisiones
 
@@ -63,11 +63,19 @@ Registro inicial en esta colección; la decisión de escritorio de `Home` ya que
 | ADR-010 | Experimental | Generaciones aisladas y atomicidad de actualización |
 | ADR-011 | Propuesto | Cuenta local suficiente y servicios cloud opcionales |
 | ADR-012 | Evaluación | OBS como orquestador frente a pipeline Debian de referencia |
+| ADR-013 | Confirmado por solicitud | `KDE Plasma` como interfaz predeterminada de `Business`; `GNOME`, `XFCE` y `Cinnamon` como variantes controladas; el instalador puede exponer selector solo cuando el medio incluya variantes calificadas |
+| ADR-014 | Confirmado por solicitud | `Server` sin interfaz gráfica por defecto; instalación estándar headless sin selector gráfico; cualquier GUI futura requiere medio y evidencia independientes |
 
 Cada aceptación futura debe adjuntar alternativas evaluadas, pruebas y consecuencias. Una decisión reemplazada conserva su estado histórico y enlaza a la que la sustituye. Los documentos de producto se actualizan para reflejar el resultado; no se mantienen dos afirmaciones incompatibles bajo el mismo estado de aprobación.
 
 Detalle aprobado del `ADR-006`:
 - [ADR-006 · Catalogo grafico y selector de interfaz para Home](../DEVELOPMENT/GRAPHIC%20INTERFACE/HOME/ADR-006_HOME_GRAPHIC_CATALOG_AND_SELECTOR.md)
+
+Detalle aprobado del `ADR-013`:
+- [ADR-013 · Catalogo grafico y selector de interfaz para Business](../DEVELOPMENT/GRAPHIC%20INTERFACE/BUSINESS/ADR-013_BUSINESS_GRAPHIC_CATALOG_AND_SELECTOR.md)
+
+Detalle aprobado del `ADR-014`:
+- [ADR-014 · Politica de interfaz para Server](../DEVELOPMENT/GRAPHIC%20INTERFACE/SERVER/ADR-014_SERVER_HEADLESS_INTERFACE_POLICY.md)
 
 ---
 

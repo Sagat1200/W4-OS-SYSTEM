@@ -10,7 +10,7 @@ Definir protocolo gráfico por sesión y una política limitada de compatibilida
 
 ## Alcance, arquitectura y decisiones
 
-Wayland es objetivo preferido sujeto a calificación del hardware; XWayland atiende aplicaciones X11 cuando esté disponible. Sesión X11 alternativa sólo si se mantiene y prueba explícitamente.
+Wayland es objetivo preferido sujeto a calificación del hardware; XWayland atiende aplicaciones X11 cuando esté disponible. Sesión X11 alternativa sólo si se mantiene y prueba explícitamente. Esta estrategia aplica a composiciones gráficas como `Home` y `Business`; `Server` queda fuera de esta ruta por `ADR-014`, con política `headless` por defecto.
 
 ## Componentes y flujo operativo
 

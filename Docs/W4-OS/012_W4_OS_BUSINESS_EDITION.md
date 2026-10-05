@@ -10,7 +10,7 @@ Definir Business como escritorio administrable sin bifurcar el sistema base.
 
 ## Alcance, arquitectura y decisiones
 
-Agregar inscripción de dispositivos, políticas declarativas, inventario, identidad empresarial y soporte controlado. Operación local y caché de políticas sobreviven a indisponibilidad del servidor.
+Agregar inscripción de dispositivos, políticas declarativas, inventario, identidad empresarial y soporte controlado. `Business` toma `KDE Plasma` como interfaz gráfica predeterminada según `ADR-013`, manteniendo variantes controladas solo cuando el medio las califique. Operación local y caché de políticas sobreviven a indisponibilidad del servidor.
 
 ## Componentes y flujo operativo
 

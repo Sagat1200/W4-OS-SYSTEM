@@ -10,7 +10,7 @@ Construir un instalador que haga explícitos los cambios de disco antes de ejecu
 
 ## Alcance, arquitectura y decisiones
 
-Proponer reutilización de un motor existente compatible con Debian, seleccionado por prueba técnica. Separar UI, planificador de almacenamiento y ejecutor privilegiado; no inventar un motor desde cero.
+Proponer reutilización de un motor existente compatible con Debian, seleccionado por prueba técnica. Separar UI, planificador de almacenamiento y ejecutor privilegiado; no inventar un motor desde cero. La UI del instalador debe resolver diferencias por producto: `Home` y `Business` pueden exponer decisiones gráficas cuando el medio las califique, mientras `Server` debe resolver directamente la ruta headless sin selector gráfico.
 
 ## Componentes y flujo operativo
 

@@ -176,6 +176,7 @@ Estado de avance dentro de este ciclo:
 - `ADR-006` ya fue aprobada en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/ADR-006_HOME_GRAPHIC_CATALOG_AND_SELECTOR.md`.
 - `GNOME` ya queda fijado como interfaz predeterminada de `Home`.
 - `KDE Plasma`, `XFCE` y `Cinnamon` quedan como variantes controladas, no como ruta base equivalente.
+- `Business` ya documenta por `ADR-013` una ruta base distinta sobre `KDE Plasma`, por lo que `MX-007` no debe forzar convergencia artificial entre ediciones.
 - El siguiente corte correcto ya no es decidir plataforma, sino materializar defaults, branding y paquetes base sobre `GNOME`.
 
 Resultado ejecutivo esperado:

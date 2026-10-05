@@ -6,11 +6,11 @@
 
 ## Propósito, contexto y objetivos
 
-Delimitar una familia de dos ediciones y evitar multiplicar ciclos de desarrollo.
+Delimitar una familia de tres ediciones y evitar multiplicar ciclos de desarrollo.
 
 ## Alcance, arquitectura y decisiones
 
-W4 Linux Base es una plataforma compartida, no una tercera edición de consumo. Home y Business son perfiles declarativos sobre la misma versión del núcleo; Developer es un perfil opcional.
+W4 Linux Base es una plataforma compartida, no una tercera edición de consumo. `Home`, `Business` y `Server` son perfiles declarativos sobre la misma versión del núcleo; `Developer` es un perfil opcional. `Server` se define como ruta headless y no hereda catálogo gráfico por defecto.
 
 ## Componentes y flujo operativo
 

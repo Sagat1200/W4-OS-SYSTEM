@@ -10,7 +10,7 @@ Cerrar V1 Business con administración mínima operable y aislamiento probado.
 
 ## Alcance, arquitectura y decisiones
 
-Perfil añade inscripción, políticas esenciales, inventario mínimo, actualización por ventana y auditoría. Directorio empresarial se limita a configuración de referencia; soporte remoto asistido sólo si está calificado.
+Perfil añade inscripción, políticas esenciales, inventario mínimo, actualización por ventana y auditoría. `Business V1` toma `KDE Plasma` como interfaz gráfica predeterminada según `ADR-013`, con variantes controladas solo cuando el medio las califique. Directorio empresarial se limita a configuración de referencia; soporte remoto asistido sólo si está calificado.
 
 ## Componentes y flujo operativo
 
