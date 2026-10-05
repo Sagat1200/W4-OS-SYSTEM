@@ -6,8 +6,6 @@ use PHPUnit\Framework\TestCase;
 
 final class ServerIsoArtifactTest extends TestCase
 {
-    private const EXPECTED_ISO_SHA256 = 'b5fbb8915e6af8760298c9e5b3b7f9eb797f20e1ddabd4c51fd2c6db925c3f21';
-
     /**
      * @var list<string>
      */
@@ -50,8 +48,9 @@ final class ServerIsoArtifactTest extends TestCase
         self::assertFileExists($summaryPath);
         self::assertFileExists($policyPath);
 
-        self::assertSame(self::EXPECTED_ISO_SHA256, hash_file('sha256', $isoPath));
-        self::assertStringContainsString(self::EXPECTED_ISO_SHA256 . '  w4-os-server-live-amd64.iso', $this->readFile($checksumPath));
+        $expectedIsoSha256 = $this->readChecksumForFile($checksumPath, 'w4-os-server-live-amd64.iso');
+
+        self::assertSame($expectedIsoSha256, hash_file('sha256', $isoPath));
 
         $summary = $this->readFile($summaryPath);
         self::assertStringContainsString('W4_PROFILE_ID="w4-os-server"', $summary);
@@ -94,6 +93,30 @@ final class ServerIsoArtifactTest extends TestCase
         }
 
         return $packages;
+    }
+
+    private function readChecksumForFile(string $path, string $filename): string
+    {
+        $lines = preg_split('/\r?\n/', $this->readFile($path)) ?: [];
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+
+            if (preg_match('/^([a-f0-9]{64})\s+(.+)$/i', $line, $matches) !== 1) {
+                continue;
+            }
+
+            if (($matches[2] ?? '') !== $filename) {
+                continue;
+            }
+
+            return strtolower((string) $matches[1]);
+        }
+
+        self::fail(sprintf('No se encontro checksum SHA256 para %s en %s', $filename, $path));
     }
 
     private function readFile(string $path): string

@@ -20,7 +20,7 @@ function readJsonFixtureFromEnv(string $variable): ?array
     try {
         /** @var array<string, mixed> $data */
         $data = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
-    } catch (JsonException $exception) {
+    } catch (\JsonException $exception) {
         throw new ValidationError(sprintf('Fixture JSON invalido en %s: %s', $variable, $exception->getMessage()));
     }
 
@@ -247,7 +247,7 @@ function decodeJsonObject(string $json, string $label): array
     try {
         /** @var array<string, mixed> $data */
         $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
-    } catch (JsonException $exception) {
+    } catch (\JsonException $exception) {
         throw new ValidationError(sprintf('No se pudo decodificar JSON de %s: %s', $label, $exception->getMessage()));
     }
 

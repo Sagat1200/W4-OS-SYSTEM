@@ -61,7 +61,7 @@ Actualmente, **W4 OS System** ya supero la fase puramente documental inicial y c
 - apertura tecnica de `W4 OS Server` con Base sin desktop obligatorio, perfil Server headless, politica inicial separada, propagacion de Debian `trixie` como codename efectivo y publisher capaz de generar `--package-set server`,
 - instalador MVP de `W4 OS Server` con perfil unattended, inventario Hyper-V de laboratorio y bundle `build/install/w4-os-server`,
 - `W4 OS Server` materializado en WSL con rootfs Debian `trixie`, arbol live, ISO `build/iso-output/w4-os-server/w4-os-server-live-amd64.iso` y manifiesto sin paquetes desktop prohibidos,
-- gate PHPUnit de artefacto Server para verificar checksum de ISO, metadata y ausencia de paquetes desktop prohibidos,
+- gate PHPUnit de artefacto Server para verificar checksum de ISO contra `metadata/SHA256SUMS`, metadata y ausencia de paquetes desktop prohibidos,
 - preflight y smoke live de `W4 OS Server` en VirtualBox EFI con autologin `w4live`, identidad Server, SSH activo y disco desechable visible, ya revalidados tambien sobre una VM efimera para contrastar la ISO Server regenerada sin heredar el estado EFI/NVRAM de la VM historica,
 - instalacion de `W4 OS Server` en VM VirtualBox desechable con LUKS2, Btrfs, subvolumen `/srv`, primer boot cifrado y SSH validado con `w4admin`,
 - baseline runtime de `W4 OS Server` ejecutado en VM instalada, con fix aplicado para que el live bundle transporte/aplique `system-overlay` antes del squashfs y el instalador preserve `w4-firstboot.service` en el target,
