@@ -122,6 +122,8 @@ Este paso ya queda aterrizado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007
 - fijar politica de tema, iconos y assets;
 - anotar que defaults son reversibles y cuales no entran en V1.
 
+Este paso ya queda aterrizado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_REVERSIBLE_BRANDING_POLICY.md`.
+
 ### Paso 3 · Delimitar defaults funcionales
 
 - documentar sesion por defecto;

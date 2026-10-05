@@ -129,7 +129,7 @@ El siguiente ciclo tecnico activo corresponde a `MX-007 · Shell y branding mini
 - fijar assets, defaults y paquetes base sin fork profundo del upstream,
 - y desbloquear de forma ordenada `MX-008` y `MX-009`.
 
-El siguiente paso operativo es delimitar `w4-desktop-gnome-meta` y la politica minima de branding antes de abrir implementacion UX. Ese aterrizaje ya queda formalizado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_GNOME_SHELL_AND_BRANDING_MINIMO.md`, y su primer subcorte concreto ya fija la base `GNOME + GDM` y la frontera de `w4-desktop-gnome-meta` en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_GNOME_GDM_BASE_CONTRACT.md`.
+El siguiente paso operativo es delimitar `w4-desktop-gnome-meta` y la politica minima de branding antes de abrir implementacion UX. Ese aterrizaje ya queda formalizado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_GNOME_SHELL_AND_BRANDING_MINIMO.md`: el primer subcorte ya fija la base `GNOME + GDM` y la frontera de `w4-desktop-gnome-meta` en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_GNOME_GDM_BASE_CONTRACT.md`, y el segundo ya define la politica minima de branding reversible en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_REVERSIBLE_BRANDING_POLICY.md`.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 

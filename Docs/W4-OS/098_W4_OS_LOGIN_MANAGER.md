@@ -10,7 +10,7 @@ Seleccionar un gestor de acceso integrado con el escritorio y accesibilidad.
 
 ## Alcance, arquitectura y decisiones
 
-Usar display manager compatible y mantenido en Debian; pantalla W4 no reemplaza el motor de autenticación. Configuración y temas se distribuyen por paquete.
+Usar display manager compatible y mantenido en Debian; pantalla W4 no reemplaza el motor de autenticación. Configuración y temas se distribuyen por paquete. Para la ruta base `Home V1`, `MX-007` ya fija `GDM` como display manager de referencia y limita el branding de login a recursos o ajustes empaquetados por interfaces soportadas, sin tocar PAM ni internals del gestor.
 
 ## Componentes y flujo operativo
 

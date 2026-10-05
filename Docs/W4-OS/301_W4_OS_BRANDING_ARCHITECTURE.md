@@ -10,7 +10,7 @@ Aplicar marca W4 de forma consistente sin alterar atribuciones técnicas o legal
 
 ## Alcance, arquitectura y decisiones
 
-Recursos de identidad se distribuyen en paquetes separados de componentes funcionales. Marca abarca instalador, arranque, escritorio y documentación; no justifica forks de infraestructura.
+Recursos de identidad se distribuyen en paquetes separados de componentes funcionales. Marca abarca instalador, arranque, escritorio y documentación; no justifica forks de infraestructura. El aterrizaje actual de `MX-007` para `Home V1` ya baja este principio a una politica de branding reversible sobre `GNOME + GDM`, separando base comun, branding de `Home` y limites explicitos para login, tema, iconos y defaults de escritorio.
 
 ## Componentes y flujo operativo
 

@@ -10,7 +10,7 @@ Definir temas consistentes que respeten contraste y preferencias de accesibilida
 
 ## Alcance, arquitectura y decisiones
 
-Paleta clara/oscura y estilos compatibles con toolkits del escritorio; recursos versionados en paquete. No forzar tema en aplicaciones donde rompa controles o contraste.
+Paleta clara/oscura y estilos compatibles con toolkits del escritorio; recursos versionados en paquete. No forzar tema en aplicaciones donde rompa controles o contraste. Para `Home V1`, `MX-007` ya fija una politica de prudencia: priorizar una capa ligera sobre assets, paleta y defaults antes que una tematizacion agresiva del shell o del toolkit.
 
 ## Componentes y flujo operativo
 

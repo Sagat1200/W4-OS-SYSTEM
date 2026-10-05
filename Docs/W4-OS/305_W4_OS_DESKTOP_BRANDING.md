@@ -10,7 +10,7 @@ Personalizar escritorio con cambios reversibles y compatibles con upstream.
 
 ## Alcance, arquitectura y decisiones
 
-Fondo, lanzador y defaults W4 en paquete de recursos; preferencias del usuario prevalecen salvo política. Evitar modificar binarios de shell para identidad.
+Fondo, lanzador y defaults W4 en paquete de recursos; preferencias del usuario prevalecen salvo política. Evitar modificar binarios de shell para identidad. Para `Home V1`, `MX-007` ya concreta este criterio: wallpaper, tema, iconos, assets ligeros de login y pequenos defaults de shell pueden entrar solo si son reversibles, tienen fallback claro y no vuelven a imponerse contra la eleccion del usuario.
 
 ## Componentes y flujo operativo
 

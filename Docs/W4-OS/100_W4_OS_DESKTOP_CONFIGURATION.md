@@ -10,7 +10,7 @@ Gestionar ajustes del escritorio sin sobrescribir preferencias en cada actualiza
 
 ## Alcance, arquitectura y decisiones
 
-Defaults W4 se aplican al crear perfil o por mecanismo upstream de valores por defecto. Migraciones actúan sólo en claves propias y distinguen valor elegido por usuario.
+Defaults W4 se aplican al crear perfil o por mecanismo upstream de valores por defecto. Migraciones actúan sólo en claves propias y distinguen valor elegido por usuario. En `Home V1`, la politica de `MX-007` ya refuerza que wallpaper, tema, iconos, favoritos y defaults pequenos de shell no deben reimponerse en cada arranque o update una vez que el usuario haya elegido otra preferencia.
 
 ## Componentes y flujo operativo
 

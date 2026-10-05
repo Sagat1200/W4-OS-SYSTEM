@@ -10,7 +10,7 @@ Dar identidad W4 mediante configuración y componentes pequeños del shell.
 
 ## Alcance, arquitectura y decisiones
 
-Mantener panel, lanzador y notificaciones upstream; recursos W4 se empaquetan y pueden desactivarse. Evitar bifurcar shell completo para obtener marca.
+Mantener panel, lanzador y notificaciones upstream; recursos W4 se empaquetan y pueden desactivarse. Evitar bifurcar shell completo para obtener marca. En la ruta actual `Home V1`, `MX-007` ya acota este principio a una personalizacion reversible sobre `GNOME + GDM`: wallpaper, tema, iconos y defaults pequenos de sesion pueden entrar por recursos y configuracion soportada, pero no por parches profundos ni extensiones obligatorias del shell.
 
 ## Componentes y flujo operativo
 

@@ -197,6 +197,8 @@ Con este contrato ya definido, el siguiente subcorte correcto es documentar la p
 
 Solo despues de ese cierre conviene tocar manifests o composicion tecnica real del escritorio.
 
+Ese siguiente subcorte ya queda documentado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_REVERSIBLE_BRANDING_POLICY.md`.
+
 ## Referencias
 
 - `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/ADR-006_HOME_GRAPHIC_CATALOG_AND_SELECTOR.md`

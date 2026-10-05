@@ -10,7 +10,7 @@ Mantener iconografía reconocible con nombres semánticos y fallbacks.
 
 ## Alcance, arquitectura y decisiones
 
-Usar un conjunto con licencia compatible, añadir únicamente iconos W4 necesarios y conservar nombres estándar. Diferenciar acciones destructivas por forma y texto, no sólo color.
+Usar un conjunto con licencia compatible, añadir únicamente iconos W4 necesarios y conservar nombres estándar. Diferenciar acciones destructivas por forma y texto, no sólo color. Para `Home V1`, `MX-007` ya acota esta regla a una estrategia conservadora: partir de una base compatible con upstream y reservar iconos W4 para identidad puntual, assets propios y puntos concretos donde aporten valor real.
 
 ## Componentes y flujo operativo
 

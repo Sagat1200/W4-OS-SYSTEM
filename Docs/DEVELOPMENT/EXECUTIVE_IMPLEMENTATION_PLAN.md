@@ -197,7 +197,7 @@ Entregables tecnicos obligatorios:
 4. Riesgos y dependencias de `MX-008` y `MX-009` actualizados contra la ruta base ya aprobada.
 5. Trazabilidad ejecutiva y matriz de desarrollo alineadas a `GNOME` como base de `Home`.
 
-Ese aterrizaje operativo ya queda abierto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_GNOME_SHELL_AND_BRANDING_MINIMO.md`, para que el frente tenga una lista concreta de entregables, criterios de cierre, fuera de alcance y secuencia de trabajo antes de tocar implementacion UX. El primer subcorte ya queda ademas fijado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_GNOME_GDM_BASE_CONTRACT.md`, que separa `w4-desktop-meta`, `w4-desktop-gnome-meta` y la ruta base visible `GNOME + GDM`.
+Ese aterrizaje operativo ya queda abierto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_GNOME_SHELL_AND_BRANDING_MINIMO.md`, para que el frente tenga una lista concreta de entregables, criterios de cierre, fuera de alcance y secuencia de trabajo antes de tocar implementacion UX. El primer subcorte ya queda fijado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_GNOME_GDM_BASE_CONTRACT.md`, que separa `w4-desktop-meta`, `w4-desktop-gnome-meta` y la ruta base visible `GNOME + GDM`; el segundo ya queda fijado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_REVERSIBLE_BRANDING_POLICY.md`, que define wallpaper, tema, iconos, assets de login y mecanismo de defaults bajo criterio de reversibilidad.
 
 Siguiente paso despues de este corte:
 abrir `MX-008` y despues `MX-009` sobre `GNOME` como ruta base ya fijada.
