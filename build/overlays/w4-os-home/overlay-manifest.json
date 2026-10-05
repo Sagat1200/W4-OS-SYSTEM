@@ -13,10 +13,16 @@
         "live_hostname": "w4-home-live",
         "live_user": "w4live"
     },
+    "edition_policy": {
+        "path": "config\/editions\/home\/policy.json",
+        "default_target": "graphical.target"
+    },
     "features": [
         "desktop-defaults",
+        "gnome-gdm-default-route",
         "home-onboarding",
-        "local-backup-ready"
+        "local-backup-ready",
+        "reversible-branding-defaults"
     ],
     "services": [
         "w4-firstboot.service",
@@ -37,28 +43,51 @@
         }
     },
     "generated_files": [
-        "files\/etc\/hostname",
-        "files\/etc\/hosts",
+        "apply-overlay.sh",
+        "files\/etc\/dconf\/db\/gdm.d\/00-w4-login",
+        "files\/etc\/dconf\/db\/local.d\/00-w4-home",
+        "files\/etc\/dconf\/profile\/gdm",
+        "files\/etc\/dconf\/profile\/user",
         "files\/etc\/default\/grub.d\/50-w4-security.cfg",
         "files\/etc\/default\/ufw",
+        "files\/etc\/default\/w4-live",
+        "files\/etc\/hostname",
+        "files\/etc\/hosts",
         "files\/etc\/issue",
         "files\/etc\/issue.net",
         "files\/etc\/motd",
-        "files\/etc\/ufw\/ufw.conf",
-        "files\/etc\/default\/w4-live",
-        "files\/etc\/w4\/profile.env",
-        "files\/etc\/w4\/os-release.env",
         "files\/etc\/skel\/.config\/w4-os\/profile.env",
         "files\/etc\/systemd\/system\/w4-firstboot.service",
         "files\/etc\/systemd\/system\/w4-live-prep.service",
+        "files\/etc\/ufw\/ufw.conf",
+        "files\/etc\/w4\/desktop-defaults.json",
+        "files\/etc\/w4\/os-release.env",
+        "files\/etc\/w4\/profile.env",
         "files\/usr\/local\/lib\/w4\/w4-firstboot.sh",
         "files\/usr\/local\/lib\/w4\/w4-live-prep.sh",
-        "apply-overlay.sh"
+        "files\/usr\/share\/w4\/branding\/home\/wallpapers\/w4-home-default.svg"
     ],
     "next_steps": [
         "aplicar overlay al rootfs",
         "verificar primer inicio",
         "integrar entorno live con la imagen final",
         "probar boot en VM"
-    ]
+    ],
+    "desktop_defaults": {
+        "path": "config\/editions\/home\/desktop-defaults.json",
+        "application_method": "overlay-dconf",
+        "scope": "profile-defaults",
+        "runtime_file": "files\/etc\/w4\/desktop-defaults.json",
+        "dconf_profiles": [
+            "files\/etc\/dconf\/profile\/user",
+            "files\/etc\/dconf\/profile\/gdm"
+        ],
+        "dconf_databases": [
+            "files\/etc\/dconf\/db\/local.d\/00-w4-home",
+            "files\/etc\/dconf\/db\/gdm.d\/00-w4-login"
+        ],
+        "assets": [
+            "files\/usr\/share\/w4\/branding\/home\/wallpapers\/w4-home-default.svg"
+        ]
+    }
 }

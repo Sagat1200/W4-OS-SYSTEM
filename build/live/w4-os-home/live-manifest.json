@@ -6,6 +6,7 @@
     "base_manifest_id": "w4-linux-base",
     "source_build_input": "w4-os-home.build-input.json",
     "source_overlay_manifest": "overlay-manifest.json",
+    "source_overlay_payload": "files\/system-overlay",
     "branding": {
         "profile_id": "w4-os-home",
         "profile_name": "W4 OS Home",
@@ -13,7 +14,12 @@
         "live_user": "w4live",
         "live_hostname": "w4-home-live",
         "distribution_name": "W4 OS",
+        "default_target": "graphical.target",
         "volume_id": "W4_OS_HOME_LIVE"
+    },
+    "edition_policy": {
+        "path": "config\/editions\/home\/policy.json",
+        "default_target": "graphical.target"
     },
     "live_stack": {
         "packages": [
@@ -26,16 +32,17 @@
             "grub-mkstandalone"
         ]
     },
-    "generated_files": [
-        "files\/.disk\/info",
-        "files\/README-LIVE.txt",
-        "files\/boot\/grub\/grub.cfg",
-        "compose-live.sh"
-    ],
     "next_steps": [
         "componer image-root y filesystem.squashfs",
         "validar live-boot en VM",
         "instalar tooling de ISO si aplica",
         "empaquetar ISO arrancable"
+    ],
+    "generated_files": [
+        "compose-live.sh",
+        "files\/.disk\/info",
+        "files\/README-LIVE.txt",
+        "files\/boot\/grub\/grub.cfg",
+        "files\/system-overlay\/"
     ]
 }

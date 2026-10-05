@@ -5,6 +5,7 @@ ROOTFS_DIR="${1:-}"
 OUTPUT_DIR="${2:-}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FILES_DIR="${SCRIPT_DIR}/files"
+OVERLAY_FILES_DIR="${FILES_DIR}/system-overlay"
 PROFILE_ID="w4-os-home"
 PROFILE_NAME="W4 OS Home"
 LIVE_USER="w4live"
@@ -127,6 +128,52 @@ unmount_work_rootfs() {
   umount -lf "${WORK_ROOTFS}/dev" 2>/dev/null || true
 }
 
+apply_system_overlay() {
+  local rootfs_dir="${1}"
+
+  if [[ ! -d "${OVERLAY_FILES_DIR}" ]]; then
+    echo "ERROR: el bundle live no incluye files/system-overlay" >&2
+    exit 1
+  fi
+
+  rsync -aHAX "${OVERLAY_FILES_DIR}/" "${rootfs_dir}/"
+
+  mkdir -p "${rootfs_dir}/etc/w4" "${rootfs_dir}/usr/local/lib/w4" "${rootfs_dir}/var/lib/w4"
+  chown root:root "${rootfs_dir}" "${rootfs_dir}/etc" "${rootfs_dir}/usr" "${rootfs_dir}/usr/local" "${rootfs_dir}/usr/local/lib" 2>/dev/null || true
+  chmod 0755 "${rootfs_dir}" "${rootfs_dir}/etc" "${rootfs_dir}/usr" "${rootfs_dir}/usr/local" "${rootfs_dir}/usr/local/lib" 2>/dev/null || true
+  chown -R root:root \
+    "${rootfs_dir}/etc/hostname" \
+    "${rootfs_dir}/etc/hosts" \
+    "${rootfs_dir}/etc/issue" \
+    "${rootfs_dir}/etc/issue.net" \
+    "${rootfs_dir}/etc/motd" \
+    "${rootfs_dir}/etc/w4" \
+    "${rootfs_dir}/etc/default" \
+    "${rootfs_dir}/etc/ufw" \
+    "${rootfs_dir}/etc/systemd" \
+    "${rootfs_dir}/etc/skel" \
+    "${rootfs_dir}/usr/local/lib/w4" \
+    "${rootfs_dir}/var/lib/w4" 2>/dev/null || true
+
+  [[ -f "${rootfs_dir}/usr/local/lib/w4/w4-firstboot.sh" ]] && chmod 0755 "${rootfs_dir}/usr/local/lib/w4/w4-firstboot.sh"
+  [[ -f "${rootfs_dir}/usr/local/lib/w4/w4-live-prep.sh" ]] && chmod 0755 "${rootfs_dir}/usr/local/lib/w4/w4-live-prep.sh"
+  [[ -d "${rootfs_dir}/etc/default" ]] && chmod 0755 "${rootfs_dir}/etc/default"
+  [[ -d "${rootfs_dir}/etc/ufw" ]] && chmod 0755 "${rootfs_dir}/etc/ufw"
+  [[ -f "${rootfs_dir}/etc/default/ufw" ]] && chmod 0644 "${rootfs_dir}/etc/default/ufw"
+  [[ -f "${rootfs_dir}/etc/ufw/ufw.conf" ]] && chmod 0644 "${rootfs_dir}/etc/ufw/ufw.conf"
+
+  mkdir -p "${rootfs_dir}/etc/systemd/system/multi-user.target.wants"
+  if [[ -f "${rootfs_dir}/etc/systemd/system/w4-firstboot.service" ]]; then
+    ln -sfn ../w4-firstboot.service "${rootfs_dir}/etc/systemd/system/multi-user.target.wants/w4-firstboot.service"
+  fi
+  if [[ -f "${rootfs_dir}/etc/systemd/system/w4-live-prep.service" ]]; then
+    ln -sfn ../w4-live-prep.service "${rootfs_dir}/etc/systemd/system/multi-user.target.wants/w4-live-prep.service"
+  fi
+
+  printf '%s\n' "${PROFILE_ID}" > "${rootfs_dir}/var/lib/w4/system-overlay-profile"
+  printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "${rootfs_dir}/var/lib/w4/system-overlay-applied-at"
+}
+
 prepare_live_identity() {
   local rootfs_dir="${1}"
   local profile_env="${rootfs_dir}/etc/w4/profile.env"
@@ -231,6 +278,9 @@ mkdir -p "${STAGE_OUTPUT_DIR}/image-root/live" "${STAGE_OUTPUT_DIR}/image-root/b
 echo "==> Preparando copia de trabajo del rootfs"
 rsync -aHAX --delete "${ROOTFS_DIR}/" "${WORK_ROOTFS}/"
 
+echo "==> Aplicando overlay de sistema en la copia de trabajo"
+apply_system_overlay "${WORK_ROOTFS}"
+
 echo "==> Asegurando keyring Debian dentro de la copia de trabajo"
 ensure_debian_keyring_in_rootfs "${WORK_ROOTFS}"
 normalize_debian_sources_keyring "${WORK_ROOTFS}"
@@ -281,6 +331,7 @@ W4_PROFILE_ID="${PROFILE_ID}"
 W4_PROFILE_NAME="${PROFILE_NAME}"
 W4_LIVE_USER="${LIVE_USER}"
 W4_LIVE_HOSTNAME="${LIVE_HOSTNAME}"
+W4_DEFAULT_TARGET="${W4_DEFAULT_TARGET:-graphical.target}"
 W4_KERNEL_BASENAME="$(basename "${KERNEL_SRC}")"
 W4_INITRD_BASENAME="$(basename "${INITRD_SRC}")"
 W4_PREPARED_LIVE_STACK="${PREPARE_LIVE_STACK}"

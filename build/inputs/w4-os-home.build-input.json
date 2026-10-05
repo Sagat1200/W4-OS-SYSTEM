@@ -64,8 +64,10 @@
     },
     "features": [
         "desktop-defaults",
+        "gnome-gdm-default-route",
         "home-onboarding",
-        "local-backup-ready"
+        "local-backup-ready",
+        "reversible-branding-defaults"
     ],
     "source_manifests": {
         "base": "w4-linux-base.manifest.json",

@@ -199,8 +199,11 @@ Entregables tecnicos obligatorios:
 
 Ese aterrizaje operativo ya queda abierto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_GNOME_SHELL_AND_BRANDING_MINIMO.md`, para que el frente tenga una lista concreta de entregables, criterios de cierre, fuera de alcance y secuencia de trabajo antes de tocar implementacion UX. El primer subcorte ya queda fijado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_GNOME_GDM_BASE_CONTRACT.md`, que separa `w4-desktop-meta`, `w4-desktop-gnome-meta` y la ruta base visible `GNOME + GDM`; el segundo ya queda fijado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_REVERSIBLE_BRANDING_POLICY.md`, que define wallpaper, tema, iconos, assets de login y mecanismo de defaults bajo criterio de reversibilidad; y el tercero ya queda materializado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_DEFAULTS_LAYOUT_AND_OVERLAY_IMPLEMENTATION.md`, `config/editions/home/desktop-defaults.json` y `generate_system_overlay.php`, que ahora transportan defaults `dconf`, wallpaper W4 y metadata de desktop dentro del overlay real de `Home`.
 
+Resultado del siguiente paso:
+la cadena `overlay -> live` de `Home` ya fue repetida sobre WSL y quedo validado que la nueva capa visible llega intacta al artefacto real: `build/live-output/w4-os-home/image-root/system-overlay/` ya contiene `etc/w4/desktop-defaults.json`, perfiles y bases `dconf`, wallpaper W4 y el payload completo de `system-overlay`. La brecha que sigue abierta ya no es de defaults visuales, sino de packaging/base rootfs: el `filesystem.manifest` del live no evidencia aun `gdm`, `gnome-shell` ni `gnome-session`.
+
 Siguiente paso despues de este corte:
-repetir la cadena `overlay -> live` para `Home`, verificar que la nueva capa visible llegue intacta al artefacto real y solo despues abrir `MX-008` y `MX-009` sobre `GNOME` como ruta base ya fijada.
+abrir el frente de packaging para que `Home` instale de verdad la ruta `GNOME + GDM` en rootfs y live, y solo despues seguir hacia `MX-008` y `MX-009` sobre una base grafica realmente materializada.
 
 ## Referencia historica · MX-004
 

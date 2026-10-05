@@ -18,26 +18,30 @@ fi
 mkdir -p "${ROOTFS_DIR}/etc/w4" "${ROOTFS_DIR}/usr/local/lib/w4" "${ROOTFS_DIR}/var/lib/w4"
 cp -a "${OVERLAY_DIR}/." "${ROOTFS_DIR}/"
 
-chown root:root "${ROOTFS_DIR}" "${ROOTFS_DIR}/etc" "${ROOTFS_DIR}/usr" "${ROOTFS_DIR}/usr/local" "${ROOTFS_DIR}/usr/local/lib" || true
+chown root:root "${ROOTFS_DIR}" "${ROOTFS_DIR}/etc" "${ROOTFS_DIR}/usr" "${ROOTFS_DIR}/usr/local" "${ROOTFS_DIR}/usr/local/lib" "${ROOTFS_DIR}/usr/share" || true
 chown -R root:root \
   "${ROOTFS_DIR}/etc/hostname" \
   "${ROOTFS_DIR}/etc/hosts" \
   "${ROOTFS_DIR}/etc/issue" \
   "${ROOTFS_DIR}/etc/issue.net" \
   "${ROOTFS_DIR}/etc/motd" \
+  "${ROOTFS_DIR}/etc/dconf" \
   "${ROOTFS_DIR}/etc/w4" \
   "${ROOTFS_DIR}/etc/default" \
   "${ROOTFS_DIR}/etc/systemd" \
   "${ROOTFS_DIR}/etc/skel" \
   "${ROOTFS_DIR}/usr/local/lib/w4" \
+  "${ROOTFS_DIR}/usr/share/w4" \
   "${ROOTFS_DIR}/var/lib/w4" || true
 
 chmod 0755 "${ROOTFS_DIR}/usr/local/lib/w4/w4-firstboot.sh"
 chmod 0755 "${ROOTFS_DIR}/usr/local/lib/w4/w4-live-prep.sh"
 
-mkdir -p "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants"
-ln -sfn ../w4-firstboot.service "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/w4-firstboot.service"
-ln -sfn ../w4-live-prep.service "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/w4-live-prep.service"
+DEFAULT_TARGET="graphical.target"
+
+mkdir -p "${ROOTFS_DIR}/etc/systemd/system/${DEFAULT_TARGET}.wants"
+ln -sfn ../w4-firstboot.service "${ROOTFS_DIR}/etc/systemd/system/${DEFAULT_TARGET}.wants/w4-firstboot.service"
+ln -sfn ../w4-live-prep.service "${ROOTFS_DIR}/etc/systemd/system/${DEFAULT_TARGET}.wants/w4-live-prep.service"
 
 printf '%s\n' "w4-os-home" > "${ROOTFS_DIR}/var/lib/w4/system-overlay-profile"
 printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "${ROOTFS_DIR}/var/lib/w4/system-overlay-applied-at"

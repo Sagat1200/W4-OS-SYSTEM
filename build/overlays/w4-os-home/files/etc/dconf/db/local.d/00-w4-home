@@ -1,0 +1,15 @@
+[org/gnome/desktop/interface]
+gtk-theme='Adwaita'
+color-scheme='prefer-dark'
+icon-theme='Adwaita'
+cursor-theme='Adwaita'
+
+[org/gnome/desktop/background]
+picture-uri='file:///usr/share/w4/branding/home/wallpapers/w4-home-default.svg'
+picture-uri-dark='file:///usr/share/w4/branding/home/wallpapers/w4-home-default.svg'
+
+[org/gnome/desktop/screensaver]
+picture-uri='file:///usr/share/w4/branding/home/wallpapers/w4-home-default.svg'
+
+[org/gnome/shell]
+favorite-apps=['org.gnome.Nautilus.desktop', 'firefox-esr.desktop', 'org.libreoffice.LibreOffice.StartCenter.desktop', 'org.gnome.Software.desktop']
