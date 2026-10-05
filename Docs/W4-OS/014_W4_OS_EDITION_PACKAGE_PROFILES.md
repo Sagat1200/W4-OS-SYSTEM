@@ -10,11 +10,11 @@ Convertir las ediciones en conjuntos de paquetes reconstruibles.
 
 ## Alcance, arquitectura y decisiones
 
-Proponer w4-base-meta, w4-desktop-meta, w4-home-meta y w4-business-meta con dependencias explícitas. Separar requisitos indispensables de recomendaciones removibles.
+Proponer `w4-base-meta`, `w4-desktop-meta`, `w4-home-meta` y `w4-business-meta` con dependencias explícitas, y permitir perfiles gráficos adicionales mediante metapaquetes de interfaz como `w4-desktop-gnome-meta`, `w4-desktop-kde-meta`, `w4-desktop-xfce-meta` y `w4-desktop-cinnamon-meta` cuando el producto aprobado lo requiera. Para `Home`, `w4-desktop-gnome-meta` pasa a ser la ruta predeterminada de composición. Separar requisitos indispensables de recomendaciones removibles.
 
 ## Componentes y flujo operativo
 
-Resolver perfil sobre repositorio fijado, exportar lista exacta, construir imagen y comparar con manifiesto aprobado.
+Resolver perfil de producto e interfaz sobre repositorio fijado, exportar lista exacta, construir imagen y comparar con manifiesto aprobado.
 
 ## Seguridad y riesgos
 

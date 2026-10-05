@@ -6,11 +6,11 @@
 
 ## Propósito, contexto y objetivos
 
-Fijar alcance V1 alrededor de un escritorio instalable, mantenible y recuperable.
+Fijar alcance V1 alrededor de una experiencia gráfica instalable, mantenible y recuperable.
 
 ## Alcance, arquitectura y decisiones
 
-Incluye base Debian fijada, amd64 UEFI de referencia, un escritorio elegido, dos perfiles, repositorio firmado, actualización offline, recuperación probada y respaldo externo. Business se libera por piloto calificado.
+Incluye base Debian fijada, amd64 UEFI de referencia, `GNOME` como interfaz gráfica predeterminada de `Home` segun `ADR-006`, un catálogo gráfico aprobado para variantes adicionales, dos perfiles de producto, repositorio firmado, actualización offline, recuperación probada y respaldo externo. Si el instalador expone selección de interfaz gráfica, esa selección debe limitarse a variantes explícitamente calificadas. Business se libera por piloto calificado.
 
 ## Componentes y flujo operativo
 

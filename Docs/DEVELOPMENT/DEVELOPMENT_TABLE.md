@@ -13,12 +13,12 @@ Tabla priorizada de implementacion para convertir la coleccion documental en ent
 
 | Prioridad | Area | Madurez actual | Documentos base | Decision pendiente | Primer entregable tecnico | Riesgo principal |
 | --- | --- | --- | --- | --- | --- | --- |
-| P0 | ADRs y base de plataforma | Amarillo | 001, 004, 401, 406, 414, 415 | Cerrar ADR de codename, amd64 UEFI inicial, bootloader, layout, update V1 y escritorio oficial | Paquete de ADRs aprobados con responsables, alcance y criterios de prueba por hito H0 | Iniciar implementacion sobre supuestos no congelados y reabrir decisiones a mitad del MVP |
+| P0 | ADRs y base de plataforma | Amarillo | 001, 004, 401, 406, 414, 415 | Cerrar ADR de codename, amd64 UEFI inicial, bootloader, layout y update V1; `ADR-006` de escritorio/Home ya queda aprobada | Paquete de ADRs aprobados con responsables, alcance y criterios de prueba por hito H0 | Iniciar implementacion sobre supuestos no congelados y reabrir decisiones a mitad del MVP |
 | P0 | Supply, build y repositorios | Amarillo | 041, 047, 048, 051, 061, 068, 069, 070 | Elegir pipeline real de build y firma; confirmar si OBS entra o no en V1 | Primera imagen amd64 reproducible, firmada y trazable desde repositorio controlado | No poder demostrar procedencia, firma o repetibilidad del artefacto |
 | P0 | Instalacion | Amarillo tirando a verde | 031, 032, 033, 034, 037, 040 | Elegir motor Debian-compatible del instalador y congelar flujo destructivo | Instalador funcional en VM vacia con resumen final, validacion de plan y primer boot correcto | Corrupcion de disco por plan obsoleto o flujo no revalidado |
 | P0 | Modelo de estado, update y recovery | Amarillo | 071, 072, 077, 083, 085, 086, 088, 090 | Congelar contrato de estado y alcance real del rollback V1; no prometer atomicidad no probada | Coordinador de update durable con `operation_id`, snapshot previo, reinicio y diagnostico post-fallo | Mezclar binarios, `dpkg`, kernel o ESP en una recuperacion inconsistente |
 | P0 | Seguridad baseline | Cerrado | 156, 157, 158, 159, 160, 165, 169 | Mantener playbook y evidencia en futuras regeneraciones de imagen | Perfil minimo validado en Home y Business: usuario estandar, firewall disponible y default deny, AppArmor activo con perfiles enforce, SSH no habilitado por defecto, permisos criticos, update autenticada por evidencia firmada y cifrado visible | Reabrir imagenes sin ejecutar el playbook `MX-005` o dejar excepciones SSH de laboratorio |
-| P1 | Escritorio oficial | Amarillo tirando a rojo | 091, 092, 096, 097, 104, 283 | Elegir un solo escritorio oficial para V1 mediante ADR y matriz de pruebas | Prototipos comparables KDE Plasma vs GNOME con evidencia de accesibilidad, suspension, graficos y mantenimiento | Duplicar carga de QA o elegir por preferencia estetica sin datos |
+| P1 | Catalogo grafico y selector | Amarillo documental, rojo operativo | 091, 092, 096, 097, 104, 283 | `GNOME` ya queda fijado como default de `Home`; falta calificar variantes y traducir la ADR a paquetes, defaults y selector por medio | `ADR-006` aprobada, matriz de variantes y primera composicion `w4-desktop-gnome-meta` con politica de medios calificados | Multiplicar carga de QA o anunciar variantes no calificadas como si tuvieran soporte equivalente |
 | P1 | Shell y branding minimo | Amarillo | 096, 101, 102, 103, 301, 305 | Delimitar que personalizacion entra en V1 y que queda fuera | Paquete de defaults, tema, iconos y assets W4 desactivables sin romper la sesion | Derivar demasiado del shell upstream y encarecer mantenimiento |
 | P1 | Control Center | Amarillo | 111, 112, 116, 117, 118, 119, 368 | Definir modulos V1 y congelar contratos API minimos | Centro de control con modulos esenciales y backend autorizado solo donde haga falta | Convertir la UI en un lanzador de acciones privilegiadas sin contrato estable |
 | P1 | Home utilizable | Amarillo | 011, 131, 132, 133, 136, 140, 231, 232, 408 | Cerrar conjunto minimo de apps y recorrido de onboarding | Imagen Home que cubra tareas domesticas basicas, backup externo y accesibilidad aceptable | Ampliar demasiado el alcance de aplicaciones y perder foco del MVP |
@@ -32,8 +32,8 @@ Tabla priorizada de implementacion para convertir la coleccion documental en ent
 3. Entregar `instalacion`.
 4. Demostrar `modelo de estado, update y recovery`.
 5. Fijar `seguridad baseline`.
-6. Elegir `escritorio oficial`.
-7. Montar `shell`, `control center` y `Home utilizable`.
+6. Traducir el `catalogo grafico` aprobado a `shell` y branding minimo.
+7. Montar `control center` y `Home utilizable`.
 8. Abrir `Business piloto` solo despues del MVP recuperable.
 
 ## Criterio de salida por hito

@@ -10,11 +10,11 @@ Guiar instalación sin ocultar cifrado, borrado ni limitaciones de conectividad.
 
 ## Alcance, arquitectura y decisiones
 
-Pasos: idioma, accesibilidad, destino, particionado, cifrado, cuenta y resumen. Descargas opcionales no deben hacer imposible una instalación base desde medio completo.
+Pasos: idioma, accesibilidad, producto, interfaz gráfica cuando aplique, destino, particionado, cifrado, cuenta y resumen. En `Home` y en variantes gráficas futuras compatibles, el instalador puede ofrecer una selección explícita de interfaz entre perfiles aprobados del medio; si no existe selección o el usuario no la cambia, la ruta predeterminada debe ser `GNOME`. Descargas opcionales no deben hacer imposible una instalación base desde medio completo.
 
 ## Componentes y flujo operativo
 
-Guardar elecciones no secretas, calcular plan, confirmar resumen con capacidad y disco, ejecutar y validar; ante error presentar registro redactado y opciones de salida.
+Guardar elecciones no secretas, resolver producto y perfil gráfico elegido, calcular plan, confirmar resumen con capacidad y disco, ejecutar y validar; ante error presentar registro redactado y opciones de salida.
 
 ## Seguridad y riesgos
 

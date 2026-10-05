@@ -45,7 +45,7 @@ Contratos relacionados que deben mantenerse coherentes al implementar o cambiar 
 
 ## Roadmap y condiciones de evolución
 
-Registro inicial en esta colección; decisiones de escritorio, cargador y atomicidad siguen propuestas.
+Registro inicial en esta colección; la decisión de escritorio de `Home` ya queda cerrada mediante `ADR-006`, mientras cargador y atomicidad siguen propuestas.
 
 ## Registro inicial de decisiones
 
@@ -56,7 +56,7 @@ Registro inicial en esta colección; decisiones de escritorio, cargador y atomic
 | ADR-003 | Confirmado por solicitud | openSUSE como referencia técnica, sin upstream openSUSE |
 | ADR-004 | Propuesto | Codename fijado; trixie candidato inicial |
 | ADR-005 | Propuesto | amd64 UEFI como referencia inicial; arm64 experimental |
-| ADR-006 | Propuesto | Un escritorio oficial; evaluar KDE Plasma y alternativa GNOME |
+| ADR-006 | Confirmado por solicitud | `GNOME` como interfaz predeterminada de `Home`; `KDE Plasma`, `XFCE` y `Cinnamon` como variantes controladas; el instalador puede exponer selector solo cuando el medio incluya variantes calificadas |
 | ADR-007 | Propuesto | GRUB Debian como candidato de arranque amd64 |
 | ADR-008 | Propuesto | Btrfs y contrato de estado del documento 083 |
 | ADR-009 | Propuesto | Actualización offline recuperable para V1 |
@@ -65,6 +65,9 @@ Registro inicial en esta colección; decisiones de escritorio, cargador y atomic
 | ADR-012 | Evaluación | OBS como orquestador frente a pipeline Debian de referencia |
 
 Cada aceptación futura debe adjuntar alternativas evaluadas, pruebas y consecuencias. Una decisión reemplazada conserva su estado histórico y enlaza a la que la sustituye. Los documentos de producto se actualizan para reflejar el resultado; no se mantienen dos afirmaciones incompatibles bajo el mismo estado de aprobación.
+
+Detalle aprobado del `ADR-006`:
+- [ADR-006 · Catalogo grafico y selector de interfaz para Home](../DEVELOPMENT/GRAPHIC%20INTERFACE/HOME/ADR-006_HOME_GRAPHIC_CATALOG_AND_SELECTOR.md)
 
 ---
 

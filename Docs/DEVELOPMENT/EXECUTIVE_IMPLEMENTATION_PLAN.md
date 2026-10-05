@@ -58,7 +58,7 @@ Incluye:
 
 - Base Debian estable integrada como `W4 Linux Base`.
 - Referencia inicial `amd64 UEFI`.
-- Un escritorio oficial.
+- Un catálogo gráfico aprobado para `Home`, con selector en instalación solo si queda calificado.
 - Instalacion funcional con cifrado por contrasena.
 - Build reproducible y artefactos firmados.
 - Actualizacion offline con coordinador durable y recuperacion probada.
@@ -166,29 +166,36 @@ Salida obligatoria:
 8. Business piloto.
 9. Compliance, soporte y release.
 
-## Siguiente ciclo recomendado · MX-006
+## Siguiente ciclo recomendado · MX-007
 
 Objetivo del ciclo:
-fijar el escritorio oficial V1 para Home sobre la base ya instalable, actualizable, endurecida y separada de Server, evitando abrir `shell`, `control center` y `MX-009` sin una decision de plataforma visible.
+traducir la ADR de `MX-006` a una primera implementacion documental y tecnica de `shell` y branding minimo sobre `GNOME`, evitando abrir `MX-008` y `MX-009` sin una ruta base visible y modular.
+
+Estado de avance dentro de este ciclo:
+
+- `ADR-006` ya fue aprobada en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/ADR-006_HOME_GRAPHIC_CATALOG_AND_SELECTOR.md`.
+- `GNOME` ya queda fijado como interfaz predeterminada de `Home`.
+- `KDE Plasma`, `XFCE` y `Cinnamon` quedan como variantes controladas, no como ruta base equivalente.
+- El siguiente corte correcto ya no es decidir plataforma, sino materializar defaults, branding y paquetes base sobre `GNOME`.
 
 Resultado ejecutivo esperado:
 
-- Decision ADR de escritorio V1 aprobada.
-- Matriz comparativa de KDE vs GNOME cerrada con criterios tecnicos y de producto.
-- Criterios minimos de accesibilidad, consumo base y mantenibilidad explicitados para Home.
-- Direccion clara para `w4-desktop-meta`, branding, `shell` y `control center`.
-- Dependencias y regresiones esperadas sobre Home/Business documentadas antes de abrir implementacion UX.
+- Ruta base de `GNOME` delimitada para `Home`.
+- Alcance minimo de `shell` y branding documentado sin fork profundo del upstream.
+- Direccion clara para `w4-desktop-gnome-meta`, `GDM`, assets y defaults reversibles.
+- Dependencias y limites entre branding comun y overrides por variante documentados antes de abrir implementacion UX.
+- Bloqueo removido para que `MX-008` y `MX-009` trabajen sobre una base visible ya decidida.
 
 Entregables tecnicos obligatorios:
 
-1. Matriz comparativa V1 entre KDE y GNOME con criterios de producto y operacion.
-2. ADR de escritorio oficial aprobada y enlazada al roadmap.
-3. Criterios minimos para `shell`, branding, onboarding y apps base delimitados a partir de la decision.
-4. Riesgos y dependencias de `MX-007`, `MX-008` y `MX-009` actualizados contra la decision tomada.
-5. Trazabilidad ejecutiva y matriz de desarrollo alineadas al escritorio elegido.
+1. Delimitacion de `w4-desktop-gnome-meta` y de la ruta base `GNOME + GDM`.
+2. Politica minima de branding reversible para wallpaper, tema, iconos, assets y defaults.
+3. Separacion explicita entre branding comun y overrides por variante controlada.
+4. Riesgos y dependencias de `MX-008` y `MX-009` actualizados contra la ruta base ya aprobada.
+5. Trazabilidad ejecutiva y matriz de desarrollo alineadas a `GNOME` como base de `Home`.
 
 Siguiente paso despues de este corte:
-abrir implementacion de `MX-007`, `MX-008` y despues `MX-009` sobre el escritorio oficial ya fijado.
+abrir `MX-008` y despues `MX-009` sobre `GNOME` como ruta base ya fijada.
 
 ## Referencia historica · MX-004
 

@@ -102,6 +102,7 @@ Ese runner ya quedo cerrado tambien en real sobre [W4-OS-Server-C126-Install](fi
 La capa final de cierre ya tambien quedo absorbida dentro de ese mismo runner. Primero se reforzo [enable_live_ssh_in_virtualbox.php](file:///C:/W4/Packages/W4-OS%20SYSTEM/scripts/enable_live_ssh_in_virtualbox.php) para neutralizar en la live el posture endurecido `AuthenticationMethods publickey` mediante un override explicito de `PasswordAuthentication yes`, `KbdInteractiveAuthentication yes`, `PubkeyAuthentication yes`, `AuthenticationMethods any` y `UsePAM yes`, de forma que el transporte temporal de laboratorio no vuelva a depender de la consola manual aunque la imagen Server mantenga su politica mas estricta. Despues, [run_server_virtualbox_install_flow.php](file:///C:/W4/Packages/W4-OS%20SYSTEM/scripts/run_server_virtualbox_install_flow.php) paso a encadenar `install -> apagado ACPI -> detach ISO -> boot desde disco -> captura pre-LUKS -> rerun del baseline con --sudo y desbloqueo automatico -> captura post-login -> resumen textual`, parseando ademas el ultimo JSON canonico cuando el helper de baseline mezcla reporte y payload en la misma salida.
 Esa corrida totalmente integrada ya cerro en real sobre [W4-OS-Server-C128-Flow](file:///C:/W4/Packages/W4-OS%20SYSTEM/build/vbox-server-smoke/W4-OS-Server-C128-Flow): el bundle [w4-os-server-w4-os-server-c128-flow](file:///C:/W4/Packages/W4-OS%20SYSTEM/build/install/w4-os-server-w4-os-server-c128-flow) y el inventario [virtualbox-server-w4-os-server-c128-flow.json](file:///C:/W4/Packages/W4-OS%20SYSTEM/build/install-inventory/virtualbox-server-w4-os-server-c128-flow.json) se generaron desde el mismo entrypoint, `installation_exit=0`, la pantalla previa al desbloqueo quedo en [server-c128-flow-before-luks.png](file:///C:/W4/Packages/W4-OS%20SYSTEM/build/vbox-server-smoke/server-c128-flow-before-luks.png), el sistema instalado volvio con `hostname=w4-server-vm`, `ssh=active` y `w4-firstboot=active`, y el baseline [security-baseline-report.json](file:///C:/W4/Packages/W4-OS%20SYSTEM/build/security/validation/w4-os-server-w4-os-server-c128-flow/security-baseline-report.json) cerro otra vez en `9 passed`, `0 failed`, `1 skipped`. El bloque deja ademas [server-c128-flow-postlogin.png](file:///C:/W4/Packages/W4-OS%20SYSTEM/build/vbox-server-smoke/server-c128-flow-postlogin.png) y [server-c128-flow-install-validation.txt](file:///C:/W4/Packages/W4-OS%20SYSTEM/build/vbox-server-smoke/server-c128-flow-install-validation.txt) como evidencia de que Server ya queda realmente en modo "un solo comando" de punta a punta sobre VirtualBox.
 Para que ese cierre no vuelva a depender solo de la evidencia manual/real, la cobertura PHPUnit del runner tambien ya absorbio el contrato `status=ok`. [ServerVirtualBoxInstallFlowCliTest.php](file:///C:/W4/Packages/W4-OS%20SYSTEM/tests/ServerVirtualBoxInstallFlowCliTest.php) ahora ejecuta el flujo completo sobre un fixture map controlado, congelando el payload final del runner, el parseo del ultimo JSON emitido por `run_security_baseline_via_paramiko.php`, la persistencia del inventario VirtualBox y la escritura del resumen textual de validacion. Con eso, el recorrido `ready -> ok -> complete` de Server queda protegido tanto por evidencia operativa real como por un gate reproducible de QA local.
+Con el frente Server ya encapsulado y validado, el siguiente movimiento de producto vuelve a `Home`: en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-006_HOME_V1_DESKTOP_MATRIX.md` ya existe la matriz comparativa activa de `MX-006`, y ese analisis ya quedo formalizado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/ADR-006_HOME_GRAPHIC_CATALOG_AND_SELECTOR.md`. La ADR aprobada fija `GNOME` como interfaz predeterminada de `Home`, conserva `KDE Plasma`, `XFCE` y `Cinnamon` como variantes controladas y permite selector de instalación solo cuando el medio incluya variantes calificadas. Con eso, `MX-006` queda cerrado como frente de decision.
 
 ## Ruta inicial
 
@@ -118,15 +119,14 @@ La prioridad del proyecto es construir, en este orden:
 
 ## Siguiente ciclo
 
-El siguiente ciclo tecnico activo corresponde a `MX-006 · Escritorio oficial` y se centra en:
+El siguiente ciclo tecnico activo corresponde a `MX-007 · Shell y branding minimo` y se centra en:
 
-- comparar KDE y GNOME como candidatos reales de V1,
-- medir impacto en ISO, memoria base, accesibilidad y mantenimiento,
-- fijar el escritorio oficial unico para Home,
-- traducir esa decision al alcance de `shell`, branding, onboarding y apps base,
-- y desbloquear de forma ordenada `MX-007`, `MX-008` y `MX-009`.
+- traducir `ADR-006` a una composicion base `GNOME + GDM`,
+- delimitar branding minimo reversible sobre `GNOME`,
+- fijar assets, defaults y paquetes base sin fork profundo del upstream,
+- y desbloquear de forma ordenada `MX-008` y `MX-009`.
 
-El siguiente paso operativo es ejecutar la matriz comparativa y aprobar el ADR del escritorio oficial antes de abrir implementacion UX.
+El siguiente paso operativo es delimitar `w4-desktop-gnome-meta` y la politica minima de branding antes de abrir implementacion UX.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 
