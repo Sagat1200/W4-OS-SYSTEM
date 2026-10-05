@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "kind": "desktop-defaults",
+  "profile_id": "w4-os-home",
+  "desktop": {
+    "shell": "gnome-shell",
+    "session": "gnome",
+    "display_manager": "gdm"
+  },
+  "application": {
+    "method": "overlay-dconf",
+    "scope": "profile-defaults"
+  },
+  "theme": {
+    "gtk": "Adwaita",
+    "color_scheme": "prefer-dark",
+    "icon": "Adwaita",
+    "cursor": "Adwaita"
+  },
+  "wallpaper": {
+    "uri": "file:///usr/share/w4/branding/home/wallpapers/w4-home-default.svg",
+    "asset_path": "/usr/share/w4/branding/home/wallpapers/w4-home-default.svg"
+  },
+  "branding": {
+    "scope": "home",
+    "login": {
+      "mode": "gdm-supported-settings-only"
+    }
+  },
+  "favorites": [
+    "org.gnome.Nautilus.desktop",
+    "firefox-esr.desktop",
+    "org.libreoffice.LibreOffice.StartCenter.desktop",
+    "org.gnome.Software.desktop"
+  ]
+}

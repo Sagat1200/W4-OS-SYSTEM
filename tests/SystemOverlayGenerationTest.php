@@ -46,6 +46,11 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertSame('firstboot-enables-service', $manifest['security']['apparmor']['activation']);
         self::assertSame('graphical.target', $manifest['edition_policy']['default_target']);
         self::assertSame('config/editions/home/policy.json', $manifest['edition_policy']['path']);
+        self::assertSame('config/editions/home/desktop-defaults.json', $manifest['desktop_defaults']['path']);
+        self::assertSame('overlay-dconf', $manifest['desktop_defaults']['application_method']);
+        self::assertContains('files/etc/dconf/profile/user', $manifest['desktop_defaults']['dconf_profiles']);
+        self::assertContains('files/etc/dconf/db/local.d/00-w4-home', $manifest['desktop_defaults']['dconf_databases']);
+        self::assertContains('files/usr/share/w4/branding/home/wallpapers/w4-home-default.svg', $manifest['desktop_defaults']['assets']);
 
         $grubDefaults = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'default' . DIRECTORY_SEPARATOR . 'grub.d' . DIRECTORY_SEPARATOR . '50-w4-security.cfg');
         self::assertNotFalse($grubDefaults);
@@ -65,15 +70,43 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertStringContainsString('systemctl enable apparmor.service', $firstbootScript);
         self::assertStringContainsString('ufw default deny incoming', $firstbootScript);
         self::assertStringContainsString('ufw --force enable', $firstbootScript);
+        self::assertStringContainsString('dconf update', $firstbootScript);
+
+        $livePrepScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'w4-live-prep.sh');
+        self::assertNotFalse($livePrepScript);
+        self::assertStringContainsString('dconf update', $livePrepScript);
 
         $profileEnv = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'profile.env');
         self::assertNotFalse($profileEnv);
         self::assertStringContainsString('W4_DEFAULT_TARGET="graphical.target"', $profileEnv);
 
+        $desktopDefaults = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'desktop-defaults.json');
+        self::assertSame('w4-os-home', $desktopDefaults['profile_id']);
+        self::assertSame('gdm', $desktopDefaults['desktop']['display_manager']);
+        self::assertSame('gnome', $desktopDefaults['desktop']['session']);
+        self::assertSame('overlay-dconf', $desktopDefaults['application']['method']);
+        self::assertSame('file:///usr/share/w4/branding/home/wallpapers/w4-home-default.svg', $desktopDefaults['wallpaper']['uri']);
+
+        $dconfUserProfile = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'dconf' . DIRECTORY_SEPARATOR . 'profile' . DIRECTORY_SEPARATOR . 'user');
+        self::assertNotFalse($dconfUserProfile);
+        self::assertStringContainsString('system-db:local', $dconfUserProfile);
+
+        $userDefaults = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'dconf' . DIRECTORY_SEPARATOR . 'db' . DIRECTORY_SEPARATOR . 'local.d' . DIRECTORY_SEPARATOR . '00-w4-home');
+        self::assertNotFalse($userDefaults);
+        self::assertStringContainsString("[org/gnome/desktop/interface]", $userDefaults);
+        self::assertStringContainsString("color-scheme='prefer-dark'", $userDefaults);
+        self::assertStringContainsString("picture-uri='file:///usr/share/w4/branding/home/wallpapers/w4-home-default.svg'", $userDefaults);
+
+        $wallpaper = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'branding' . DIRECTORY_SEPARATOR . 'home' . DIRECTORY_SEPARATOR . 'wallpapers' . DIRECTORY_SEPARATOR . 'w4-home-default.svg');
+        self::assertNotFalse($wallpaper);
+        self::assertStringContainsString('<svg', $wallpaper);
+        self::assertStringContainsString('W4 OS Home', $wallpaper);
+
         $applyScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'apply-overlay.sh');
         self::assertNotFalse($applyScript);
         self::assertStringContainsString('DEFAULT_TARGET="graphical.target"', $applyScript);
         self::assertStringContainsString('${DEFAULT_TARGET}.wants', $applyScript);
+        self::assertStringContainsString('etc/dconf', $applyScript);
     }
 
     public function testGenerateSystemOverlayUsesServerBrandingWithoutHomeFallback(): void
@@ -110,6 +143,7 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertSame('w4-server-live', $manifest['branding']['live_hostname']);
         self::assertSame('multi-user.target', $manifest['edition_policy']['default_target']);
         self::assertSame('config/editions/server/policy.json', $manifest['edition_policy']['path']);
+        self::assertArrayNotHasKey('desktop_defaults', $manifest);
 
         $motd = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'motd');
         self::assertNotFalse($motd);

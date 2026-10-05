@@ -41,7 +41,9 @@ final class ManifestToolkitTest extends TestCase
         self::assertContains('os-prober', $resolved['required_packages']);
         self::assertContains('firefox-esr', $resolved['required_packages']);
         self::assertContains('vlc', $resolved['recommended_packages']);
+        self::assertContains('gnome-gdm-default-route', $resolved['features']);
         self::assertContains('home-onboarding', $resolved['features']);
+        self::assertContains('reversible-branding-defaults', $resolved['features']);
     }
 
     public function testCreateBuildInputMergesBaseAndEditionPackages(): void
@@ -64,6 +66,7 @@ final class ManifestToolkitTest extends TestCase
         self::assertContains('php-cli', $buildInput['packages']['required']);
         self::assertContains('ufw', $buildInput['packages']['required']);
         self::assertContains('snapper', $buildInput['packages']['recommended']);
+        self::assertContains('gnome-gdm-default-route', $buildInput['features']);
         self::assertSame(
             count($buildInput['packages']['required']),
             $buildInput['counts']['required_packages']

@@ -27,11 +27,14 @@
   },
   "features": [
     "desktop-defaults",
+    "gnome-gdm-default-route",
     "home-onboarding",
-    "local-backup-ready"
+    "local-backup-ready",
+    "reversible-branding-defaults"
   ],
   "notes": [
     "Perfil inicial para tareas domesticas y uso general.",
-    "Las selecciones podran cambiar cuando se cierre el escritorio oficial y el conjunto minimo de aplicaciones V1."
+    "Las selecciones podran cambiar cuando se cierre el escritorio oficial y el conjunto minimo de aplicaciones V1.",
+    "La ruta visual base actual de Home se resuelve sobre GNOME + GDM mediante defaults reversibles materializados desde el overlay."
   ]
 }

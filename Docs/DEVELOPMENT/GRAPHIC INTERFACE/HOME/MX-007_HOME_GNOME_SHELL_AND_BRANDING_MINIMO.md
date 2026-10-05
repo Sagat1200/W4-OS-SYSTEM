@@ -130,6 +130,8 @@ Este paso ya queda aterrizado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007
 - documentar display manager;
 - decidir que tocar y que no tocar en shell/panel/dock.
 
+Este paso ya queda aterrizado tecnicamente en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_DEFAULTS_LAYOUT_AND_OVERLAY_IMPLEMENTATION.md`, junto con `config/editions/home/desktop-defaults.json` y su materializacion inicial dentro del `system-overlay`.
+
 ### Paso 4 · Reescribir dependencias aguas abajo
 
 - actualizar `MX-008`;

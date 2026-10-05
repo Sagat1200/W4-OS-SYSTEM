@@ -93,6 +93,113 @@ function readEditionPolicy(string $rootDir, string $profileId): array
 }
 
 /**
+ * @return array<string, mixed>
+ */
+function readDesktopDefaults(string $rootDir, string $profileId): array
+{
+    $editionDirectory = str_replace('w4-os-', '', $profileId);
+    $defaultsPath = $rootDir
+        . DIRECTORY_SEPARATOR . 'config'
+        . DIRECTORY_SEPARATOR . 'editions'
+        . DIRECTORY_SEPARATOR . $editionDirectory
+        . DIRECTORY_SEPARATOR . 'desktop-defaults.json';
+
+    if (!is_file($defaultsPath)) {
+        return [];
+    }
+
+    $raw = file_get_contents($defaultsPath);
+    if ($raw === false) {
+        throw new ValidationError(sprintf('No se pudo leer los defaults desktop: %s', $defaultsPath));
+    }
+
+    try {
+        /** @var array<string, mixed> $defaults */
+        $defaults = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('Defaults desktop invalidos: %s', $exception->getMessage()));
+    }
+
+    if (($defaults['schema_version'] ?? null) !== 1) {
+        throw new ValidationError(sprintf('%s: schema_version debe ser 1', $defaultsPath));
+    }
+
+    if (($defaults['kind'] ?? null) !== 'desktop-defaults') {
+        throw new ValidationError(sprintf('%s: kind debe ser desktop-defaults', $defaultsPath));
+    }
+
+    if (($defaults['profile_id'] ?? null) !== $profileId) {
+        throw new ValidationError(sprintf('%s: profile_id debe ser %s', $defaultsPath, $profileId));
+    }
+
+    $desktop = $defaults['desktop'] ?? null;
+    $application = $defaults['application'] ?? null;
+    $theme = $defaults['theme'] ?? null;
+    $wallpaper = $defaults['wallpaper'] ?? null;
+    $favorites = $defaults['favorites'] ?? null;
+    $branding = $defaults['branding'] ?? null;
+
+    if (!is_array($desktop) || !is_array($application) || !is_array($theme) || !is_array($wallpaper) || !is_array($branding)) {
+        throw new ValidationError(sprintf('%s: desktop, application, theme, wallpaper y branding deben ser objetos', $defaultsPath));
+    }
+
+    foreach (['shell', 'session', 'display_manager'] as $field) {
+        $value = $desktop[$field] ?? null;
+        if (!is_string($value) || $value === '') {
+            throw new ValidationError(sprintf('%s: desktop.%s debe ser un string no vacio', $defaultsPath, $field));
+        }
+    }
+
+    foreach (['method', 'scope'] as $field) {
+        $value = $application[$field] ?? null;
+        if (!is_string($value) || $value === '') {
+            throw new ValidationError(sprintf('%s: application.%s debe ser un string no vacio', $defaultsPath, $field));
+        }
+    }
+
+    foreach (['gtk', 'color_scheme', 'icon', 'cursor'] as $field) {
+        $value = $theme[$field] ?? null;
+        if (!is_string($value) || $value === '') {
+            throw new ValidationError(sprintf('%s: theme.%s debe ser un string no vacio', $defaultsPath, $field));
+        }
+    }
+
+    foreach (['uri', 'asset_path'] as $field) {
+        $value = $wallpaper[$field] ?? null;
+        if (!is_string($value) || $value === '') {
+            throw new ValidationError(sprintf('%s: wallpaper.%s debe ser un string no vacio', $defaultsPath, $field));
+        }
+    }
+
+    if (!is_array($favorites)) {
+        throw new ValidationError(sprintf('%s: favorites debe ser una lista', $defaultsPath));
+    }
+
+    foreach ($favorites as $favorite) {
+        if (!is_string($favorite) || $favorite === '') {
+            throw new ValidationError(sprintf('%s: favorites debe contener strings no vacios', $defaultsPath));
+        }
+    }
+
+    $scope = $branding['scope'] ?? null;
+    if (!is_string($scope) || $scope === '') {
+        throw new ValidationError(sprintf('%s: branding.scope debe ser un string no vacio', $defaultsPath));
+    }
+
+    $login = $branding['login'] ?? null;
+    if (!is_array($login)) {
+        throw new ValidationError(sprintf('%s: branding.login debe ser un objeto', $defaultsPath));
+    }
+
+    $mode = $login['mode'] ?? null;
+    if (!is_string($mode) || $mode === '') {
+        throw new ValidationError(sprintf('%s: branding.login.mode debe ser un string no vacio', $defaultsPath));
+    }
+
+    return $defaults;
+}
+
+/**
  * @param array<string, mixed> $buildInput
  * @param array<string, mixed> $editionPolicy
  * @return array<string, string>
@@ -178,6 +285,144 @@ W4_OS_NAME="{$vars['distribution_name']}"
 W4_OS_VENDOR="{$vars['product_name']}"
 W4_OS_EDITION="{$vars['edition']}"
 TXT);
+}
+
+/**
+ * @param array<string, mixed> $desktopDefaults
+ */
+function buildDesktopDefaultsJson(array $desktopDefaults): string
+{
+    $json = json_encode($desktopDefaults, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    if ($json === false) {
+        throw new ValidationError('No se pudo serializar desktop-defaults.json');
+    }
+
+    return $json;
+}
+
+function buildDconfUserProfile(): string
+{
+    return str_replace(["\r\n", "\r"], "\n", <<<TXT
+user-db:user
+system-db:local
+TXT);
+}
+
+function buildDconfGdmProfile(): string
+{
+    return str_replace(["\r\n", "\r"], "\n", <<<TXT
+user-db:user
+system-db:gdm
+file-db:/usr/share/gdm/greeter-dconf-defaults
+TXT);
+}
+
+function escapeGVariantString(string $value): string
+{
+    return str_replace(["\\", "'"], ["\\\\", "\\'"], $value);
+}
+
+/**
+ * @param list<string> $items
+ */
+function renderGVariantStringArray(array $items): string
+{
+    $rendered = array_map(
+        static fn (string $item): string => "'" . escapeGVariantString($item) . "'",
+        $items
+    );
+
+    return '[' . implode(', ', $rendered) . ']';
+}
+
+/**
+ * @param array<string, mixed> $desktopDefaults
+ */
+function buildUserDconfDefaults(array $desktopDefaults): string
+{
+    /** @var array<string, string> $theme */
+    $theme = $desktopDefaults['theme'];
+    /** @var array<string, string> $wallpaper */
+    $wallpaper = $desktopDefaults['wallpaper'];
+    /** @var list<string> $favorites */
+    $favorites = $desktopDefaults['favorites'];
+
+    $wallpaperUri = escapeGVariantString($wallpaper['uri']);
+    $gtkTheme = escapeGVariantString($theme['gtk']);
+    $colorScheme = escapeGVariantString($theme['color_scheme']);
+    $iconTheme = escapeGVariantString($theme['icon']);
+    $cursorTheme = escapeGVariantString($theme['cursor']);
+    $favoriteApps = renderGVariantStringArray($favorites);
+
+    return str_replace(["\r\n", "\r"], "\n", <<<TXT
+[org/gnome/desktop/interface]
+gtk-theme='{$gtkTheme}'
+color-scheme='{$colorScheme}'
+icon-theme='{$iconTheme}'
+cursor-theme='{$cursorTheme}'
+
+[org/gnome/desktop/background]
+picture-uri='{$wallpaperUri}'
+picture-uri-dark='{$wallpaperUri}'
+
+[org/gnome/desktop/screensaver]
+picture-uri='{$wallpaperUri}'
+
+[org/gnome/shell]
+favorite-apps={$favoriteApps}
+TXT);
+}
+
+/**
+ * @param array<string, mixed> $desktopDefaults
+ */
+function buildGdmDconfDefaults(array $desktopDefaults): string
+{
+    /** @var array<string, string> $theme */
+    $theme = $desktopDefaults['theme'];
+    $colorScheme = escapeGVariantString($theme['color_scheme']);
+
+    return str_replace(["\r\n", "\r"], "\n", <<<TXT
+[org/gnome/desktop/interface]
+color-scheme='{$colorScheme}'
+TXT);
+}
+
+/**
+ * @param array<string, string> $vars
+ */
+function buildHomeWallpaperSvg(array $vars): string
+{
+    $title = htmlspecialchars($vars['profile_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $edition = htmlspecialchars($vars['edition'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+    return str_replace(["\r\n", "\r"], "\n", <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 3840 2160" role="img" aria-labelledby="title desc">
+  <title id="title">{$title} default wallpaper</title>
+  <desc id="desc">Wallpaper base de {$edition} con identidad W4 y contraste alto.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1020"/>
+      <stop offset="55%" stop-color="#111c3a"/>
+      <stop offset="100%" stop-color="#1d3d6f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.82" cy="0.2" r="0.7">
+      <stop offset="0%" stop-color="#7dd3fc" stop-opacity="0.42"/>
+      <stop offset="100%" stop-color="#7dd3fc" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="3840" height="2160" fill="url(#bg)"/>
+  <rect width="3840" height="2160" fill="url(#glow)"/>
+  <circle cx="2940" cy="460" r="520" fill="#38bdf8" opacity="0.10"/>
+  <circle cx="3180" cy="360" r="240" fill="#f8fafc" opacity="0.05"/>
+  <path d="M0 1760C480 1600 820 1560 1180 1610C1530 1660 1840 1780 2160 1830C2570 1890 3000 1850 3840 1610V2160H0Z" fill="#020617" opacity="0.32"/>
+  <g transform="translate(270 320)">
+    <text x="0" y="0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="128" font-weight="700" fill="#f8fafc">W4</text>
+    <text x="0" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="64" font-weight="500" fill="#cbd5e1">{$title}</text>
+    <text x="0" y="254" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="38" font-weight="400" fill="#94a3b8">GNOME + GDM default route</text>
+  </g>
+</svg>
+SVG);
 }
 
 /**
@@ -386,6 +631,10 @@ if command -v ufw >/dev/null 2>&1; then
   ufw --force enable >/dev/null 2>&1 || true
 fi
 
+if command -v dconf >/dev/null 2>&1 && [[ -d /etc/dconf/db ]]; then
+  dconf update >/dev/null 2>&1 || true
+fi
+
 mkdir -p /etc/w4
 cat > /etc/w4/firstboot-state.env <<EOF
 W4_PROFILE_ID="${W4_PROFILE_ID:-${PROFILE_ID}}"
@@ -476,6 +725,10 @@ W4_LIVE_USER="${LIVE_USER}"
 W4_LIVE_HOSTNAME="${LIVE_HOSTNAME}"
 W4_LIVE_PREPARED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 EOF
+
+if command -v dconf >/dev/null 2>&1 && [[ -d /etc/dconf/db ]]; then
+  dconf update >/dev/null 2>&1 || true
+fi
 BASH;
 
     $script = str_replace(
@@ -513,18 +766,20 @@ fi
 mkdir -p "${ROOTFS_DIR}/etc/w4" "${ROOTFS_DIR}/usr/local/lib/w4" "${ROOTFS_DIR}/var/lib/w4"
 cp -a "${OVERLAY_DIR}/." "${ROOTFS_DIR}/"
 
-chown root:root "${ROOTFS_DIR}" "${ROOTFS_DIR}/etc" "${ROOTFS_DIR}/usr" "${ROOTFS_DIR}/usr/local" "${ROOTFS_DIR}/usr/local/lib" || true
+chown root:root "${ROOTFS_DIR}" "${ROOTFS_DIR}/etc" "${ROOTFS_DIR}/usr" "${ROOTFS_DIR}/usr/local" "${ROOTFS_DIR}/usr/local/lib" "${ROOTFS_DIR}/usr/share" || true
 chown -R root:root \
   "${ROOTFS_DIR}/etc/hostname" \
   "${ROOTFS_DIR}/etc/hosts" \
   "${ROOTFS_DIR}/etc/issue" \
   "${ROOTFS_DIR}/etc/issue.net" \
   "${ROOTFS_DIR}/etc/motd" \
+  "${ROOTFS_DIR}/etc/dconf" \
   "${ROOTFS_DIR}/etc/w4" \
   "${ROOTFS_DIR}/etc/default" \
   "${ROOTFS_DIR}/etc/systemd" \
   "${ROOTFS_DIR}/etc/skel" \
   "${ROOTFS_DIR}/usr/local/lib/w4" \
+  "${ROOTFS_DIR}/usr/share/w4" \
   "${ROOTFS_DIR}/var/lib/w4" || true
 
 chmod 0755 "${ROOTFS_DIR}/usr/local/lib/w4/w4-firstboot.sh"
@@ -554,13 +809,14 @@ BASH;
 /**
  * @param array<string, mixed> $buildInput
  * @param array<string, string> $vars
+ * @param array<string, mixed> $desktopDefaults
  * @return array<string, string>
  */
-function buildOverlayFiles(array $buildInput, array $vars): array
+function buildOverlayFiles(array $buildInput, array $vars, array $desktopDefaults): array
 {
     $features = implode(',', $buildInput['features']);
 
-    return [
+    $files = [
         'files/etc/hostname' => $vars['hostname'] . "\n",
         'files/etc/hosts' => buildHosts($vars) . "\n",
         'files/etc/default/grub.d/50-w4-security.cfg' => buildSecurityGrubDefaults($vars) . "\n",
@@ -579,6 +835,17 @@ function buildOverlayFiles(array $buildInput, array $vars): array
         'files/usr/local/lib/w4/w4-live-prep.sh' => buildLivePrepScript($vars) . "\n",
         'apply-overlay.sh' => buildApplyScript($vars) . "\n",
     ];
+
+    if ($desktopDefaults !== []) {
+        $files['files/etc/w4/desktop-defaults.json'] = buildDesktopDefaultsJson($desktopDefaults) . "\n";
+        $files['files/etc/dconf/profile/user'] = buildDconfUserProfile() . "\n";
+        $files['files/etc/dconf/profile/gdm'] = buildDconfGdmProfile() . "\n";
+        $files['files/etc/dconf/db/local.d/00-w4-home'] = buildUserDconfDefaults($desktopDefaults) . "\n";
+        $files['files/etc/dconf/db/gdm.d/00-w4-login'] = buildGdmDconfDefaults($desktopDefaults) . "\n";
+        $files['files/usr/share/w4/branding/home/wallpapers/w4-home-default.svg'] = buildHomeWallpaperSvg($vars) . "\n";
+    }
+
+    return $files;
 }
 
 try {
@@ -640,8 +907,9 @@ try {
     }
 
     $editionPolicy = readEditionPolicy($rootDir, $resolvedProfileId);
+    $desktopDefaults = readDesktopDefaults($rootDir, $resolvedProfileId);
     $vars = overlayVariables($buildInput, $editionPolicy);
-    $files = buildOverlayFiles($buildInput, $vars);
+    $files = buildOverlayFiles($buildInput, $vars, $desktopDefaults);
 
     foreach ($files as $relativePath => $contents) {
         $targetPath = $outputPath . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
@@ -656,12 +924,7 @@ try {
     }
 
     $metadataToolkit = new ArtifactMetadataToolkit();
-    $overlayManifest = $metadataToolkit->createManifest(
-        'overlay_schema_version',
-        'system-overlay',
-        (string) $buildInput['profile_id'],
-        (string) $buildInput['profile_name'],
-        [
+    $overlayManifestData = [
         'base_manifest_id' => $buildInput['base_manifest_id'],
         'source_build_input' => basename($inputPath),
         'branding' => [
@@ -702,7 +965,34 @@ try {
             'integrar entorno live con la imagen final',
             'probar boot en VM',
         ],
-        ]
+    ];
+
+    if ($desktopDefaults !== []) {
+        $overlayManifestData['desktop_defaults'] = [
+            'path' => sprintf('config/editions/%s/desktop-defaults.json', str_replace('w4-os-', '', $resolvedProfileId)),
+            'application_method' => $desktopDefaults['application']['method'],
+            'scope' => $desktopDefaults['application']['scope'],
+            'runtime_file' => 'files/etc/w4/desktop-defaults.json',
+            'dconf_profiles' => [
+                'files/etc/dconf/profile/user',
+                'files/etc/dconf/profile/gdm',
+            ],
+            'dconf_databases' => [
+                'files/etc/dconf/db/local.d/00-w4-home',
+                'files/etc/dconf/db/gdm.d/00-w4-login',
+            ],
+            'assets' => [
+                'files/usr/share/w4/branding/home/wallpapers/w4-home-default.svg',
+            ],
+        ];
+    }
+
+    $overlayManifest = $metadataToolkit->createManifest(
+        'overlay_schema_version',
+        'system-overlay',
+        (string) $buildInput['profile_id'],
+        (string) $buildInput['profile_name'],
+        $overlayManifestData
     );
 
     $manifestPath = $outputPath . DIRECTORY_SEPARATOR . 'overlay-manifest.json';
