@@ -10,7 +10,7 @@ Definir un catálogo curado de interfaces gráficas por accesibilidad, mantenimi
 
 ## Alcance, arquitectura y decisiones
 
-Propuesta de trabajo: evaluar `KDE Plasma`, `GNOME`, `XFCE` y `Cinnamon` de Debian como interfaces gráficas candidatas para `Home`, mediante matriz de pruebas. `ADR-006` ya fija `GNOME` como interfaz predeterminada de `Home`, conserva `KDE Plasma`, `XFCE` y `Cinnamon` como variantes controladas y permite selector en instalación solo cuando el medio incluya variantes calificadas.
+Propuesta de trabajo: evaluar `KDE Plasma`, `GNOME`, `XFCE` y `Cinnamon` de Debian como interfaces gráficas candidatas para `Home`, mediante matriz de pruebas. `ADR-006` ya fija `GNOME` como interfaz predeterminada de `Home`, conserva `KDE Plasma`, `XFCE` y `Cinnamon` como variantes controladas y permite selector en instalación solo cuando el medio incluya variantes calificadas. Como siguiente aterrizaje operativo de esa decisión, `MX-007` ya delimita la ruta base visible de `Home` como `GNOME + GDM`, con `w4-desktop-meta` reservado para la base desktop común y `w4-desktop-gnome-meta` como metapaquete específico de composición.
 
 ## Componentes y flujo operativo
 

@@ -114,6 +114,8 @@ Queda fuera de `MX-007`:
 - redactar el contrato inicial de `w4-desktop-gnome-meta`;
 - separar base comun vs base especifica de `Home`.
 
+Este paso ya queda aterrizado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_GNOME_GDM_BASE_CONTRACT.md`.
+
 ### Paso 2 · Delimitar branding reversible
 
 - elegir wallpaper base;
