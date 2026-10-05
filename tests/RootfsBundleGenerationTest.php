@@ -79,6 +79,57 @@ final class RootfsBundleGenerationTest extends TestCase
         self::assertContains('/etc/machine-id', $manifest['identity_cleanup']);
     }
 
+    public function testGenerateHomeRootfsBundleIncludesGnomeAndGdmBaseline(): void
+    {
+        $buildInputPath = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-home.build-input.json';
+        $outputDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-home-rootfs';
+
+        $buildInput = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'generate_build_input.php',
+            [
+                '--profile',
+                'w4-os-home',
+                '--output',
+                $buildInputPath,
+            ]
+        );
+        self::assertSame(0, $buildInput['exitCode'], $buildInput['stderr']);
+
+        $result = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'generate_rootfs_bundle.php',
+            [
+                '--input',
+                $buildInputPath,
+                '--output',
+                $outputDir,
+            ]
+        );
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $manifest = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'rootfs-manifest.json');
+        self::assertContains('w4-desktop-gnome-meta', $manifest['meta_packages']['required']);
+        self::assertContains('gdm3', $manifest['packages']['required']);
+        self::assertContains('gnome-session', $manifest['packages']['required']);
+        self::assertContains('gnome-shell', $manifest['packages']['required']);
+        self::assertContains('gnome-software', $manifest['packages']['required']);
+        self::assertContains('nautilus', $manifest['packages']['required']);
+        self::assertContains('xdg-desktop-portal-gnome', $manifest['packages']['required']);
+
+        $requiredPackages = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'packages.required.list');
+        self::assertNotFalse($requiredPackages);
+        self::assertStringContainsString("gdm3\n", $requiredPackages);
+        self::assertStringContainsString("gnome-shell\n", $requiredPackages);
+        self::assertStringContainsString("gnome-session\n", $requiredPackages);
+
+        $buildScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'build-rootfs.sh');
+        self::assertNotFalse($buildScript);
+        self::assertStringContainsString('--include=', $buildScript);
+        self::assertStringContainsString('gdm3', $buildScript);
+        self::assertStringContainsString('gnome-shell', $buildScript);
+        self::assertStringContainsString('gnome-session', $buildScript);
+    }
+
     /**
      * @param list<string> $arguments
      * @return array{exitCode:int,stdout:string,stderr:string}

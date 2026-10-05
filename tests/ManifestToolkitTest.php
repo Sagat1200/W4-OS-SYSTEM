@@ -32,10 +32,16 @@ final class ManifestToolkitTest extends TestCase
         self::assertSame('w4-os-home', $resolved['id']);
         self::assertContains('w4-base-meta', $resolved['required_meta_packages']);
         self::assertContains('w4-desktop-meta', $resolved['required_meta_packages']);
+        self::assertContains('w4-desktop-gnome-meta', $resolved['required_meta_packages']);
         self::assertContains('w4-home-meta', $resolved['required_meta_packages']);
         self::assertContains('apt', $resolved['required_packages']);
         self::assertContains('apparmor', $resolved['required_packages']);
         self::assertContains('btrfs-progs', $resolved['required_packages']);
+        self::assertContains('gdm3', $resolved['required_packages']);
+        self::assertContains('gnome-session', $resolved['required_packages']);
+        self::assertContains('gnome-shell', $resolved['required_packages']);
+        self::assertContains('gnome-software', $resolved['required_packages']);
+        self::assertContains('nautilus', $resolved['required_packages']);
         self::assertContains('php-cli', $resolved['required_packages']);
         self::assertContains('ufw', $resolved['required_packages']);
         self::assertContains('os-prober', $resolved['required_packages']);
@@ -63,6 +69,10 @@ final class ManifestToolkitTest extends TestCase
         self::assertContains('apparmor', $buildInput['packages']['required']);
         self::assertContains('btrfs-progs', $buildInput['packages']['required']);
         self::assertContains('firefox-esr', $buildInput['packages']['required']);
+        self::assertContains('gdm3', $buildInput['packages']['required']);
+        self::assertContains('gnome-session', $buildInput['packages']['required']);
+        self::assertContains('gnome-shell', $buildInput['packages']['required']);
+        self::assertContains('xdg-desktop-portal-gnome', $buildInput['packages']['required']);
         self::assertContains('php-cli', $buildInput['packages']['required']);
         self::assertContains('ufw', $buildInput['packages']['required']);
         self::assertContains('snapper', $buildInput['packages']['recommended']);
@@ -127,5 +137,17 @@ final class ManifestToolkitTest extends TestCase
             self::assertNotContains('w4-server-meta', $resolved['required_meta_packages']);
             self::assertNotContains('self-contained-live-installer', $resolved['features']);
         }
+
+        $home = $toolkit->resolveProfile($manifests, 'w4-os-home');
+        self::assertContains('w4-desktop-gnome-meta', $home['required_meta_packages']);
+        self::assertContains('gdm3', $home['required_packages']);
+        self::assertContains('gnome-shell', $home['required_packages']);
+        self::assertContains('gnome-session', $home['required_packages']);
+        self::assertContains('nautilus', $home['required_packages']);
+
+        $business = $toolkit->resolveProfile($manifests, 'w4-os-business');
+        self::assertNotContains('w4-desktop-gnome-meta', $business['required_meta_packages']);
+        self::assertNotContains('gdm3', $business['required_packages']);
+        self::assertNotContains('gnome-shell', $business['required_packages']);
     }
 }

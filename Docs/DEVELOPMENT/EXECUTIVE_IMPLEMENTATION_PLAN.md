@@ -205,6 +205,8 @@ la cadena `overlay -> live` de `Home` ya fue repetida sobre WSL y quedo validado
 Siguiente paso despues de este corte:
 abrir el frente de packaging para que `Home` instale de verdad la ruta `GNOME + GDM` en rootfs y live, y solo despues seguir hacia `MX-008` y `MX-009` sobre una base grafica realmente materializada.
 
+El siguiente subcorte de `MX-007` debe mover la composicion `GNOME + GDM` al manifiesto de paquetes de `Home`: `w4-desktop-gnome-meta` tiene que quedar trazado como metapaquete requerido y el `build-input` de `w4-os-home` debe empezar a arrastrar `gdm`, `gnome-shell`, `gnome-session` y el baseline minimo de sesion GNOME necesario para que el `filesystem.manifest` del live deje de ser headless con defaults bonitos.
+
 ## Referencia historica · MX-004
 
 Objetivo del ciclo:

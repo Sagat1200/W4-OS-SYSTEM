@@ -7,6 +7,7 @@
   "meta_packages": {
     "required": [
       "w4-desktop-meta",
+      "w4-desktop-gnome-meta",
       "w4-home-meta"
     ],
     "recommended": []
@@ -14,10 +15,18 @@
   "packages": {
     "required": [
       "firefox-esr",
+      "gdm3",
+      "gnome-control-center",
+      "gnome-session",
+      "gnome-shell",
+      "gnome-software",
+      "gnome-terminal",
       "libreoffice",
+      "nautilus",
       "os-prober",
       "pipewire",
-      "xdg-desktop-portal"
+      "xdg-desktop-portal",
+      "xdg-desktop-portal-gnome"
     ],
     "recommended": [
       "evince",
