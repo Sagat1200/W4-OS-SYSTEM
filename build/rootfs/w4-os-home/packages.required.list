@@ -5,9 +5,16 @@ bash
 btrfs-progs
 ca-certificates
 firefox-esr
+gdm3
+gnome-control-center
+gnome-session
+gnome-shell
+gnome-software
+gnome-terminal
 grub-efi-amd64
 libreoffice
 linux-image-amd64
+nautilus
 network-manager
 os-prober
 php-cli
@@ -17,3 +24,4 @@ sudo
 systemd
 ufw
 xdg-desktop-portal
+xdg-desktop-portal-gnome

@@ -119,7 +119,7 @@ if command -v mmdebstrap >/dev/null 2>&1; then
   echo "==> Bootstrap base Debian con mmdebstrap"
   mmdebstrap \
     --variant=minbase \
-    --include=apparmor,apt,base-files,bash,btrfs-progs,ca-certificates,firefox-esr,grub-efi-amd64,libreoffice,linux-image-amd64,network-manager,os-prober,php-cli,pipewire,shim-signed,sudo,systemd,ufw,xdg-desktop-portal \
+    --include=apparmor,apt,base-files,bash,btrfs-progs,ca-certificates,firefox-esr,gdm3,gnome-control-center,gnome-session,gnome-shell,gnome-software,gnome-terminal,grub-efi-amd64,libreoffice,linux-image-amd64,nautilus,network-manager,os-prober,php-cli,pipewire,shim-signed,sudo,systemd,ufw,xdg-desktop-portal,xdg-desktop-portal-gnome \
     --aptopt='Acquire::Retries "3"' \
     trixie "${ROOTFS_DIR}" \
     "deb [signed-by=${HOST_BOOTSTRAP_KEYRING}] https://deb.debian.org/debian trixie main"
@@ -162,7 +162,7 @@ mkdir -p "${ROOTFS_DIR}/var/tmp"
 
   echo "==> Instalacion de paquetes requeridos"
   chroot "${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 update
-  chroot "${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 install -y apparmor apt base-files bash btrfs-progs ca-certificates firefox-esr grub-efi-amd64 libreoffice linux-image-amd64 network-manager os-prober php-cli pipewire shim-signed sudo systemd ufw xdg-desktop-portal
+  chroot "${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 install -y apparmor apt base-files bash btrfs-progs ca-certificates firefox-esr gdm3 gnome-control-center gnome-session gnome-shell gnome-software gnome-terminal grub-efi-amd64 libreoffice linux-image-amd64 nautilus network-manager os-prober php-cli pipewire shim-signed sudo systemd ufw xdg-desktop-portal xdg-desktop-portal-gnome
 fi
 
 echo "==> Asegurando keyring Debian dentro del rootfs"

@@ -27,6 +27,7 @@
     "meta_packages": {
         "required": [
             "w4-base-meta",
+            "w4-desktop-gnome-meta",
             "w4-desktop-meta",
             "w4-home-meta"
         ],
@@ -41,9 +42,16 @@
             "btrfs-progs",
             "ca-certificates",
             "firefox-esr",
+            "gdm3",
+            "gnome-control-center",
+            "gnome-session",
+            "gnome-shell",
+            "gnome-software",
+            "gnome-terminal",
             "grub-efi-amd64",
             "libreoffice",
             "linux-image-amd64",
+            "nautilus",
             "network-manager",
             "os-prober",
             "php-cli",
@@ -52,7 +60,8 @@
             "sudo",
             "systemd",
             "ufw",
-            "xdg-desktop-portal"
+            "xdg-desktop-portal",
+            "xdg-desktop-portal-gnome"
         ],
         "recommended": [
             "evince",
@@ -74,9 +83,9 @@
         "profile": "w4-os-home.profile.json"
     },
     "counts": {
-        "required_meta_packages": 3,
+        "required_meta_packages": 4,
         "recommended_meta_packages": 0,
-        "required_packages": 19,
+        "required_packages": 27,
         "recommended_packages": 5
     }
 }
