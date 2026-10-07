@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.138 | 2026-10-07 | Activa | `Home` ya valida la cadena completa `rootfs -> overlay -> live` con baseline `GNOME + GDM` y branding W4 en el artefacto real |
 | TECH | TECH-1.137 | 2026-10-07 | Activa | El bundle `rootfs` de `Home` ya incorpora fallback operativo de `mmdebstrap` a `debootstrap` para endurecer el bootstrap WSL |
 | TECH | TECH-1.136 | 2026-10-04 | Activa | `Home` ya declara packaging real `GNOME + GDM` en manifiestos y rootfs |
 | TECH | TECH-1.135 | 2026-10-04 | Activa | `MX-007` ya valida en `live-output` que los defaults desktop de `Home` sobreviven la cadena `overlay -> live` |

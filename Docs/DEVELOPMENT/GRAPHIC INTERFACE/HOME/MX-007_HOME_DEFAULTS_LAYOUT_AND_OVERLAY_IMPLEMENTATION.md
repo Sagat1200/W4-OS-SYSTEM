@@ -159,7 +159,28 @@ Con esto, el subcorte de `MX-007` mantiene separado el problema real:
 
 - manifests y baseline `GNOME + GDM` ya aprobados;
 - defaults y branding ya materializados;
-- validacion final pendiente concentrada en cerrar `rootfs -> overlay -> live` sobre una ruta WSL limpia.
+- validacion final ya cerrada sobre una ruta WSL limpia.
+
+## Cierre operativo materializado
+
+La validacion fuerte pendiente ya quedo cerrada con una corrida real sobre:
+
+- `/var/tmp/w4-os-system/w4-os-home-fallback-validation/assembled-rootfs`
+
+Secuencia confirmada:
+
+1. `run_rootfs_in_wsl.php` cerro el `rootfs` limpio de `Home` con el fallback operativo `mmdebstrap -> debootstrap` disponible en el bundle generado.
+2. `apply-overlay.sh` aplico sobre ese mismo arbol `desktop-defaults.json`, `dconf` de usuario/login y el wallpaper W4.
+3. `run_live_bundle_in_wsl.php` recompuso `build/live-output/w4-os-home/image-root/` con `W4_GENERATED_AT="2026-10-07T09:39:20Z"`.
+
+Evidencia de cierre:
+
+- `build/live-output/w4-os-home/image-root/live/filesystem.manifest` ya contiene `gdm3`, `gnome-control-center`, `gnome-session`, `gnome-shell`, `gnome-software`, `gnome-terminal`, `nautilus` y `xdg-desktop-portal-gnome`.
+- `build/live-output/w4-os-home/image-root/system-overlay/etc/w4/desktop-defaults.json` sigue presente en el artefacto final.
+- `build/live-output/w4-os-home/image-root/system-overlay/etc/dconf/db/local.d/00-w4-home` y `build/live-output/w4-os-home/image-root/system-overlay/etc/dconf/db/gdm.d/00-w4-login` sobreviven la composicion live.
+- `build/live-output/w4-os-home/image-root/system-overlay/usr/share/w4/branding/home/wallpapers/w4-home-default.svg` confirma que el branding reversible tambien viaja hasta el artefacto.
+
+Con esta evidencia, `MX-007` puede tratarse como cerrado para `Home`: la ruta `GNOME + GDM` ya no es solo contrato documental ni packaging declarativo, sino una base real validada de extremo a extremo.
 
 ## Referencias
 
