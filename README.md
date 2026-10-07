@@ -135,7 +135,11 @@ El aterrizaje operativo de este frente ya queda abierto en `Docs/DEVELOPMENT/GRA
 
 Ese mapa general ya tiene ademas un primer subcorte concreto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-008_HOME_CONTROL_CENTER_V1_SLICE_A_FOUNDATION.md`. El `Slice A` fija una ruta `read-first` y selecciona los cuatro modulos con mejor anclaje tecnico real para arrancar el trabajo de codigo: `Sistema`, `Seguridad`, `Actualizaciones` y `Almacenamiento`. La idea no es abrir una UI grande de golpe, sino empezar por adaptadores de lectura, procedencia del dato, evidencia y deep-links a `GNOME` donde el upstream ya cubre el caso.
 
-Con ello, el siguiente paso correcto ya no es seguir ampliando el mapa teorico de `MX-008`, sino abrir la primera capa tecnica de lectura para esos cuatro modulos. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
+Ese primer aterrizaje tecnico ya existe en codigo: `src/ControlCenter/ControlCenterSliceAToolkit.php` expone un read model homogeneo para el `Slice A` y agrega evidencia real desde artefactos y toolkits ya presentes del repo (`EditionPolicyToolkit`, baseline de seguridad, stores de update y perfiles/artefactos de instalacion/live). La cobertura inicial vive en `tests/ControlCenterSliceAToolkitTest.php`, donde el contrato queda validado con un workspace minimo aislado para no depender de un `build/` mutable.
+
+Ese siguiente paso ya tambien queda consumido en codigo: `src/ControlCenter/ControlCenterHomeToolkit.php` toma el `Slice A`, lo traduce a una home `read-first` de `Settings` con resumen, estado visible, badges, highlights y `deep-links` a `GNOME`, mientras `scripts/read_control_center_home.php` lo expone como payload JSON reutilizable. La cobertura adicional queda en `tests/ControlCenterHomeToolkitTest.php` y `tests/ControlCenterHomeCliTest.php`, para congelar tanto la home agregada como su salida CLI sin depender del `build/` mutable del repo.
+
+Con ello, el siguiente paso correcto ya no es abrir otra capa generica de lectura, sino endurecer el contrato de esa home de `Settings` y decidir su primer consumidor visual o API sin saltarse la frontera `read-first`. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 

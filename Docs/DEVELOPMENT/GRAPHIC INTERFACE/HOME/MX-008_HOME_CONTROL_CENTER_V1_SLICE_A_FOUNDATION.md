@@ -228,7 +228,9 @@ El `Slice A` puede considerarse correctamente aterrizado cuando existan estas co
 
 ## Siguiente paso inmediato
 
-Con este slice ya fijado, el siguiente trabajo tecnico correcto es abrir la primera capa de adaptadores de lectura para `Sistema`, `Seguridad`, `Actualizaciones` y `Almacenamiento`, manteniendo los cambios de estado detras de contratos ya existentes o explicitamente diferidos.
+Con este slice ya fijado, ese siguiente trabajo tecnico ya queda materializado: `src/ControlCenter/ControlCenterSliceAToolkit.php` expone el read model homogeneo para `Sistema`, `Seguridad`, `Actualizaciones` y `Almacenamiento`; `src/ControlCenter/ControlCenterHomeToolkit.php` consume ese material y lo traduce a una primera home `read-first` de `Settings`; y `scripts/read_control_center_home.php` lo expone como payload JSON reutilizable. La cobertura correspondiente ya existe en `tests/ControlCenterSliceAToolkitTest.php`, `tests/ControlCenterHomeToolkitTest.php` y `tests/ControlCenterHomeCliTest.php`.
+
+Con ello, el siguiente trabajo tecnico correcto ya pasa a ser endurecer el contrato de esa home inicial, decidir su primer consumidor visual/API y mantener diferidos `Red`, `Usuarios` y `Aplicaciones` hasta que este frente cierre mejor su capa base.
 
 ## Referencias
 
@@ -241,6 +243,9 @@ Con este slice ya fijado, el siguiente trabajo tecnico correcto es abrir la prim
 - `src/Installer/InstallerToolkit.php`
 - `src/Security/SecurityBaselineToolkit.php`
 - `src/Update/UpdateToolkit.php`
+- `src/ControlCenter/ControlCenterSliceAToolkit.php`
+- `src/ControlCenter/ControlCenterHomeToolkit.php`
+- `scripts/read_control_center_home.php`
 - `scripts/generate_system_overlay.php`
 - `scripts/generate_security_baseline_bundle.php`
 - `scripts/prepare_update_operation.php`
