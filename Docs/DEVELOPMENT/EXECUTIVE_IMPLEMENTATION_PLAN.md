@@ -210,6 +210,8 @@ El siguiente subcorte de `MX-007` debe mover la composicion `GNOME + GDM` al man
 Estado actual de ese subcorte:
 ya quedo implementado en `manifests/w4-os-home.profile.json`, que ahora declara `w4-desktop-gnome-meta` y un baseline real de `gdm3`, `gnome-shell`, `gnome-session`, `gnome-control-center`, `gnome-terminal`, `gnome-software`, `nautilus` y `xdg-desktop-portal-gnome`. `ManifestToolkitTest` y `RootfsBundleGenerationTest` ya validan esta resolucion, y `build-input` / `rootfs-manifest` de `Home` la reflejan de forma canonica. La parte que sigue abierta es operativa: el bootstrap limpio en WSL ya evidencia binarios `gnome-shell`, `gdm3` y `gnome-session` dentro del rootfs, pero la corrida completa hasta `live` aun requiere tiempo adicional de reconstruccion para cerrar el `filesystem.manifest` final.
 
+Como endurecimiento inmediato de ese frente operativo, `generate_rootfs_bundle.php` ya genera un `build-rootfs.sh` con fallback real de `mmdebstrap` a `debootstrap`: si `mmdebstrap` falla en el host WSL, el script limpia el rootfs parcial y reintenta automaticamente por la ruta clasica antes de abandonar el ensamblado. Con ello, el siguiente cuello de botella deja de ser el manifiesto o el overlay y queda claramente aislado a la ejecucion real del bootstrap pesado de `Home`.
+
 ## Referencia historica · MX-004
 
 Objetivo del ciclo:

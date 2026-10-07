@@ -201,6 +201,45 @@ normalize_debian_sources_keyring() {
   fi
 }
 
+reset_rootfs_dir() {
+  if [[ -z "\${ROOTFS_DIR}" || "\${ROOTFS_DIR}" == "/" ]]; then
+    echo "ERROR: ROOTFS_DIR invalido para limpieza." >&2
+    exit 1
+  fi
+
+  rm -rf "\${ROOTFS_DIR}"
+  mkdir -p "\${ROOTFS_DIR}"
+}
+
+bootstrap_with_mmdebstrap() {
+  mmdebstrap \
+    --variant=minbase \
+    --include={$requiredPackagesForMmdebstrap} \
+    --aptopt='Acquire::Retries "3"' \
+    {$codename} "\${ROOTFS_DIR}" \
+    "deb [signed-by=\${HOST_BOOTSTRAP_KEYRING}] https://deb.debian.org/debian {$codename} main"
+}
+
+bootstrap_with_debootstrap() {
+  debootstrap --keyring="\${HOST_BOOTSTRAP_KEYRING}" --merged-usr --variant=minbase {$codename} "\${ROOTFS_DIR}" https://deb.debian.org/debian/
+
+  echo "==> Asegurando keyring Debian dentro del rootfs"
+  ensure_debian_keyring_in_rootfs "\${ROOTFS_DIR}"
+  normalize_debian_sources_keyring "\${ROOTFS_DIR}"
+
+  echo "==> Asegurando estructura base de directorios"
+  {$directoryCommands}
+
+  echo "==> Montando pseudo-filesystems para chroot"
+  mount --bind /dev "\${ROOTFS_DIR}/dev"
+  mount -t proc proc "\${ROOTFS_DIR}/proc"
+  mount -t sysfs sysfs "\${ROOTFS_DIR}/sys"
+
+  echo "==> Instalacion de paquetes requeridos"
+  chroot "\${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 update
+  chroot "\${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 install -y {$requiredPackages}
+}
+
 cleanup() {
   umount -lf "\${ROOTFS_DIR}/proc" 2>/dev/null || true
   umount -lf "\${ROOTFS_DIR}/sys" 2>/dev/null || true
@@ -230,31 +269,22 @@ echo "==> Keyring bootstrap: \${HOST_BOOTSTRAP_KEYRING}"
 
 if command -v mmdebstrap >/dev/null 2>&1; then
   echo "==> Bootstrap base Debian con mmdebstrap"
-  mmdebstrap \
-    --variant=minbase \
-    --include={$requiredPackagesForMmdebstrap} \
-    --aptopt='Acquire::Retries "3"' \
-    {$codename} "\${ROOTFS_DIR}" \
-    "deb [signed-by=\${HOST_BOOTSTRAP_KEYRING}] https://deb.debian.org/debian {$codename} main"
+  set +e
+  bootstrap_with_mmdebstrap
+  mmdebstrap_exit_code=$?
+  set -e
+
+  if [[ \${mmdebstrap_exit_code} -ne 0 ]]; then
+    echo "WARN: mmdebstrap fallo con codigo \${mmdebstrap_exit_code}; limpiando rootfs parcial y reintentando con debootstrap." >&2
+    cleanup
+    reset_rootfs_dir
+
+    echo "==> Bootstrap base Debian con debootstrap (fallback)"
+    bootstrap_with_debootstrap
+  fi
 else
   echo "==> Bootstrap base Debian con debootstrap"
-  debootstrap --keyring="\${HOST_BOOTSTRAP_KEYRING}" --merged-usr --variant=minbase {$codename} "\${ROOTFS_DIR}" https://deb.debian.org/debian/
-
-  echo "==> Asegurando keyring Debian dentro del rootfs"
-  ensure_debian_keyring_in_rootfs "\${ROOTFS_DIR}"
-  normalize_debian_sources_keyring "\${ROOTFS_DIR}"
-
-  echo "==> Asegurando estructura base de directorios"
-  {$directoryCommands}
-
-  echo "==> Montando pseudo-filesystems para chroot"
-  mount --bind /dev "\${ROOTFS_DIR}/dev"
-  mount -t proc proc "\${ROOTFS_DIR}/proc"
-  mount -t sysfs sysfs "\${ROOTFS_DIR}/sys"
-
-  echo "==> Instalacion de paquetes requeridos"
-  chroot "\${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 update
-  chroot "\${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 install -y {$requiredPackages}
+  bootstrap_with_debootstrap
 fi
 
 echo "==> Asegurando keyring Debian dentro del rootfs"

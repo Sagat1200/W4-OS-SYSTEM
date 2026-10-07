@@ -128,6 +128,11 @@ final class RootfsBundleGenerationTest extends TestCase
         self::assertStringContainsString('gdm3', $buildScript);
         self::assertStringContainsString('gnome-shell', $buildScript);
         self::assertStringContainsString('gnome-session', $buildScript);
+        self::assertStringContainsString('bootstrap_with_mmdebstrap()', $buildScript);
+        self::assertStringContainsString('bootstrap_with_debootstrap()', $buildScript);
+        self::assertStringContainsString('mmdebstrap fallo con codigo', $buildScript);
+        self::assertStringContainsString('Bootstrap base Debian con debootstrap (fallback)', $buildScript);
+        self::assertStringContainsString('reset_rootfs_dir()', $buildScript);
     }
 
     /**

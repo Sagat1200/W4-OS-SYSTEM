@@ -140,6 +140,27 @@ Este bloque puede darse por cerrado cuando existan estas condiciones:
 
 Una vez cerrado este subcorte, el siguiente avance razonable es conectar esta misma capa con manifests o metapaquetes desktop cuando el repo ya tenga la materializacion real de `w4-desktop-gnome-meta`.
 
+## Endurecimiento operativo posterior
+
+Una vez materializado ese siguiente subcorte de packaging, el bloqueo ya no quedo en defaults, `dconf` ni branding, sino en la ejecucion real del bootstrap pesado dentro de WSL.
+
+Para reducir esa fragilidad operativa sin reabrir manifests ni overlays, `generate_rootfs_bundle.php` ya genera un `build-rootfs.sh` con dos rutas explicitas:
+
+- `bootstrap_with_mmdebstrap()` como camino preferente cuando el host lo soporta;
+- `bootstrap_with_debootstrap()` como fallback operativo automatico si `mmdebstrap` falla.
+
+La regla nueva es concreta:
+
+- si `mmdebstrap` completa el bootstrap, el flujo sigue igual;
+- si `mmdebstrap` devuelve error, el script limpia el rootfs parcial y reintenta por `debootstrap`;
+- la decision queda trazada en el propio bundle materializado de `rootfs`, sin depender de pasos manuales fuera del repo.
+
+Con esto, el subcorte de `MX-007` mantiene separado el problema real:
+
+- manifests y baseline `GNOME + GDM` ya aprobados;
+- defaults y branding ya materializados;
+- validacion final pendiente concentrada en cerrar `rootfs -> overlay -> live` sobre una ruta WSL limpia.
+
 ## Referencias
 
 - `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_GNOME_GDM_BASE_CONTRACT.md`

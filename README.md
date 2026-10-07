@@ -133,6 +133,8 @@ El siguiente paso operativo era delimitar `w4-desktop-gnome-meta` y la politica 
 
 El subcorte siguiente ya queda implementado en manifiestos: `manifests/w4-os-home.profile.json` ahora declara `w4-desktop-gnome-meta` y arrastra `gdm3`, `gnome-shell`, `gnome-session`, `gnome-control-center`, `gnome-terminal`, `gnome-software`, `nautilus` y `xdg-desktop-portal-gnome` como baseline de la ruta `Home + GNOME`. `ManifestToolkitTest` y `RootfsBundleGenerationTest` ya cubren esa resolucion y el `build-input` / `rootfs-manifest` de `Home` la reflejan de forma canonica. La validacion operativa fuerte de `rootfs -> live` sobre una ruta WSL limpia sigue en curso porque el bootstrap GNOME es mucho mas pesado; aun asi, ya existe evidencia intermedia de que `gnome-shell`, `gdm3` y `gnome-session` estan materializandose en el rootfs limpio y que la brecha ya no esta en manifests sino en el tiempo de reconstruccion del artefacto.
 
+Para endurecer justo ese punto, `scripts/generate_rootfs_bundle.php` ya emite un `build-rootfs.sh` con fallback operativo de `mmdebstrap` a `debootstrap`: si el host WSL no completa el bootstrap inicial, el script limpia el rootfs parcial y reintenta automaticamente por la ruta clasica antes de abortar. Con ello, `MX-007` deja mejor aislado su bloqueo real en la ejecucion pesada del rootfs y evita que un fallo puntual de `mmdebstrap` obligue a reabrir manifests, defaults o branding ya estabilizados.
+
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 
 - coordinador durable de actualizacion con `operation_id`,
