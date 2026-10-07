@@ -172,7 +172,7 @@ Este frente debe reflejarse al menos en:
 
 ## Siguiente paso inmediato
 
-Con este marco, el siguiente corte tecnico correcto es documentar el contrato de `w4-desktop-gnome-meta` y la politica minima de branding reversible antes de tocar implementacion UX o abrir `MX-008`.
+Con este marco, el siguiente corte tecnico correcto ya no es seguir abriendo shell o branding, sino usar esta base cerrada para `MX-008`. Ese handoff queda aterrizado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-008_HOME_CONTROL_CENTER_V1_CONTRACT.md`, donde `Control Center` se abre sobre `GNOME + GDM` real y no sobre una ruta abstracta.
 
 ## Referencias
 

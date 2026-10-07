@@ -168,47 +168,46 @@ Salida obligatoria:
 8. Business piloto.
 9. Compliance, soporte y release.
 
-## Siguiente ciclo recomendado · MX-007
+## Siguiente ciclo recomendado · MX-008
 
 Objetivo del ciclo:
-traducir la ADR de `MX-006` a una primera implementacion documental y tecnica de `shell` y branding minimo sobre `GNOME`, evitando abrir `MX-008` y `MX-009` sin una ruta base visible y modular.
+traducir la base ya validada de `GNOME + GDM` de `Home` a un primer contrato operativo de `Control Center`, evitando construir una UI ambigua o demasiado grande antes de fijar modulos, privilegios y APIs minimas.
 
 Estado de avance dentro de este ciclo:
 
-- `ADR-006` ya fue aprobada en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/ADR-006_HOME_GRAPHIC_CATALOG_AND_SELECTOR.md`.
-- `GNOME` ya queda fijado como interfaz predeterminada de `Home`.
-- `KDE Plasma`, `XFCE` y `Cinnamon` quedan como variantes controladas, no como ruta base equivalente.
-- `Business` ya documenta por `ADR-013` una ruta base distinta sobre `KDE Plasma`, por lo que `MX-007` no debe forzar convergencia artificial entre ediciones.
-- El siguiente corte correcto ya no es decidir plataforma, sino materializar defaults, branding y paquetes base sobre `GNOME`.
+- `ADR-006` ya fue aprobada y `GNOME` queda fijado como interfaz predeterminada de `Home`.
+- `MX-007` ya dejo validada la cadena real `rootfs -> overlay -> live` con `gnome-control-center` presente en el baseline materializado de `Home`.
+- `Business` sigue otra ruta visible por `ADR-013`, por lo que `MX-008` no debe forzar convergencia artificial entre ediciones.
+- La arquitectura general de `Control Center` ya existe en `111`, `112` y `368`, pero faltaba bajarla a un frente operativo concreto para `Home`.
 
 Resultado ejecutivo esperado:
 
-- Ruta base de `GNOME` delimitada para `Home`.
-- Alcance minimo de `shell` y branding documentado sin fork profundo del upstream.
-- Direccion clara para `w4-desktop-gnome-meta`, `GDM`, assets y defaults reversibles.
-- Dependencias y limites entre branding comun y overrides por variante documentados antes de abrir implementacion UX.
-- Bloqueo removido para que `MX-008` y `MX-009` trabajen sobre una base visible ya decidida.
+- Modulos V1 de `Control Center` identificados para `Home`.
+- Frontera clara entre paneles `GNOME-native`, modulos `W4-augmented` y piezas `W4-native`.
+- Contrato minimo de lectura, validacion, autorizacion y aplicacion fijado antes de abrir UI.
+- Dependencias de `MX-009` reescritas para apoyarse en este frente.
+- Trazabilidad ejecutiva y matriz de desarrollo alineadas a `MX-008` como nuevo ciclo activo.
 
 Entregables tecnicos obligatorios:
 
-1. Delimitacion de `w4-desktop-gnome-meta` y de la ruta base `GNOME + GDM`.
-2. Politica minima de branding reversible para wallpaper, tema, iconos, assets y defaults.
-3. Separacion explicita entre branding comun y overrides por variante controlada.
-4. Riesgos y dependencias de `MX-008` y `MX-009` actualizados contra la ruta base ya aprobada.
-5. Trazabilidad ejecutiva y matriz de desarrollo alineadas a `GNOME` como base de `Home`.
+1. Mapa inicial de modulos V1 para `Sistema`, `Red`, `Usuarios`, `Seguridad`, `Actualizaciones`, `Almacenamiento` y `Aplicaciones`.
+2. Regla explicita de reutilizacion de `gnome-control-center` frente a UI W4 propia.
+3. Frontera de privilegios y de autorizacion congelada para cambios de sistema.
+4. Contrato minimo API/controlador para modulos con backend.
+5. Handoff claro hacia `MX-009` sin mezclar este frente con onboarding o capa de producto completa.
 
-Ese aterrizaje operativo ya queda abierto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_GNOME_SHELL_AND_BRANDING_MINIMO.md`, para que el frente tenga una lista concreta de entregables, criterios de cierre, fuera de alcance y secuencia de trabajo antes de tocar implementacion UX. El primer subcorte ya queda fijado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_GNOME_GDM_BASE_CONTRACT.md`, que separa `w4-desktop-meta`, `w4-desktop-gnome-meta` y la ruta base visible `GNOME + GDM`; el segundo ya queda fijado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_REVERSIBLE_BRANDING_POLICY.md`, que define wallpaper, tema, iconos, assets de login y mecanismo de defaults bajo criterio de reversibilidad; y el tercero ya queda materializado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-007_HOME_DEFAULTS_LAYOUT_AND_OVERLAY_IMPLEMENTATION.md`, `config/editions/home/desktop-defaults.json` y `generate_system_overlay.php`, que ahora transportan defaults `dconf`, wallpaper W4 y metadata de desktop dentro del overlay real de `Home`.
+Ese aterrizaje operativo ya queda abierto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-008_HOME_CONTROL_CENTER_V1_CONTRACT.md`, para que `Control Center` deje de ser solo una arquitectura general y pase a contar con un contrato V1 concreto sobre `Home`. La pieza toma como referencias `Docs/W4-OS/111_W4_OS_CONTROL_CENTER_ARCHITECTURE.md`, `Docs/W4-OS/112_W4_OS_SYSTEM_SETTINGS.md` y `Docs/W4-OS/368_W4_OS_CONTROL_CENTER_API.md`, pero las baja a una ruta conservadora: reutilizar `GNOME` cuando el upstream ya cubre el caso, envolver con W4 solo donde haga falta politica, procedencia o validacion adicional, y evitar una UI privilegiada sin contrato estable.
 
 Resultado del siguiente paso:
-la cadena `overlay -> live` de `Home` ya fue repetida otra vez sobre WSL, ahora sobre una ruta limpia reforzada por fallback `mmdebstrap -> debootstrap`, y queda validado que la nueva capa visible y la base grafica llegan juntas al artefacto real. `build/live-output/w4-os-home/image-root/system-overlay/` ya contiene `etc/w4/desktop-defaults.json`, perfiles y bases `dconf`, `00-w4-login` y el wallpaper W4; al mismo tiempo, `build/live-output/w4-os-home/image-root/live/filesystem.manifest` ya evidencia `gdm3`, `gnome-control-center`, `gnome-session`, `gnome-shell`, `gnome-software`, `gnome-terminal`, `nautilus` y `xdg-desktop-portal-gnome`.
+`MX-008` ya no parte de una shell hipotetica. La base visible de `Home` queda materializada en `build/live-output/w4-os-home/image-root/live/filesystem.manifest` y `build/live-output/w4-os-home/image-root/system-overlay/`, por lo que el frente puede seleccionar modulos V1 reales sin reabrir packaging, branding ni defaults.
 
 Siguiente paso despues de este corte:
-tomar `MX-007` como base ya validada y abrir `MX-008` sobre esa ruta `GNOME + GDM` materializada, dejando `MX-009` para el primer recorrido de Home utilizable sobre una shell ya cerrada.
+seleccionar el primer subconjunto implementable de modulos V1 para `Home`, empezando por los mas compatibles con una ruta incremental: `Sistema`, `Seguridad`, `Actualizaciones` y `Almacenamiento`, manteniendo `MX-009` como el siguiente frente visible de producto una vez fijado este contrato.
 
 Estado actual de ese subcorte:
-ya quedo implementado en `manifests/w4-os-home.profile.json`, que ahora declara `w4-desktop-gnome-meta` y un baseline real de `gdm3`, `gnome-shell`, `gnome-session`, `gnome-control-center`, `gnome-terminal`, `gnome-software`, `nautilus` y `xdg-desktop-portal-gnome`. `ManifestToolkitTest` y `RootfsBundleGenerationTest` ya validan esta resolucion, y `build-input` / `rootfs-manifest` de `Home` la reflejan de forma canonica. La validacion materializada completa ya cerro sobre `/var/tmp/w4-os-system/w4-os-home-fallback-validation/assembled-rootfs`, con overlay aplicado sobre el mismo arbol y `build/live-output/w4-os-home/image-root/` regenerado en `2026-10-07T09:39:20Z`.
+ya existe una base suficiente para abrirlo: `gnome-control-center` forma parte del baseline materializado de `Home`; la arquitectura documental de `Control Center` y `System Settings` ya estaba redactada; y `MX-008_HOME_CONTROL_CENTER_V1_CONTRACT.md` ya define la clasificacion inicial entre modulos `GNOME-native`, `W4-augmented` y `W4-native`, junto con la frontera de privilegios y el alcance V1 recomendado.
 
-Como endurecimiento inmediato de ese frente operativo, `generate_rootfs_bundle.php` ya genera un `build-rootfs.sh` con fallback real de `mmdebstrap` a `debootstrap`: si `mmdebstrap` falla en el host WSL, el script limpia el rootfs parcial y reintenta automaticamente por la ruta clasica antes de abandonar el ensamblado. Con ello, el siguiente cuello de botella deja de ser el manifiesto o el overlay y queda absorbido como defensa operativa del bootstrap, no como deuda abierta de `MX-007`.
+Como guardrail de este frente, la regla principal queda congelada desde el arranque: si `GNOME` ya ofrece un panel suficiente para V1 y no existe politica W4 adicional, se reutiliza antes de construir una UI nueva. Con ello, `MX-008` mantiene el enfoque incremental, minimiza deriva frente al upstream y prepara una base mas realista para `MX-009`.
 
 ## Referencia historica · MX-004
 
