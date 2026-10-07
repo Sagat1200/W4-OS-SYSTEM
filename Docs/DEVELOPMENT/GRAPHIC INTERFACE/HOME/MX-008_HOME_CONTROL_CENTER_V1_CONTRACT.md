@@ -196,6 +196,8 @@ Con este marco, el siguiente corte tecnico correcto es:
 - seleccionar el primer subconjunto implementable de modulos V1;
 - y solo despues abrir cambios de codigo o UI sobre un contrato ya estable.
 
+Ese siguiente subcorte ya queda aterrizado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-008_HOME_CONTROL_CENTER_V1_SLICE_A_FOUNDATION.md`, que fija un `Slice A` conservador y `read-first` sobre `Sistema`, `Seguridad`, `Actualizaciones` y `Almacenamiento`. Con ello, `MX-008` ya no solo define el mapa completo de modulos V1, sino tambien el primer paquete concreto sobre el que deben arrancar los adaptadores de lectura y la primera home de `Settings`.
+
 ## Referencias
 
 - `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/ADR-006_HOME_GRAPHIC_CATALOG_AND_SELECTOR.md`

@@ -133,7 +133,9 @@ La base de este ciclo ya no es hipotetica: `MX-007` dejo validada de extremo a e
 
 El aterrizaje operativo de este frente ya queda abierto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-008_HOME_CONTROL_CENTER_V1_CONTRACT.md`. Ese documento toma como referencias `Docs/W4-OS/111_W4_OS_CONTROL_CENTER_ARCHITECTURE.md`, `112_W4_OS_SYSTEM_SETTINGS.md` y `368_W4_OS_CONTROL_CENTER_API.md`, pero baja esas piezas a una ruta concreta para `Home V1`: reutilizar `gnome-control-center` cuando el upstream ya cubre el caso, envolver con una capa W4 solo donde haga falta procedencia, politica, autorizacion o integracion visible, y evitar que la UI se convierta en un lanzador privilegiado sin contrato estable.
 
-Con ello, el siguiente paso correcto ya no es reabrir shell, branding ni packaging de `Home`, sino seleccionar el primer subconjunto implementable de `MX-008`: `Sistema`, `Red`, `Seguridad`, `Actualizaciones`, `Almacenamiento`, `Usuarios` y `Aplicaciones`, clasificando cada modulo como `GNOME-native`, `W4-augmented` o `W4-native` antes de tocar codigo. Sobre esa base, `MX-009` podra abrir despues un recorrido `Home utilizable` apoyado en settings y flujo iniciales ya acotados.
+Ese mapa general ya tiene ademas un primer subcorte concreto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-008_HOME_CONTROL_CENTER_V1_SLICE_A_FOUNDATION.md`. El `Slice A` fija una ruta `read-first` y selecciona los cuatro modulos con mejor anclaje tecnico real para arrancar el trabajo de codigo: `Sistema`, `Seguridad`, `Actualizaciones` y `Almacenamiento`. La idea no es abrir una UI grande de golpe, sino empezar por adaptadores de lectura, procedencia del dato, evidencia y deep-links a `GNOME` donde el upstream ya cubre el caso.
+
+Con ello, el siguiente paso correcto ya no es seguir ampliando el mapa teorico de `MX-008`, sino abrir la primera capa tecnica de lectura para esos cuatro modulos. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 

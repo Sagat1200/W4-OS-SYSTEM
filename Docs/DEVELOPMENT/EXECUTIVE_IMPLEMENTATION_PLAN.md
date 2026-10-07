@@ -199,13 +199,13 @@ Entregables tecnicos obligatorios:
 Ese aterrizaje operativo ya queda abierto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-008_HOME_CONTROL_CENTER_V1_CONTRACT.md`, para que `Control Center` deje de ser solo una arquitectura general y pase a contar con un contrato V1 concreto sobre `Home`. La pieza toma como referencias `Docs/W4-OS/111_W4_OS_CONTROL_CENTER_ARCHITECTURE.md`, `Docs/W4-OS/112_W4_OS_SYSTEM_SETTINGS.md` y `Docs/W4-OS/368_W4_OS_CONTROL_CENTER_API.md`, pero las baja a una ruta conservadora: reutilizar `GNOME` cuando el upstream ya cubre el caso, envolver con W4 solo donde haga falta politica, procedencia o validacion adicional, y evitar una UI privilegiada sin contrato estable.
 
 Resultado del siguiente paso:
-`MX-008` ya no parte de una shell hipotetica. La base visible de `Home` queda materializada en `build/live-output/w4-os-home/image-root/live/filesystem.manifest` y `build/live-output/w4-os-home/image-root/system-overlay/`, por lo que el frente puede seleccionar modulos V1 reales sin reabrir packaging, branding ni defaults.
+`MX-008` ya no parte de una shell hipotetica. La base visible de `Home` queda materializada en `build/live-output/w4-os-home/image-root/live/filesystem.manifest` y `build/live-output/w4-os-home/image-root/system-overlay/`, y el frente ya selecciona un primer paquete tecnico concreto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-008_HOME_CONTROL_CENTER_V1_SLICE_A_FOUNDATION.md`.
 
 Siguiente paso despues de este corte:
-seleccionar el primer subconjunto implementable de modulos V1 para `Home`, empezando por los mas compatibles con una ruta incremental: `Sistema`, `Seguridad`, `Actualizaciones` y `Almacenamiento`, manteniendo `MX-009` como el siguiente frente visible de producto una vez fijado este contrato.
+abrir la primera capa tecnica de lectura para `Sistema`, `Seguridad`, `Actualizaciones` y `Almacenamiento`, manteniendo `MX-009` como el siguiente frente visible de producto una vez fijado este `Slice A`.
 
 Estado actual de ese subcorte:
-ya existe una base suficiente para abrirlo: `gnome-control-center` forma parte del baseline materializado de `Home`; la arquitectura documental de `Control Center` y `System Settings` ya estaba redactada; y `MX-008_HOME_CONTROL_CENTER_V1_CONTRACT.md` ya define la clasificacion inicial entre modulos `GNOME-native`, `W4-augmented` y `W4-native`, junto con la frontera de privilegios y el alcance V1 recomendado.
+ya existe una base suficiente para abrirlo: `gnome-control-center` forma parte del baseline materializado de `Home`; la arquitectura documental de `Control Center` y `System Settings` ya estaba redactada; `MX-008_HOME_CONTROL_CENTER_V1_CONTRACT.md` ya define la clasificacion inicial entre modulos `GNOME-native`, `W4-augmented` y `W4-native`; y `MX-008_HOME_CONTROL_CENTER_V1_SLICE_A_FOUNDATION.md` ya fija una estrategia `read-first` con fuentes tecnicas concretas en `EditionPolicyToolkit`, `SecurityBaselineToolkit`, `UpdateToolkit` e `InstallerToolkit`.
 
 Como guardrail de este frente, la regla principal queda congelada desde el arranque: si `GNOME` ya ofrece un panel suficiente para V1 y no existe politica W4 adicional, se reutiliza antes de construir una UI nueva. Con ello, `MX-008` mantiene el enfoque incremental, minimiza deriva frente al upstream y prepara una base mas realista para `MX-009`.
 
