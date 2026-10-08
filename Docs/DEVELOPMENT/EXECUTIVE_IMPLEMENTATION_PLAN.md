@@ -168,46 +168,44 @@ Salida obligatoria:
 8. Business piloto.
 9. Compliance, soporte y release.
 
-## Siguiente ciclo recomendado · MX-008
+## Siguiente ciclo recomendado · MX-009
 
 Objetivo del ciclo:
-traducir la base ya validada de `GNOME + GDM` de `Home` a un primer contrato operativo de `Control Center`, evitando construir una UI ambigua o demasiado grande antes de fijar modulos, privilegios y APIs minimas.
+traducir la base ya cerrada de `Home` en un primer recorrido visible y utilizable para tareas domesticas basicas, sin absorber todavia onboarding interactivo completo ni ampliar el catalogo de apps sin evidencia.
 
 Estado de avance dentro de este ciclo:
 
 - `ADR-006` ya fue aprobada y `GNOME` queda fijado como interfaz predeterminada de `Home`.
-- `MX-007` ya dejo validada la cadena real `rootfs -> overlay -> live` con `gnome-control-center` presente en el baseline materializado de `Home`.
-- `Business` sigue otra ruta visible por `ADR-013`, por lo que `MX-008` no debe forzar convergencia artificial entre ediciones.
-- La arquitectura general de `Control Center` ya existe en `111`, `112` y `368`, pero faltaba bajarla a un frente operativo concreto para `Home`.
+- `MX-007` ya dejo validada la cadena real `rootfs -> overlay -> live` sobre `GNOME + GDM`.
+- `MX-008` ya queda tratado como baseline suficiente de `Settings` para `Home V1`.
+- El manifiesto real de `Home` ya declara `firefox-esr`, `libreoffice`, `nautilus`, `gnome-control-center` y `gnome-software`, y esos paquetes ya aparecen materializados en el `live-output` actual.
 
 Resultado ejecutivo esperado:
 
-- Modulos V1 de `Control Center` identificados para `Home`.
-- Frontera clara entre paneles `GNOME-native`, modulos `W4-augmented` y piezas `W4-native`.
-- Contrato minimo de lectura, validacion, autorizacion y aplicacion fijado antes de abrir UI.
-- Dependencias de `MX-009` reescritas para apoyarse en este frente.
-- Trazabilidad ejecutiva y matriz de desarrollo alineadas a `MX-008` como nuevo ciclo activo.
+- baseline minimo visible de `Home` congelado sobre artefacto real;
+- rutas de shell y `Settings` tratadas como parte del contrato utilizable;
+- apps y accesos minimos verificados sin inspeccion manual;
+- handoff claro hacia slices posteriores de onboarding, accesibilidad y apps adicionales.
 
 Entregables tecnicos obligatorios:
 
-1. Mapa inicial de modulos V1 para `Sistema`, `Red`, `Usuarios`, `Seguridad`, `Actualizaciones`, `Almacenamiento` y `Aplicaciones`.
-2. Regla explicita de reutilizacion de `gnome-control-center` frente a UI W4 propia.
-3. Frontera de privilegios y de autorizacion congelada para cambios de sistema.
-4. Contrato minimo API/controlador para modulos con backend.
-5. Handoff claro hacia `MX-009` sin mezclar este frente con onboarding o capa de producto completa.
+1. contrato operativo propio de `MX-009` para `Home V1`;
+2. validador canonico del baseline utilizable sobre `live-output`;
+3. salida `json` y `text` reutilizable por QA o por futuros gates del pipeline;
+4. trazabilidad ejecutiva alineada para tratar `MX-009` como frente activo.
 
-Ese aterrizaje operativo ya queda abierto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-008_HOME_CONTROL_CENTER_V1_CONTRACT.md`, para que `Control Center` deje de ser solo una arquitectura general y pase a contar con un contrato V1 concreto sobre `Home`. La pieza toma como referencias `Docs/W4-OS/111_W4_OS_CONTROL_CENTER_ARCHITECTURE.md`, `Docs/W4-OS/112_W4_OS_SYSTEM_SETTINGS.md` y `Docs/W4-OS/368_W4_OS_CONTROL_CENTER_API.md`, pero las baja a una ruta conservadora: reutilizar `GNOME` cuando el upstream ya cubre el caso, envolver con W4 solo donde haga falta politica, procedencia o validacion adicional, y evitar una UI privilegiada sin contrato estable.
+Ese aterrizaje operativo ya queda abierto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-009_HOME_USABLE_V1_CONTRACT.md`. La pieza baja `011`, `131`, `231`, `232`, `237` y `408` a una ruta conservadora: primero se congela el baseline visible de aplicaciones y entrypoints ya materializados, luego se decide si onboarding, accesibilidad, PDF y multimedia entran como slices posteriores con evidencia propia.
 
 Resultado del siguiente paso:
-`MX-008` ya no parte de una shell hipotetica ni se queda en un read model aislado. La base visible de `Home` queda materializada en `build/live-output/w4-os-home/image-root/live/filesystem.manifest` y `build/live-output/w4-os-home/image-root/system-overlay/`; el frente ya selecciona un primer paquete tecnico concreto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-008_HOME_CONTROL_CENTER_V1_SLICE_A_FOUNDATION.md`; ya materializa una primera superficie de codigo en `src/ControlCenter/ControlCenterSliceAToolkit.php`; consume ese `Slice A` desde `src/ControlCenter/ControlCenterHomeToolkit.php`, con salida reutilizable por `scripts/read_control_center_home.php` tanto para home agregada como para detalle por modulo; puede persistir snapshots autocontenidos en `build/control-center/<perfil>/` mediante `scripts/generate_control_center_snapshot.php`; puede leer esa persistencia como contrato estable con `src/ControlCenter/ControlCenterSnapshotToolkit.php` y `scripts/read_control_center_snapshot.php`; puede traducirla a una respuesta API estable mediante `src/ControlCenter/ControlCenterApiToolkit.php` y `scripts/read_control_center_api.php`; puede materializar una primera interfaz visual estatica mediante `src/ControlCenter/ControlCenterUiToolkit.php` y `scripts/generate_control_center_ui_bundle.php`; queda formalmente orientado por `ADR-015` a una ruta `GNOME-augmented` con mapa tecnico inicial en `src/ControlCenter/ControlCenterGnomeIntegrationToolkit.php` y `scripts/generate_control_center_gnome_integration.php`; puede emitir launchers `.desktop` reales para GNOME mediante `src/ControlCenter/ControlCenterGnomeLauncherToolkit.php` y `scripts/generate_control_center_gnome_launchers.php`; `scripts/generate_system_overlay.php` ya integra ese bundle dentro del overlay real de `Home`; `scripts/generate_live_bundle.php` ya propaga ese estado hacia el contrato del live bundle; y `src/ControlCenter/ControlCenterLiveOutputToolkit.php` junto con `scripts/validate_control_center_live_output.php` ya añaden un gate especifico para contrastar un `live-output` materializado real contra esa ruta `GNOME-augmented`.
+`src/Home/HomeUsabilityLiveOutputToolkit.php`, expuesto por `scripts/validate_home_usability_live_output.php`, ya valida sobre `build/live-output/w4-os-home/` la presencia de `firefox-esr`, `libreoffice`, `nautilus`, `gnome-control-center`, `gnome-software`, los favoritos clave del shell y las rutas visibles `W4 Settings`/`Updates`. `tests/HomeUsabilityLiveOutputCliTest.php` congela ese contrato sobre un workspace sintetico y la corrida real ya confirma que el baseline minimo requerido esta presente en el artefacto materializado de `Home`.
 
 Siguiente paso despues de este corte:
-ese primer ajuste UX ya queda materializado tambien en defaults: `config/editions/home/desktop-defaults.json` ahora fija `w4-control-center-home-home.desktop` y `w4-control-center-home-updates.desktop` como favoritos por defecto de `Home`, manteniendo `MX-009` como el siguiente frente visible de producto una vez que confirmemos si este set de favoritos queda congelado tal cual o si requiere un ajuste menor adicional.
+usar esta apertura para cerrar el siguiente subcorte de `MX-009`: decidir si `evince` y `vlc` deben promocionarse desde recomendados a baseline efectivo de `Home V1`, o si se dejan como extras explicitamente fuera del baseline minimo visible.
 
 Estado actual de ese subcorte:
-ya existe una base suficiente para abrirlo: `gnome-control-center` forma parte del baseline materializado de `Home`; la arquitectura documental de `Control Center` y `System Settings` ya estaba redactada; `MX-008_HOME_CONTROL_CENTER_V1_CONTRACT.md` ya define la clasificacion inicial entre modulos `GNOME-native`, `W4-augmented` y `W4-native`; `MX-008_HOME_CONTROL_CENTER_V1_SLICE_A_FOUNDATION.md` ya fija una estrategia `read-first` con fuentes tecnicas concretas en `EditionPolicyToolkit`, `SecurityBaselineToolkit`, `UpdateToolkit` e `InstallerToolkit`; `ControlCenterSliceAToolkit` ya expone un read model homogeneo para `Sistema`, `Seguridad`, `Actualizaciones` y `Almacenamiento`; `ControlCenterHomeToolkit` ya agrega ese material en una primera home de `Settings` con estado visible, highlights, `status_reason`, `deep-links` a `GNOME` y `drill-down` por modulo en formatos `json` y `text`; `ControlCenterHomeRenderer` centraliza el render reutilizable; `generate_control_center_snapshot.php` ya deja evidencia persistida lista para consumidores posteriores; `ControlCenterSnapshotToolkit` junto con `read_control_center_snapshot.php` ya consumen esa persistencia como fachada estable; `ControlCenterApiToolkit` junto con `read_control_center_api.php` ya la traducen a una respuesta API versionada para `home` y `module`; `ControlCenterUiToolkit` junto con `generate_control_center_ui_bundle.php` ya convierten esa respuesta en una primera UI HTML autocontenida; `ADR-015` junto con `ControlCenterGnomeIntegrationToolkit` ya congelan que esa UI queda como referencia contractual dentro de una ruta `GNOME-augmented`; `ControlCenterGnomeLauncherToolkit` junto con `generate_control_center_gnome_launchers.php` ya convierten ese mapa en launchers `.desktop` listos para un handoff real; `generate_system_overlay.php` ya integra esos launchers dentro del overlay efectivo; `generate_live_bundle.php` ya propaga esa integracion al `live-manifest`; `ControlCenterLiveOutputToolkit` junto con `validate_control_center_live_output.php` ya permiten validar el `live-output` materializado final sin inspeccion manual archivo por archivo; y `config/editions/home/desktop-defaults.json` ya promociona `W4 Settings` y `Updates` dentro de los favoritos por defecto del shell usando esos mismos launchers GNOME. La fotografia operativa ya queda cerrada tambien en artefacto real: `build/live-output/w4-os-home/` fue recompuesto desde el rootfs validado de `Home`, el validador ya cierra con `status=ok`, los cuatro launchers GNOME ya estan presentes en `system-overlay` y el `filesystem.manifest` vuelve a confirmar `gdm3`, `gnome-control-center`, `gnome-session`, `gnome-shell`, `gnome-software`, `nautilus` y `xdg-desktop-portal-gnome`.
+el validador real ya devuelve `ok` para navegador, documentos, archivos, `W4 Settings` y `Updates`; tambien confirma `graphical.target` y la alineacion de favoritos del shell. La senal que queda abierta ya no es de shell ni de `Settings`, sino de packaging visible: `evince` y `vlc` siguen ausentes del `filesystem.manifest` materializado del `live-output` actual.
 
-Como guardrail de este frente, la regla principal queda congelada desde el arranque: si `GNOME` ya ofrece un panel suficiente para V1 y no existe politica W4 adicional, se reutiliza antes de construir una UI nueva. Con ello, `MX-008` mantiene el enfoque incremental, minimiza deriva frente al upstream y prepara una base mas realista para `MX-009`.
+Como guardrail de este frente, la regla principal queda congelada desde el arranque: `MX-009` no debe intentar cerrar todo `Home V1` de una sola vez. Primero se congela el baseline minimo visible y solo despues se habilitan slices mas amplios de onboarding, accesibilidad o catalogo.
 
 ## Referencia historica · MX-004
 

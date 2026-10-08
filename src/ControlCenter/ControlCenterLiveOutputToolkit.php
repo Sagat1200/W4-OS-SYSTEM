@@ -63,6 +63,17 @@ final class ControlCenterLiveOutputToolkit
         $filesystemManifestLines = $this->readFilesystemManifestLines(
             $resolvedLiveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'live' . DIRECTORY_SEPARATOR . 'filesystem.manifest'
         );
+        $desktopDefaults = $this->readRequiredJsonFile(
+            $resolvedLiveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'desktop-defaults.json',
+            'No se pudo leer desktop-defaults.json del live materializado'
+        );
+        $favorites = $this->validateFavorites($desktopDefaults);
+        $dconfFavoritesPath = $resolvedLiveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'dconf' . DIRECTORY_SEPARATOR . 'db' . DIRECTORY_SEPARATOR . 'local.d' . DIRECTORY_SEPARATOR . '00-w4-home';
+        $dconfFavorites = $this->readRequiredTextFile(
+            $dconfFavoritesPath,
+            'No se pudo leer el payload dconf de favoritos del live materializado'
+        );
+        $this->validateDconfFavorites($dconfFavorites, $favorites, $dconfFavoritesPath);
 
         return [
             'control_center_live_output_validation_schema_version' => 1,
@@ -78,6 +89,11 @@ final class ControlCenterLiveOutputToolkit
             'filesystem_packages' => [
                 'gnome-control-center' => in_array('gnome-control-center', $filesystemManifestLines, true),
                 'gnome-software' => in_array('gnome-software', $filesystemManifestLines, true),
+            ],
+            'favorites' => [
+                'declared' => $favorites,
+                'runtime_defaults' => 'image-root/system-overlay/etc/w4/desktop-defaults.json',
+                'runtime_dconf' => 'image-root/system-overlay/etc/dconf/db/local.d/00-w4-home',
             ],
             'live_summary' => [
                 'live_user' => (string) ($liveSummary['W4_LIVE_USER'] ?? ''),
@@ -95,6 +111,8 @@ final class ControlCenterLiveOutputToolkit
     {
         $desktopFiles = is_array($validation['desktop_files'] ?? null) ? $validation['desktop_files'] : [];
         $packages = is_array($validation['filesystem_packages'] ?? null) ? $validation['filesystem_packages'] : [];
+        $favorites = is_array($validation['favorites'] ?? null) ? $validation['favorites'] : [];
+        $favoriteEntries = is_array($favorites['declared'] ?? null) ? $favorites['declared'] : [];
         $liveSummary = is_array($validation['live_summary'] ?? null) ? $validation['live_summary'] : [];
 
         $lines = [
@@ -109,9 +127,18 @@ final class ControlCenterLiveOutputToolkit
             sprintf('filesystem.manifest -> gnome-control-center: %s', !empty($packages['gnome-control-center']) ? 'yes' : 'no'),
             sprintf('filesystem.manifest -> gnome-software: %s', !empty($packages['gnome-software']) ? 'yes' : 'no'),
             '',
-            'Desktop files:',
+            'Favorites:',
+            '',
         ];
 
+        foreach ($favoriteEntries as $favoriteEntry) {
+            if (is_string($favoriteEntry)) {
+                $lines[] = sprintf('- %s', $favoriteEntry);
+            }
+        }
+
+        $lines[] = '';
+        $lines[] = 'Desktop files:';
         foreach ($desktopFiles as $desktopFile) {
             if (is_string($desktopFile)) {
                 $lines[] = sprintf('- %s', $desktopFile);
@@ -177,6 +204,20 @@ final class ControlCenterLiveOutputToolkit
         return $decoded;
     }
 
+    private function readRequiredTextFile(string $path, string $errorMessage): string
+    {
+        if (!is_file($path)) {
+            throw new ValidationError(sprintf('%s: %s', $errorMessage, $path));
+        }
+
+        $raw = file_get_contents($path);
+        if ($raw === false) {
+            throw new ValidationError(sprintf('%s: %s', $errorMessage, $path));
+        }
+
+        return $raw;
+    }
+
     /**
      * @return list<string>
      */
@@ -233,5 +274,62 @@ final class ControlCenterLiveOutputToolkit
         $excerpt = array_slice($lines, 0, 4);
 
         return implode("\n", $excerpt);
+    }
+
+    /**
+     * @param array<string, mixed> $desktopDefaults
+     * @return list<string>
+     */
+    private function validateFavorites(array $desktopDefaults): array
+    {
+        if (($desktopDefaults['kind'] ?? null) !== 'desktop-defaults') {
+            throw new ValidationError('desktop-defaults.json no tiene un kind soportado');
+        }
+
+        $favorites = $desktopDefaults['favorites'] ?? null;
+        if (!is_array($favorites)) {
+            throw new ValidationError('desktop-defaults.json no declara una lista de favorites');
+        }
+
+        $normalizedFavorites = [];
+        foreach ($favorites as $favorite) {
+            if (!is_string($favorite) || $favorite === '') {
+                throw new ValidationError('desktop-defaults.json contiene un favorito invalido');
+            }
+
+            $normalizedFavorites[] = $favorite;
+        }
+
+        foreach ([
+            'w4-control-center-home-home.desktop',
+            'w4-control-center-home-updates.desktop',
+        ] as $requiredFavorite) {
+            if (!in_array($requiredFavorite, $normalizedFavorites, true)) {
+                throw new ValidationError(sprintf('Falta el favorito requerido %s en desktop-defaults.json', $requiredFavorite));
+            }
+        }
+
+        if (in_array('org.gnome.Software.desktop', $normalizedFavorites, true)) {
+            throw new ValidationError('desktop-defaults.json mantiene org.gnome.Software.desktop como favorito legacy');
+        }
+
+        return $normalizedFavorites;
+    }
+
+    /**
+     * @param list<string> $favorites
+     */
+    private function validateDconfFavorites(string $dconfDefaults, array $favorites, string $path): void
+    {
+        foreach ($favorites as $favorite) {
+            $needle = sprintf("'%s'", $favorite);
+            if (!str_contains($dconfDefaults, $needle)) {
+                throw new ValidationError(sprintf('El payload dconf no contiene el favorito %s: %s', $favorite, $path));
+            }
+        }
+
+        if (str_contains($dconfDefaults, "'org.gnome.Software.desktop'")) {
+            throw new ValidationError(sprintf('El payload dconf mantiene org.gnome.Software.desktop como favorito legacy: %s', $path));
+        }
     }
 }

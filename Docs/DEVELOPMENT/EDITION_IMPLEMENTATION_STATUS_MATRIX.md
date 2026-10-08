@@ -20,7 +20,7 @@ Este documento no sustituye `DEVELOPMENT_MATRIX.md`. Su funcion es resumir, por 
 ## Resumen corto
 
 - `Server` es hoy la edicion tecnicamente mas madura en pipeline operativo y validacion runtime.
-- `Home` ya tiene cerrada la base tecnica instalable, actualizable y endurecida, pero no su capa de producto visible.
+- `Home` ya tiene cerrada la base tecnica instalable, actualizable y endurecida, y ahora tambien su baseline visible de shell + `Settings`; su deuda principal pasa a `MX-009`.
 - `Business` comparte gran parte de la base tecnica cerrada, aunque su piloto funcional sigue mas verde que `Home`.
 
 ## Matriz por capacidad
@@ -39,9 +39,9 @@ Este documento no sustituye `DEVELOPMENT_MATRIX.md`. Su funcion es resumir, por 
 | evidencia runtime end-to-end | Cerrado | Cerrado | Cerrado | `Server` incluso ya queda encapsulado en runner host->VM de un solo comando. |
 | automatizacion VM/QA integrada | Parcial | Parcial | Cerrado | `Server` es el frente mas encapsulado; `Home` y `Business` aun dependen mas de playbook operativo que de runner integrado equivalente. |
 | politica de interfaz | Cerrado | Cerrado | Cerrado | `Home`, `Business` y `Server` ya tienen matriz y ADR propias. |
-| shell, branding y defaults visibles | No iniciado | No iniciado | N/A | `Home` y `Business` aun no han traducido la ADR grafica a composicion UX real; `Server` no persigue esa meta como default. |
-| apps base / experiencia utilizable | No iniciado | No iniciado | N/A | Falta cerrar la experiencia visible de `Home` y el piloto utilizable de `Business`. |
-| control center / gestion UX | No iniciado | No iniciado | N/A | Sigue siendo un frente futuro de producto. |
+| shell, branding y defaults visibles | Cerrado | No iniciado | N/A | `Home` ya aterrizo `GNOME + GDM`, branding reversible y favoritos visibles; `Business` aun no traduce su ADR grafica a composicion UX real. |
+| apps base / experiencia utilizable | Parcial | No iniciado | N/A | `Home` ya abre `MX-009` con baseline visible verificable, pero todavia debe cerrar PDF, multimedia, onboarding y accesibilidad; `Business` sigue sin aterrizaje utilizable equivalente. |
+| control center / gestion UX | Parcial | No iniciado | N/A | `Home` ya tiene baseline `GNOME-augmented` validado y suficiente para `Home V1`, aunque no una suite completa de producto; `Business` sigue sin este frente. |
 | perfil de producto final | Parcial | Parcial | Cerrado | `Server` ya esta fuerte para su objetivo headless; `Home` y `Business` aun no cierran su capa final de producto. |
 
 ## Lectura por edicion
@@ -57,7 +57,7 @@ Este documento no sustituye `DEVELOPMENT_MATRIX.md`. Su funcion es resumir, por 
 - recuperar,
 - y validar baseline de seguridad.
 
-Su hueco real ya no es infraestructura base, sino `MX-007`, `MX-008` y `MX-009`: shell, branding, defaults, onboarding y experiencia visible utilizable.
+Su hueco real ya no es infraestructura base ni `Settings` de arranque, sino `MX-009`: cerrar el perfil utilizable de apps, onboarding y accesibilidad sobre la base visible ya validada.
 
 ### Business
 
