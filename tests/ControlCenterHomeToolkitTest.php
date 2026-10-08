@@ -71,6 +71,21 @@ final class ControlCenterHomeToolkitTest extends TestCase
         self::assertStringContainsString('aun no materializan estado suficiente', $model['hero']['summary']);
     }
 
+    public function testCreateModuleDetailModelReturnsDrillDownForRequestedModule(): void
+    {
+        $this->seedHomeFixtures(includeUpdateArtifacts: true);
+
+        $toolkit = new ControlCenterHomeToolkit($this->rootDir);
+        $detail = $toolkit->createModuleDetailModel('w4-os-home', 'updates');
+
+        self::assertSame('control-center-module-detail', $detail['kind']);
+        self::assertSame('updates', $detail['module']['id']);
+        self::assertSame('healthy', $detail['module']['status']);
+        self::assertStringContainsString('confirmada', $detail['detail']['status_reason']);
+        self::assertSame(1, $detail['detail']['entrypoint_count']);
+        self::assertSame('gnome-software --mode=updates', $detail['detail']['recommended_entrypoint']['command']);
+    }
+
     private function seedHomeFixtures(bool $includeUpdateArtifacts): void
     {
         $this->writeFile(

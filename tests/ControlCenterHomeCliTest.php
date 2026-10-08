@@ -53,6 +53,70 @@ final class ControlCenterHomeCliTest extends TestCase
         self::assertSame('confirmed', $this->indexModules($savedPayload['modules'])['updates']['highlights']['stage']);
     }
 
+    public function testReadControlCenterHomeScriptSupportsTextFormat(): void
+    {
+        $this->seedFixtures();
+
+        $result = $this->runPhpScript(
+            $this->repoRoot . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'read_control_center_home.php',
+            [
+                '--profile',
+                'w4-os-home',
+                '--root-dir',
+                $this->workspaceRoot,
+                '--format',
+                'text',
+            ]
+        );
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+        self::assertStringContainsString('Settings · w4-os-home', $result['stdout']);
+        self::assertStringContainsString('- Sistema [HEALTHY] (W4-augmented)', $result['stdout']);
+        self::assertStringContainsString('Motivo:', $result['stdout']);
+    }
+
+    public function testReadControlCenterHomeScriptSupportsModuleDrillDownInJsonAndText(): void
+    {
+        $this->seedFixtures();
+
+        $jsonResult = $this->runPhpScript(
+            $this->repoRoot . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'read_control_center_home.php',
+            [
+                '--profile',
+                'w4-os-home',
+                '--root-dir',
+                $this->workspaceRoot,
+                '--module',
+                'updates',
+            ]
+        );
+
+        self::assertSame(0, $jsonResult['exitCode'], $jsonResult['stderr']);
+        $jsonPayload = $this->decodeJson($jsonResult['stdout']);
+        self::assertSame('control-center-module-detail', $jsonPayload['kind']);
+        self::assertSame('updates', $jsonPayload['module']['id']);
+        self::assertSame('confirmed', $jsonPayload['module']['highlights']['stage']);
+
+        $textResult = $this->runPhpScript(
+            $this->repoRoot . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'read_control_center_home.php',
+            [
+                '--profile',
+                'w4-os-home',
+                '--root-dir',
+                $this->workspaceRoot,
+                '--module',
+                'updates',
+                '--format',
+                'text',
+            ]
+        );
+
+        self::assertSame(0, $textResult['exitCode'], $textResult['stderr']);
+        self::assertStringContainsString('Settings · w4-os-home · Actualizaciones', $textResult['stdout']);
+        self::assertStringContainsString('Entrypoints:', $textResult['stdout']);
+        self::assertStringContainsString('gnome-software --mode=updates', $textResult['stdout']);
+    }
+
     private function seedFixtures(): void
     {
         $this->writeFile(

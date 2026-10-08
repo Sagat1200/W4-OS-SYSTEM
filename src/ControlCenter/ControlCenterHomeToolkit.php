@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace W4\OS\ControlCenter;
 
+use W4\OS\ControlCenter\ControlCenterSliceAToolkit;
+use W4\OS\Support\ValidationError;
+
 final class ControlCenterHomeToolkit
 {
     private ControlCenterSliceAToolkit $sliceAToolkit;
@@ -58,6 +61,39 @@ final class ControlCenterHomeToolkit
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    public function createModuleDetailModel(string $profileId, string $moduleId): array
+    {
+        $homeModel = $this->createHomeModel($profileId);
+        $module = $this->findModule($homeModel, $moduleId);
+        if ($module === null) {
+            throw new ValidationError(sprintf('Modulo de Control Center no soportado: %s', $moduleId));
+        }
+
+        $entrypoints = $this->entrypointList($module);
+        $sourceOfTruth = $this->stringList($module['source_of_truth'] ?? []);
+        $actions = $this->stringList($module['actions'] ?? []);
+
+        return [
+            'control_center_module_schema_version' => 1,
+            'kind' => 'control-center-module-detail',
+            'profile_id' => $profileId,
+            'generated_at' => (string) ($homeModel['generated_at'] ?? gmdate('c')),
+            'mode' => 'read-first',
+            'module' => $module,
+            'detail' => [
+                'status_reason' => (string) ($module['status_reason'] ?? ''),
+                'recommended_entrypoint' => $entrypoints[0] ?? null,
+                'evidence_keys' => array_keys(is_array($module['highlights'] ?? null) ? $module['highlights'] : []),
+                'source_count' => count($sourceOfTruth),
+                'entrypoint_count' => count($entrypoints),
+                'action_count' => count($actions),
+            ],
+        ];
+    }
+
+    /**
      * @param array<string, mixed> $module
      * @return array<string, mixed>
      */
@@ -67,12 +103,14 @@ final class ControlCenterHomeToolkit
         $evidence = is_array($module['evidence'] ?? null) ? $module['evidence'] : [];
         $entrypoints = $this->buildEntrypoints($moduleId);
         $status = $this->resolveStatus($moduleId, $evidence);
+        $statusReason = $this->resolveStatusReason($moduleId, $evidence, $status);
 
         return [
             'id' => $moduleId,
             'title' => (string) ($module['title'] ?? $moduleId),
             'class' => (string) ($module['class'] ?? 'W4-augmented'),
             'status' => $status,
+            'status_reason' => $statusReason,
             'mode' => 'read-first',
             'summary' => (string) ($module['summary'] ?? ''),
             'authority' => (string) ($module['authority'] ?? ''),
@@ -84,6 +122,50 @@ final class ControlCenterHomeToolkit
             'entrypoints' => $entrypoints,
             'actions' => $this->stringList($module['actions'] ?? []),
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $evidence
+     */
+    private function resolveStatusReason(string $moduleId, array $evidence, string $status): string
+    {
+        return match ($moduleId) {
+            'system' => $status === 'healthy'
+                ? 'Shell, sesion y display manager ya quedaron materializados.'
+                : 'Falta evidencia suficiente de shell o display manager efectivos.',
+            'security' => match ($status) {
+                'healthy' => sprintf(
+                    'La baseline materializada no declara gaps y registra %d controles implementados.',
+                    (int) ($evidence['implemented_controls'] ?? 0)
+                ),
+                'attention' => sprintf(
+                    'La baseline todavia declara %d gaps pendientes.',
+                    (int) ($evidence['gap_controls'] ?? 0)
+                ),
+                default => 'No hay baseline suficiente para determinar el estado de seguridad.',
+            },
+            'updates' => match ($status) {
+                'healthy' => sprintf(
+                    'La ultima operacion conocida ya quedo confirmada hacia %s.',
+                    (string) ($evidence['target_version'] ?? 'la version objetivo')
+                ),
+                'attention' => sprintf(
+                    'La operacion de update sigue en etapa %s y necesita revision.',
+                    (string) ($evidence['stage'] ?? 'desconocida')
+                ),
+                default => 'No hay evidencia materializada de operaciones de update para este perfil.',
+            },
+            'storage' => match ($status) {
+                'healthy' => sprintf(
+                    'La politica y el perfil de instalacion convergen en %s con %d subvolumenes visibles.',
+                    (string) ($evidence['root_filesystem'] ?? 'el layout esperado'),
+                    (int) ($evidence['subvolume_count'] ?? 0)
+                ),
+                'attention' => 'La politica de almacenamiento existe, pero faltan subvolumenes o evidencia de layout suficiente.',
+                default => 'No hay evidencia suficiente para confirmar el layout de almacenamiento.',
+            },
+            default => 'No existe razon de estado disponible para este modulo.',
+        };
     }
 
     /**
@@ -354,5 +436,64 @@ final class ControlCenterHomeToolkit
         }
 
         return array_values(array_unique($normalized));
+    }
+
+    /**
+     * @param array<string, mixed> $homeModel
+     * @return array<string, mixed>|null
+     */
+    private function findModule(array $homeModel, string $moduleId): ?array
+    {
+        $modules = is_array($homeModel['modules'] ?? null) ? $homeModel['modules'] : [];
+        foreach ($modules as $module) {
+            if (!is_array($module)) {
+                continue;
+            }
+
+            if ((string) ($module['id'] ?? '') === $moduleId) {
+                return $module;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $module
+     * @return list<array<string, string>>
+     */
+    private function entrypointList(array $module): array
+    {
+        $entrypoints = $module['entrypoints'] ?? [];
+        if (!is_array($entrypoints)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($entrypoints as $entrypoint) {
+            if (!is_array($entrypoint)) {
+                continue;
+            }
+
+            $id = trim((string) ($entrypoint['id'] ?? ''));
+            $label = trim((string) ($entrypoint['label'] ?? ''));
+            $kind = trim((string) ($entrypoint['kind'] ?? ''));
+            $target = trim((string) ($entrypoint['target'] ?? ''));
+            $command = trim((string) ($entrypoint['command'] ?? ''));
+
+            if ($id === '' || $label === '' || $command === '') {
+                continue;
+            }
+
+            $normalized[] = [
+                'id' => $id,
+                'label' => $label,
+                'kind' => $kind,
+                'target' => $target,
+                'command' => $command,
+            ];
+        }
+
+        return $normalized;
     }
 }
