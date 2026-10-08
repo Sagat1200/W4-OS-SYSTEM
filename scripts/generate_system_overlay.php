@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use W4\OS\Support\ArtifactMetadataToolkit;
+use W4\OS\Support\ValidationError as SupportValidationError;
 
 require_once __DIR__ . '/lib/ManifestToolkit.php';
 
@@ -298,6 +299,215 @@ function buildDesktopDefaultsJson(array $desktopDefaults): string
     }
 
     return $json;
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function buildControlCenterLauncherOverlay(string $rootDir, string $profileId, array $desktopDefaults): array
+{
+    if ($profileId !== 'w4-os-home' || $desktopDefaults === []) {
+        return [
+            'status' => 'not-applicable',
+            'files' => [],
+        ];
+    }
+
+    try {
+        $bundleDir = ensureControlCenterLauncherBundle($rootDir, $profileId);
+        $bundleJsonPath = $bundleDir . DIRECTORY_SEPARATOR . 'control-center-gnome-launchers.json';
+        $bundleSummaryPath = $bundleDir . DIRECTORY_SEPARATOR . 'control-center-gnome-launchers-summary.txt';
+        $bundle = readOptionalJsonFile($bundleJsonPath);
+
+        if ($bundle === null) {
+            throw new ValidationError(sprintf('No se pudo leer el bundle de launchers GNOME: %s', $bundleJsonPath));
+        }
+
+        $summary = file_get_contents($bundleSummaryPath);
+        if ($summary === false) {
+            throw new ValidationError(sprintf('No se pudo leer el resumen de launchers GNOME: %s', $bundleSummaryPath));
+        }
+
+        $launchers = is_array($bundle['launchers'] ?? null) ? $bundle['launchers'] : [];
+        $pendingModules = is_array($bundle['pending_modules'] ?? null) ? $bundle['pending_modules'] : [];
+        $overlayRoot = $bundleDir . DIRECTORY_SEPARATOR . 'overlay-root';
+        $overlayFiles = overlayFilesFromDirectory($overlayRoot);
+
+        $files = [
+            'files/etc/w4/control-center/gnome-launchers.json' => encodePrettyJson($bundle, 'No se pudo serializar el bundle de launchers GNOME'),
+            'files/etc/w4/control-center/gnome-launchers-summary.txt' => normalizeLineEndings($summary),
+        ];
+
+        foreach ($overlayFiles as $relativePath => $contents) {
+            $files['files/' . $relativePath] = $contents;
+        }
+
+        return [
+            'status' => 'integrated',
+            'bundle_dir' => relativePathFromRoot($rootDir, $bundleDir),
+            'launcher_count' => count($launchers),
+            'pending_module_count' => count($pendingModules),
+            'runtime_manifest' => 'files/etc/w4/control-center/gnome-launchers.json',
+            'runtime_summary' => 'files/etc/w4/control-center/gnome-launchers-summary.txt',
+            'desktop_files' => array_map(
+                static fn (string $path): string => 'files/' . str_replace(DIRECTORY_SEPARATOR, '/', $path),
+                array_keys($overlayFiles)
+            ),
+            'files' => $files,
+        ];
+    } catch (ValidationError $exception) {
+        return [
+            'status' => 'skipped',
+            'reason' => $exception->getMessage(),
+            'files' => [],
+        ];
+    }
+}
+
+function ensureControlCenterLauncherBundle(string $rootDir, string $profileId): string
+{
+    $bundleDir = $rootDir . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'control-center-gnome-launchers' . DIRECTORY_SEPARATOR . $profileId;
+    $bundleJsonPath = $bundleDir . DIRECTORY_SEPARATOR . 'control-center-gnome-launchers.json';
+    $overlayRoot = $bundleDir . DIRECTORY_SEPARATOR . 'overlay-root';
+
+    if (is_file($bundleJsonPath) && is_dir($overlayRoot)) {
+        return $bundleDir;
+    }
+
+    runPhpGenerator($rootDir, 'generate_control_center_snapshot.php', ['--profile', $profileId, '--root-dir', $rootDir]);
+    runPhpGenerator($rootDir, 'generate_control_center_ui_bundle.php', ['--profile', $profileId, '--root-dir', $rootDir]);
+    runPhpGenerator($rootDir, 'generate_control_center_gnome_launchers.php', ['--profile', $profileId, '--root-dir', $rootDir]);
+
+    if (!is_file($bundleJsonPath) || !is_dir($overlayRoot)) {
+        throw new ValidationError(sprintf('El bundle de launchers GNOME no quedo disponible en %s', $bundleDir));
+    }
+
+    return $bundleDir;
+}
+
+/**
+ * @param list<string> $arguments
+ */
+function runPhpGenerator(string $rootDir, string $scriptName, array $arguments): void
+{
+    $scriptPath = $rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . $scriptName;
+    if (!is_file($scriptPath)) {
+        throw new ValidationError(sprintf('No existe el generador requerido: %s', $scriptPath));
+    }
+
+    $command = array_merge([PHP_BINARY, $scriptPath], $arguments);
+    $descriptorSpec = [
+        0 => ['pipe', 'r'],
+        1 => ['pipe', 'w'],
+        2 => ['pipe', 'w'],
+    ];
+
+    $process = proc_open($command, $descriptorSpec, $pipes, $rootDir);
+    if (!is_resource($process)) {
+        throw new ValidationError(sprintf('No se pudo ejecutar %s', $scriptName));
+    }
+
+    fclose($pipes[0]);
+    $stdout = stream_get_contents($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+
+    $exitCode = proc_close($process);
+    if ($exitCode !== 0) {
+        $details = trim((string) ($stderr !== false ? $stderr : ''));
+        if ($details === '') {
+            $details = trim((string) ($stdout !== false ? $stdout : ''));
+        }
+
+        throw new ValidationError(sprintf('Fallo %s: %s', $scriptName, $details));
+    }
+}
+
+/**
+ * @return array<string, string>
+ */
+function overlayFilesFromDirectory(string $directory): array
+{
+    if (!is_dir($directory)) {
+        throw new ValidationError(sprintf('No existe el directorio de overlay: %s', $directory));
+    }
+
+    $files = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS)
+    );
+
+    foreach ($iterator as $fileInfo) {
+        if (!$fileInfo instanceof SplFileInfo || !$fileInfo->isFile()) {
+            continue;
+        }
+
+        $absolutePath = $fileInfo->getPathname();
+        $relativePath = substr($absolutePath, strlen(rtrim($directory, DIRECTORY_SEPARATOR)) + 1);
+        $contents = file_get_contents($absolutePath);
+        if ($contents === false) {
+            throw new ValidationError(sprintf('No se pudo leer el archivo de overlay %s', $absolutePath));
+        }
+
+        $files[str_replace(['/', '\\'], '/', $relativePath)] = $contents;
+    }
+
+    ksort($files);
+
+    return $files;
+}
+
+/**
+ * @return array<string, mixed>|null
+ */
+function readOptionalJsonFile(string $path): ?array
+{
+    if (!is_file($path)) {
+        return null;
+    }
+
+    $raw = file_get_contents($path);
+    if ($raw === false) {
+        throw new ValidationError(sprintf('No se pudo leer %s', $path));
+    }
+
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) {
+        throw new ValidationError(sprintf('El archivo JSON no es valido: %s', $path));
+    }
+
+    return $decoded;
+}
+
+/**
+ * @param array<string, mixed> $payload
+ */
+function encodePrettyJson(array $payload, string $errorMessage): string
+{
+    $encoded = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($encoded === false) {
+        throw new ValidationError($errorMessage);
+    }
+
+    return $encoded . "\n";
+}
+
+function normalizeLineEndings(string $contents): string
+{
+    return str_replace(["\r\n", "\r"], "\n", $contents);
+}
+
+function relativePathFromRoot(string $rootDir, string $path): string
+{
+    $normalizedRoot = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $rootDir), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+    $normalizedPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
+
+    if (str_starts_with($normalizedPath, $normalizedRoot)) {
+        return str_replace(DIRECTORY_SEPARATOR, '/', substr($normalizedPath, strlen($normalizedRoot)));
+    }
+
+    return str_replace(DIRECTORY_SEPARATOR, '/', $normalizedPath);
 }
 
 function buildDconfUserProfile(): string
@@ -763,7 +973,7 @@ if [[ ! -d "${ROOTFS_DIR}" ]]; then
   exit 1
 fi
 
-mkdir -p "${ROOTFS_DIR}/etc/w4" "${ROOTFS_DIR}/usr/local/lib/w4" "${ROOTFS_DIR}/var/lib/w4"
+mkdir -p "${ROOTFS_DIR}/etc/w4" "${ROOTFS_DIR}/usr/local/lib/w4" "${ROOTFS_DIR}/usr/share/applications" "${ROOTFS_DIR}/var/lib/w4"
 cp -a "${OVERLAY_DIR}/." "${ROOTFS_DIR}/"
 
 chown root:root "${ROOTFS_DIR}" "${ROOTFS_DIR}/etc" "${ROOTFS_DIR}/usr" "${ROOTFS_DIR}/usr/local" "${ROOTFS_DIR}/usr/local/lib" "${ROOTFS_DIR}/usr/share" || true
@@ -778,6 +988,7 @@ chown -R root:root \
   "${ROOTFS_DIR}/etc/default" \
   "${ROOTFS_DIR}/etc/systemd" \
   "${ROOTFS_DIR}/etc/skel" \
+  "${ROOTFS_DIR}/usr/share/applications" \
   "${ROOTFS_DIR}/usr/local/lib/w4" \
   "${ROOTFS_DIR}/usr/share/w4" \
   "${ROOTFS_DIR}/var/lib/w4" || true
@@ -910,6 +1121,12 @@ try {
     $desktopDefaults = readDesktopDefaults($rootDir, $resolvedProfileId);
     $vars = overlayVariables($buildInput, $editionPolicy);
     $files = buildOverlayFiles($buildInput, $vars, $desktopDefaults);
+    $controlCenterLaunchers = buildControlCenterLauncherOverlay($rootDir, $resolvedProfileId, $desktopDefaults);
+    if (is_array($controlCenterLaunchers['files'] ?? null) && $controlCenterLaunchers['files'] !== []) {
+        /** @var array<string, string> $launcherFiles */
+        $launcherFiles = $controlCenterLaunchers['files'];
+        $files = array_merge($files, $launcherFiles);
+    }
 
     foreach ($files as $relativePath => $contents) {
         $targetPath = $outputPath . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
@@ -984,6 +1201,23 @@ try {
             'assets' => [
                 'files/usr/share/w4/branding/home/wallpapers/w4-home-default.svg',
             ],
+        ];
+    }
+
+    if (($controlCenterLaunchers['status'] ?? null) === 'integrated') {
+        $overlayManifestData['control_center_gnome_launchers'] = [
+            'status' => 'integrated',
+            'bundle_dir' => $controlCenterLaunchers['bundle_dir'],
+            'launcher_count' => $controlCenterLaunchers['launcher_count'],
+            'pending_module_count' => $controlCenterLaunchers['pending_module_count'],
+            'runtime_manifest' => $controlCenterLaunchers['runtime_manifest'],
+            'runtime_summary' => $controlCenterLaunchers['runtime_summary'],
+            'desktop_files' => $controlCenterLaunchers['desktop_files'],
+        ];
+    } elseif (($controlCenterLaunchers['status'] ?? null) === 'skipped') {
+        $overlayManifestData['control_center_gnome_launchers'] = [
+            'status' => 'skipped',
+            'reason' => (string) ($controlCenterLaunchers['reason'] ?? 'unknown'),
         ];
     }
 

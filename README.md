@@ -153,7 +153,9 @@ Esa decision ya queda cerrada en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/ADR-01
 
 Ese primer handoff real a `GNOME` ya empieza a existir tambien como artifact tecnico: `src/ControlCenter/ControlCenterGnomeLauncherToolkit.php`, expuesto por `scripts/generate_control_center_gnome_launchers.php`, genera un bundle de launchers `.desktop` listo para `usr/share/applications/` a partir del mapa `GNOME-augmented`. Con ello, `Sistema`, `Seguridad` y `Actualizaciones` ya pueden aterrizarse como entradas reales hacia `gnome-control-center` o `gnome-software`, mientras `Almacenamiento` queda marcado como `w4-surface-pending` fuera del bundle GNOME hasta que su superficie propia este mas estable.
 
-Con ello, el siguiente paso correcto ya no es decidir el frontend oficial, sino conectar estos launchers al overlay o al packaging efectivo de `Home`. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
+Ese cableado ya empezo tambien dentro del pipeline real: `scripts/generate_system_overlay.php` ya integra automaticamente el bundle de launchers GNOME en el overlay de `Home` y deja sus `.desktop` bajo `files/usr/share/applications/`, junto con evidencia runtime en `files/etc/w4/control-center/gnome-launchers.json` y `gnome-launchers-summary.txt`. Si el bundle previo no existe, el script intenta generarlo; si faltara alguna dependencia, degrada a `skipped` sin romper el overlay.
+
+Con ello, el siguiente paso correcto ya no es decidir el frontend oficial, sino bajar estos launchers al overlay/packaging final de la edicion `Home` y validar su presencia en `live`. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 

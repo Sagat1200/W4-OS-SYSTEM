@@ -51,6 +51,7 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertContains('files/etc/dconf/profile/user', $manifest['desktop_defaults']['dconf_profiles']);
         self::assertContains('files/etc/dconf/db/local.d/00-w4-home', $manifest['desktop_defaults']['dconf_databases']);
         self::assertContains('files/usr/share/w4/branding/home/wallpapers/w4-home-default.svg', $manifest['desktop_defaults']['assets']);
+        self::assertArrayHasKey('control_center_gnome_launchers', $manifest);
 
         $grubDefaults = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'default' . DIRECTORY_SEPARATOR . 'grub.d' . DIRECTORY_SEPARATOR . '50-w4-security.cfg');
         self::assertNotFalse($grubDefaults);
@@ -107,6 +108,31 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertStringContainsString('DEFAULT_TARGET="graphical.target"', $applyScript);
         self::assertStringContainsString('${DEFAULT_TARGET}.wants', $applyScript);
         self::assertStringContainsString('etc/dconf', $applyScript);
+        self::assertStringContainsString('usr/share/applications', $applyScript);
+
+        $launcherState = $manifest['control_center_gnome_launchers']['status'];
+        self::assertContains($launcherState, ['integrated', 'skipped']);
+
+        if ($launcherState === 'integrated') {
+            self::assertSame('files/etc/w4/control-center/gnome-launchers.json', $manifest['control_center_gnome_launchers']['runtime_manifest']);
+            self::assertContains(
+                'files/usr/share/applications/w4-control-center-home-updates.desktop',
+                $manifest['control_center_gnome_launchers']['desktop_files']
+            );
+
+            $launcherManifest = $this->decodeJsonFile(
+                $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'control-center' . DIRECTORY_SEPARATOR . 'gnome-launchers.json'
+            );
+            self::assertSame('control-center-gnome-launchers', $launcherManifest['kind']);
+
+            $updatesLauncher = file_get_contents(
+                $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'applications' . DIRECTORY_SEPARATOR . 'w4-control-center-home-updates.desktop'
+            );
+            self::assertNotFalse($updatesLauncher);
+            self::assertStringContainsString('Exec=gnome-software --mode=updates', $updatesLauncher);
+        } else {
+            self::assertNotSame('', trim((string) $manifest['control_center_gnome_launchers']['reason']));
+        }
     }
 
     public function testGenerateSystemOverlayUsesServerBrandingWithoutHomeFallback(): void
