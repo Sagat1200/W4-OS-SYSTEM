@@ -228,11 +228,11 @@ El `Slice A` puede considerarse correctamente aterrizado cuando existan estas co
 
 ## Siguiente paso inmediato
 
-Con este slice ya fijado, ese siguiente trabajo tecnico ya queda materializado: `src/ControlCenter/ControlCenterSliceAToolkit.php` expone el read model homogeneo para `Sistema`, `Seguridad`, `Actualizaciones` y `Almacenamiento`; `src/ControlCenter/ControlCenterHomeToolkit.php` consume ese material y lo traduce a una primera home `read-first` de `Settings`; y `scripts/read_control_center_home.php` lo expone como CLI reutilizable tanto en `json` como en `text`, con `drill-down` por modulo.
+Con este slice ya fijado, ese siguiente trabajo tecnico ya queda materializado: `src/ControlCenter/ControlCenterSliceAToolkit.php` expone el read model homogeneo para `Sistema`, `Seguridad`, `Actualizaciones` y `Almacenamiento`; `src/ControlCenter/ControlCenterHomeToolkit.php` consume ese material y lo traduce a una primera home `read-first` de `Settings`; `scripts/read_control_center_home.php` lo expone como CLI reutilizable tanto en `json` como en `text`, con `drill-down` por modulo; y `scripts/generate_control_center_snapshot.php` ya puede persistir esa vista agregada y el detalle por modulo dentro de `build/control-center/<perfil>/`.
 
-La cobertura correspondiente ya existe en `tests/ControlCenterSliceAToolkitTest.php`, `tests/ControlCenterHomeToolkitTest.php` y `tests/ControlCenterHomeCliTest.php`, incluyendo la home agregada, el detalle por modulo y la salida legible desde terminal.
+La cobertura correspondiente ya existe en `tests/ControlCenterSliceAToolkitTest.php`, `tests/ControlCenterHomeToolkitTest.php`, `tests/ControlCenterHomeCliTest.php` y `tests/ControlCenterSnapshotCliTest.php`, incluyendo la home agregada, el detalle por modulo, la salida legible desde terminal y el snapshot persistido.
 
-Con ello, el siguiente trabajo tecnico correcto ya pasa a ser decidir el primer consumidor visual/API de esta home/CLI y mantener diferidos `Red`, `Usuarios` y `Aplicaciones` hasta que este frente cierre mejor su capa base.
+Con ello, el siguiente trabajo tecnico correcto ya pasa a ser decidir el primer consumidor visual/API de esta home/CLI/snapshot y mantener diferidos `Red`, `Usuarios` y `Aplicaciones` hasta que este frente cierre mejor su capa base.
 
 ## Referencias
 
@@ -247,9 +247,12 @@ Con ello, el siguiente trabajo tecnico correcto ya pasa a ser decidir el primer 
 - `src/Update/UpdateToolkit.php`
 - `src/ControlCenter/ControlCenterSliceAToolkit.php`
 - `src/ControlCenter/ControlCenterHomeToolkit.php`
+- `src/ControlCenter/ControlCenterHomeRenderer.php`
 - `scripts/read_control_center_home.php`
+- `scripts/generate_control_center_snapshot.php`
 - `tests/ControlCenterHomeToolkitTest.php`
 - `tests/ControlCenterHomeCliTest.php`
+- `tests/ControlCenterSnapshotCliTest.php`
 - `scripts/generate_system_overlay.php`
 - `scripts/generate_security_baseline_bundle.php`
 - `scripts/prepare_update_operation.php`

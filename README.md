@@ -141,7 +141,9 @@ Ese siguiente paso ya tambien queda consumido en codigo: `src/ControlCenter/Cont
 
 Ese CLI ya no se queda solo en JSON crudo: ahora soporta home agregada y `drill-down` por modulo, tanto en `json` como en `text`, lo que deja una primera superficie operativa real para leer el estado de `Sistema`, `Seguridad`, `Actualizaciones` y `Almacenamiento` desde terminal sin abrir todavia UI privilegiada. La cobertura correspondiente queda en `tests/ControlCenterHomeToolkitTest.php` y `tests/ControlCenterHomeCliTest.php`, congelando la home, el detalle por modulo y la salida CLI sobre un workspace temporal aislado.
 
-Con ello, el siguiente paso correcto ya no es abrir otra capa generica de lectura, sino decidir el primer consumidor visual/API de esta home y mantener su contrato estable sin saltarse la frontera `read-first`. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
+Sobre esa base, la capa superior ya tambien puede materializar snapshots persistidos en `build/control-center/<perfil>/`: `src/ControlCenter/ControlCenterHomeRenderer.php` centraliza el render `json`/`text` y `scripts/generate_control_center_snapshot.php` exporta la home agregada, el detalle por modulo y un `control-center-snapshot.json` autocontenido para consumo posterior por UI o API. La prueba de integracion `tests/ControlCenterSnapshotCliTest.php` congela ese layout y valida que el snapshot generado conserve tanto la vista general como el detalle operativo de cada modulo.
+
+Con ello, el siguiente paso correcto ya no es abrir otra capa generica de lectura, sino decidir el primer consumidor visual/API de esta home ya persistida y mantener su contrato estable sin saltarse la frontera `read-first`. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 
