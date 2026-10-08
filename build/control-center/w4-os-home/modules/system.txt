@@ -1,0 +1,18 @@
+Settings · w4-os-home · Sistema
+Estado: HEALTHY | Clase: W4-augmented | Modo: read-first
+Resumen: w4-os-home usa gnome-shell/gnome con gdm, target graphical.target y prefijo de hostname w4-home.
+Motivo: Shell, sesion y display manager ya quedaron materializados.
+Authority: edition-policy
+Capabilities: read, deep-link
+Highlights: shell=gnome-shell, display_manager=gdm, hostname_prefix=w4-home
+Source of truth:
+  - config/editions/home/policy.json
+  - build/live-output/w4-os-home/metadata/live-summary.env
+  - build/live-output/w4-os-home/image-root/system-overlay/etc/w4/desktop-defaults.json
+  - build/install/w4-os-home/installation-profile.derived.json
+Entrypoints:
+  - Informacion del sistema -> gnome-control-center info-overview
+  - Idioma y region -> gnome-control-center region
+  - Fecha y hora -> gnome-control-center datetime
+Actions:
+  - ninguna

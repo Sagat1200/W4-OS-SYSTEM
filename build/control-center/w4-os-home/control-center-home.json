@@ -1,0 +1,194 @@
+{
+    "control_center_home_schema_version": 1,
+    "kind": "control-center-home-model",
+    "profile_id": "w4-os-home",
+    "generated_at": "2026-10-08T07:09:44+00:00",
+    "mode": "read-first",
+    "hero": {
+        "title": "Settings",
+        "summary": "w4-os-home expone 4 modulos con evidencia consistente y 6 deep-links listos para GNOME."
+    },
+    "summary": {
+        "modules_total": 4,
+        "healthy_modules": 4,
+        "attention_modules": 0,
+        "unknown_modules": 0,
+        "deep_links_available": 6
+    },
+    "modules": [
+        {
+            "id": "system",
+            "title": "Sistema",
+            "class": "W4-augmented",
+            "status": "healthy",
+            "status_reason": "Shell, sesion y display manager ya quedaron materializados.",
+            "mode": "read-first",
+            "summary": "w4-os-home usa gnome-shell\/gnome con gdm, target graphical.target y prefijo de hostname w4-home.",
+            "authority": "edition-policy",
+            "capabilities": [
+                "read",
+                "deep-link"
+            ],
+            "last_checked_at": "2026-10-07T09:39:20Z",
+            "source_of_truth": [
+                "config\/editions\/home\/policy.json",
+                "build\/live-output\/w4-os-home\/metadata\/live-summary.env",
+                "build\/live-output\/w4-os-home\/image-root\/system-overlay\/etc\/w4\/desktop-defaults.json",
+                "build\/install\/w4-os-home\/installation-profile.derived.json"
+            ],
+            "badges": [
+                "W4-augmented",
+                "Solo lectura",
+                "Deep-link",
+                "Evidencia consistente"
+            ],
+            "highlights": {
+                "shell": "gnome-shell",
+                "display_manager": "gdm",
+                "hostname_prefix": "w4-home"
+            },
+            "entrypoints": [
+                {
+                    "id": "gnome-info-overview",
+                    "label": "Informacion del sistema",
+                    "kind": "gnome-control-center",
+                    "target": "info-overview",
+                    "command": "gnome-control-center info-overview"
+                },
+                {
+                    "id": "gnome-region",
+                    "label": "Idioma y region",
+                    "kind": "gnome-control-center",
+                    "target": "region",
+                    "command": "gnome-control-center region"
+                },
+                {
+                    "id": "gnome-datetime",
+                    "label": "Fecha y hora",
+                    "kind": "gnome-control-center",
+                    "target": "datetime",
+                    "command": "gnome-control-center datetime"
+                }
+            ],
+            "actions": []
+        },
+        {
+            "id": "security",
+            "title": "Seguridad",
+            "class": "W4-augmented",
+            "status": "healthy",
+            "status_reason": "La baseline materializada no declara gaps y registra 10 controles implementados.",
+            "mode": "read-first",
+            "summary": "Baseline de seguridad con 10 controles implementados y 0 gaps; firewall ufw DENY\/ALLOW; SSH por defecto deshabilitado.",
+            "authority": "edition-policy+security-baseline",
+            "capabilities": [
+                "read"
+            ],
+            "last_checked_at": "2026-09-29T08:04:09+00:00",
+            "source_of_truth": [
+                "config\/editions\/home\/policy.json",
+                "build\/security\/w4-os-home\/security-baseline.json"
+            ],
+            "badges": [
+                "W4-augmented",
+                "Solo lectura",
+                "Deep-link",
+                "Evidencia consistente"
+            ],
+            "highlights": {
+                "implemented_controls": 10,
+                "gap_controls": 0,
+                "firewall_backend": "ufw"
+            },
+            "entrypoints": [
+                {
+                    "id": "gnome-privacy",
+                    "label": "Privacidad",
+                    "kind": "gnome-control-center",
+                    "target": "privacy",
+                    "command": "gnome-control-center privacy"
+                },
+                {
+                    "id": "gnome-sharing",
+                    "label": "Compartir",
+                    "kind": "gnome-control-center",
+                    "target": "sharing",
+                    "command": "gnome-control-center sharing"
+                }
+            ],
+            "actions": []
+        },
+        {
+            "id": "updates",
+            "title": "Actualizaciones",
+            "class": "W4-augmented",
+            "status": "healthy",
+            "status_reason": "La ultima operacion conocida ya quedo confirmada hacia 1.0.1-lab.",
+            "mode": "read-first",
+            "summary": "Ultima operacion w4-update-smoke-003 en estado confirmed hacia 1.0.1-lab sobre testing.",
+            "authority": "update-operation-store",
+            "capabilities": [
+                "read"
+            ],
+            "last_checked_at": "2026-09-23T20:53:10+00:00",
+            "source_of_truth": [
+                "build\/update\/validation\/w4-update-smoke-003-signed-prod-home-rerun-002\/operation.json",
+                "build\/update\/validation\/w4-update-smoke-003-signed-prod-home-rerun-002\/health-report.json",
+                "build\/update\/validation\/w4-update-smoke-003-signed-prod-home-rerun-002\/snapshot-manifest.json",
+                "build\/update\/repository-output\/w4-main-2026-09-20T180000Z-signed-prod\/publication-manifest.json"
+            ],
+            "badges": [
+                "W4-augmented",
+                "Solo lectura",
+                "Deep-link",
+                "Evidencia consistente"
+            ],
+            "highlights": {
+                "stage": "confirmed",
+                "target_version": "1.0.1-lab",
+                "channel": "testing"
+            },
+            "entrypoints": [
+                {
+                    "id": "gnome-software-updates",
+                    "label": "Actualizaciones",
+                    "kind": "gnome-software",
+                    "target": "updates",
+                    "command": "gnome-software --mode=updates"
+                }
+            ],
+            "actions": []
+        },
+        {
+            "id": "storage",
+            "title": "Almacenamiento",
+            "class": "W4-augmented",
+            "status": "healthy",
+            "status_reason": "La politica y el perfil de instalacion convergen en btrfs con 5 subvolumenes visibles.",
+            "mode": "read-first",
+            "summary": "Home espera raiz btrfs cifrada con luks2, 5 subvolumenes declarados y backend de snapshots btrfs.",
+            "authority": "edition-policy+installation-profile",
+            "capabilities": [
+                "read"
+            ],
+            "last_checked_at": "2026-09-23T20:53:26+00:00",
+            "source_of_truth": [
+                "config\/editions\/home\/policy.json",
+                "build\/install\/w4-os-home\/installation-profile.derived.json",
+                "build\/update\/validation\/w4-update-smoke-003-signed-prod-home-rerun-002\/snapshot-manifest.json"
+            ],
+            "badges": [
+                "W4-augmented",
+                "Solo lectura",
+                "Evidencia consistente"
+            ],
+            "highlights": {
+                "root_filesystem": "btrfs",
+                "encryption_default": "luks2",
+                "subvolume_count": 5
+            },
+            "entrypoints": [],
+            "actions": []
+        }
+    ]
+}

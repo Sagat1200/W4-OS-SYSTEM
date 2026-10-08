@@ -1,0 +1,16 @@
+Settings · w4-os-home · Actualizaciones
+Estado: HEALTHY | Clase: W4-augmented | Modo: read-first
+Resumen: Ultima operacion w4-update-smoke-003 en estado confirmed hacia 1.0.1-lab sobre testing.
+Motivo: La ultima operacion conocida ya quedo confirmada hacia 1.0.1-lab.
+Authority: update-operation-store
+Capabilities: read
+Highlights: stage=confirmed, target_version=1.0.1-lab, channel=testing
+Source of truth:
+  - build/update/validation/w4-update-smoke-003-signed-prod-home-rerun-002/operation.json
+  - build/update/validation/w4-update-smoke-003-signed-prod-home-rerun-002/health-report.json
+  - build/update/validation/w4-update-smoke-003-signed-prod-home-rerun-002/snapshot-manifest.json
+  - build/update/repository-output/w4-main-2026-09-20T180000Z-signed-prod/publication-manifest.json
+Entrypoints:
+  - Actualizaciones -> gnome-software --mode=updates
+Actions:
+  - ninguna

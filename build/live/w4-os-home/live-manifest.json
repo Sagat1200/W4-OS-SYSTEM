@@ -21,6 +21,20 @@
         "path": "config\/editions\/home\/policy.json",
         "default_target": "graphical.target"
     },
+    "control_center_gnome_launchers": {
+        "status": "integrated",
+        "bundle_dir": "build\/control-center-gnome-launchers\/w4-os-home",
+        "launcher_count": 4,
+        "pending_module_count": 1,
+        "runtime_manifest": "files\/etc\/w4\/control-center\/gnome-launchers.json",
+        "runtime_summary": "files\/etc\/w4\/control-center\/gnome-launchers-summary.txt",
+        "desktop_files": [
+            "files\/usr\/share\/applications\/w4-control-center-home-home.desktop",
+            "files\/usr\/share\/applications\/w4-control-center-home-security.desktop",
+            "files\/usr\/share\/applications\/w4-control-center-home-system.desktop",
+            "files\/usr\/share\/applications\/w4-control-center-home-updates.desktop"
+        ]
+    },
     "live_stack": {
         "packages": [
             "live-boot",

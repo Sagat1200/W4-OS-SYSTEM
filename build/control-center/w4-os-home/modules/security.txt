@@ -1,0 +1,15 @@
+Settings · w4-os-home · Seguridad
+Estado: HEALTHY | Clase: W4-augmented | Modo: read-first
+Resumen: Baseline de seguridad con 10 controles implementados y 0 gaps; firewall ufw DENY/ALLOW; SSH por defecto deshabilitado.
+Motivo: La baseline materializada no declara gaps y registra 10 controles implementados.
+Authority: edition-policy+security-baseline
+Capabilities: read
+Highlights: implemented_controls=10, gap_controls=0, firewall_backend=ufw
+Source of truth:
+  - config/editions/home/policy.json
+  - build/security/w4-os-home/security-baseline.json
+Entrypoints:
+  - Privacidad -> gnome-control-center privacy
+  - Compartir -> gnome-control-center sharing
+Actions:
+  - ninguna

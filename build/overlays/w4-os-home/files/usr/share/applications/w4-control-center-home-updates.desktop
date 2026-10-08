@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=W4 Settings · Actualizaciones
+Comment=La ultima operacion conocida ya quedo confirmada hacia 1.0.1-lab.
+Exec=gnome-software --mode=updates
+Icon=org.gnome.Software
+Categories=Settings;System;
+Keywords=w4;settings;updates;gnome;
+StartupNotify=true
+Terminal=false

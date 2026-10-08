@@ -1,0 +1,71 @@
+{
+    "control_center_module_schema_version": 1,
+    "kind": "control-center-module-detail",
+    "profile_id": "w4-os-home",
+    "generated_at": "2026-10-08T07:09:44+00:00",
+    "mode": "read-first",
+    "module": {
+        "id": "security",
+        "title": "Seguridad",
+        "class": "W4-augmented",
+        "status": "healthy",
+        "status_reason": "La baseline materializada no declara gaps y registra 10 controles implementados.",
+        "mode": "read-first",
+        "summary": "Baseline de seguridad con 10 controles implementados y 0 gaps; firewall ufw DENY\/ALLOW; SSH por defecto deshabilitado.",
+        "authority": "edition-policy+security-baseline",
+        "capabilities": [
+            "read"
+        ],
+        "last_checked_at": "2026-09-29T08:04:09+00:00",
+        "source_of_truth": [
+            "config\/editions\/home\/policy.json",
+            "build\/security\/w4-os-home\/security-baseline.json"
+        ],
+        "badges": [
+            "W4-augmented",
+            "Solo lectura",
+            "Deep-link",
+            "Evidencia consistente"
+        ],
+        "highlights": {
+            "implemented_controls": 10,
+            "gap_controls": 0,
+            "firewall_backend": "ufw"
+        },
+        "entrypoints": [
+            {
+                "id": "gnome-privacy",
+                "label": "Privacidad",
+                "kind": "gnome-control-center",
+                "target": "privacy",
+                "command": "gnome-control-center privacy"
+            },
+            {
+                "id": "gnome-sharing",
+                "label": "Compartir",
+                "kind": "gnome-control-center",
+                "target": "sharing",
+                "command": "gnome-control-center sharing"
+            }
+        ],
+        "actions": []
+    },
+    "detail": {
+        "status_reason": "La baseline materializada no declara gaps y registra 10 controles implementados.",
+        "recommended_entrypoint": {
+            "id": "gnome-privacy",
+            "label": "Privacidad",
+            "kind": "gnome-control-center",
+            "target": "privacy",
+            "command": "gnome-control-center privacy"
+        },
+        "evidence_keys": [
+            "implemented_controls",
+            "gap_controls",
+            "firewall_backend"
+        ],
+        "source_count": 2,
+        "entrypoint_count": 2,
+        "action_count": 0
+    }
+}

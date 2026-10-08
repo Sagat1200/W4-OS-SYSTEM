@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=W4 Settings
+Comment=w4-os-home expone 4 modulos con evidencia consistente y 6 deep-links listos para GNOME.
+Exec=gnome-control-center
+Icon=org.gnome.Settings
+Categories=Settings;System;
+Keywords=w4;settings;control-center;gnome;
+StartupNotify=true
+Terminal=false

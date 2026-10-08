@@ -1,0 +1,18 @@
+{
+    "control_center_gnome_launchers_bundle_schema_version": 1,
+    "kind": "control-center-gnome-launchers-bundle",
+    "profile_id": "w4-os-home",
+    "generated_at": "2026-10-08T07:09:44+00:00",
+    "strategy": "gnome-augmented",
+    "launcher_count": 4,
+    "pending_module_count": 1,
+    "generated_files": [
+        "control-center-gnome-launchers-manifest.json",
+        "control-center-gnome-launchers-summary.txt",
+        "control-center-gnome-launchers.json",
+        "overlay-root\/usr\/share\/applications\/w4-control-center-home-home.desktop",
+        "overlay-root\/usr\/share\/applications\/w4-control-center-home-security.desktop",
+        "overlay-root\/usr\/share\/applications\/w4-control-center-home-system.desktop",
+        "overlay-root\/usr\/share\/applications\/w4-control-center-home-updates.desktop"
+    ]
+}

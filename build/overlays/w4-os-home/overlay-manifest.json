@@ -60,11 +60,17 @@
         "files\/etc\/systemd\/system\/w4-firstboot.service",
         "files\/etc\/systemd\/system\/w4-live-prep.service",
         "files\/etc\/ufw\/ufw.conf",
+        "files\/etc\/w4\/control-center\/gnome-launchers-summary.txt",
+        "files\/etc\/w4\/control-center\/gnome-launchers.json",
         "files\/etc\/w4\/desktop-defaults.json",
         "files\/etc\/w4\/os-release.env",
         "files\/etc\/w4\/profile.env",
         "files\/usr\/local\/lib\/w4\/w4-firstboot.sh",
         "files\/usr\/local\/lib\/w4\/w4-live-prep.sh",
+        "files\/usr\/share\/applications\/w4-control-center-home-home.desktop",
+        "files\/usr\/share\/applications\/w4-control-center-home-security.desktop",
+        "files\/usr\/share\/applications\/w4-control-center-home-system.desktop",
+        "files\/usr\/share\/applications\/w4-control-center-home-updates.desktop",
         "files\/usr\/share\/w4\/branding\/home\/wallpapers\/w4-home-default.svg"
     ],
     "next_steps": [
@@ -88,6 +94,20 @@
         ],
         "assets": [
             "files\/usr\/share\/w4\/branding\/home\/wallpapers\/w4-home-default.svg"
+        ]
+    },
+    "control_center_gnome_launchers": {
+        "status": "integrated",
+        "bundle_dir": "build\/control-center-gnome-launchers\/w4-os-home",
+        "launcher_count": 4,
+        "pending_module_count": 1,
+        "runtime_manifest": "files\/etc\/w4\/control-center\/gnome-launchers.json",
+        "runtime_summary": "files\/etc\/w4\/control-center\/gnome-launchers-summary.txt",
+        "desktop_files": [
+            "files\/usr\/share\/applications\/w4-control-center-home-home.desktop",
+            "files\/usr\/share\/applications\/w4-control-center-home-security.desktop",
+            "files\/usr\/share\/applications\/w4-control-center-home-system.desktop",
+            "files\/usr\/share\/applications\/w4-control-center-home-updates.desktop"
         ]
     }
 }

@@ -1,0 +1,27 @@
+Settings · w4-os-home
+w4-os-home expone 4 modulos con evidencia consistente y 6 deep-links listos para GNOME.
+Resumen: total=4, healthy=4, attention=0, unknown=0, deep-links=6
+
+- Sistema [HEALTHY] (W4-augmented)
+  w4-os-home usa gnome-shell/gnome con gdm, target graphical.target y prefijo de hostname w4-home.
+  Motivo: Shell, sesion y display manager ya quedaron materializados.
+  Highlights: shell=gnome-shell, display_manager=gdm, hostname_prefix=w4-home
+  Entrypoints: 3
+
+- Seguridad [HEALTHY] (W4-augmented)
+  Baseline de seguridad con 10 controles implementados y 0 gaps; firewall ufw DENY/ALLOW; SSH por defecto deshabilitado.
+  Motivo: La baseline materializada no declara gaps y registra 10 controles implementados.
+  Highlights: implemented_controls=10, gap_controls=0, firewall_backend=ufw
+  Entrypoints: 2
+
+- Actualizaciones [HEALTHY] (W4-augmented)
+  Ultima operacion w4-update-smoke-003 en estado confirmed hacia 1.0.1-lab sobre testing.
+  Motivo: La ultima operacion conocida ya quedo confirmada hacia 1.0.1-lab.
+  Highlights: stage=confirmed, target_version=1.0.1-lab, channel=testing
+  Entrypoints: 1
+
+- Almacenamiento [HEALTHY] (W4-augmented)
+  Home espera raiz btrfs cifrada con luks2, 5 subvolumenes declarados y backend de snapshots btrfs.
+  Motivo: La politica y el perfil de instalacion convergen en btrfs con 5 subvolumenes visibles.
+  Highlights: root_filesystem=btrfs, encryption_default=luks2, subvolume_count=5
+  Entrypoints: 0

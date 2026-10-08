@@ -1,0 +1,122 @@
+{
+    "control_center_gnome_launchers_schema_version": 1,
+    "kind": "control-center-gnome-launchers",
+    "profile_id": "w4-os-home",
+    "generated_at": "2026-10-08T07:09:44+00:00",
+    "strategy": "gnome-augmented",
+    "ui_bundle_role": "reference-only",
+    "home": {
+        "title": "Settings",
+        "summary": "w4-os-home expone 4 modulos con evidencia consistente y 6 deep-links listos para GNOME.",
+        "status_overview": {
+            "modules_total": 4,
+            "healthy_modules": 4,
+            "attention_modules": 0,
+            "unknown_modules": 0,
+            "deep_links_available": 6
+        },
+        "api_resource": "\/control-center\/home",
+        "reference_html_path": "build\/control-center-ui\/w4-os-home\/index.html"
+    },
+    "launchers": [
+        {
+            "id": "home",
+            "desktop_file": "w4-control-center-home-home.desktop",
+            "name": "W4 Settings",
+            "comment": "w4-os-home expone 4 modulos con evidencia consistente y 6 deep-links listos para GNOME.",
+            "exec": "gnome-control-center",
+            "icon": "org.gnome.Settings",
+            "categories": "Settings;System;",
+            "keywords": [
+                "w4",
+                "settings",
+                "control-center",
+                "gnome"
+            ],
+            "startup_notify": true,
+            "module_id": "home",
+            "strategy": "delegate",
+            "api_resource": "\/control-center\/home",
+            "reference_html_path": "build\/control-center-ui\/w4-os-home\/index.html",
+            "version": "1.0"
+        },
+        {
+            "id": "system",
+            "desktop_file": "w4-control-center-home-system.desktop",
+            "name": "W4 Settings · Sistema",
+            "comment": "Shell, sesion y display manager ya quedaron materializados.",
+            "exec": "gnome-control-center info-overview",
+            "icon": "org.gnome.Settings",
+            "categories": "Settings;System;",
+            "keywords": [
+                "w4",
+                "settings",
+                "system",
+                "gnome"
+            ],
+            "startup_notify": true,
+            "module_id": "system",
+            "strategy": "augment",
+            "api_resource": "\/control-center\/modules\/system",
+            "reference_html_path": "build\/control-center-ui\/w4-os-home\/modules\/system.html",
+            "version": "1.0"
+        },
+        {
+            "id": "security",
+            "desktop_file": "w4-control-center-home-security.desktop",
+            "name": "W4 Settings · Seguridad",
+            "comment": "La baseline materializada no declara gaps y registra 10 controles implementados.",
+            "exec": "gnome-control-center privacy",
+            "icon": "org.gnome.Settings",
+            "categories": "Settings;System;",
+            "keywords": [
+                "w4",
+                "settings",
+                "security",
+                "gnome"
+            ],
+            "startup_notify": true,
+            "module_id": "security",
+            "strategy": "augment",
+            "api_resource": "\/control-center\/modules\/security",
+            "reference_html_path": "build\/control-center-ui\/w4-os-home\/modules\/security.html",
+            "version": "1.0"
+        },
+        {
+            "id": "updates",
+            "desktop_file": "w4-control-center-home-updates.desktop",
+            "name": "W4 Settings · Actualizaciones",
+            "comment": "La ultima operacion conocida ya quedo confirmada hacia 1.0.1-lab.",
+            "exec": "gnome-software --mode=updates",
+            "icon": "org.gnome.Software",
+            "categories": "Settings;System;",
+            "keywords": [
+                "w4",
+                "settings",
+                "updates",
+                "gnome"
+            ],
+            "startup_notify": true,
+            "module_id": "updates",
+            "strategy": "augment",
+            "api_resource": "\/control-center\/modules\/updates",
+            "reference_html_path": "build\/control-center-ui\/w4-os-home\/modules\/updates.html",
+            "version": "1.0"
+        }
+    ],
+    "pending_modules": [
+        {
+            "id": "storage",
+            "title": "Almacenamiento",
+            "integration_strategy": "w4-surface",
+            "reason": "w4-surface-pending",
+            "reference_html_path": "build\/control-center-ui\/w4-os-home\/modules\/storage.html",
+            "w4_api_resource": "\/control-center\/modules\/storage"
+        }
+    ],
+    "guidelines": [
+        "install-launchers-under-usr-share-applications",
+        "reuse-gnome-entrypoints-when-available",
+        "keep-w4-surfaces-outside-gnome-launchers-until-stable"
+    ]
+}

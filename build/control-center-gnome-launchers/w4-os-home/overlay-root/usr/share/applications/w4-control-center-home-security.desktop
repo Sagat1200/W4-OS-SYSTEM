@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=W4 Settings · Seguridad
+Comment=La baseline materializada no declara gaps y registra 10 controles implementados.
+Exec=gnome-control-center privacy
+Icon=org.gnome.Settings
+Categories=Settings;System;
+Keywords=w4;settings;security;gnome;
+StartupNotify=true
+Terminal=false

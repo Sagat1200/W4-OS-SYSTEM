@@ -1,0 +1,27 @@
+{
+    "control_center_ui_bundle_schema_version": 1,
+    "kind": "control-center-ui-bundle",
+    "profile_id": "w4-os-home",
+    "generated_at": "2026-10-08T07:09:44+00:00",
+    "mode": "read-first",
+    "source_kind": "control-center-api-response",
+    "entry_resource": "home",
+    "routes": {
+        "home": "index.html",
+        "modules": {
+            "system": "modules\/system.html",
+            "security": "modules\/security.html",
+            "updates": "modules\/updates.html",
+            "storage": "modules\/storage.html"
+        }
+    },
+    "generated_files": [
+        "control-center-ui-manifest.json",
+        "index.html",
+        "modules\/security.html",
+        "modules\/storage.html",
+        "modules\/system.html",
+        "modules\/updates.html",
+        "styles\/control-center.css"
+    ]
+}

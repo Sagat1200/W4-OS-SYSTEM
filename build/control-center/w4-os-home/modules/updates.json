@@ -1,0 +1,66 @@
+{
+    "control_center_module_schema_version": 1,
+    "kind": "control-center-module-detail",
+    "profile_id": "w4-os-home",
+    "generated_at": "2026-10-08T07:09:44+00:00",
+    "mode": "read-first",
+    "module": {
+        "id": "updates",
+        "title": "Actualizaciones",
+        "class": "W4-augmented",
+        "status": "healthy",
+        "status_reason": "La ultima operacion conocida ya quedo confirmada hacia 1.0.1-lab.",
+        "mode": "read-first",
+        "summary": "Ultima operacion w4-update-smoke-003 en estado confirmed hacia 1.0.1-lab sobre testing.",
+        "authority": "update-operation-store",
+        "capabilities": [
+            "read"
+        ],
+        "last_checked_at": "2026-09-23T20:53:10+00:00",
+        "source_of_truth": [
+            "build\/update\/validation\/w4-update-smoke-003-signed-prod-home-rerun-002\/operation.json",
+            "build\/update\/validation\/w4-update-smoke-003-signed-prod-home-rerun-002\/health-report.json",
+            "build\/update\/validation\/w4-update-smoke-003-signed-prod-home-rerun-002\/snapshot-manifest.json",
+            "build\/update\/repository-output\/w4-main-2026-09-20T180000Z-signed-prod\/publication-manifest.json"
+        ],
+        "badges": [
+            "W4-augmented",
+            "Solo lectura",
+            "Deep-link",
+            "Evidencia consistente"
+        ],
+        "highlights": {
+            "stage": "confirmed",
+            "target_version": "1.0.1-lab",
+            "channel": "testing"
+        },
+        "entrypoints": [
+            {
+                "id": "gnome-software-updates",
+                "label": "Actualizaciones",
+                "kind": "gnome-software",
+                "target": "updates",
+                "command": "gnome-software --mode=updates"
+            }
+        ],
+        "actions": []
+    },
+    "detail": {
+        "status_reason": "La ultima operacion conocida ya quedo confirmada hacia 1.0.1-lab.",
+        "recommended_entrypoint": {
+            "id": "gnome-software-updates",
+            "label": "Actualizaciones",
+            "kind": "gnome-software",
+            "target": "updates",
+            "command": "gnome-software --mode=updates"
+        },
+        "evidence_keys": [
+            "stage",
+            "target_version",
+            "channel"
+        ],
+        "source_count": 4,
+        "entrypoint_count": 1,
+        "action_count": 0
+    }
+}

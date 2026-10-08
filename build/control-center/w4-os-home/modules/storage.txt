@@ -1,0 +1,15 @@
+Settings · w4-os-home · Almacenamiento
+Estado: HEALTHY | Clase: W4-augmented | Modo: read-first
+Resumen: Home espera raiz btrfs cifrada con luks2, 5 subvolumenes declarados y backend de snapshots btrfs.
+Motivo: La politica y el perfil de instalacion convergen en btrfs con 5 subvolumenes visibles.
+Authority: edition-policy+installation-profile
+Capabilities: read
+Highlights: root_filesystem=btrfs, encryption_default=luks2, subvolume_count=5
+Source of truth:
+  - config/editions/home/policy.json
+  - build/install/w4-os-home/installation-profile.derived.json
+  - build/update/validation/w4-update-smoke-003-signed-prod-home-rerun-002/snapshot-manifest.json
+Entrypoints:
+  - ninguno
+Actions:
+  - ninguna

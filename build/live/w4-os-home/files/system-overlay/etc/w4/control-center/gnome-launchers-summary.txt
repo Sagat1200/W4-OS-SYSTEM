@@ -1,0 +1,12 @@
+Control Center launchers · w4-os-home
+Strategy: gnome-augmented
+Launchers: 4
+Pending modules: 1
+
+- w4-control-center-home-home.desktop -> gnome-control-center
+- w4-control-center-home-system.desktop -> gnome-control-center info-overview
+- w4-control-center-home-security.desktop -> gnome-control-center privacy
+- w4-control-center-home-updates.desktop -> gnome-software --mode=updates
+
+Pending modules:
+- Almacenamiento -> w4-surface-pending

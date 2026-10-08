@@ -15,7 +15,7 @@ if [[ ! -d "${ROOTFS_DIR}" ]]; then
   exit 1
 fi
 
-mkdir -p "${ROOTFS_DIR}/etc/w4" "${ROOTFS_DIR}/usr/local/lib/w4" "${ROOTFS_DIR}/var/lib/w4"
+mkdir -p "${ROOTFS_DIR}/etc/w4" "${ROOTFS_DIR}/usr/local/lib/w4" "${ROOTFS_DIR}/usr/share/applications" "${ROOTFS_DIR}/var/lib/w4"
 cp -a "${OVERLAY_DIR}/." "${ROOTFS_DIR}/"
 
 chown root:root "${ROOTFS_DIR}" "${ROOTFS_DIR}/etc" "${ROOTFS_DIR}/usr" "${ROOTFS_DIR}/usr/local" "${ROOTFS_DIR}/usr/local/lib" "${ROOTFS_DIR}/usr/share" || true
@@ -30,6 +30,7 @@ chown -R root:root \
   "${ROOTFS_DIR}/etc/default" \
   "${ROOTFS_DIR}/etc/systemd" \
   "${ROOTFS_DIR}/etc/skel" \
+  "${ROOTFS_DIR}/usr/share/applications" \
   "${ROOTFS_DIR}/usr/local/lib/w4" \
   "${ROOTFS_DIR}/usr/share/w4" \
   "${ROOTFS_DIR}/var/lib/w4" || true

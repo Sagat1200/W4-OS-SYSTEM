@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=W4 Settings · Sistema
+Comment=Shell, sesion y display manager ya quedaron materializados.
+Exec=gnome-control-center info-overview
+Icon=org.gnome.Settings
+Categories=Settings;System;
+Keywords=w4;settings;system;gnome;
+StartupNotify=true
+Terminal=false

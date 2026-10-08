@@ -1,0 +1,50 @@
+{
+    "control_center_module_schema_version": 1,
+    "kind": "control-center-module-detail",
+    "profile_id": "w4-os-home",
+    "generated_at": "2026-10-08T07:09:44+00:00",
+    "mode": "read-first",
+    "module": {
+        "id": "storage",
+        "title": "Almacenamiento",
+        "class": "W4-augmented",
+        "status": "healthy",
+        "status_reason": "La politica y el perfil de instalacion convergen en btrfs con 5 subvolumenes visibles.",
+        "mode": "read-first",
+        "summary": "Home espera raiz btrfs cifrada con luks2, 5 subvolumenes declarados y backend de snapshots btrfs.",
+        "authority": "edition-policy+installation-profile",
+        "capabilities": [
+            "read"
+        ],
+        "last_checked_at": "2026-09-23T20:53:26+00:00",
+        "source_of_truth": [
+            "config\/editions\/home\/policy.json",
+            "build\/install\/w4-os-home\/installation-profile.derived.json",
+            "build\/update\/validation\/w4-update-smoke-003-signed-prod-home-rerun-002\/snapshot-manifest.json"
+        ],
+        "badges": [
+            "W4-augmented",
+            "Solo lectura",
+            "Evidencia consistente"
+        ],
+        "highlights": {
+            "root_filesystem": "btrfs",
+            "encryption_default": "luks2",
+            "subvolume_count": 5
+        },
+        "entrypoints": [],
+        "actions": []
+    },
+    "detail": {
+        "status_reason": "La politica y el perfil de instalacion convergen en btrfs con 5 subvolumenes visibles.",
+        "recommended_entrypoint": null,
+        "evidence_keys": [
+            "root_filesystem",
+            "encryption_default",
+            "subvolume_count"
+        ],
+        "source_count": 3,
+        "entrypoint_count": 0,
+        "action_count": 0
+    }
+}

@@ -1,0 +1,62 @@
+{
+    "control_center_snapshot_schema_version": 1,
+    "kind": "control-center-snapshot",
+    "profile_id": "w4-os-home",
+    "generated_at": "2026-10-08T07:09:44+00:00",
+    "mode": "read-first",
+    "home": {
+        "json_path": "control-center-home.json",
+        "text_path": "control-center-home.txt"
+    },
+    "modules": [
+        {
+            "id": "system",
+            "title": "Sistema",
+            "status": "healthy",
+            "class": "W4-augmented",
+            "json_path": "modules\/system.json",
+            "text_path": "modules\/system.txt",
+            "entrypoint_count": 3
+        },
+        {
+            "id": "security",
+            "title": "Seguridad",
+            "status": "healthy",
+            "class": "W4-augmented",
+            "json_path": "modules\/security.json",
+            "text_path": "modules\/security.txt",
+            "entrypoint_count": 2
+        },
+        {
+            "id": "updates",
+            "title": "Actualizaciones",
+            "status": "healthy",
+            "class": "W4-augmented",
+            "json_path": "modules\/updates.json",
+            "text_path": "modules\/updates.txt",
+            "entrypoint_count": 1
+        },
+        {
+            "id": "storage",
+            "title": "Almacenamiento",
+            "status": "healthy",
+            "class": "W4-augmented",
+            "json_path": "modules\/storage.json",
+            "text_path": "modules\/storage.txt",
+            "entrypoint_count": 0
+        }
+    ],
+    "generated_files": [
+        "control-center-home.json",
+        "control-center-home.txt",
+        "control-center-snapshot.json",
+        "modules\/security.json",
+        "modules\/security.txt",
+        "modules\/storage.json",
+        "modules\/storage.txt",
+        "modules\/system.json",
+        "modules\/system.txt",
+        "modules\/updates.json",
+        "modules\/updates.txt"
+    ]
+}
