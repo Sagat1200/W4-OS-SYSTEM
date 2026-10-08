@@ -115,6 +115,12 @@ En este corte se aprueba una implementacion minima y conservadora:
 - defaults via `dconf`;
 - recompilacion de `dconf` desde scripts existentes del overlay cuando proceda.
 
+La evolucion aprobada sobre esa misma capa mantiene el mismo criterio conservador: cuando `Home` ya dispone de entrypoints reales y validados para la ruta `GNOME-augmented` de `Settings`, los favoritos por defecto pueden promocionar esos launchers sin abrir un dock paralelo ni forzar extensiones propias. En la composicion vigente de `Home`, esa promocion queda acotada a:
+
+- `w4-control-center-home-home.desktop` como entrypoint principal de `W4 Settings`;
+- `w4-control-center-home-updates.desktop` como acceso directo a `Updates`;
+- sustitucion del acceso generico `org.gnome.Software.desktop` por el launcher de updates alineado con `Control Center`.
+
 ## Fuera de alcance
 
 Queda fuera de este corte:

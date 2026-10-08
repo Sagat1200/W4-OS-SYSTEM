@@ -12,4 +12,4 @@ picture-uri-dark='file:///usr/share/w4/branding/home/wallpapers/w4-home-default.
 picture-uri='file:///usr/share/w4/branding/home/wallpapers/w4-home-default.svg'
 
 [org/gnome/shell]
-favorite-apps=['org.gnome.Nautilus.desktop', 'firefox-esr.desktop', 'org.libreoffice.LibreOffice.StartCenter.desktop', 'org.gnome.Software.desktop']
+favorite-apps=['org.gnome.Nautilus.desktop', 'w4-control-center-home-home.desktop', 'firefox-esr.desktop', 'org.libreoffice.LibreOffice.StartCenter.desktop', 'w4-control-center-home-updates.desktop']

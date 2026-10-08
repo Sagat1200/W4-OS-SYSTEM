@@ -140,12 +140,33 @@ final class LiveBundleGenerationTest extends TestCase
         self::assertFileExists(
             $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'control-center' . DIRECTORY_SEPARATOR . 'gnome-launchers.json'
         );
+        self::assertFileExists(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'desktop-defaults.json'
+        );
+        self::assertFileExists(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'dconf' . DIRECTORY_SEPARATOR . 'db' . DIRECTORY_SEPARATOR . 'local.d' . DIRECTORY_SEPARATOR . '00-w4-home'
+        );
 
         $updatesLauncher = file_get_contents(
             $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'applications' . DIRECTORY_SEPARATOR . 'w4-control-center-home-updates.desktop'
         );
         self::assertNotFalse($updatesLauncher);
         self::assertStringContainsString('Exec=gnome-software --mode=updates', $updatesLauncher);
+
+        $desktopDefaults = $this->decodeJsonFile(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'desktop-defaults.json'
+        );
+        self::assertContains('w4-control-center-home-home.desktop', $desktopDefaults['favorites']);
+        self::assertContains('w4-control-center-home-updates.desktop', $desktopDefaults['favorites']);
+        self::assertNotContains('org.gnome.Software.desktop', $desktopDefaults['favorites']);
+
+        $userDefaults = file_get_contents(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'dconf' . DIRECTORY_SEPARATOR . 'db' . DIRECTORY_SEPARATOR . 'local.d' . DIRECTORY_SEPARATOR . '00-w4-home'
+        );
+        self::assertNotFalse($userDefaults);
+        self::assertStringContainsString("'w4-control-center-home-home.desktop'", $userDefaults);
+        self::assertStringContainsString("'w4-control-center-home-updates.desktop'", $userDefaults);
+        self::assertStringNotContainsString("'org.gnome.Software.desktop'", $userDefaults);
 
         $launcherManifest = $this->decodeJsonFile(
             $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'control-center' . DIRECTORY_SEPARATOR . 'gnome-launchers.json'

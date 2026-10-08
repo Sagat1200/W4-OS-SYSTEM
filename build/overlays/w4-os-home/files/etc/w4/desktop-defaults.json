@@ -29,8 +29,9 @@
     },
     "favorites": [
         "org.gnome.Nautilus.desktop",
+        "w4-control-center-home-home.desktop",
         "firefox-esr.desktop",
         "org.libreoffice.LibreOffice.StartCenter.desktop",
-        "org.gnome.Software.desktop"
+        "w4-control-center-home-updates.desktop"
     ]
 }

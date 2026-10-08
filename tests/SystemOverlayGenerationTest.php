@@ -87,6 +87,9 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertSame('gnome', $desktopDefaults['desktop']['session']);
         self::assertSame('overlay-dconf', $desktopDefaults['application']['method']);
         self::assertSame('file:///usr/share/w4/branding/home/wallpapers/w4-home-default.svg', $desktopDefaults['wallpaper']['uri']);
+        self::assertContains('w4-control-center-home-home.desktop', $desktopDefaults['favorites']);
+        self::assertContains('w4-control-center-home-updates.desktop', $desktopDefaults['favorites']);
+        self::assertNotContains('org.gnome.Software.desktop', $desktopDefaults['favorites']);
 
         $dconfUserProfile = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'dconf' . DIRECTORY_SEPARATOR . 'profile' . DIRECTORY_SEPARATOR . 'user');
         self::assertNotFalse($dconfUserProfile);
@@ -97,6 +100,9 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertStringContainsString("[org/gnome/desktop/interface]", $userDefaults);
         self::assertStringContainsString("color-scheme='prefer-dark'", $userDefaults);
         self::assertStringContainsString("picture-uri='file:///usr/share/w4/branding/home/wallpapers/w4-home-default.svg'", $userDefaults);
+        self::assertStringContainsString("'w4-control-center-home-home.desktop'", $userDefaults);
+        self::assertStringContainsString("'w4-control-center-home-updates.desktop'", $userDefaults);
+        self::assertStringNotContainsString("'org.gnome.Software.desktop'", $userDefaults);
 
         $wallpaper = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'branding' . DIRECTORY_SEPARATOR . 'home' . DIRECTORY_SEPARATOR . 'wallpapers' . DIRECTORY_SEPARATOR . 'w4-home-default.svg');
         self::assertNotFalse($wallpaper);
