@@ -157,7 +157,9 @@ Ese cableado ya empezo tambien dentro del pipeline real: `scripts/generate_syste
 
 Esa validacion `overlay -> live` ya empieza a quedar congelada tambien en la cadena de build: `scripts/generate_live_bundle.php` ya propaga el estado de `control_center_gnome_launchers` al `live-manifest` y `tests/LiveBundleGenerationTest.php` verifica que el payload `files/system-overlay/` conserva tanto los `.desktop` como la evidencia runtime de `Control Center`.
 
-Con ello, el siguiente paso correcto ya no es decidir el frontend oficial, sino validar estos launchers en un live materializado real y decidir si alguno debe anclarse tambien en favoritos por defecto de `Home`. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
+Ese siguiente paso ya tiene ahora un validador propio: `src/ControlCenter/ControlCenterLiveOutputToolkit.php`, expuesto por `scripts/validate_control_center_live_output.php`, comprueba en un `live-output` materializado la presencia de `gnome-launchers.json`, `gnome-launchers-summary.txt`, los `.desktop` de `usr/share/applications/` y el baseline minimo en `filesystem.manifest`. Esto permite distinguir con claridad entre un live antiguo y uno ya regenerado con la ruta `GNOME-augmented` integrada.
+
+Con ello, el siguiente paso correcto ya no es decidir el frontend oficial, sino re-materializar el `live-output` real de `Home`, ejecutar esta validacion sobre ese artefacto y decidir si alguno de esos launchers debe anclarse tambien en favoritos por defecto. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 
