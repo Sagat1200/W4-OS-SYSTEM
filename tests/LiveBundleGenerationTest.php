@@ -84,6 +84,77 @@ final class LiveBundleGenerationTest extends TestCase
         self::assertStringContainsString('W4_DEFAULT_TARGET="${W4_DEFAULT_TARGET:-multi-user.target}"', $composeScript);
     }
 
+    public function testGenerateLiveBundleCarriesControlCenterGnomeLaunchersForHome(): void
+    {
+        $buildInputPath = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-home.build-input.json';
+        $overlayDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-home-overlay';
+        $liveDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-home-live';
+
+        $buildInput = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'generate_build_input.php',
+            [
+                '--profile',
+                'w4-os-home',
+                '--output',
+                $buildInputPath,
+            ]
+        );
+        self::assertSame(0, $buildInput['exitCode'], $buildInput['stderr']);
+
+        $overlay = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'generate_system_overlay.php',
+            [
+                '--input',
+                $buildInputPath,
+                '--output',
+                $overlayDir,
+            ]
+        );
+        self::assertSame(0, $overlay['exitCode'], $overlay['stderr']);
+
+        $live = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'generate_live_bundle.php',
+            [
+                '--input',
+                $buildInputPath,
+                '--overlay-manifest',
+                $overlayDir . DIRECTORY_SEPARATOR . 'overlay-manifest.json',
+                '--output',
+                $liveDir,
+            ]
+        );
+        self::assertSame(0, $live['exitCode'], $live['stderr']);
+
+        $manifest = $this->decodeJsonFile($liveDir . DIRECTORY_SEPARATOR . 'live-manifest.json');
+        self::assertSame('graphical.target', $manifest['edition_policy']['default_target']);
+        self::assertArrayHasKey('control_center_gnome_launchers', $manifest);
+        self::assertSame('integrated', $manifest['control_center_gnome_launchers']['status']);
+        self::assertContains(
+            'files/usr/share/applications/w4-control-center-home-updates.desktop',
+            $manifest['control_center_gnome_launchers']['desktop_files']
+        );
+
+        self::assertFileExists(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'applications' . DIRECTORY_SEPARATOR . 'w4-control-center-home-updates.desktop'
+        );
+        self::assertFileExists(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'control-center' . DIRECTORY_SEPARATOR . 'gnome-launchers.json'
+        );
+
+        $updatesLauncher = file_get_contents(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'applications' . DIRECTORY_SEPARATOR . 'w4-control-center-home-updates.desktop'
+        );
+        self::assertNotFalse($updatesLauncher);
+        self::assertStringContainsString('Exec=gnome-software --mode=updates', $updatesLauncher);
+
+        $launcherManifest = $this->decodeJsonFile(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'control-center' . DIRECTORY_SEPARATOR . 'gnome-launchers.json'
+        );
+        self::assertSame('control-center-gnome-launchers', $launcherManifest['kind']);
+        self::assertSame(4, count($launcherManifest['launchers']));
+        self::assertSame(1, count($launcherManifest['pending_modules']));
+    }
+
     /**
      * @param list<string> $arguments
      * @return array{exitCode:int,stdout:string,stderr:string}

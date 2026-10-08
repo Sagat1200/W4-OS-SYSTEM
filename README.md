@@ -155,7 +155,9 @@ Ese primer handoff real a `GNOME` ya empieza a existir tambien como artifact tec
 
 Ese cableado ya empezo tambien dentro del pipeline real: `scripts/generate_system_overlay.php` ya integra automaticamente el bundle de launchers GNOME en el overlay de `Home` y deja sus `.desktop` bajo `files/usr/share/applications/`, junto con evidencia runtime en `files/etc/w4/control-center/gnome-launchers.json` y `gnome-launchers-summary.txt`. Si el bundle previo no existe, el script intenta generarlo; si faltara alguna dependencia, degrada a `skipped` sin romper el overlay.
 
-Con ello, el siguiente paso correcto ya no es decidir el frontend oficial, sino bajar estos launchers al overlay/packaging final de la edicion `Home` y validar su presencia en `live`. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
+Esa validacion `overlay -> live` ya empieza a quedar congelada tambien en la cadena de build: `scripts/generate_live_bundle.php` ya propaga el estado de `control_center_gnome_launchers` al `live-manifest` y `tests/LiveBundleGenerationTest.php` verifica que el payload `files/system-overlay/` conserva tanto los `.desktop` como la evidencia runtime de `Control Center`.
+
+Con ello, el siguiente paso correcto ya no es decidir el frontend oficial, sino validar estos launchers en un live materializado real y decidir si alguno debe anclarse tambien en favoritos por defecto de `Home`. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 

@@ -723,6 +723,9 @@ try {
         'source_overlay_payload' => 'files/system-overlay',
         'branding' => $vars,
         'edition_policy' => $overlayManifest['edition_policy'] ?? [],
+        'control_center_gnome_launchers' => $overlayManifest['control_center_gnome_launchers'] ?? [
+            'status' => 'not-declared',
+        ],
         'live_stack' => [
             'packages' => ['live-boot', 'live-config'],
             'bootloader_ready' => false,
