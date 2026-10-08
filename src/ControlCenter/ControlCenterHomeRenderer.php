@@ -31,8 +31,57 @@ final class ControlCenterHomeRenderer
         return match ($kind) {
             'control-center-home-model' => $this->renderHomeText($payload),
             'control-center-module-detail' => $this->renderModuleDetailText($payload),
+            'control-center-snapshot-home-view' => $this->renderSnapshotHomeView($payload),
+            'control-center-snapshot-module-view' => $this->renderSnapshotModuleView($payload),
             default => throw new ValidationError(sprintf('Payload de Control Center no soportado: %s', $kind)),
         };
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function renderSnapshotHomeView(array $payload): string
+    {
+        $snapshot = is_array($payload['snapshot'] ?? null) ? $payload['snapshot'] : [];
+        $home = is_array($payload['home'] ?? null) ? $payload['home'] : [];
+
+        $lines = [
+            sprintf(
+                'Snapshot · manifest=%s · modulos=%d',
+                (string) ($snapshot['manifest_file'] ?? 'control-center-snapshot.json'),
+                count(is_array($snapshot['module_ids'] ?? null) ? $snapshot['module_ids'] : [])
+            ),
+            '',
+        ];
+
+        return implode(PHP_EOL, $lines) . $this->renderHomeText($home);
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function renderSnapshotModuleView(array $payload): string
+    {
+        $snapshot = is_array($payload['snapshot'] ?? null) ? $payload['snapshot'] : [];
+        $module = is_array($payload['module'] ?? null) ? $payload['module'] : [];
+        $detail = is_array($payload['detail'] ?? null) ? $payload['detail'] : [];
+
+        $moduleDetailPayload = [
+            'profile_id' => (string) ($payload['profile_id'] ?? 'unknown'),
+            'module' => $module,
+            'detail' => $detail,
+        ];
+
+        $lines = [
+            sprintf(
+                'Snapshot · manifest=%s · modulo=%s',
+                (string) ($snapshot['manifest_file'] ?? 'control-center-snapshot.json'),
+                (string) ($module['id'] ?? 'unknown')
+            ),
+            '',
+        ];
+
+        return implode(PHP_EOL, $lines) . $this->renderModuleDetailText($moduleDetailPayload);
     }
 
     /**

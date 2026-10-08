@@ -143,7 +143,9 @@ Ese CLI ya no se queda solo en JSON crudo: ahora soporta home agregada y `drill-
 
 Sobre esa base, la capa superior ya tambien puede materializar snapshots persistidos en `build/control-center/<perfil>/`: `src/ControlCenter/ControlCenterHomeRenderer.php` centraliza el render `json`/`text` y `scripts/generate_control_center_snapshot.php` exporta la home agregada, el detalle por modulo y un `control-center-snapshot.json` autocontenido para consumo posterior por UI o API. La prueba de integracion `tests/ControlCenterSnapshotCliTest.php` congela ese layout y valida que el snapshot generado conserve tanto la vista general como el detalle operativo de cada modulo.
 
-Con ello, el siguiente paso correcto ya no es abrir otra capa generica de lectura, sino decidir el primer consumidor visual/API de esta home ya persistida y mantener su contrato estable sin saltarse la frontera `read-first`. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
+Ese siguiente consumidor tecnico ya empieza a existir: `src/ControlCenter/ControlCenterSnapshotToolkit.php` lee `control-center-snapshot.json` y los payloads persistidos sin recomputar el `Slice A`, mientras `scripts/read_control_center_snapshot.php` expone esa lectura como home o detalle por modulo en `json`/`text`. La nueva cobertura `tests/ControlCenterSnapshotReaderCliTest.php` congela justo ese contrato de consumo sobre artifacts ya materializados.
+
+Con ello, el siguiente paso correcto ya no es abrir otra capa generica de lectura, sino decidir el primer consumidor visual/API que se apoye en este snapshot ya legible y mantener su contrato estable sin saltarse la frontera `read-first`. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 
