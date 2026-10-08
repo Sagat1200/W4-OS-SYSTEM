@@ -145,7 +145,9 @@ Sobre esa base, la capa superior ya tambien puede materializar snapshots persist
 
 Ese siguiente consumidor tecnico ya empieza a existir: `src/ControlCenter/ControlCenterSnapshotToolkit.php` lee `control-center-snapshot.json` y los payloads persistidos sin recomputar el `Slice A`, mientras `scripts/read_control_center_snapshot.php` expone esa lectura como home o detalle por modulo en `json`/`text`. La nueva cobertura `tests/ControlCenterSnapshotReaderCliTest.php` congela justo ese contrato de consumo sobre artifacts ya materializados.
 
-Con ello, el siguiente paso correcto ya no es abrir otra capa generica de lectura, sino decidir el primer consumidor visual/API que se apoye en este snapshot ya legible y mantener su contrato estable sin saltarse la frontera `read-first`. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
+Ese siguiente consumidor visual/API ya empieza a aterrizarse tambien en codigo: `src/ControlCenter/ControlCenterApiToolkit.php` traduce la lectura persistida a una respuesta API estable para `home` y `module`, con `etag`, `links`, `capabilities` y `data` lista para UI; y `scripts/read_control_center_api.php` la expone como payload JSON reutilizable. La cobertura `tests/ControlCenterApiCliTest.php` congela ese contrato para asegurar que la futura capa visual no dependa de recomputar el estado desde cero.
+
+Con ello, el siguiente paso correcto ya no es abrir otra capa generica de lectura, sino decidir la primera interfaz visual que consuma esta respuesta API sobre snapshot persistido y mantener su contrato estable sin saltarse la frontera `read-first`. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 
