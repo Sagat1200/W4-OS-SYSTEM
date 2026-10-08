@@ -151,7 +151,9 @@ Esa primera interfaz visual ya empieza a existir tambien como artifact del repo:
 
 Esa decision ya queda cerrada en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/ADR-015_HOME_SETTINGS_GNOME_AUGMENTED_INTEGRATION.md`: `Home` adopta una ruta `GNOME-augmented` para `Settings`, mantiene `gnome-control-center` como primera superficie cuando el upstream cubre el caso, y deja el bundle HTML como `reference-only`. La pieza tecnica que aterriza esa ruta es `src/ControlCenter/ControlCenterGnomeIntegrationToolkit.php`, expuesta por `scripts/generate_control_center_gnome_integration.php`, que clasifica cada modulo del `Slice A` como `delegate`, `augment` o `w4-surface` y enlaza API, entrypoints `GNOME` y referencias HTML.
 
-Con ello, el siguiente paso correcto ya no es decidir el frontend oficial, sino bajar el primer handoff real a `GNOME` sobre esta ruta `GNOME-augmented`. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
+Ese primer handoff real a `GNOME` ya empieza a existir tambien como artifact tecnico: `src/ControlCenter/ControlCenterGnomeLauncherToolkit.php`, expuesto por `scripts/generate_control_center_gnome_launchers.php`, genera un bundle de launchers `.desktop` listo para `usr/share/applications/` a partir del mapa `GNOME-augmented`. Con ello, `Sistema`, `Seguridad` y `Actualizaciones` ya pueden aterrizarse como entradas reales hacia `gnome-control-center` o `gnome-software`, mientras `Almacenamiento` queda marcado como `w4-surface-pending` fuera del bundle GNOME hasta que su superficie propia este mas estable.
+
+Con ello, el siguiente paso correcto ya no es decidir el frontend oficial, sino conectar estos launchers al overlay o al packaging efectivo de `Home`. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 
