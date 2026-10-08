@@ -3,7 +3,7 @@
 Fecha: 2026-10-07
 Estado: Activo para aterrizaje operativo
 Alcance: `W4 OS Home V1`
-Dependencias cerradas: `MX-006`, `MX-007`, `ADR-006`
+Dependencias cerradas: `MX-006`, `MX-007`, `ADR-006`, `ADR-015`
 Dependencias abiertas: `MX-004`, `MX-009`
 
 ## Objetivo
@@ -44,6 +44,8 @@ Al cerrar `MX-008`, el proyecto debe contar con un contrato V1 suficiente para i
 - defaults `dconf` y branding reversible ya preservados en el artefacto final.
 
 Con ello, `MX-008` ya no diseña contra un shell abstracto. Su referencia visible es el `Home` real sobre `GNOME`.
+
+Tras `ADR-015`, la ruta oficial de `Settings` para `Home` queda fijada como `GNOME-augmented`: `gnome-control-center` sigue siendo la primera superficie cuando el upstream cubre suficientemente el caso, mientras las capas W4 se reservan para procedencia, evidencia, politica, API estable y superficies faltantes. El bundle HTML generado por `MX-008` queda como referencia contractual y no como frontend oficial del producto.
 
 ## Entregables exactos
 

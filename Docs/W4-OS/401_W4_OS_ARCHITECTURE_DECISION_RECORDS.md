@@ -45,7 +45,7 @@ Contratos relacionados que deben mantenerse coherentes al implementar o cambiar 
 
 ## Roadmap y condiciones de evolución
 
-Registro inicial en esta colección; las decisiones de interfaz de `Home`, `Business` y `Server` ya quedan cerradas mediante `ADR-006`, `ADR-013` y `ADR-014`, mientras cargador y atomicidad siguen propuestas.
+Registro inicial en esta colección; las decisiones de interfaz de `Home`, `Business` y `Server` ya quedan cerradas mediante `ADR-006`, `ADR-013` y `ADR-014`, y `ADR-015` ya fija la ruta `GNOME-augmented` para `Settings` en `Home`, mientras cargador y atomicidad siguen propuestas.
 
 ## Registro inicial de decisiones
 
@@ -65,6 +65,7 @@ Registro inicial en esta colección; las decisiones de interfaz de `Home`, `Busi
 | ADR-012 | Evaluación | OBS como orquestador frente a pipeline Debian de referencia |
 | ADR-013 | Confirmado por solicitud | `KDE Plasma` como interfaz predeterminada de `Business`; `GNOME`, `XFCE` y `Cinnamon` como variantes controladas; el instalador puede exponer selector solo cuando el medio incluya variantes calificadas |
 | ADR-014 | Confirmado por solicitud | `Server` sin interfaz gráfica por defecto; instalación con `headless` preseleccionado y selector opcional para `KDE Plasma`, `GNOME`, `XFCE` y `Cinnamon` cuando el medio las incluya |
+| ADR-015 | Confirmado por solicitud | `Settings` de `Home` sigue una ruta `GNOME-augmented`; el bundle HTML de `MX-008` queda como referencia contractual y no como frontend oficial |
 
 Cada aceptación futura debe adjuntar alternativas evaluadas, pruebas y consecuencias. Una decisión reemplazada conserva su estado histórico y enlaza a la que la sustituye. Los documentos de producto se actualizan para reflejar el resultado; no se mantienen dos afirmaciones incompatibles bajo el mismo estado de aprobación.
 
@@ -76,6 +77,9 @@ Detalle aprobado del `ADR-013`:
 
 Detalle aprobado del `ADR-014`:
 - [ADR-014 · Politica de interfaz para Server](../DEVELOPMENT/GRAPHIC%20INTERFACE/SERVER/ADR-014_SERVER_HEADLESS_INTERFACE_POLICY.md)
+
+Detalle aprobado del `ADR-015`:
+- [ADR-015 · Integracion `GNOME-augmented` para `Settings` en `Home`](../DEVELOPMENT/GRAPHIC%20INTERFACE/HOME/ADR-015_HOME_SETTINGS_GNOME_AUGMENTED_INTEGRATION.md)
 
 ---
 

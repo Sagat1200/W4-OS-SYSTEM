@@ -149,7 +149,9 @@ Ese siguiente consumidor visual/API ya empieza a aterrizarse tambien en codigo: 
 
 Esa primera interfaz visual ya empieza a existir tambien como artifact del repo: `src/ControlCenter/ControlCenterUiToolkit.php` genera una home HTML y paginas por modulo a partir de la respuesta API, y `scripts/generate_control_center_ui_bundle.php` materializa un bundle estatico en `build/control-center-ui/<perfil>/` con `index.html`, `modules/*.html`, `styles/control-center.css` y `control-center-ui-manifest.json`. La cobertura `tests/ControlCenterUiBundleCliTest.php` congela ese bundle para que la UI visible siga anclada al contrato `read-first`.
 
-Con ello, el siguiente paso correcto ya no es abrir otra capa generica de lectura, sino decidir si esta UI estatica pasa a ser prototipo oficial de `Settings` o si se usa como base de una integracion mas cercana a `GNOME`. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
+Esa decision ya queda cerrada en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/ADR-015_HOME_SETTINGS_GNOME_AUGMENTED_INTEGRATION.md`: `Home` adopta una ruta `GNOME-augmented` para `Settings`, mantiene `gnome-control-center` como primera superficie cuando el upstream cubre el caso, y deja el bundle HTML como `reference-only`. La pieza tecnica que aterriza esa ruta es `src/ControlCenter/ControlCenterGnomeIntegrationToolkit.php`, expuesta por `scripts/generate_control_center_gnome_integration.php`, que clasifica cada modulo del `Slice A` como `delegate`, `augment` o `w4-surface` y enlaza API, entrypoints `GNOME` y referencias HTML.
+
+Con ello, el siguiente paso correcto ya no es decidir el frontend oficial, sino bajar el primer handoff real a `GNOME` sobre esta ruta `GNOME-augmented`. `Red`, `Usuarios` y `Aplicaciones` quedan explicitamente diferidos para no empujar demasiado pronto a `MX-009` ni mezclar este frente con onboarding o catalogo de producto.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 
