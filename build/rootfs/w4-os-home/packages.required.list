@@ -4,6 +4,7 @@ base-files
 bash
 btrfs-progs
 ca-certificates
+evince
 firefox-esr
 gdm3
 gnome-control-center
@@ -23,5 +24,6 @@ shim-signed
 sudo
 systemd
 ufw
+vlc
 xdg-desktop-portal
 xdg-desktop-portal-gnome

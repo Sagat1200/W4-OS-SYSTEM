@@ -41,6 +41,7 @@
             "bash",
             "btrfs-progs",
             "ca-certificates",
+            "evince",
             "firefox-esr",
             "gdm3",
             "gnome-control-center",
@@ -60,15 +61,14 @@
             "sudo",
             "systemd",
             "ufw",
+            "vlc",
             "xdg-desktop-portal",
             "xdg-desktop-portal-gnome"
         ],
         "recommended": [
-            "evince",
             "flatpak",
             "fwupd",
-            "snapper",
-            "vlc"
+            "snapper"
         ]
     },
     "features": [
@@ -85,7 +85,7 @@
     "counts": {
         "required_meta_packages": 4,
         "recommended_meta_packages": 0,
-        "required_packages": 27,
-        "recommended_packages": 5
+        "required_packages": 29,
+        "recommended_packages": 3
     }
 }

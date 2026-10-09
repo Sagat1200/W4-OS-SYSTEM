@@ -99,7 +99,7 @@ reset_rootfs_dir() {
 bootstrap_with_mmdebstrap() {
   mmdebstrap \
     --variant=minbase \
-    --include=apparmor,apt,base-files,bash,btrfs-progs,ca-certificates,firefox-esr,gdm3,gnome-control-center,gnome-session,gnome-shell,gnome-software,gnome-terminal,grub-efi-amd64,libreoffice,linux-image-amd64,nautilus,network-manager,os-prober,php-cli,pipewire,shim-signed,sudo,systemd,ufw,xdg-desktop-portal,xdg-desktop-portal-gnome \
+    --include=apparmor,apt,base-files,bash,btrfs-progs,ca-certificates,evince,firefox-esr,gdm3,gnome-control-center,gnome-session,gnome-shell,gnome-software,gnome-terminal,grub-efi-amd64,libreoffice,linux-image-amd64,nautilus,network-manager,os-prober,php-cli,pipewire,shim-signed,sudo,systemd,ufw,vlc,xdg-desktop-portal,xdg-desktop-portal-gnome \
     --aptopt='Acquire::Retries "3"' \
     trixie "${ROOTFS_DIR}" \
     "deb [signed-by=${HOST_BOOTSTRAP_KEYRING}] https://deb.debian.org/debian trixie main"
@@ -143,7 +143,7 @@ mkdir -p "${ROOTFS_DIR}/var/tmp"
 
   echo "==> Instalacion de paquetes requeridos"
   chroot "${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 update
-  chroot "${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 install -y apparmor apt base-files bash btrfs-progs ca-certificates firefox-esr gdm3 gnome-control-center gnome-session gnome-shell gnome-software gnome-terminal grub-efi-amd64 libreoffice linux-image-amd64 nautilus network-manager os-prober php-cli pipewire shim-signed sudo systemd ufw xdg-desktop-portal xdg-desktop-portal-gnome
+  chroot "${ROOTFS_DIR}" env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 install -y apparmor apt base-files bash btrfs-progs ca-certificates evince firefox-esr gdm3 gnome-control-center gnome-session gnome-shell gnome-software gnome-terminal grub-efi-amd64 libreoffice linux-image-amd64 nautilus network-manager os-prober php-cli pipewire shim-signed sudo systemd ufw vlc xdg-desktop-portal xdg-desktop-portal-gnome
 }
 
 cleanup() {
@@ -224,7 +224,7 @@ mkdir -p "${ROOTFS_DIR}/var/log"
 mkdir -p "${ROOTFS_DIR}/var/tmp"
 
 echo "==> Paquetes recomendados sugeridos"
-echo "evince flatpak fwupd snapper vlc"
+echo "flatpak fwupd snapper"
 
 echo "==> Limpiando identidades del entorno"
 rm -f "${ROOTFS_DIR}/etc/machine-id"

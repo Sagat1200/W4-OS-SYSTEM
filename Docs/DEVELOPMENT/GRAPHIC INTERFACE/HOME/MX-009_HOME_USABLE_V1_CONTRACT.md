@@ -46,14 +46,14 @@ La primera capa verificable de `MX-009` debe tratar como baseline utilizable de 
 
 - navegador: `firefox-esr`
 - documentos: `libreoffice`
+- PDF: `evince`
+- multimedia basica: `vlc`
 - archivos: `nautilus`
 - ajustes: `W4 Settings`
 - updates visibles: `W4 Settings · Actualizaciones`
 
 Este corte no declara aun un stack final completo de:
 
-- PDF,
-- multimedia,
 - escaneo,
 - respaldo guiado,
 - onboarding interactivo.
@@ -98,7 +98,8 @@ El primer slice tecnico de `MX-009` debe validar sobre `build/live-output/w4-os-
 1. que el baseline de aplicaciones minimo siga presente en `filesystem.manifest`;
 2. que los favoritos del shell sigan exponiendo las rutas visibles de `Home`;
 3. que `W4 Settings` y `Updates` sigan aterrizados como entrypoints reales;
-4. que la ruta materializada no dependa de inspeccion manual archivo por archivo.
+4. que `evince` y `vlc` pasen de decision documental a baseline materializado real;
+5. que la ruta materializada no dependa de inspeccion manual archivo por archivo.
 
 ## Entregables obligatorios de este primer slice
 

@@ -109,25 +109,31 @@ final class RootfsBundleGenerationTest extends TestCase
 
         $manifest = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'rootfs-manifest.json');
         self::assertContains('w4-desktop-gnome-meta', $manifest['meta_packages']['required']);
+        self::assertContains('evince', $manifest['packages']['required']);
         self::assertContains('gdm3', $manifest['packages']['required']);
         self::assertContains('gnome-session', $manifest['packages']['required']);
         self::assertContains('gnome-shell', $manifest['packages']['required']);
         self::assertContains('gnome-software', $manifest['packages']['required']);
         self::assertContains('nautilus', $manifest['packages']['required']);
+        self::assertContains('vlc', $manifest['packages']['required']);
         self::assertContains('xdg-desktop-portal-gnome', $manifest['packages']['required']);
 
         $requiredPackages = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'packages.required.list');
         self::assertNotFalse($requiredPackages);
+        self::assertStringContainsString("evince\n", $requiredPackages);
         self::assertStringContainsString("gdm3\n", $requiredPackages);
         self::assertStringContainsString("gnome-shell\n", $requiredPackages);
         self::assertStringContainsString("gnome-session\n", $requiredPackages);
+        self::assertStringContainsString("vlc\n", $requiredPackages);
 
         $buildScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'build-rootfs.sh');
         self::assertNotFalse($buildScript);
         self::assertStringContainsString('--include=', $buildScript);
+        self::assertStringContainsString('evince', $buildScript);
         self::assertStringContainsString('gdm3', $buildScript);
         self::assertStringContainsString('gnome-shell', $buildScript);
         self::assertStringContainsString('gnome-session', $buildScript);
+        self::assertStringContainsString('vlc', $buildScript);
         self::assertStringContainsString('bootstrap_with_mmdebstrap()', $buildScript);
         self::assertStringContainsString('bootstrap_with_debootstrap()', $buildScript);
         self::assertStringContainsString('mmdebstrap fallo con codigo', $buildScript);

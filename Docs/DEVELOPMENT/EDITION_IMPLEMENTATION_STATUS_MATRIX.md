@@ -40,7 +40,7 @@ Este documento no sustituye `DEVELOPMENT_MATRIX.md`. Su funcion es resumir, por 
 | automatizacion VM/QA integrada | Parcial | Parcial | Cerrado | `Server` es el frente mas encapsulado; `Home` y `Business` aun dependen mas de playbook operativo que de runner integrado equivalente. |
 | politica de interfaz | Cerrado | Cerrado | Cerrado | `Home`, `Business` y `Server` ya tienen matriz y ADR propias. |
 | shell, branding y defaults visibles | Cerrado | No iniciado | N/A | `Home` ya aterrizo `GNOME + GDM`, branding reversible y favoritos visibles; `Business` aun no traduce su ADR grafica a composicion UX real. |
-| apps base / experiencia utilizable | Parcial | No iniciado | N/A | `Home` ya abre `MX-009` con baseline visible verificable, pero todavia debe cerrar PDF, multimedia, onboarding y accesibilidad; `Business` sigue sin aterrizaje utilizable equivalente. |
+| apps base / experiencia utilizable | Parcial | No iniciado | N/A | `Home` ya abre `MX-009` con baseline visible verificable y ya promociona `evince` y `vlc` a baseline efectivo de V1, pero todavia debe rematerializar ese cierre en el artefacto real y luego abordar onboarding y accesibilidad; `Business` sigue sin aterrizaje utilizable equivalente. |
 | control center / gestion UX | Parcial | No iniciado | N/A | `Home` ya tiene baseline `GNOME-augmented` validado y suficiente para `Home V1`, aunque no una suite completa de producto; `Business` sigue sin este frente. |
 | perfil de producto final | Parcial | Parcial | Cerrado | `Server` ya esta fuerte para su objetivo headless; `Home` y `Business` aun no cierran su capa final de producto. |
 

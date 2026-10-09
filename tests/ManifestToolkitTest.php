@@ -46,7 +46,8 @@ final class ManifestToolkitTest extends TestCase
         self::assertContains('ufw', $resolved['required_packages']);
         self::assertContains('os-prober', $resolved['required_packages']);
         self::assertContains('firefox-esr', $resolved['required_packages']);
-        self::assertContains('vlc', $resolved['recommended_packages']);
+        self::assertContains('evince', $resolved['required_packages']);
+        self::assertContains('vlc', $resolved['required_packages']);
         self::assertContains('gnome-gdm-default-route', $resolved['features']);
         self::assertContains('home-onboarding', $resolved['features']);
         self::assertContains('reversible-branding-defaults', $resolved['features']);
@@ -68,14 +69,18 @@ final class ManifestToolkitTest extends TestCase
         self::assertSame('trixie', $buildInput['upstream']['codename']);
         self::assertContains('apparmor', $buildInput['packages']['required']);
         self::assertContains('btrfs-progs', $buildInput['packages']['required']);
+        self::assertContains('evince', $buildInput['packages']['required']);
         self::assertContains('firefox-esr', $buildInput['packages']['required']);
         self::assertContains('gdm3', $buildInput['packages']['required']);
         self::assertContains('gnome-session', $buildInput['packages']['required']);
         self::assertContains('gnome-shell', $buildInput['packages']['required']);
+        self::assertContains('vlc', $buildInput['packages']['required']);
         self::assertContains('xdg-desktop-portal-gnome', $buildInput['packages']['required']);
         self::assertContains('php-cli', $buildInput['packages']['required']);
         self::assertContains('ufw', $buildInput['packages']['required']);
         self::assertContains('snapper', $buildInput['packages']['recommended']);
+        self::assertNotContains('evince', $buildInput['packages']['recommended']);
+        self::assertNotContains('vlc', $buildInput['packages']['recommended']);
         self::assertContains('gnome-gdm-default-route', $buildInput['features']);
         self::assertSame(
             count($buildInput['packages']['required']),

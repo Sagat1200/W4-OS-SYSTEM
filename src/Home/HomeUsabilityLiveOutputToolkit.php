@@ -33,20 +33,16 @@ final class HomeUsabilityLiveOutputToolkit
         );
 
         $requiredPackages = [
+            'evince',
             'firefox-esr',
             'libreoffice',
             'nautilus',
             'gnome-control-center',
             'gnome-software',
-        ];
-
-        $recommendedPackages = [
-            'evince',
             'vlc',
         ];
 
         $requiredPackageStatus = $this->packageStatus($filesystemPackages, $requiredPackages, true);
-        $recommendedPackageStatus = $this->packageStatus($filesystemPackages, $recommendedPackages, false);
 
         $desktopDefaults = $this->readRequiredJsonFile(
             $resolvedLiveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'desktop-defaults.json',
@@ -85,7 +81,6 @@ final class HomeUsabilityLiveOutputToolkit
             'generated_at' => (string) ($liveSummary['W4_GENERATED_AT'] ?? gmdate('c')),
             'live_output_dir' => $this->relativePath($resolvedLiveOutputDir),
             'required_packages' => $requiredPackageStatus,
-            'recommended_packages' => $recommendedPackageStatus,
             'favorites' => [
                 'declared' => $favorites['declared'],
                 'required' => $favorites['required'],
@@ -154,7 +149,6 @@ final class HomeUsabilityLiveOutputToolkit
     public function renderSummaryText(array $validation): string
     {
         $requiredPackages = is_array($validation['required_packages'] ?? null) ? $validation['required_packages'] : [];
-        $recommendedPackages = is_array($validation['recommended_packages'] ?? null) ? $validation['recommended_packages'] : [];
         $favorites = is_array($validation['favorites'] ?? null) ? $validation['favorites'] : [];
         $favoriteEntries = is_array($favorites['declared'] ?? null) ? $favorites['declared'] : [];
         $visibleRoutes = is_array($validation['visible_routes'] ?? null) ? $validation['visible_routes'] : [];
@@ -171,12 +165,6 @@ final class HomeUsabilityLiveOutputToolkit
         ];
 
         foreach ((array) ($requiredPackages['present'] ?? []) as $package => $present) {
-            $lines[] = sprintf('- %s: %s', (string) $package, $present ? 'yes' : 'no');
-        }
-
-        $lines[] = '';
-        $lines[] = 'Recommended packages:';
-        foreach ((array) ($recommendedPackages['present'] ?? []) as $package => $present) {
             $lines[] = sprintf('- %s: %s', (string) $package, $present ? 'yes' : 'no');
         }
 

@@ -14,6 +14,7 @@
   },
   "packages": {
     "required": [
+      "evince",
       "firefox-esr",
       "gdm3",
       "gnome-control-center",
@@ -25,13 +26,11 @@
       "nautilus",
       "os-prober",
       "pipewire",
+      "vlc",
       "xdg-desktop-portal",
       "xdg-desktop-portal-gnome"
     ],
-    "recommended": [
-      "evince",
-      "vlc"
-    ],
+    "recommended": [],
     "remove": []
   },
   "features": [

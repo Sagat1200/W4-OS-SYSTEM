@@ -44,10 +44,11 @@ final class HomeUsabilityLiveOutputCliTest extends TestCase
         self::assertSame('ok', $payload['status']);
         self::assertSame('home-usability-live-output-validation', $payload['kind']);
         self::assertSame('w4-os-home', $payload['profile_id']);
+        self::assertTrue($payload['required_packages']['present']['evince']);
         self::assertTrue($payload['required_packages']['present']['firefox-esr']);
         self::assertTrue($payload['required_packages']['present']['libreoffice']);
         self::assertTrue($payload['required_packages']['present']['nautilus']);
-        self::assertSame(['vlc'], $payload['recommended_packages']['missing']);
+        self::assertTrue($payload['required_packages']['present']['vlc']);
         self::assertContains('firefox-esr.desktop', $payload['favorites']['declared']);
         self::assertContains('w4-control-center-home-home.desktop', $payload['favorites']['required']);
         self::assertSame('available', $payload['visible_routes'][0]['status']);
@@ -78,8 +79,9 @@ final class HomeUsabilityLiveOutputCliTest extends TestCase
 
         self::assertSame(0, $result['exitCode'], $result['stderr']);
         self::assertStringContainsString('Home utilizable live output', $result['stdout']);
+        self::assertStringContainsString('evince: yes', $result['stdout']);
         self::assertStringContainsString('firefox-esr: yes', $result['stdout']);
-        self::assertStringContainsString('vlc: no', $result['stdout']);
+        self::assertStringContainsString('vlc: yes', $result['stdout']);
         self::assertStringContainsString('W4 Settings: available', $result['stdout']);
         self::assertStringContainsString('Actualizaciones: available', $result['stdout']);
     }
@@ -148,11 +150,12 @@ JSON
             $liveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'live' . DIRECTORY_SEPARATOR . 'filesystem.manifest',
             <<<'TXT'
 firefox-esr 140.15.0esr-1~deb13u1
+evince 48.0-1
 gnome-control-center 48.4-1
 gnome-software 48.3-2
 libreoffice 25.2.3-2
 nautilus 48.3-2
-evince 48.0-1
+vlc 1:3.0.21-0+deb13u1
 TXT
         );
     }

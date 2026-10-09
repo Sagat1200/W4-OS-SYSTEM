@@ -33,6 +33,7 @@
             "bash",
             "btrfs-progs",
             "ca-certificates",
+            "evince",
             "firefox-esr",
             "gdm3",
             "gnome-control-center",
@@ -52,15 +53,14 @@
             "sudo",
             "systemd",
             "ufw",
+            "vlc",
             "xdg-desktop-portal",
             "xdg-desktop-portal-gnome"
         ],
         "recommended": [
-            "evince",
             "flatpak",
             "fwupd",
-            "snapper",
-            "vlc"
+            "snapper"
         ]
     },
     "meta_packages": {
