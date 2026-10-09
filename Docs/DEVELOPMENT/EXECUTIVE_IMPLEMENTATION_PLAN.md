@@ -197,13 +197,13 @@ Entregables tecnicos obligatorios:
 Ese aterrizaje operativo ya queda abierto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-009_HOME_USABLE_V1_CONTRACT.md`. La pieza baja `011`, `131`, `231`, `232`, `237` y `408` a una ruta conservadora: primero se congela el baseline visible de aplicaciones y entrypoints ya materializados, luego se decide si onboarding, accesibilidad, PDF y multimedia entran como slices posteriores con evidencia propia.
 
 Resultado del siguiente paso:
-`src/Home/HomeUsabilityLiveOutputToolkit.php`, expuesto por `scripts/validate_home_usability_live_output.php`, ya valida sobre `build/live-output/w4-os-home/` la presencia de `firefox-esr`, `libreoffice`, `evince`, `vlc`, `nautilus`, `gnome-control-center`, `gnome-software`, los favoritos clave del shell y las rutas visibles `W4 Settings`/`Updates`. `tests/HomeUsabilityLiveOutputCliTest.php` congela ese contrato sobre un workspace sintetico; `manifests/w4-os-home.profile.json` ya promociona `evince` y `vlc` a `packages.required`; y `build/inputs/w4-os-home.build-input.json` junto con `build/rootfs/w4-os-home/rootfs-manifest.json` ya reflejan esa decision en el pipeline fuente.
+`src/Home/HomeUsabilityLiveOutputToolkit.php`, expuesto por `scripts/validate_home_usability_live_output.php`, ya valida sobre `build/live-output/w4-os-home/` la presencia de `firefox-esr`, `libreoffice`, `evince`, `vlc`, `nautilus`, `gnome-control-center`, `gnome-software`, los favoritos clave del shell y las rutas visibles `W4 Settings`/`Updates`. `tests/HomeUsabilityLiveOutputCliTest.php` congela ese contrato sobre un workspace sintetico; `manifests/w4-os-home.profile.json` ya promociona `evince` y `vlc` a `packages.required`; el rootfs fue recompuesto en WSL; y el `live-output` final ya cierra en verde con ambos paquetes presentes en `filesystem.manifest`.
 
 Siguiente paso despues de este corte:
-usar esta promocion para cerrar el siguiente subcorte de `MX-009`: rematerializar `Home` sobre WSL y volver a ejecutar el validador de `live-output` hasta que `evince` y `vlc` queden presentes tambien en el artefacto final, no solo en manifests y bundles intermedios.
+tomar este baseline ampliado ya materializado como base estable de `Home V1` y elegir el siguiente slice visible de `MX-009`, probablemente en onboarding, accesibilidad o pulido del recorrido inicial, sin reabrir el mismo cierre de packaging.
 
 Estado actual de ese subcorte:
-el validador real ahora falla de forma controlada con `Faltan paquetes requeridos del baseline utilizable de Home: evince, vlc`, precisamente porque el `live-output` actual todavia es anterior a esta promocion. La brecha ya no esta en la decision de producto ni en el contrato fuente, sino en la rematerializacion efectiva del artefacto.
+el validador real ya devuelve `yes` para `evince`, `vlc`, `firefox-esr`, `libreoffice`, `nautilus`, `gnome-control-center` y `gnome-software`, y mantiene alineadas las rutas visibles `W4 Settings`/`Updates` junto con los favoritos del shell. La brecha de packaging visible queda cerrada para este corte.
 
 Como guardrail de este frente, la regla principal queda congelada desde el arranque: `MX-009` no debe intentar cerrar todo `Home V1` de una sola vez. Primero se congela el baseline minimo visible y solo despues se habilitan slices mas amplios de onboarding, accesibilidad o catalogo.
 
