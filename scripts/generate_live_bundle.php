@@ -257,6 +257,7 @@ LIVE_USER="%LIVE_USER%"
 LIVE_HOSTNAME="%LIVE_HOSTNAME%"
 DIST_NAME="%DIST_NAME%"
 EDITION="%EDITION%"
+W4_DEFAULT_TARGET="${W4_DEFAULT_TARGET:-%DEFAULT_TARGET%}"
 WORK_ROOTFS_DEFAULT="/var/tmp/w4-os-system/${PROFILE_ID}/live-work-rootfs"
 WORK_ROOTFS="${W4_LIVE_WORK_ROOTFS:-${WORK_ROOTFS_DEFAULT}}"
 STAGE_OUTPUT_DEFAULT="/var/tmp/w4-os-system/${PROFILE_ID}/live-output-stage"
@@ -407,12 +408,12 @@ apply_system_overlay() {
   [[ -f "${rootfs_dir}/etc/default/ufw" ]] && chmod 0644 "${rootfs_dir}/etc/default/ufw"
   [[ -f "${rootfs_dir}/etc/ufw/ufw.conf" ]] && chmod 0644 "${rootfs_dir}/etc/ufw/ufw.conf"
 
-  mkdir -p "${rootfs_dir}/etc/systemd/system/multi-user.target.wants"
+  mkdir -p "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants"
   if [[ -f "${rootfs_dir}/etc/systemd/system/w4-firstboot.service" ]]; then
-    ln -sfn ../w4-firstboot.service "${rootfs_dir}/etc/systemd/system/multi-user.target.wants/w4-firstboot.service"
+    ln -sfn ../w4-firstboot.service "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-firstboot.service"
   fi
   if [[ -f "${rootfs_dir}/etc/systemd/system/w4-live-prep.service" ]]; then
-    ln -sfn ../w4-live-prep.service "${rootfs_dir}/etc/systemd/system/multi-user.target.wants/w4-live-prep.service"
+    ln -sfn ../w4-live-prep.service "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-live-prep.service"
   fi
 
   printf '%s\n' "${PROFILE_ID}" > "${rootfs_dir}/var/lib/w4/system-overlay-profile"
@@ -576,7 +577,7 @@ W4_PROFILE_ID="${PROFILE_ID}"
 W4_PROFILE_NAME="${PROFILE_NAME}"
 W4_LIVE_USER="${LIVE_USER}"
 W4_LIVE_HOSTNAME="${LIVE_HOSTNAME}"
-W4_DEFAULT_TARGET="${W4_DEFAULT_TARGET:-%DEFAULT_TARGET%}"
+W4_DEFAULT_TARGET="${W4_DEFAULT_TARGET}"
 W4_KERNEL_BASENAME="$(basename "${KERNEL_SRC}")"
 W4_INITRD_BASENAME="$(basename "${INITRD_SRC}")"
 W4_PREPARED_LIVE_STACK="${PREPARE_LIVE_STACK}"

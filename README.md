@@ -126,7 +126,8 @@ El siguiente ciclo tecnico activo corresponde a `MX-009 · Home utilizable` y se
 
 - congelar el baseline minimo visible de `Home`;
 - validar apps y rutas de primera sesion sobre el `live-output` real;
-- y dejar onboarding, accesibilidad y ampliacion de apps como slices posteriores con evidencia propia.
+- abrir onboarding local como readiness tecnica verificable;
+- y dejar la UI completa, accesibilidad y ampliacion de apps como slices posteriores con evidencia propia.
 
 La base de este ciclo ya no es hipotetica: `MX-007` dejo validada la shell `GNOME + GDM` y `MX-008` ya deja `Settings` en una ruta `GNOME-augmented` aceptada como suficiente para `Home V1`. Eso permite que `MX-009` arranque sobre una experiencia visible real y no sobre intenciones sueltas de producto.
 
@@ -134,7 +135,11 @@ El aterrizaje operativo de este frente ya queda abierto en `Docs/DEVELOPMENT/GRA
 
 Ese primer slice tecnico ya existe en codigo: `src/Home/HomeUsabilityLiveOutputToolkit.php`, expuesto por `scripts/validate_home_usability_live_output.php`, valida sobre `build/live-output/w4-os-home/` la presencia de `firefox-esr`, `libreoffice`, `evince`, `vlc`, `nautilus`, `gnome-control-center`, `gnome-software`, los favoritos clave del shell y las rutas visibles `W4 Settings`/`Updates`. La cobertura inicial vive en `tests/HomeUsabilityLiveOutputCliTest.php`, donde el contrato queda congelado sobre un workspace minimo aislado.
 
-Ese baseline ya no queda solo como recomendacion: `manifests/w4-os-home.profile.json` promociona `evince` y `vlc` a `packages.required`, `build/inputs/w4-os-home.build-input.json` junto con `build/rootfs/w4-os-home/rootfs-manifest.json` ya reflejan esa decision, y la recomposicion real de `build/live-output/w4-os-home/` ya la deja materializada en el artefacto final. `scripts/validate_home_usability_live_output.php --profile w4-os-home --format text` ya confirma `yes` para `evince`, `vlc`, `firefox-esr`, `libreoffice`, `nautilus`, `gnome-control-center` y `gnome-software`, manteniendo tambien las rutas visibles `W4 Settings` y `Updates`. Con esto, el baseline ampliado de `Home V1` queda cerrado y el siguiente paso deja de ser packaging para pasar a otro slice visible de `MX-009`.
+Ese baseline ya no queda solo como recomendacion: `manifests/w4-os-home.profile.json` promociona `evince` y `vlc` a `packages.required`, `build/inputs/w4-os-home.build-input.json` junto con `build/rootfs/w4-os-home/rootfs-manifest.json` ya reflejan esa decision, y la recomposicion real de `build/live-output/w4-os-home/` ya la deja materializada en el artefacto final. `scripts/validate_home_usability_live_output.php --profile w4-os-home --format text` ya confirma `yes` para `evince`, `vlc`, `firefox-esr`, `libreoffice`, `nautilus`, `gnome-control-center` y `gnome-software`, manteniendo tambien las rutas visibles `W4 Settings` y `Updates`.
+
+El siguiente subcorte ya queda encuadrado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-009_HOME_ONBOARDING_LOCAL_READINESS.md`: onboarding local se trata primero como readiness de primer inicio sobre el artefacto materializado. `src/Home/HomeOnboardingLiveOutputToolkit.php`, expuesto por `scripts/validate_home_onboarding_live_output.php`, valida `home-onboarding`, `local-backup-ready`, `w4-firstboot.service`, `w4-live-prep.service`, scripts runtime y activacion en el target por defecto; `tests/HomeOnboardingLiveOutputCliTest.php` congela ese contrato.
+
+La primera corrida real de ese gate encontro una brecha concreta del pipeline: el `live-output` vigente no trae aun `graphical.target.wants/w4-firstboot.service`, aunque el servicio declara `WantedBy=graphical.target`. El origen ya quedo corregido en `scripts/generate_live_bundle.php`, `tests/LiveBundleGenerationTest.php` ya congela la activacion sobre `${W4_DEFAULT_TARGET}.wants`, y `build/live/w4-os-home/compose-live.sh` fue regenerado con esa regla. El paso pendiente ya no es de diseno sino de rematerializacion del `live-output` final para volver a correr el validador de onboarding sobre el artefacto actualizado.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 

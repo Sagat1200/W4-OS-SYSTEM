@@ -82,6 +82,13 @@ final class LiveBundleGenerationTest extends TestCase
         self::assertStringContainsString('chmod 0755 "${rootfs_dir}/etc/ufw"', $composeScript);
         self::assertStringContainsString('chmod 0644 "${rootfs_dir}/etc/ufw/ufw.conf"', $composeScript);
         self::assertStringContainsString('W4_DEFAULT_TARGET="${W4_DEFAULT_TARGET:-multi-user.target}"', $composeScript);
+        self::assertStringContainsString('mkdir -p "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants"', $composeScript);
+        self::assertStringContainsString('ln -sfn ../w4-firstboot.service "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-firstboot.service"', $composeScript);
+        self::assertStringContainsString('ln -sfn ../w4-live-prep.service "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-live-prep.service"', $composeScript);
+        self::assertLessThan(
+            strpos($composeScript, 'mkdir -p "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants"'),
+            strpos($composeScript, 'W4_DEFAULT_TARGET="${W4_DEFAULT_TARGET:-multi-user.target}"')
+        );
     }
 
     public function testGenerateLiveBundleCarriesControlCenterGnomeLaunchersForHome(): void
@@ -174,6 +181,17 @@ final class LiveBundleGenerationTest extends TestCase
         self::assertSame('control-center-gnome-launchers', $launcherManifest['kind']);
         self::assertSame(4, count($launcherManifest['launchers']));
         self::assertSame(1, count($launcherManifest['pending_modules']));
+
+        $composeScript = file_get_contents($liveDir . DIRECTORY_SEPARATOR . 'compose-live.sh');
+        self::assertNotFalse($composeScript);
+        self::assertStringContainsString('W4_DEFAULT_TARGET="${W4_DEFAULT_TARGET:-graphical.target}"', $composeScript);
+        self::assertStringContainsString('mkdir -p "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants"', $composeScript);
+        self::assertStringContainsString('ln -sfn ../w4-firstboot.service "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-firstboot.service"', $composeScript);
+        self::assertStringContainsString('ln -sfn ../w4-live-prep.service "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-live-prep.service"', $composeScript);
+        self::assertLessThan(
+            strpos($composeScript, 'mkdir -p "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants"'),
+            strpos($composeScript, 'W4_DEFAULT_TARGET="${W4_DEFAULT_TARGET:-graphical.target}"')
+        );
     }
 
     /**
