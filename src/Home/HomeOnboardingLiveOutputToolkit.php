@@ -103,11 +103,11 @@ final class HomeOnboardingLiveOutputToolkit
         $firstbootSymlink = $resolvedLiveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'systemd' . DIRECTORY_SEPARATOR . 'system' . DIRECTORY_SEPARATOR . 'graphical.target.wants' . DIRECTORY_SEPARATOR . 'w4-firstboot.service';
         $livePrepSymlink = $resolvedLiveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'systemd' . DIRECTORY_SEPARATOR . 'system' . DIRECTORY_SEPARATOR . 'graphical.target.wants' . DIRECTORY_SEPARATOR . 'w4-live-prep.service';
 
-        if (!is_link($firstbootSymlink) && !is_file($firstbootSymlink)) {
+        if (!$this->pathExists($firstbootSymlink)) {
             throw new ValidationError(sprintf('No se encontro el enlace esperado de firstboot: %s', $firstbootSymlink));
         }
 
-        if (!is_link($livePrepSymlink) && !is_file($livePrepSymlink)) {
+        if (!$this->pathExists($livePrepSymlink)) {
             throw new ValidationError(sprintf('No se encontro el enlace esperado de live-prep: %s', $livePrepSymlink));
         }
 
@@ -202,6 +202,15 @@ final class HomeOnboardingLiveOutputToolkit
     private function defaultLiveOutputDir(string $profileId): string
     {
         return $this->rootDir . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'live-output' . DIRECTORY_SEPARATOR . $profileId;
+    }
+
+    private function pathExists(string $path): bool
+    {
+        if (file_exists($path)) {
+            return true;
+        }
+
+        return @lstat($path) !== false;
     }
 
     /**

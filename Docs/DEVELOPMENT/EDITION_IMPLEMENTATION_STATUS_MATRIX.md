@@ -40,7 +40,7 @@ Este documento no sustituye `DEVELOPMENT_MATRIX.md`. Su funcion es resumir, por 
 | automatizacion VM/QA integrada | Parcial | Parcial | Cerrado | `Server` es el frente mas encapsulado; `Home` y `Business` aun dependen mas de playbook operativo que de runner integrado equivalente. |
 | politica de interfaz | Cerrado | Cerrado | Cerrado | `Home`, `Business` y `Server` ya tienen matriz y ADR propias. |
 | shell, branding y defaults visibles | Cerrado | No iniciado | N/A | `Home` ya aterrizo `GNOME + GDM`, branding reversible y favoritos visibles; `Business` aun no traduce su ADR grafica a composicion UX real. |
-| apps base / experiencia utilizable | Parcial | No iniciado | N/A | `Home` ya cerro el baseline visible materializado de navegador, documentos, PDF, multimedia, archivos, `W4 Settings` y `Updates`; ademas ya abrio onboarding local como readiness verificable con `HomeOnboardingLiveOutputToolkit`, aunque el `live-output` vigente aun debe rematerializarse con el fix de activacion por `default target` antes de tratar ese subcorte como cierre materializado. `Business` sigue sin aterrizaje utilizable equivalente. |
+| apps base / experiencia utilizable | Parcial | No iniciado | N/A | `Home` ya cerro el baseline visible materializado de navegador, documentos, PDF, multimedia, archivos, `W4 Settings` y `Updates`; ademas ya materializo onboarding local readiness con `HomeOnboardingLiveOutputToolkit` sobre el `live-output` real, incluyendo activacion por `default target` y compatibilidad Windows para validar esos entrypoints. `Business` sigue sin aterrizaje utilizable equivalente. |
 | control center / gestion UX | Parcial | No iniciado | N/A | `Home` ya tiene baseline `GNOME-augmented` validado y suficiente para `Home V1`, aunque no una suite completa de producto; `Business` sigue sin este frente. |
 | perfil de producto final | Parcial | Parcial | Cerrado | `Server` ya esta fuerte para su objetivo headless; `Home` y `Business` aun no cierran su capa final de producto. |
 
@@ -57,7 +57,7 @@ Este documento no sustituye `DEVELOPMENT_MATRIX.md`. Su funcion es resumir, por 
 - recuperar,
 - y validar baseline de seguridad.
 
-Su hueco real ya no es infraestructura base ni `Settings` de arranque, sino `MX-009`: cerrar onboarding local y luego accesibilidad sobre la base visible ya validada.
+Su hueco real ya no es infraestructura base ni `Settings` de arranque, sino `MX-009`: decidir el siguiente slice visible despues de onboarding local, probablemente accesibilidad o UI ligera de primer inicio, sobre la base ya validada.
 
 ### Business
 

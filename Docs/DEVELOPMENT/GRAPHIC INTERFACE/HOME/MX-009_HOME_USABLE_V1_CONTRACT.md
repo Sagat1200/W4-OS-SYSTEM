@@ -101,6 +101,22 @@ El primer slice tecnico de `MX-009` debe validar sobre `build/live-output/w4-os-
 4. que `evince` y `vlc` pasen de decision documental a baseline materializado real;
 5. que la ruta materializada no dependa de inspeccion manual archivo por archivo.
 
+### Slice B · UI ligera de onboarding local
+
+Una vez cerrado el readiness local de primer inicio, el siguiente slice visible de `MX-009` debe abrir una UI ligera de onboarding sobre la base ya materializada, sin convertirla en wizard grande ni en superficie paralela a `GNOME Settings`.
+
+Este slice debe:
+
+1. mostrar una bienvenida breve y accionable;
+2. reutilizar entrypoints reales ya materializados de `Home`;
+3. limitar el recorrido visible a pocos pasos;
+4. permitir omitir pasos opcionales;
+5. cerrar sin reaparecer sin motivo.
+
+Su contrato operativo detallado queda en:
+
+- `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-009_HOME_ONBOARDING_LIGHT_UI_SLICE_B.md`
+
 ## Entregables obligatorios de este primer slice
 
 1. un validador canonico de `Home utilizable` sobre `live-output`;

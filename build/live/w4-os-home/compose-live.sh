@@ -240,6 +240,23 @@ W4_LIVE_HOSTNAME="${LIVE_HOSTNAME}"
 EOF
 }
 
+project_system_overlay_runtime_state() {
+  local rootfs_dir="${1}"
+  local stage_root="${2}"
+  local stage_systemd_dir="${stage_root}/image-root/system-overlay/etc/systemd/system"
+  local wants_dir="${stage_systemd_dir}/${W4_DEFAULT_TARGET}.wants"
+
+  mkdir -p "${wants_dir}"
+
+  if [[ -e "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-firstboot.service" ]]; then
+    cp -a "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-firstboot.service" "${wants_dir}/w4-firstboot.service"
+  fi
+
+  if [[ -e "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-live-prep.service" ]]; then
+    cp -a "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-live-prep.service" "${wants_dir}/w4-live-prep.service"
+  fi
+}
+
 trap cleanup EXIT
 
 if [[ -z "${ROOTFS_DIR}" ]]; then
@@ -311,6 +328,7 @@ echo "==> Copiando estructura base de imagen live"
 cp -a "${FILES_DIR}/." "${STAGE_OUTPUT_DIR}/image-root/"
 cp "${KERNEL_SRC}" "${STAGE_OUTPUT_DIR}/image-root/live/vmlinuz"
 cp "${INITRD_SRC}" "${STAGE_OUTPUT_DIR}/image-root/live/initrd"
+project_system_overlay_runtime_state "${WORK_ROOTFS}" "${STAGE_OUTPUT_DIR}"
 
 echo "==> Generando manifest de paquetes"
 chroot "${WORK_ROOTFS}" dpkg-query -W --showformat='${Package} ${Version}\n' > "${STAGE_OUTPUT_DIR}/image-root/live/filesystem.manifest"
