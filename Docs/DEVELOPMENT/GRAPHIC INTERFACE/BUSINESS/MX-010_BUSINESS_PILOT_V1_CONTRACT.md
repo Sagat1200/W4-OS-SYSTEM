@@ -123,12 +123,15 @@ Ese primer aterrizaje ya deja ahora una base implementada en el repo:
 - `Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_SLICE_A_KDE_BASELINE.md`
 - `manifests/w4-os-business.profile.json`
 - `config/editions/business/desktop-defaults.json`
+- `src/Business/BusinessKdeLiveOutputToolkit.php`
+- `scripts/validate_business_kde_live_output.php`
+- `tests/BusinessKdeLiveOutputCliTest.php`
 - `build/inputs/w4-os-business.build-input.json`
 - `build/rootfs/w4-os-business/rootfs-manifest.json`
 - `build/overlays/w4-os-business/overlay-manifest.json`
 - `build/live/w4-os-business/live-manifest.json`
 
-Con ello, `MX-010` ya no depende solo de la ADR para su base visible: `Business` ya cuenta con composicion KDE propia en manifiestos y bundles del pipeline, aunque todavia falte rematerializar y validar el `live-output` final antes de tratar este slice como cerrado por completo.
+Con ello, `MX-010` ya no depende solo de la ADR para su base visible: `Business` ya cuenta con composicion KDE propia en manifiestos y bundles del pipeline, y tambien con un validador ejecutable para el gate final. Aun asi, todavia falta rematerializar y validar el `live-output` final antes de tratar este slice como cerrado por completo.
 
 ### Slice B · Enrollment readiness del piloto
 

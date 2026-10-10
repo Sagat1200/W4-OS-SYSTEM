@@ -83,7 +83,8 @@ Este slice ya deja un primer aterrizaje tecnico verificable en el arbol real:
 2. `config/editions/business/desktop-defaults.json` ya fija `KDE Plasma + SDDM` como ruta visible de `Business` con branding/defaults propios;
 3. `scripts/generate_system_overlay.php` ya deja de asumir que cualquier `desktop-defaults` implica `GNOME`, genera wallpaper especifico de `Business` y evita arrastrar onboarding de `Home` al overlay de `Business`;
 4. `build/inputs/w4-os-business.build-input.json`, `build/rootfs/w4-os-business/rootfs-manifest.json`, `build/overlays/w4-os-business/overlay-manifest.json` y `build/live/w4-os-business/live-manifest.json` ya fueron regenerados sobre esa ruta base;
-5. `tests/ManifestToolkitTest.php`, `tests/SystemOverlayGenerationTest.php`, `tests/RootfsBundleGenerationTest.php` y `tests/LiveBundleGenerationTest.php` ya congelan este baseline en verde.
+5. `tests/ManifestToolkitTest.php`, `tests/SystemOverlayGenerationTest.php`, `tests/RootfsBundleGenerationTest.php` y `tests/LiveBundleGenerationTest.php` ya congelan este baseline en verde;
+6. `src/Business/BusinessKdeLiveOutputToolkit.php`, `scripts/validate_business_kde_live_output.php` y `tests/BusinessKdeLiveOutputCliTest.php` ya dejan fijado el gate ejecutable que debe cerrar el baseline KDE sobre `build/live-output/w4-os-business/`.
 
 Con ello, `Slice A` deja de ser solo contrato documental y pasa a tener una base implementada sobre manifests, overlay y bundles del pipeline, aunque todavia no cierre el gate final de `live-output` materializado.
 
