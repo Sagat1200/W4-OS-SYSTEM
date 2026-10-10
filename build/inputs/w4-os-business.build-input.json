@@ -28,6 +28,7 @@
         "required": [
             "w4-base-meta",
             "w4-business-meta",
+            "w4-desktop-kde-meta",
             "w4-desktop-meta"
         ],
         "recommended": []
@@ -41,18 +42,26 @@
             "btrfs-progs",
             "ca-certificates",
             "curl",
+            "dolphin",
             "grub-efi-amd64",
             "jq",
+            "konsole",
             "linux-image-amd64",
             "network-manager",
             "os-prober",
             "php-cli",
             "pipewire",
+            "plasma-desktop",
+            "plasma-nm",
+            "plasma-workspace",
+            "sddm",
             "shim-signed",
             "sudo",
             "systemd",
+            "systemsettings",
             "ufw",
-            "xdg-desktop-portal"
+            "xdg-desktop-portal",
+            "xdg-desktop-portal-kde"
         ],
         "recommended": [
             "flatpak",
@@ -63,18 +72,21 @@
         ]
     },
     "features": [
+        "desktop-defaults",
         "business-policy-hooks",
         "device-enrollment-ready",
-        "inventory-ready"
+        "inventory-ready",
+        "kde-sddm-default-route",
+        "reversible-branding-defaults"
     ],
     "source_manifests": {
         "base": "w4-linux-base.manifest.json",
         "profile": "w4-os-business.profile.json"
     },
     "counts": {
-        "required_meta_packages": 3,
+        "required_meta_packages": 4,
         "recommended_meta_packages": 0,
-        "required_packages": 19,
+        "required_packages": 27,
         "recommended_packages": 5
     }
 }

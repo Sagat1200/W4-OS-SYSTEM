@@ -34,18 +34,26 @@
             "btrfs-progs",
             "ca-certificates",
             "curl",
+            "dolphin",
             "grub-efi-amd64",
             "jq",
+            "konsole",
             "linux-image-amd64",
             "network-manager",
             "os-prober",
             "php-cli",
             "pipewire",
+            "plasma-desktop",
+            "plasma-nm",
+            "plasma-workspace",
+            "sddm",
             "shim-signed",
             "sudo",
             "systemd",
+            "systemsettings",
             "ufw",
-            "xdg-desktop-portal"
+            "xdg-desktop-portal",
+            "xdg-desktop-portal-kde"
         ],
         "recommended": [
             "flatpak",
@@ -59,14 +67,18 @@
         "required": [
             "w4-base-meta",
             "w4-business-meta",
+            "w4-desktop-kde-meta",
             "w4-desktop-meta"
         ],
         "recommended": []
     },
     "features": [
+        "desktop-defaults",
         "business-policy-hooks",
         "device-enrollment-ready",
-        "inventory-ready"
+        "inventory-ready",
+        "kde-sddm-default-route",
+        "reversible-branding-defaults"
     ],
     "rootfs_directories": [
         "\/boot",
@@ -95,6 +107,13 @@
     "identity_cleanup": [
         "\/etc\/machine-id",
         "\/var\/lib\/dbus\/machine-id"
+    ],
+    "generated_files": [
+        "build-rootfs.sh",
+        "directories.list",
+        "packages.recommended.list",
+        "packages.required.list",
+        "repositories.list"
     ],
     "next_steps": [
         "configurar primer inicio",

@@ -31,6 +31,38 @@ function readBuildInput(string $path): array
     return $data;
 }
 
+function removeOutputPath(string $path): void
+{
+    if (!file_exists($path)) {
+        return;
+    }
+
+    if (is_dir($path) && !is_link($path)) {
+        $items = scandir($path);
+        if ($items === false) {
+            throw new ValidationError(sprintf('No se pudo listar la carpeta %s', $path));
+        }
+
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+
+            removeOutputPath($path . DIRECTORY_SEPARATOR . $item);
+        }
+
+        if (!rmdir($path)) {
+            throw new ValidationError(sprintf('No se pudo eliminar la carpeta %s', $path));
+        }
+
+        return;
+    }
+
+    if (!unlink($path)) {
+        throw new ValidationError(sprintf('No se pudo eliminar %s', $path));
+    }
+}
+
 /**
  * @param array<string, mixed> $buildInput
  */
@@ -527,6 +559,39 @@ file-db:/usr/share/gdm/greeter-dconf-defaults
 TXT);
 }
 
+/**
+ * @param array<string, mixed> $desktopDefaults
+ */
+function usesGnomeDconfDefaults(array $desktopDefaults): bool
+{
+    $session = (string) (($desktopDefaults['desktop']['session'] ?? null) ?: '');
+
+    return $session === 'gnome';
+}
+
+/**
+ * @param array<string, mixed> $desktopDefaults
+ */
+function desktopDefaultsDconfUserPath(array $desktopDefaults): string
+{
+    $scope = (string) (($desktopDefaults['branding']['scope'] ?? null) ?: 'desktop');
+
+    return sprintf('files/etc/dconf/db/local.d/00-w4-%s', $scope);
+}
+
+/**
+ * @param array<string, mixed> $desktopDefaults
+ */
+function desktopDefaultsAssetRuntimePath(array $desktopDefaults): string
+{
+    $assetPath = ltrim((string) (($desktopDefaults['wallpaper']['asset_path'] ?? null) ?: ''), '/');
+    if ($assetPath === '') {
+        throw new ValidationError('desktop-defaults.json no define wallpaper.asset_path');
+    }
+
+    return 'files/' . str_replace('\\', '/', $assetPath);
+}
+
 function escapeGVariantString(string $value): string
 {
     return str_replace(["\\", "'"], ["\\\\", "\\'"], $value);
@@ -600,11 +665,15 @@ TXT);
 
 /**
  * @param array<string, string> $vars
+ * @param array<string, mixed> $desktopDefaults
  */
-function buildHomeWallpaperSvg(array $vars): string
+function buildDesktopWallpaperSvg(array $vars, array $desktopDefaults): string
 {
     $title = htmlspecialchars($vars['profile_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $edition = htmlspecialchars($vars['edition'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $session = strtoupper((string) (($desktopDefaults['desktop']['session'] ?? null) ?: 'desktop'));
+    $displayManager = strtoupper((string) (($desktopDefaults['desktop']['display_manager'] ?? null) ?: 'default'));
+    $routeLabel = htmlspecialchars($session . ' + ' . $displayManager . ' default route', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
     return str_replace(["\r\n", "\r"], "\n", <<<SVG
 <svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 3840 2160" role="img" aria-labelledby="title desc">
@@ -629,7 +698,7 @@ function buildHomeWallpaperSvg(array $vars): string
   <g transform="translate(270 320)">
     <text x="0" y="0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="128" font-weight="700" fill="#f8fafc">W4</text>
     <text x="0" y="170" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="64" font-weight="500" fill="#cbd5e1">{$title}</text>
-    <text x="0" y="254" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="38" font-weight="400" fill="#94a3b8">GNOME + GDM default route</text>
+    <text x="0" y="254" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="38" font-weight="400" fill="#94a3b8">{$routeLabel}</text>
   </g>
 </svg>
 SVG);
@@ -1133,7 +1202,9 @@ chown -R root:root \
 
 chmod 0755 "${ROOTFS_DIR}/usr/local/lib/w4/w4-firstboot.sh"
 chmod 0755 "${ROOTFS_DIR}/usr/local/lib/w4/w4-live-prep.sh"
-chmod 0755 "${ROOTFS_DIR}/usr/local/lib/w4/w4-home-onboarding-light-ui.sh"
+if [[ -f "${ROOTFS_DIR}/usr/local/lib/w4/w4-home-onboarding-light-ui.sh" ]]; then
+  chmod 0755 "${ROOTFS_DIR}/usr/local/lib/w4/w4-home-onboarding-light-ui.sh"
+fi
 
 DEFAULT_TARGET="%DEFAULT_TARGET%"
 
@@ -1250,21 +1321,28 @@ function buildOverlayFiles(array $buildInput, array $vars, array $desktopDefault
         'files/etc/skel/.config/w4-os/profile.env' => buildSkelProfile($vars) . "\n",
         'files/etc/systemd/system/w4-firstboot.service' => buildFirstbootService($vars) . "\n",
         'files/etc/systemd/system/w4-live-prep.service' => buildLivePrepService($vars) . "\n",
-        'files/etc/xdg/autostart/w4-home-onboarding-light-ui.desktop' => buildHomeOnboardingLightUiAutostartDesktop($vars) . "\n",
         'files/usr/local/lib/w4/w4-firstboot.sh' => buildFirstbootScript($vars) . "\n",
-        'files/usr/local/lib/w4/w4-home-onboarding-light-ui.sh' => buildHomeOnboardingLightUiLaunchScript($vars) . "\n",
         'files/usr/local/lib/w4/w4-live-prep.sh' => buildLivePrepScript($vars) . "\n",
-        'files/usr/share/applications/w4-home-onboarding-light-ui.desktop' => buildHomeOnboardingLightUiDesktop($vars) . "\n",
         'apply-overlay.sh' => buildApplyScript($vars) . "\n",
     ];
 
+    if (($buildInput['profile_id'] ?? null) === 'w4-os-home') {
+        $files['files/etc/xdg/autostart/w4-home-onboarding-light-ui.desktop'] = buildHomeOnboardingLightUiAutostartDesktop($vars) . "\n";
+        $files['files/usr/local/lib/w4/w4-home-onboarding-light-ui.sh'] = buildHomeOnboardingLightUiLaunchScript($vars) . "\n";
+        $files['files/usr/share/applications/w4-home-onboarding-light-ui.desktop'] = buildHomeOnboardingLightUiDesktop($vars) . "\n";
+    }
+
     if ($desktopDefaults !== []) {
+        $wallpaperRuntimePath = desktopDefaultsAssetRuntimePath($desktopDefaults);
         $files['files/etc/w4/desktop-defaults.json'] = buildDesktopDefaultsJson($desktopDefaults) . "\n";
-        $files['files/etc/dconf/profile/user'] = buildDconfUserProfile() . "\n";
-        $files['files/etc/dconf/profile/gdm'] = buildDconfGdmProfile() . "\n";
-        $files['files/etc/dconf/db/local.d/00-w4-home'] = buildUserDconfDefaults($desktopDefaults) . "\n";
-        $files['files/etc/dconf/db/gdm.d/00-w4-login'] = buildGdmDconfDefaults($desktopDefaults) . "\n";
-        $files['files/usr/share/w4/branding/home/wallpapers/w4-home-default.svg'] = buildHomeWallpaperSvg($vars) . "\n";
+        $files[$wallpaperRuntimePath] = buildDesktopWallpaperSvg($vars, $desktopDefaults) . "\n";
+
+        if (usesGnomeDconfDefaults($desktopDefaults)) {
+            $files['files/etc/dconf/profile/user'] = buildDconfUserProfile() . "\n";
+            $files['files/etc/dconf/profile/gdm'] = buildDconfGdmProfile() . "\n";
+            $files[desktopDefaultsDconfUserPath($desktopDefaults)] = buildUserDconfDefaults($desktopDefaults) . "\n";
+            $files['files/etc/dconf/db/gdm.d/00-w4-login'] = buildGdmDconfDefaults($desktopDefaults) . "\n";
+        }
     }
 
     return $files;
@@ -1323,6 +1401,10 @@ try {
     if ($outputPath === null) {
         $outputPath = $defaultOutputDir . DIRECTORY_SEPARATOR . $resolvedProfileId;
     }
+
+    removeOutputPath($outputPath . DIRECTORY_SEPARATOR . 'files');
+    removeOutputPath($outputPath . DIRECTORY_SEPARATOR . 'overlay-manifest.json');
+    removeOutputPath($outputPath . DIRECTORY_SEPARATOR . 'apply-overlay.sh');
 
     if (!is_dir($outputPath) && !mkdir($outputPath, 0777, true) && !is_dir($outputPath)) {
         throw new ValidationError(sprintf('No se pudo crear la carpeta de salida: %s', $outputPath));
@@ -1402,21 +1484,28 @@ try {
     ];
 
     if ($desktopDefaults !== []) {
+        $dconfProfiles = [];
+        $dconfDatabases = [];
+        if (usesGnomeDconfDefaults($desktopDefaults)) {
+            $dconfProfiles = [
+                'files/etc/dconf/profile/user',
+                'files/etc/dconf/profile/gdm',
+            ];
+            $dconfDatabases = [
+                desktopDefaultsDconfUserPath($desktopDefaults),
+                'files/etc/dconf/db/gdm.d/00-w4-login',
+            ];
+        }
+
         $overlayManifestData['desktop_defaults'] = [
             'path' => sprintf('config/editions/%s/desktop-defaults.json', str_replace('w4-os-', '', $resolvedProfileId)),
             'application_method' => $desktopDefaults['application']['method'],
             'scope' => $desktopDefaults['application']['scope'],
             'runtime_file' => 'files/etc/w4/desktop-defaults.json',
-            'dconf_profiles' => [
-                'files/etc/dconf/profile/user',
-                'files/etc/dconf/profile/gdm',
-            ],
-            'dconf_databases' => [
-                'files/etc/dconf/db/local.d/00-w4-home',
-                'files/etc/dconf/db/gdm.d/00-w4-login',
-            ],
+            'dconf_profiles' => $dconfProfiles,
+            'dconf_databases' => $dconfDatabases,
             'assets' => [
-                'files/usr/share/w4/branding/home/wallpapers/w4-home-default.svg',
+                desktopDefaultsAssetRuntimePath($desktopDefaults),
             ],
         ];
     }

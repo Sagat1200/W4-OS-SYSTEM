@@ -233,6 +233,76 @@ final class LiveBundleGenerationTest extends TestCase
         );
     }
 
+    public function testGenerateLiveBundleCarriesBusinessKdeDesktopDefaults(): void
+    {
+        $buildInputPath = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-business.build-input.json';
+        $overlayDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-business-overlay';
+        $liveDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-business-live';
+
+        $buildInput = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'generate_build_input.php',
+            [
+                '--profile',
+                'w4-os-business',
+                '--output',
+                $buildInputPath,
+            ]
+        );
+        self::assertSame(0, $buildInput['exitCode'], $buildInput['stderr']);
+
+        $overlay = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'generate_system_overlay.php',
+            [
+                '--input',
+                $buildInputPath,
+                '--output',
+                $overlayDir,
+            ]
+        );
+        self::assertSame(0, $overlay['exitCode'], $overlay['stderr']);
+
+        $live = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'generate_live_bundle.php',
+            [
+                '--input',
+                $buildInputPath,
+                '--overlay-manifest',
+                $overlayDir . DIRECTORY_SEPARATOR . 'overlay-manifest.json',
+                '--output',
+                $liveDir,
+            ]
+        );
+        self::assertSame(0, $live['exitCode'], $live['stderr']);
+
+        $manifest = $this->decodeJsonFile($liveDir . DIRECTORY_SEPARATOR . 'live-manifest.json');
+        self::assertSame('graphical.target', $manifest['edition_policy']['default_target']);
+        self::assertSame('config/editions/business/policy.json', $manifest['edition_policy']['path']);
+        self::assertSame('not-declared', $manifest['control_center_gnome_launchers']['status']);
+        self::assertSame('not-declared', $manifest['home_onboarding_light_ui']['status']);
+
+        self::assertFileExists(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'desktop-defaults.json'
+        );
+        self::assertFileExists(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'branding' . DIRECTORY_SEPARATOR . 'business' . DIRECTORY_SEPARATOR . 'wallpapers' . DIRECTORY_SEPARATOR . 'w4-business-default.svg'
+        );
+        self::assertFileDoesNotExist(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'dconf' . DIRECTORY_SEPARATOR . 'db' . DIRECTORY_SEPARATOR . 'local.d' . DIRECTORY_SEPARATOR . '00-w4-business'
+        );
+
+        $desktopDefaults = $this->decodeJsonFile(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'desktop-defaults.json'
+        );
+        self::assertSame('plasma', $desktopDefaults['desktop']['session']);
+        self::assertSame('sddm', $desktopDefaults['desktop']['display_manager']);
+        self::assertContains('org.kde.dolphin.desktop', $desktopDefaults['favorites']);
+        self::assertContains('systemsettings.desktop', $desktopDefaults['favorites']);
+
+        $composeScript = file_get_contents($liveDir . DIRECTORY_SEPARATOR . 'compose-live.sh');
+        self::assertNotFalse($composeScript);
+        self::assertStringContainsString('W4_DEFAULT_TARGET="${W4_DEFAULT_TARGET:-graphical.target}"', $composeScript);
+    }
+
     /**
      * @param list<string> $arguments
      * @return array{exitCode:int,stdout:string,stderr:string}

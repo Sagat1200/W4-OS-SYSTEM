@@ -7,6 +7,7 @@
   "meta_packages": {
     "required": [
       "w4-desktop-meta",
+      "w4-desktop-kde-meta",
       "w4-business-meta"
     ],
     "recommended": []
@@ -14,10 +15,18 @@
   "packages": {
     "required": [
       "curl",
+      "dolphin",
       "jq",
       "os-prober",
+      "konsole",
+      "plasma-desktop",
+      "plasma-nm",
+      "plasma-workspace",
       "pipewire",
-      "xdg-desktop-portal"
+      "sddm",
+      "systemsettings",
+      "xdg-desktop-portal",
+      "xdg-desktop-portal-kde"
     ],
     "recommended": [
       "openvpn",
@@ -26,12 +35,16 @@
     "remove": []
   },
   "features": [
+    "desktop-defaults",
     "business-policy-hooks",
     "device-enrollment-ready",
-    "inventory-ready"
+    "inventory-ready",
+    "kde-sddm-default-route",
+    "reversible-branding-defaults"
   ],
   "notes": [
     "Perfil inicial para piloto Business.",
-    "No habilita gestion remota arbitraria; solo prepara la base para integraciones tipadas posteriores."
+    "No habilita gestion remota arbitraria; solo prepara la base para integraciones tipadas posteriores.",
+    "La ruta visual base actual de Business se resuelve sobre KDE Plasma + SDDM mediante defaults reversibles materializados desde el overlay."
   ]
 }

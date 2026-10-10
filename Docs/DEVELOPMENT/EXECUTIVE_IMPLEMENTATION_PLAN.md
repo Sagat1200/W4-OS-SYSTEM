@@ -197,11 +197,24 @@ Entregables tecnicos obligatorios:
 
 Ese aterrizaje operativo ya queda abierto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_CONTRACT.md`. La pieza baja `012`, `211`, `213`, `222`, `224` y `409` a una ruta conservadora: baseline visible sobre `KDE Plasma + SDDM`, identidad de dispositivo, politica local con ultima version valida, inventario minimo y reuse del motor local de update/recovery ya validado.
 
-Resultado del siguiente paso:
-`MX-010` deja de depender solo de la matriz comparativa y de la ADR grafica, pasa de lectura puramente documental a frente operativo en `En analisis`, y fija como siguiente `Slice A` la materializacion de la base visible de `Business` sobre artefactos del pipeline.
+Ese siguiente paso ya tambien deja un primer aterrizaje tecnico real:
+`Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_SLICE_A_KDE_BASELINE.md`,
+`manifests/w4-os-business.profile.json`,
+`config/editions/business/desktop-defaults.json` y
+`scripts/generate_system_overlay.php` ya fijan en el arbol una composicion `Business`
+sobre `KDE Plasma + SDDM`, y el pipeline ya la refleja en
+`build/inputs/w4-os-business.build-input.json`,
+`build/rootfs/w4-os-business/rootfs-manifest.json`,
+`build/overlays/w4-os-business/overlay-manifest.json` y
+`build/live/w4-os-business/live-manifest.json`.
+
+Resultado del corte actual:
+`MX-010` deja de ser solo apertura documental y pasa a `En implementacion` con un
+`Slice A` ya materializado en manifests, defaults y bundles del pipeline, aunque
+todavia no cierre el gate final de `live-output` materializado.
 
 Siguiente paso despues de este corte:
-abrir el `Slice A` de `MX-010` para delimitar `w4-desktop-kde-meta`, congelar `KDE Plasma + SDDM` como baseline visible de `Business`, y fijar el primer gate verificable sobre `build-input`, `rootfs` y `live-output`.
+rematerializar `live-output` real de `Business`, fijar un validador propio del baseline `KDE Plasma + SDDM` y usar ese cierre como puente al `Slice B` de enrollment readiness.
 
 Como guardrail de este frente, la regla principal queda congelada desde el arranque: `MX-010` no debe intentar cerrar de una vez enrollment completo, portal, soporte remoto generico ni paridad plena de variantes. Primero se abre la base visible y solo despues se habilitan slices empresariales mas profundos.
 

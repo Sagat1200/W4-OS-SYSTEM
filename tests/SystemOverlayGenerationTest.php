@@ -246,6 +246,74 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertStringContainsString('W4_DEFAULT_TARGET="multi-user.target"', $profileEnv);
     }
 
+    public function testGenerateSystemOverlayPublishesBusinessKdeDefaultsWithoutGnomeDconf(): void
+    {
+        $buildInputPath = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-business.build-input.json';
+        $outputDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-business';
+
+        $buildInput = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'generate_build_input.php',
+            [
+                '--profile',
+                'w4-os-business',
+                '--output',
+                $buildInputPath,
+            ]
+        );
+        self::assertSame(0, $buildInput['exitCode'], $buildInput['stderr']);
+
+        $overlay = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'generate_system_overlay.php',
+            [
+                '--input',
+                $buildInputPath,
+                '--output',
+                $outputDir,
+            ]
+        );
+        self::assertSame(0, $overlay['exitCode'], $overlay['stderr']);
+
+        $manifest = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'overlay-manifest.json');
+        self::assertSame('w4-os-business', $manifest['profile_id']);
+        self::assertSame('Business', $manifest['branding']['edition']);
+        self::assertSame('w4-business', $manifest['branding']['hostname']);
+        self::assertSame('w4-business-live', $manifest['branding']['live_hostname']);
+        self::assertSame('graphical.target', $manifest['edition_policy']['default_target']);
+        self::assertSame('config/editions/business/policy.json', $manifest['edition_policy']['path']);
+        self::assertSame('config/editions/business/desktop-defaults.json', $manifest['desktop_defaults']['path']);
+        self::assertSame('overlay-kde-defaults', $manifest['desktop_defaults']['application_method']);
+        self::assertSame([], $manifest['desktop_defaults']['dconf_profiles']);
+        self::assertSame([], $manifest['desktop_defaults']['dconf_databases']);
+        self::assertContains('files/usr/share/w4/branding/business/wallpapers/w4-business-default.svg', $manifest['desktop_defaults']['assets']);
+
+        $desktopDefaults = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'desktop-defaults.json');
+        self::assertSame('w4-os-business', $desktopDefaults['profile_id']);
+        self::assertSame('plasma-desktop', $desktopDefaults['desktop']['shell']);
+        self::assertSame('plasma', $desktopDefaults['desktop']['session']);
+        self::assertSame('sddm', $desktopDefaults['desktop']['display_manager']);
+        self::assertSame('overlay-kde-defaults', $desktopDefaults['application']['method']);
+        self::assertSame('file:///usr/share/w4/branding/business/wallpapers/w4-business-default.svg', $desktopDefaults['wallpaper']['uri']);
+        self::assertContains('org.kde.dolphin.desktop', $desktopDefaults['favorites']);
+        self::assertContains('systemsettings.desktop', $desktopDefaults['favorites']);
+        self::assertContains('org.kde.konsole.desktop', $desktopDefaults['favorites']);
+
+        $wallpaper = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'branding' . DIRECTORY_SEPARATOR . 'business' . DIRECTORY_SEPARATOR . 'wallpapers' . DIRECTORY_SEPARATOR . 'w4-business-default.svg');
+        self::assertNotFalse($wallpaper);
+        self::assertStringContainsString('<svg', $wallpaper);
+        self::assertStringContainsString('W4 OS Business', $wallpaper);
+        self::assertStringContainsString('PLASMA + SDDM default route', $wallpaper);
+
+        self::assertFileDoesNotExist(
+            $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'dconf' . DIRECTORY_SEPARATOR . 'db' . DIRECTORY_SEPARATOR . 'local.d' . DIRECTORY_SEPARATOR . '00-w4-business'
+        );
+        self::assertFileDoesNotExist(
+            $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'dconf' . DIRECTORY_SEPARATOR . 'db' . DIRECTORY_SEPARATOR . 'gdm.d' . DIRECTORY_SEPARATOR . '00-w4-login'
+        );
+        self::assertFileDoesNotExist(
+            $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'xdg' . DIRECTORY_SEPARATOR . 'autostart' . DIRECTORY_SEPARATOR . 'w4-home-onboarding-light-ui.desktop'
+        );
+    }
+
     /**
      * @param list<string> $arguments
      * @return array{exitCode:int,stdout:string,stderr:string}

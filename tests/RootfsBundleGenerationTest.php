@@ -156,6 +156,70 @@ final class RootfsBundleGenerationTest extends TestCase
         self::assertStringContainsString('reset_rootfs_dir()', $buildScript);
     }
 
+    public function testGenerateBusinessRootfsBundleIncludesKdeAndSddmBaseline(): void
+    {
+        $buildInputPath = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-business.build-input.json';
+        $outputDir = $this->tempDir . DIRECTORY_SEPARATOR . 'w4-os-business-rootfs';
+
+        $buildInput = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'generate_build_input.php',
+            [
+                '--profile',
+                'w4-os-business',
+                '--output',
+                $buildInputPath,
+            ]
+        );
+        self::assertSame(0, $buildInput['exitCode'], $buildInput['stderr']);
+
+        $result = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'generate_rootfs_bundle.php',
+            [
+                '--input',
+                $buildInputPath,
+                '--output',
+                $outputDir,
+            ]
+        );
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $manifest = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'rootfs-manifest.json');
+        self::assertContains('w4-desktop-kde-meta', $manifest['meta_packages']['required']);
+        self::assertContains('desktop-defaults', $manifest['features']);
+        self::assertContains('kde-sddm-default-route', $manifest['features']);
+        self::assertContains('dolphin', $manifest['packages']['required']);
+        self::assertContains('konsole', $manifest['packages']['required']);
+        self::assertContains('plasma-desktop', $manifest['packages']['required']);
+        self::assertContains('plasma-nm', $manifest['packages']['required']);
+        self::assertContains('plasma-workspace', $manifest['packages']['required']);
+        self::assertContains('sddm', $manifest['packages']['required']);
+        self::assertContains('systemsettings', $manifest['packages']['required']);
+        self::assertContains('xdg-desktop-portal-kde', $manifest['packages']['required']);
+        self::assertNotContains('gdm3', $manifest['packages']['required']);
+        self::assertNotContains('gnome-shell', $manifest['packages']['required']);
+
+        $requiredPackages = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'packages.required.list');
+        self::assertNotFalse($requiredPackages);
+        self::assertStringContainsString("dolphin\n", $requiredPackages);
+        self::assertStringContainsString("konsole\n", $requiredPackages);
+        self::assertStringContainsString("plasma-desktop\n", $requiredPackages);
+        self::assertStringContainsString("plasma-workspace\n", $requiredPackages);
+        self::assertStringContainsString("sddm\n", $requiredPackages);
+        self::assertStringContainsString("systemsettings\n", $requiredPackages);
+        self::assertStringContainsString("xdg-desktop-portal-kde\n", $requiredPackages);
+
+        $buildScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'build-rootfs.sh');
+        self::assertNotFalse($buildScript);
+        self::assertStringContainsString('dolphin', $buildScript);
+        self::assertStringContainsString('konsole', $buildScript);
+        self::assertStringContainsString('plasma-desktop', $buildScript);
+        self::assertStringContainsString('plasma-workspace', $buildScript);
+        self::assertStringContainsString('sddm', $buildScript);
+        self::assertStringContainsString('systemsettings', $buildScript);
+        self::assertStringContainsString('xdg-desktop-portal-kde', $buildScript);
+    }
+
     /**
      * @param list<string> $arguments
      * @return array{exitCode:int,stdout:string,stderr:string}

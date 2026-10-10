@@ -164,7 +164,19 @@ final class ManifestToolkitTest extends TestCase
 
         $business = $toolkit->resolveProfile($manifests, 'w4-os-business');
         self::assertNotContains('w4-desktop-gnome-meta', $business['required_meta_packages']);
+        self::assertContains('w4-desktop-kde-meta', $business['required_meta_packages']);
+        self::assertContains('desktop-defaults', $business['features']);
+        self::assertContains('kde-sddm-default-route', $business['features']);
+        self::assertContains('dolphin', $business['required_packages']);
+        self::assertContains('konsole', $business['required_packages']);
+        self::assertContains('plasma-desktop', $business['required_packages']);
+        self::assertContains('plasma-nm', $business['required_packages']);
+        self::assertContains('plasma-workspace', $business['required_packages']);
+        self::assertContains('sddm', $business['required_packages']);
+        self::assertContains('systemsettings', $business['required_packages']);
+        self::assertContains('xdg-desktop-portal-kde', $business['required_packages']);
         self::assertNotContains('gdm3', $business['required_packages']);
+        self::assertNotContains('gnome-session', $business['required_packages']);
         self::assertNotContains('gnome-shell', $business['required_packages']);
     }
 }

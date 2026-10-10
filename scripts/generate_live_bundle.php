@@ -694,6 +694,15 @@ try {
         $outputPath = $defaultOutputDir . DIRECTORY_SEPARATOR . $resolvedProfileId;
     }
 
+    removeDirectory($outputPath . DIRECTORY_SEPARATOR . 'files');
+    removeDirectory($outputPath . DIRECTORY_SEPARATOR . 'metadata');
+    if (is_file($outputPath . DIRECTORY_SEPARATOR . 'live-manifest.json') && !unlink($outputPath . DIRECTORY_SEPARATOR . 'live-manifest.json')) {
+        throw new ValidationError(sprintf('No se pudo eliminar %s', $outputPath . DIRECTORY_SEPARATOR . 'live-manifest.json'));
+    }
+    if (is_file($outputPath . DIRECTORY_SEPARATOR . 'compose-live.sh') && !unlink($outputPath . DIRECTORY_SEPARATOR . 'compose-live.sh')) {
+        throw new ValidationError(sprintf('No se pudo eliminar %s', $outputPath . DIRECTORY_SEPARATOR . 'compose-live.sh'));
+    }
+
     if (!is_dir($outputPath) && !mkdir($outputPath, 0777, true) && !is_dir($outputPath)) {
         throw new ValidationError(sprintf('No se pudo crear la carpeta de salida: %s', $outputPath));
     }

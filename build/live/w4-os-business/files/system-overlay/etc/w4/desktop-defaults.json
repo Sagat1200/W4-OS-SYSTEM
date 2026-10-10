@@ -1,0 +1,37 @@
+{
+    "schema_version": 1,
+    "kind": "desktop-defaults",
+    "profile_id": "w4-os-business",
+    "desktop": {
+        "shell": "plasma-desktop",
+        "session": "plasma",
+        "display_manager": "sddm"
+    },
+    "application": {
+        "method": "overlay-kde-defaults",
+        "scope": "profile-defaults"
+    },
+    "theme": {
+        "gtk": "Breeze",
+        "color_scheme": "prefer-dark",
+        "icon": "Breeze",
+        "cursor": "Breeze"
+    },
+    "wallpaper": {
+        "uri": "file:///usr/share/w4/branding/business/wallpapers/w4-business-default.svg",
+        "asset_path": "/usr/share/w4/branding/business/wallpapers/w4-business-default.svg"
+    },
+    "branding": {
+        "scope": "business",
+        "login": {
+            "mode": "sddm-supported-settings-only"
+        }
+    },
+    "favorites": [
+        "org.kde.dolphin.desktop",
+        "systemsettings.desktop",
+        "firefox-esr.desktop",
+        "org.libreoffice.LibreOffice.StartCenter.desktop",
+        "org.kde.konsole.desktop"
+    ]
+}

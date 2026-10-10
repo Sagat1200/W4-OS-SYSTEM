@@ -118,6 +118,18 @@ Este slice debe:
 3. congelar el minimo de branding/defaults de `Business` sin bifurcar `KDE`;
 4. dejar un contrato validable sobre `build-input`, `rootfs` y `live-output`.
 
+Ese primer aterrizaje ya deja ahora una base implementada en el repo:
+
+- `Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_SLICE_A_KDE_BASELINE.md`
+- `manifests/w4-os-business.profile.json`
+- `config/editions/business/desktop-defaults.json`
+- `build/inputs/w4-os-business.build-input.json`
+- `build/rootfs/w4-os-business/rootfs-manifest.json`
+- `build/overlays/w4-os-business/overlay-manifest.json`
+- `build/live/w4-os-business/live-manifest.json`
+
+Con ello, `MX-010` ya no depende solo de la ADR para su base visible: `Business` ya cuenta con composicion KDE propia en manifiestos y bundles del pipeline, aunque todavia falte rematerializar y validar el `live-output` final antes de tratar este slice como cerrado por completo.
+
 ### Slice B · Enrollment readiness del piloto
 
 Una vez exista base visible real, el siguiente slice tecnico debe abrir readiness de inscripcion piloto.
@@ -193,3 +205,5 @@ Con la apertura correcta de `MX-010`, `Business` deja de ser solo una ADR de esc
 - un piloto delimitado por identidad, politica e inventario minimo,
 - continuidad offline apoyada en la ultima politica valida,
 - y un siguiente slice tecnico claro sin prometer todavia gestion empresarial completa.
+
+Tras esta pasada, ese avance ya se traduce en una base KDE real sobre `manifests`, `build-input`, `rootfs`, `overlay` y `live`, dejando como siguiente gate natural la validacion de `live-output` y, despues, la apertura del `Slice B` de enrollment readiness.
