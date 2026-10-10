@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=W4 Welcome
+Comment=Inicia el onboarding ligero de W4 OS Home en la primera sesion grafica
+Exec=/usr/local/lib/w4/w4-home-onboarding-light-ui.sh
+Icon=preferences-desktop
+Terminal=false
+OnlyShowIn=GNOME;
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=8

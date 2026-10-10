@@ -117,6 +117,27 @@ Su contrato operativo detallado queda en:
 
 - `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-009_HOME_ONBOARDING_LIGHT_UI_SLICE_B.md`
 
+### Slice C · Accessibility baseline materializable
+
+Con el onboarding ligero ya materializado, el siguiente slice tecnico visible de `MX-009` debe abrir accesibilidad como baseline verificable sobre `live-output`, no como calificacion UX completa.
+
+Este slice debe:
+
+1. promover a `Home` una base minima de paquetes para lector de pantalla y ayudas visuales;
+2. validar que `W4 Settings` siga siendo una ruta visible para ajustes de accesibilidad;
+3. dejar una salida canonica que distinga baseline materializable de accesibilidad completa.
+
+Su contrato operativo detallado queda en:
+
+- `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-009_HOME_ACCESSIBILITY_BASELINE.md`
+
+Este slice ya queda ahora materializado sobre el artefacto final mediante:
+
+- `src/Home/HomeAccessibilityLiveOutputToolkit.php`
+- `scripts/validate_home_accessibility_live_output.php`
+- `tests/HomeAccessibilityLiveOutputCliTest.php`
+- `build/live-output/w4-os-home/`
+
 ## Entregables obligatorios de este primer slice
 
 1. un validador canonico de `Home utilizable` sobre `live-output`;
@@ -162,8 +183,9 @@ solo se eleva a baseline de `Home utilizable` lo que pueda probarse sobre artefa
 
 ## Resultado esperado del frente
 
-Al cerrar su primer slice, `MX-009` debe dejar a `Home` con:
+Con el cierre materializado de sus slices visibles actuales, `MX-009` deja a `Home` con:
 
 - una base minima de aplicaciones visible y verificable,
 - un recorrido inicial coherente sobre shell + `Settings`,
-- y una ruta clara para slices posteriores de onboarding y accesibilidad.
+- onboarding local y onboarding ligero ya materializados sobre `live-output`,
+- y un baseline de accesibilidad verificable sin prometer todavia accesibilidad completa.

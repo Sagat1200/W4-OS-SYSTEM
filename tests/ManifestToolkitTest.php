@@ -38,16 +38,22 @@ final class ManifestToolkitTest extends TestCase
         self::assertContains('apparmor', $resolved['required_packages']);
         self::assertContains('btrfs-progs', $resolved['required_packages']);
         self::assertContains('gdm3', $resolved['required_packages']);
+        self::assertContains('at-spi2-core', $resolved['required_packages']);
+        self::assertContains('gnome-accessibility-themes', $resolved['required_packages']);
         self::assertContains('gnome-session', $resolved['required_packages']);
         self::assertContains('gnome-shell', $resolved['required_packages']);
         self::assertContains('gnome-software', $resolved['required_packages']);
+        self::assertContains('libatk-adaptor', $resolved['required_packages']);
         self::assertContains('nautilus', $resolved['required_packages']);
+        self::assertContains('orca', $resolved['required_packages']);
         self::assertContains('php-cli', $resolved['required_packages']);
+        self::assertContains('speech-dispatcher', $resolved['required_packages']);
         self::assertContains('ufw', $resolved['required_packages']);
         self::assertContains('os-prober', $resolved['required_packages']);
         self::assertContains('firefox-esr', $resolved['required_packages']);
         self::assertContains('evince', $resolved['required_packages']);
         self::assertContains('vlc', $resolved['required_packages']);
+        self::assertContains('accessibility-baseline', $resolved['features']);
         self::assertContains('gnome-gdm-default-route', $resolved['features']);
         self::assertContains('home-onboarding', $resolved['features']);
         self::assertContains('reversible-branding-defaults', $resolved['features']);
@@ -68,12 +74,17 @@ final class ManifestToolkitTest extends TestCase
         self::assertSame('stable', $buildInput['upstream']['track']);
         self::assertSame('trixie', $buildInput['upstream']['codename']);
         self::assertContains('apparmor', $buildInput['packages']['required']);
+        self::assertContains('at-spi2-core', $buildInput['packages']['required']);
         self::assertContains('btrfs-progs', $buildInput['packages']['required']);
         self::assertContains('evince', $buildInput['packages']['required']);
         self::assertContains('firefox-esr', $buildInput['packages']['required']);
         self::assertContains('gdm3', $buildInput['packages']['required']);
+        self::assertContains('gnome-accessibility-themes', $buildInput['packages']['required']);
         self::assertContains('gnome-session', $buildInput['packages']['required']);
         self::assertContains('gnome-shell', $buildInput['packages']['required']);
+        self::assertContains('libatk-adaptor', $buildInput['packages']['required']);
+        self::assertContains('orca', $buildInput['packages']['required']);
+        self::assertContains('speech-dispatcher', $buildInput['packages']['required']);
         self::assertContains('vlc', $buildInput['packages']['required']);
         self::assertContains('xdg-desktop-portal-gnome', $buildInput['packages']['required']);
         self::assertContains('php-cli', $buildInput['packages']['required']);
@@ -81,6 +92,7 @@ final class ManifestToolkitTest extends TestCase
         self::assertContains('snapper', $buildInput['packages']['recommended']);
         self::assertNotContains('evince', $buildInput['packages']['recommended']);
         self::assertNotContains('vlc', $buildInput['packages']['recommended']);
+        self::assertContains('accessibility-baseline', $buildInput['features']);
         self::assertContains('gnome-gdm-default-route', $buildInput['features']);
         self::assertSame(
             count($buildInput['packages']['required']),

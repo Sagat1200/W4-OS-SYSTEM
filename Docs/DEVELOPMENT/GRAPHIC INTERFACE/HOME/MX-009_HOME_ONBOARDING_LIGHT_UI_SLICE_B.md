@@ -1,6 +1,6 @@
 # MX-009 · Home onboarding light UI · Slice B
 
-Estado: abierto
+Estado: materializado sobre artefacto final
 Fecha: 2026-10-08
 Alcance: `W4 OS Home V1`
 Dependencias: `MX-008`, `MX-009_HOME_USABLE_V1_CONTRACT`, `MX-009_HOME_ONBOARDING_LOCAL_READINESS`
@@ -75,6 +75,50 @@ Este slice debe poder probarse sin depender de inspeccion manual extensa. Como m
 3. una lectura estructurada de pasos visibles y pasos diferidos;
 4. cobertura reproducible sobre workspace sintetico;
 5. trazabilidad ejecutiva alineada con `MX-009`.
+
+## Primer aterrizaje materializado
+
+El primer aterrizaje tecnico de este slice ya queda representado por un bundle UI ligero de referencia:
+
+- `src/Home/HomeOnboardingLightUiToolkit.php`
+- `scripts/generate_home_onboarding_ui_bundle.php`
+- `tests/HomeOnboardingUiBundleCliTest.php`
+- `build/home-onboarding-ui/w4-os-home/index.html`
+- `build/home-onboarding-ui/w4-os-home/home-onboarding-ui.json`
+
+Este bundle ya deja ademas una ruta real de anclaje en el overlay de `Home` mediante:
+
+- `files/etc/xdg/autostart/w4-home-onboarding-light-ui.desktop`
+- `files/usr/share/applications/w4-home-onboarding-light-ui.desktop`
+- `files/usr/local/lib/w4/w4-home-onboarding-light-ui.sh`
+- `files/usr/share/w4/home-onboarding/index.html`
+
+Con eso, este primer aterrizaje ya no queda solo como referencia HTML en `build/`, sino como bundle visible con punto de entrada real en la sesion grafica. Aun asi, no integra todavia una UX grande ni reemplaza el cierre de producto final de onboarding.
+
+Este aterrizaje deja materializados:
+
+1. una pantalla HTML pequena de primer inicio;
+2. una lectura estructurada de pasos visibles y diferidos;
+3. handoff a `W4 Settings` y updates como entrypoints reutilizados;
+4. `launcher + autostart + script` para sesion GNOME;
+5. cobertura reproducible para evitar que `Slice B` vuelva a quedar solo como decision documental.
+
+## Cierre materializado en `live-output`
+
+El subcorte ya queda validado sobre `build/live-output/w4-os-home/` mediante:
+
+- `scripts/validate_home_onboarding_live_output.php --profile w4-os-home --format text`
+- `src/Home/HomeOnboardingLiveOutputToolkit.php`
+
+El gate real ya confirma en el artefacto final:
+
+1. `home-onboarding` y `local-backup-ready` como feature flags activas;
+2. `w4-firstboot.service` y `w4-live-prep.service` como base de primer inicio;
+3. `files/etc/xdg/autostart/w4-home-onboarding-light-ui.desktop` materializado;
+4. `files/usr/share/applications/w4-home-onboarding-light-ui.desktop` materializado;
+5. `files/usr/local/lib/w4/w4-home-onboarding-light-ui.sh` materializado;
+6. `files/usr/share/w4/home-onboarding/index.html` y su manifest JSON materializados;
+7. los cinco pasos visibles esperados: `welcome`, `privacy`, `settings`, `updates`, `finish`.
 
 ## Criterio de cierre
 

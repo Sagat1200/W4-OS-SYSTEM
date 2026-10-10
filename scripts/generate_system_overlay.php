@@ -953,6 +953,143 @@ BASH;
 /**
  * @param array<string, string> $vars
  */
+function buildHomeOnboardingLightUiLaunchScript(array $vars): string
+{
+    $script = <<<'BASH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROFILE_ENV="/etc/w4/profile.env"
+BUNDLE_DIR="/usr/share/w4/home-onboarding"
+ENTRY_FILE="${BUNDLE_DIR}/index.html"
+STATE_DIR="${HOME:-/tmp}/.config/w4"
+STATE_FILE="${STATE_DIR}/home-onboarding-light-ui-seen"
+SESSION_GUARD="/run/w4/home-onboarding-light-ui-launched"
+
+if [[ -f "${PROFILE_ENV}" ]]; then
+  # shellcheck disable=SC1091
+  . "${PROFILE_ENV}"
+fi
+
+has_onboarding_feature() {
+  case ",${W4_FEATURES:-}," in
+    *,home-onboarding,*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+is_candidate_session() {
+  if [[ "${W4_HOME_ONBOARDING_FORCE:-0}" == "1" ]]; then
+    return 0
+  fi
+
+  if [[ -f /run/w4/session-mode ]] && grep -qx 'live' /run/w4/session-mode 2>/dev/null; then
+    return 0
+  fi
+
+  if [[ -f /etc/w4/firstboot-state.env ]]; then
+    return 0
+  fi
+
+  return 1
+}
+
+open_entry() {
+  local entry_uri="file://${ENTRY_FILE}"
+
+  if command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "${entry_uri}" >/dev/null 2>&1 &
+    return 0
+  fi
+
+  if command -v gio >/dev/null 2>&1; then
+    gio open "${entry_uri}" >/dev/null 2>&1 &
+    return 0
+  fi
+
+  if command -v firefox-esr >/dev/null 2>&1; then
+    firefox-esr "${entry_uri}" >/dev/null 2>&1 &
+    return 0
+  fi
+
+  return 1
+}
+
+if ! has_onboarding_feature; then
+  exit 0
+fi
+
+if ! is_candidate_session; then
+  exit 0
+fi
+
+if [[ ! -f "${ENTRY_FILE}" ]]; then
+  exit 0
+fi
+
+if [[ -f "${STATE_FILE}" ]] && [[ "${W4_HOME_ONBOARDING_FORCE:-0}" != "1" ]]; then
+  exit 0
+fi
+
+if [[ -f "${SESSION_GUARD}" ]] && [[ "${W4_HOME_ONBOARDING_FORCE:-0}" != "1" ]]; then
+  exit 0
+fi
+
+mkdir -p "${STATE_DIR}" /run/w4
+printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "${SESSION_GUARD}"
+
+if open_entry; then
+  printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "${STATE_FILE}"
+fi
+BASH;
+
+    return str_replace(["\r\n", "\r"], "\n", $script);
+}
+
+/**
+ * @param array<string, string> $vars
+ */
+function buildHomeOnboardingLightUiDesktop(array $vars): string
+{
+    return str_replace(["\r\n", "\r"], "\n", <<<DESKTOP
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=W4 Welcome
+Comment=Recorrido ligero de primer inicio para W4 OS Home
+Exec=/usr/local/lib/w4/w4-home-onboarding-light-ui.sh
+Icon=preferences-desktop
+Terminal=false
+Categories=System;Settings;
+OnlyShowIn=GNOME;
+StartupNotify=true
+DESKTOP);
+}
+
+/**
+ * @param array<string, string> $vars
+ */
+function buildHomeOnboardingLightUiAutostartDesktop(array $vars): string
+{
+    return str_replace(["\r\n", "\r"], "\n", <<<DESKTOP
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=W4 Welcome
+Comment=Inicia el onboarding ligero de W4 OS Home en la primera sesion grafica
+Exec=/usr/local/lib/w4/w4-home-onboarding-light-ui.sh
+Icon=preferences-desktop
+Terminal=false
+OnlyShowIn=GNOME;
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=8
+DESKTOP);
+}
+
+/**
+ * @param array<string, string> $vars
+ */
 function buildApplyScript(array $vars): string
 {
     $script = <<<'BASH'
@@ -973,7 +1110,7 @@ if [[ ! -d "${ROOTFS_DIR}" ]]; then
   exit 1
 fi
 
-mkdir -p "${ROOTFS_DIR}/etc/w4" "${ROOTFS_DIR}/usr/local/lib/w4" "${ROOTFS_DIR}/usr/share/applications" "${ROOTFS_DIR}/var/lib/w4"
+mkdir -p "${ROOTFS_DIR}/etc/w4" "${ROOTFS_DIR}/etc/xdg/autostart" "${ROOTFS_DIR}/usr/local/lib/w4" "${ROOTFS_DIR}/usr/share/applications" "${ROOTFS_DIR}/usr/share/w4/home-onboarding" "${ROOTFS_DIR}/var/lib/w4"
 cp -a "${OVERLAY_DIR}/." "${ROOTFS_DIR}/"
 
 chown root:root "${ROOTFS_DIR}" "${ROOTFS_DIR}/etc" "${ROOTFS_DIR}/usr" "${ROOTFS_DIR}/usr/local" "${ROOTFS_DIR}/usr/local/lib" "${ROOTFS_DIR}/usr/share" || true
@@ -984,6 +1121,7 @@ chown -R root:root \
   "${ROOTFS_DIR}/etc/issue.net" \
   "${ROOTFS_DIR}/etc/motd" \
   "${ROOTFS_DIR}/etc/dconf" \
+  "${ROOTFS_DIR}/etc/xdg" \
   "${ROOTFS_DIR}/etc/w4" \
   "${ROOTFS_DIR}/etc/default" \
   "${ROOTFS_DIR}/etc/systemd" \
@@ -995,6 +1133,7 @@ chown -R root:root \
 
 chmod 0755 "${ROOTFS_DIR}/usr/local/lib/w4/w4-firstboot.sh"
 chmod 0755 "${ROOTFS_DIR}/usr/local/lib/w4/w4-live-prep.sh"
+chmod 0755 "${ROOTFS_DIR}/usr/local/lib/w4/w4-home-onboarding-light-ui.sh"
 
 DEFAULT_TARGET="%DEFAULT_TARGET%"
 
@@ -1015,6 +1154,75 @@ BASH;
     );
 
     return str_replace(["\r\n", "\r"], "\n", $script);
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function buildHomeOnboardingLightUiOverlay(string $rootDir, string $profileId): array
+{
+    if ($profileId !== 'w4-os-home') {
+        return [
+            'status' => 'not-applicable',
+            'files' => [],
+        ];
+    }
+
+    try {
+        $bundleDir = ensureHomeOnboardingLightUiBundle($rootDir, $profileId);
+        $bundleManifestPath = $bundleDir . DIRECTORY_SEPARATOR . 'home-onboarding-ui-manifest.json';
+        $bundle = readOptionalJsonFile($bundleManifestPath);
+
+        if ($bundle === null) {
+            throw new ValidationError(sprintf('No se pudo leer el manifest del bundle UI de onboarding Home: %s', $bundleManifestPath));
+        }
+
+        $bundleFiles = overlayFilesFromDirectory($bundleDir);
+        $files = [];
+        foreach ($bundleFiles as $relativePath => $contents) {
+            $files['files/usr/share/w4/home-onboarding/' . $relativePath] = $contents;
+        }
+
+        return [
+            'status' => 'integrated',
+            'bundle_dir' => relativePathFromRoot($rootDir, $bundleDir),
+            'runtime_root' => 'files/usr/share/w4/home-onboarding',
+            'entrypoint' => 'files/usr/share/w4/home-onboarding/index.html',
+            'manifest' => 'files/usr/share/w4/home-onboarding/home-onboarding-ui-manifest.json',
+            'visible_step_count' => (int) ($bundle['visible_step_count'] ?? 0),
+            'deferred_step_count' => (int) ($bundle['deferred_step_count'] ?? 0),
+            'generated_files' => array_map(
+                static fn (string $path): string => 'files/usr/share/w4/home-onboarding/' . str_replace(DIRECTORY_SEPARATOR, '/', $path),
+                array_keys($bundleFiles)
+            ),
+            'files' => $files,
+        ];
+    } catch (ValidationError $exception) {
+        return [
+            'status' => 'skipped',
+            'reason' => $exception->getMessage(),
+            'files' => [],
+        ];
+    }
+}
+
+function ensureHomeOnboardingLightUiBundle(string $rootDir, string $profileId): string
+{
+    $bundleDir = $rootDir . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'home-onboarding-ui' . DIRECTORY_SEPARATOR . $profileId;
+    $manifestPath = $bundleDir . DIRECTORY_SEPARATOR . 'home-onboarding-ui-manifest.json';
+    $entryPath = $bundleDir . DIRECTORY_SEPARATOR . 'index.html';
+
+    if (is_file($manifestPath) && is_file($entryPath)) {
+        return $bundleDir;
+    }
+
+    runPhpGenerator($rootDir, 'generate_home_onboarding_ui_bundle.php', ['--profile', $profileId, '--root-dir', $rootDir]);
+
+    if (!is_file($manifestPath) || !is_file($entryPath)) {
+        throw new ValidationError(sprintf('El bundle UI de onboarding Home no quedo disponible en %s', $bundleDir));
+    }
+
+    return $bundleDir;
 }
 
 /**
@@ -1042,8 +1250,11 @@ function buildOverlayFiles(array $buildInput, array $vars, array $desktopDefault
         'files/etc/skel/.config/w4-os/profile.env' => buildSkelProfile($vars) . "\n",
         'files/etc/systemd/system/w4-firstboot.service' => buildFirstbootService($vars) . "\n",
         'files/etc/systemd/system/w4-live-prep.service' => buildLivePrepService($vars) . "\n",
+        'files/etc/xdg/autostart/w4-home-onboarding-light-ui.desktop' => buildHomeOnboardingLightUiAutostartDesktop($vars) . "\n",
         'files/usr/local/lib/w4/w4-firstboot.sh' => buildFirstbootScript($vars) . "\n",
+        'files/usr/local/lib/w4/w4-home-onboarding-light-ui.sh' => buildHomeOnboardingLightUiLaunchScript($vars) . "\n",
         'files/usr/local/lib/w4/w4-live-prep.sh' => buildLivePrepScript($vars) . "\n",
+        'files/usr/share/applications/w4-home-onboarding-light-ui.desktop' => buildHomeOnboardingLightUiDesktop($vars) . "\n",
         'apply-overlay.sh' => buildApplyScript($vars) . "\n",
     ];
 
@@ -1122,10 +1333,16 @@ try {
     $vars = overlayVariables($buildInput, $editionPolicy);
     $files = buildOverlayFiles($buildInput, $vars, $desktopDefaults);
     $controlCenterLaunchers = buildControlCenterLauncherOverlay($rootDir, $resolvedProfileId, $desktopDefaults);
+    $homeOnboardingLightUi = buildHomeOnboardingLightUiOverlay($rootDir, $resolvedProfileId);
     if (is_array($controlCenterLaunchers['files'] ?? null) && $controlCenterLaunchers['files'] !== []) {
         /** @var array<string, string> $launcherFiles */
         $launcherFiles = $controlCenterLaunchers['files'];
         $files = array_merge($files, $launcherFiles);
+    }
+    if (is_array($homeOnboardingLightUi['files'] ?? null) && $homeOnboardingLightUi['files'] !== []) {
+        /** @var array<string, string> $onboardingFiles */
+        $onboardingFiles = $homeOnboardingLightUi['files'];
+        $files = array_merge($files, $onboardingFiles);
     }
 
     foreach ($files as $relativePath => $contents) {
@@ -1218,6 +1435,27 @@ try {
         $overlayManifestData['control_center_gnome_launchers'] = [
             'status' => 'skipped',
             'reason' => (string) ($controlCenterLaunchers['reason'] ?? 'unknown'),
+        ];
+    }
+
+    if (($homeOnboardingLightUi['status'] ?? null) === 'integrated') {
+        $overlayManifestData['home_onboarding_light_ui'] = [
+            'status' => 'integrated',
+            'bundle_dir' => $homeOnboardingLightUi['bundle_dir'],
+            'runtime_root' => $homeOnboardingLightUi['runtime_root'],
+            'entrypoint' => $homeOnboardingLightUi['entrypoint'],
+            'manifest' => $homeOnboardingLightUi['manifest'],
+            'visible_step_count' => $homeOnboardingLightUi['visible_step_count'],
+            'deferred_step_count' => $homeOnboardingLightUi['deferred_step_count'],
+            'launcher' => 'files/usr/share/applications/w4-home-onboarding-light-ui.desktop',
+            'autostart' => 'files/etc/xdg/autostart/w4-home-onboarding-light-ui.desktop',
+            'launch_script' => 'files/usr/local/lib/w4/w4-home-onboarding-light-ui.sh',
+            'generated_files' => $homeOnboardingLightUi['generated_files'],
+        ];
+    } elseif (($homeOnboardingLightUi['status'] ?? null) === 'skipped') {
+        $overlayManifestData['home_onboarding_light_ui'] = [
+            'status' => 'skipped',
+            'reason' => (string) ($homeOnboardingLightUi['reason'] ?? 'unknown'),
         ];
     }
 

@@ -111,6 +111,109 @@ final class HomeOnboardingLiveOutputToolkit
             throw new ValidationError(sprintf('No se encontro el enlace esperado de live-prep: %s', $livePrepSymlink));
         }
 
+        $onboardingAutostartPath = $resolvedLiveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'xdg' . DIRECTORY_SEPARATOR . 'autostart' . DIRECTORY_SEPARATOR . 'w4-home-onboarding-light-ui.desktop';
+        $onboardingAutostart = $this->readRequiredTextFile(
+            $onboardingAutostartPath,
+            'No se pudo leer el autostart de onboarding ligero del live materializado'
+        );
+        $this->assertContainsAll(
+            $onboardingAutostart,
+            [
+                'Exec=/usr/local/lib/w4/w4-home-onboarding-light-ui.sh',
+                'OnlyShowIn=GNOME;',
+                'X-GNOME-Autostart-enabled=true',
+            ],
+            'w4-home-onboarding-light-ui autostart'
+        );
+
+        $onboardingLauncherPath = $resolvedLiveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'applications' . DIRECTORY_SEPARATOR . 'w4-home-onboarding-light-ui.desktop';
+        $onboardingLauncher = $this->readRequiredTextFile(
+            $onboardingLauncherPath,
+            'No se pudo leer el launcher de onboarding ligero del live materializado'
+        );
+        $this->assertContainsAll(
+            $onboardingLauncher,
+            [
+                'Name=W4 Welcome',
+                'Exec=/usr/local/lib/w4/w4-home-onboarding-light-ui.sh',
+                'OnlyShowIn=GNOME;',
+            ],
+            'w4-home-onboarding-light-ui launcher'
+        );
+
+        $onboardingScriptPath = $resolvedLiveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'w4-home-onboarding-light-ui.sh';
+        $onboardingScript = $this->readRequiredTextFile(
+            $onboardingScriptPath,
+            'No se pudo leer el script de onboarding ligero del live materializado'
+        );
+        $this->assertContainsAll(
+            $onboardingScript,
+            [
+                'BUNDLE_DIR="/usr/share/w4/home-onboarding"',
+                'STATE_FILE="${STATE_DIR}/home-onboarding-light-ui-seen"',
+                'xdg-open "${entry_uri}"',
+                'home-onboarding',
+            ],
+            'w4-home-onboarding-light-ui.sh'
+        );
+
+        $onboardingBundleManifestPath = $resolvedLiveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'home-onboarding' . DIRECTORY_SEPARATOR . 'home-onboarding-ui-manifest.json';
+        $onboardingBundleManifest = $this->readRequiredJsonFile(
+            $onboardingBundleManifestPath,
+            'No se pudo leer el manifest del bundle de onboarding ligero del live materializado'
+        );
+
+        if (($onboardingBundleManifest['kind'] ?? null) !== 'home-onboarding-light-ui-bundle-manifest') {
+            throw new ValidationError('El manifest del bundle de onboarding ligero no tiene el kind esperado');
+        }
+
+        if ((int) ($onboardingBundleManifest['visible_step_count'] ?? 0) !== 5) {
+            throw new ValidationError('El bundle de onboarding ligero debe exponer exactamente cinco pasos visibles');
+        }
+
+        $onboardingBundleJsonPath = $resolvedLiveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'home-onboarding' . DIRECTORY_SEPARATOR . 'home-onboarding-ui.json';
+        $onboardingBundleJson = $this->readRequiredJsonFile(
+            $onboardingBundleJsonPath,
+            'No se pudo leer el bundle JSON de onboarding ligero del live materializado'
+        );
+
+        if (($onboardingBundleJson['kind'] ?? null) !== 'home-onboarding-light-ui-bundle') {
+            throw new ValidationError('El bundle JSON de onboarding ligero no tiene el kind esperado');
+        }
+
+        $visibleSteps = is_array($onboardingBundleJson['visible_steps'] ?? null) ? $onboardingBundleJson['visible_steps'] : [];
+        if (count($visibleSteps) !== 5) {
+            throw new ValidationError('El bundle JSON de onboarding ligero no conserva cinco pasos visibles');
+        }
+
+        $visibleStepIds = [];
+        foreach ($visibleSteps as $step) {
+            if (is_array($step) && is_string($step['id'] ?? null)) {
+                $visibleStepIds[] = $step['id'];
+            }
+        }
+
+        foreach (['welcome', 'privacy', 'settings', 'updates', 'finish'] as $requiredVisibleStep) {
+            if (!in_array($requiredVisibleStep, $visibleStepIds, true)) {
+                throw new ValidationError(sprintf('Falta el paso visible %s en el bundle JSON de onboarding ligero', $requiredVisibleStep));
+            }
+        }
+
+        $onboardingEntryPath = $resolvedLiveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'home-onboarding' . DIRECTORY_SEPARATOR . 'index.html';
+        $onboardingEntry = $this->readRequiredTextFile(
+            $onboardingEntryPath,
+            'No se pudo leer la entrada HTML de onboarding ligero del live materializado'
+        );
+        $this->assertContainsAll(
+            $onboardingEntry,
+            [
+                '<title>Home Onboarding',
+                'Primer inicio ligero',
+                'Abrir W4 Settings',
+            ],
+            'home-onboarding index.html'
+        );
+
         $stateFile = $resolvedLiveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'var' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'firstboot-complete';
         if (is_file($stateFile)) {
             throw new ValidationError('El artefacto live no debe traer firstboot-complete ya materializado');
@@ -144,6 +247,15 @@ final class HomeOnboardingLiveOutputToolkit
                     'firstboot_runtime' => '/etc/w4/firstboot-state.env',
                     'live_runtime' => '/etc/w4/live-state.env',
                     'firstboot_complete_expected_absent' => 'image-root/system-overlay/var/lib/w4/firstboot-complete',
+                ],
+                'onboarding_anchor' => [
+                    'autostart' => 'image-root/system-overlay/etc/xdg/autostart/w4-home-onboarding-light-ui.desktop',
+                    'launcher' => 'image-root/system-overlay/usr/share/applications/w4-home-onboarding-light-ui.desktop',
+                    'launch_script' => 'image-root/system-overlay/usr/local/lib/w4/w4-home-onboarding-light-ui.sh',
+                    'bundle_manifest' => 'image-root/system-overlay/usr/share/w4/home-onboarding/home-onboarding-ui-manifest.json',
+                    'bundle_json' => 'image-root/system-overlay/usr/share/w4/home-onboarding/home-onboarding-ui.json',
+                    'entrypoint' => 'image-root/system-overlay/usr/share/w4/home-onboarding/index.html',
+                    'visible_steps' => $visibleStepIds,
                 ],
             ],
             'deferred_steps' => [
@@ -187,6 +299,14 @@ final class HomeOnboardingLiveOutputToolkit
         $lines[] = sprintf('- live-prep: %s', (string) (($firstSession['services']['live_prep'] ?? '')));
         $lines[] = sprintf('- firstboot-state: %s', (string) (($firstSession['state_files']['firstboot_runtime'] ?? '')));
         $lines[] = sprintf('- live-state: %s', (string) (($firstSession['state_files']['live_runtime'] ?? '')));
+        $lines[] = sprintf('- autostart: %s', (string) (($firstSession['onboarding_anchor']['autostart'] ?? '')));
+        $lines[] = sprintf('- launcher: %s', (string) (($firstSession['onboarding_anchor']['launcher'] ?? '')));
+        $lines[] = sprintf('- entrypoint: %s', (string) (($firstSession['onboarding_anchor']['entrypoint'] ?? '')));
+
+        $visibleSteps = is_array($firstSession['onboarding_anchor']['visible_steps'] ?? null) ? $firstSession['onboarding_anchor']['visible_steps'] : [];
+        if ($visibleSteps !== []) {
+            $lines[] = sprintf('- visible-steps: %s', implode(', ', array_filter($visibleSteps, 'is_string')));
+        }
 
         $lines[] = '';
         $lines[] = 'Deferred steps:';
@@ -254,6 +374,26 @@ final class HomeOnboardingLiveOutputToolkit
         }
 
         return $raw;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function readRequiredJsonFile(string $path, string $errorMessage): array
+    {
+        $raw = $this->readRequiredTextFile($path, $errorMessage);
+
+        try {
+            $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            throw new ValidationError(sprintf('%s: %s', $errorMessage, $exception->getMessage()));
+        }
+
+        if (!is_array($decoded)) {
+            throw new ValidationError(sprintf('%s: %s', $errorMessage, $path));
+        }
+
+        return $decoded;
     }
 
     /**

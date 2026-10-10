@@ -52,6 +52,7 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertContains('files/etc/dconf/db/local.d/00-w4-home', $manifest['desktop_defaults']['dconf_databases']);
         self::assertContains('files/usr/share/w4/branding/home/wallpapers/w4-home-default.svg', $manifest['desktop_defaults']['assets']);
         self::assertArrayHasKey('control_center_gnome_launchers', $manifest);
+        self::assertArrayHasKey('home_onboarding_light_ui', $manifest);
 
         $grubDefaults = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'default' . DIRECTORY_SEPARATOR . 'grub.d' . DIRECTORY_SEPARATOR . '50-w4-security.cfg');
         self::assertNotFalse($grubDefaults);
@@ -76,6 +77,13 @@ final class SystemOverlayGenerationTest extends TestCase
         $livePrepScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'w4-live-prep.sh');
         self::assertNotFalse($livePrepScript);
         self::assertStringContainsString('dconf update', $livePrepScript);
+
+        $onboardingLaunchScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'w4-home-onboarding-light-ui.sh');
+        self::assertNotFalse($onboardingLaunchScript);
+        self::assertStringContainsString('BUNDLE_DIR="/usr/share/w4/home-onboarding"', $onboardingLaunchScript);
+        self::assertStringContainsString('STATE_FILE="${STATE_DIR}/home-onboarding-light-ui-seen"', $onboardingLaunchScript);
+        self::assertStringContainsString('xdg-open "${entry_uri}"', $onboardingLaunchScript);
+        self::assertStringContainsString('home-onboarding', $onboardingLaunchScript);
 
         $profileEnv = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'profile.env');
         self::assertNotFalse($profileEnv);
@@ -114,7 +122,10 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertStringContainsString('DEFAULT_TARGET="graphical.target"', $applyScript);
         self::assertStringContainsString('${DEFAULT_TARGET}.wants', $applyScript);
         self::assertStringContainsString('etc/dconf', $applyScript);
+        self::assertStringContainsString('etc/xdg/autostart', $applyScript);
         self::assertStringContainsString('usr/share/applications', $applyScript);
+        self::assertStringContainsString('usr/share/w4/home-onboarding', $applyScript);
+        self::assertStringContainsString('w4-home-onboarding-light-ui.sh', $applyScript);
 
         $launcherState = $manifest['control_center_gnome_launchers']['status'];
         self::assertContains($launcherState, ['integrated', 'skipped']);
@@ -139,6 +150,49 @@ final class SystemOverlayGenerationTest extends TestCase
         } else {
             self::assertNotSame('', trim((string) $manifest['control_center_gnome_launchers']['reason']));
         }
+
+        self::assertSame('integrated', $manifest['home_onboarding_light_ui']['status']);
+        self::assertSame('files/usr/share/w4/home-onboarding/index.html', $manifest['home_onboarding_light_ui']['entrypoint']);
+        self::assertSame('files/etc/xdg/autostart/w4-home-onboarding-light-ui.desktop', $manifest['home_onboarding_light_ui']['autostart']);
+        self::assertSame(5, $manifest['home_onboarding_light_ui']['visible_step_count']);
+        self::assertSame(4, $manifest['home_onboarding_light_ui']['deferred_step_count']);
+        self::assertContains(
+            'files/usr/share/w4/home-onboarding/index.html',
+            $manifest['home_onboarding_light_ui']['generated_files']
+        );
+
+        self::assertFileExists(
+            $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'xdg' . DIRECTORY_SEPARATOR . 'autostart' . DIRECTORY_SEPARATOR . 'w4-home-onboarding-light-ui.desktop'
+        );
+        self::assertFileExists(
+            $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'applications' . DIRECTORY_SEPARATOR . 'w4-home-onboarding-light-ui.desktop'
+        );
+        self::assertFileExists(
+            $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'home-onboarding' . DIRECTORY_SEPARATOR . 'index.html'
+        );
+        self::assertFileExists(
+            $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'home-onboarding' . DIRECTORY_SEPARATOR . 'home-onboarding-ui.json'
+        );
+
+        $autostartDesktop = file_get_contents(
+            $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'xdg' . DIRECTORY_SEPARATOR . 'autostart' . DIRECTORY_SEPARATOR . 'w4-home-onboarding-light-ui.desktop'
+        );
+        self::assertNotFalse($autostartDesktop);
+        self::assertStringContainsString('Exec=/usr/local/lib/w4/w4-home-onboarding-light-ui.sh', $autostartDesktop);
+        self::assertStringContainsString('X-GNOME-Autostart-Delay=8', $autostartDesktop);
+
+        $launcherDesktop = file_get_contents(
+            $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'applications' . DIRECTORY_SEPARATOR . 'w4-home-onboarding-light-ui.desktop'
+        );
+        self::assertNotFalse($launcherDesktop);
+        self::assertStringContainsString('Name=W4 Welcome', $launcherDesktop);
+
+        $onboardingIndex = file_get_contents(
+            $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'home-onboarding' . DIRECTORY_SEPARATOR . 'index.html'
+        );
+        self::assertNotFalse($onboardingIndex);
+        self::assertStringContainsString('Primer inicio ligero', $onboardingIndex);
+        self::assertStringContainsString('Abrir W4 Settings', $onboardingIndex);
     }
 
     public function testGenerateSystemOverlayUsesServerBrandingWithoutHomeFallback(): void

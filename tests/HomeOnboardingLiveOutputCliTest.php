@@ -50,6 +50,16 @@ final class HomeOnboardingLiveOutputCliTest extends TestCase
         self::assertSame('w4live', $payload['first_session']['live_user']);
         self::assertSame('w4-home-live', $payload['first_session']['live_hostname']);
         self::assertSame('/etc/w4/firstboot-state.env', $payload['first_session']['state_files']['firstboot_runtime']);
+        self::assertSame(
+            'image-root/system-overlay/etc/xdg/autostart/w4-home-onboarding-light-ui.desktop',
+            $payload['first_session']['onboarding_anchor']['autostart']
+        );
+        self::assertSame(
+            'image-root/system-overlay/usr/share/applications/w4-home-onboarding-light-ui.desktop',
+            $payload['first_session']['onboarding_anchor']['launcher']
+        );
+        self::assertContains('welcome', $payload['first_session']['onboarding_anchor']['visible_steps']);
+        self::assertContains('finish', $payload['first_session']['onboarding_anchor']['visible_steps']);
         self::assertContains('privacy-step-ui', $payload['deferred_steps']);
         self::assertContains('telemetry-opt-in-ui', $payload['deferred_steps']);
     }
@@ -79,6 +89,8 @@ final class HomeOnboardingLiveOutputCliTest extends TestCase
         self::assertStringContainsString('local-backup-ready', $result['stdout']);
         self::assertStringContainsString('firstboot-state: /etc/w4/firstboot-state.env', $result['stdout']);
         self::assertStringContainsString('live-state: /etc/w4/live-state.env', $result['stdout']);
+        self::assertStringContainsString('autostart: image-root/system-overlay/etc/xdg/autostart/w4-home-onboarding-light-ui.desktop', $result['stdout']);
+        self::assertStringContainsString('visible-steps: welcome, privacy, settings, updates, finish', $result['stdout']);
     }
 
     private function seedLiveOutput(string $liveOutputDir): void
@@ -193,6 +205,113 @@ BASH
         $this->writeFile(
             $liveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'systemd' . DIRECTORY_SEPARATOR . 'system' . DIRECTORY_SEPARATOR . 'graphical.target.wants' . DIRECTORY_SEPARATOR . 'w4-live-prep.service',
             "../w4-live-prep.service\n"
+        );
+
+        $this->writeFile(
+            $liveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'xdg' . DIRECTORY_SEPARATOR . 'autostart' . DIRECTORY_SEPARATOR . 'w4-home-onboarding-light-ui.desktop',
+            <<<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=W4 Welcome
+Comment=Inicia el onboarding ligero de W4 OS Home en la primera sesion grafica
+Exec=/usr/local/lib/w4/w4-home-onboarding-light-ui.sh
+Icon=preferences-desktop
+Terminal=false
+OnlyShowIn=GNOME;
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=8
+DESKTOP
+        );
+
+        $this->writeFile(
+            $liveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'applications' . DIRECTORY_SEPARATOR . 'w4-home-onboarding-light-ui.desktop',
+            <<<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=W4 Welcome
+Comment=Recorrido ligero de primer inicio para W4 OS Home
+Exec=/usr/local/lib/w4/w4-home-onboarding-light-ui.sh
+Icon=preferences-desktop
+Terminal=false
+Categories=System;Settings;
+OnlyShowIn=GNOME;
+StartupNotify=true
+DESKTOP
+        );
+
+        $this->writeFile(
+            $liveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'w4-home-onboarding-light-ui.sh',
+            <<<'BASH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROFILE_ENV="/etc/w4/profile.env"
+BUNDLE_DIR="/usr/share/w4/home-onboarding"
+ENTRY_FILE="${BUNDLE_DIR}/index.html"
+STATE_DIR="${HOME:-/tmp}/.config/w4"
+STATE_FILE="${STATE_DIR}/home-onboarding-light-ui-seen"
+SESSION_GUARD="/run/w4/home-onboarding-light-ui-launched"
+
+if [[ -f "${PROFILE_ENV}" ]]; then
+  . "${PROFILE_ENV}"
+fi
+
+case ",${W4_FEATURES:-}," in
+  *,home-onboarding,*) ;;
+  *) exit 0 ;;
+esac
+
+entry_uri="file://${ENTRY_FILE}"
+xdg-open "${entry_uri}" >/dev/null 2>&1 &
+BASH
+        );
+
+        $this->writeFile(
+            $liveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'home-onboarding' . DIRECTORY_SEPARATOR . 'home-onboarding-ui-manifest.json',
+            <<<'JSON'
+{
+    "kind": "home-onboarding-light-ui-bundle-manifest",
+    "visible_step_count": 5,
+    "deferred_step_count": 4,
+    "routes": {
+        "home": "index.html",
+        "data": "home-onboarding-ui.json"
+    }
+}
+JSON
+        );
+
+        $this->writeFile(
+            $liveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'home-onboarding' . DIRECTORY_SEPARATOR . 'home-onboarding-ui.json',
+            <<<'JSON'
+{
+    "kind": "home-onboarding-light-ui-bundle",
+    "visible_steps": [
+        {"id": "welcome"},
+        {"id": "privacy"},
+        {"id": "settings"},
+        {"id": "updates"},
+        {"id": "finish"}
+    ]
+}
+JSON
+        );
+
+        $this->writeFile(
+            $liveOutputDir . DIRECTORY_SEPARATOR . 'image-root' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'home-onboarding' . DIRECTORY_SEPARATOR . 'index.html',
+            <<<'HTML'
+<!DOCTYPE html>
+<html lang="es">
+<head><title>Home Onboarding · w4-os-home</title></head>
+<body>
+<h1>Primer inicio ligero</h1>
+<a>Abrir W4 Settings</a>
+</body>
+</html>
+HTML
         );
     }
 

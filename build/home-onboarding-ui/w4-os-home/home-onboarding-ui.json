@@ -1,0 +1,86 @@
+{
+    "home_onboarding_light_ui_schema_version": 1,
+    "kind": "home-onboarding-light-ui-bundle",
+    "profile_id": "w4-os-home",
+    "generated_at": "2026-10-09T05:27:13Z",
+    "live_output_dir": "build\\live-output\\w4-os-home",
+    "default_target": "graphical.target",
+    "live_user": "w4live",
+    "live_hostname": "w4-home-live",
+    "hero": {
+        "eyebrow": "W4 OS Home",
+        "title": "Primer inicio ligero",
+        "summary": "Recorrido pequeno y accionable para aterrizar Home sin convertirlo en un wizard grande."
+    },
+    "visible_steps": [
+        {
+            "id": "welcome",
+            "title": "Bienvenida",
+            "status": "ready",
+            "summary": "Explica que el equipo ya esta listo para primer inicio sin pedir decisiones innecesarias.",
+            "action": "Continuar",
+            "kind": "informative"
+        },
+        {
+            "id": "privacy",
+            "title": "Privacidad local",
+            "status": "ready",
+            "summary": "Presenta una explicacion corta sobre decisiones locales y pasos opcionales diferidos.",
+            "action": "Revisar",
+            "kind": "informative"
+        },
+        {
+            "id": "settings",
+            "title": "W4 Settings",
+            "status": "available",
+            "summary": "Reutiliza la ruta validada de Settings para ajustes iniciales sin abrir una superficie paralela.",
+            "action": "Abrir W4 Settings",
+            "entrypoint": "w4-control-center-home-home.desktop",
+            "kind": "entrypoint"
+        },
+        {
+            "id": "updates",
+            "title": "Actualizaciones",
+            "status": "available",
+            "summary": "Mantiene visible el acceso a updates desde la ruta ya validada del perfil Home.",
+            "action": "Abrir Updates",
+            "entrypoint": "w4-control-center-home-updates.desktop",
+            "kind": "entrypoint"
+        },
+        {
+            "id": "finish",
+            "title": "Finalizar",
+            "status": "ready",
+            "summary": "Cierra el onboarding local y evita reaparicion arbitraria del recorrido ligero.",
+            "action": "Empezar a usar W4 OS Home",
+            "kind": "completion"
+        }
+    ],
+    "deferred_steps": [
+        {
+            "id": "privacy-step-ui",
+            "status": "deferred",
+            "summary": "Paso visual de privacidad mas amplio, fuera del alcance ligero."
+        },
+        {
+            "id": "local-account-onboarding-ui",
+            "status": "deferred",
+            "summary": "Flujo guiado de cuenta local, diferido para no convertir este slice en wizard grande."
+        },
+        {
+            "id": "external-backup-guidance-ui",
+            "status": "deferred",
+            "summary": "Guia ampliada de respaldo externo, diferida a un slice posterior."
+        },
+        {
+            "id": "telemetry-opt-in-ui",
+            "status": "deferred",
+            "summary": "Opt-in interactivo completo, fuera del alcance de la UI ligera inicial."
+        }
+    ],
+    "guardrails": [
+        "reuse-gnome-settings",
+        "no-large-wizard",
+        "no-complete-accessibility-scope"
+    ]
+}

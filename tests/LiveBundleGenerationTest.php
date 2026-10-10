@@ -141,10 +141,14 @@ final class LiveBundleGenerationTest extends TestCase
         self::assertSame('graphical.target', $manifest['edition_policy']['default_target']);
         self::assertArrayHasKey('control_center_gnome_launchers', $manifest);
         self::assertSame('integrated', $manifest['control_center_gnome_launchers']['status']);
+        self::assertArrayHasKey('home_onboarding_light_ui', $manifest);
+        self::assertSame('integrated', $manifest['home_onboarding_light_ui']['status']);
         self::assertContains(
             'files/usr/share/applications/w4-control-center-home-updates.desktop',
             $manifest['control_center_gnome_launchers']['desktop_files']
         );
+        self::assertSame('files/usr/share/w4/home-onboarding/index.html', $manifest['home_onboarding_light_ui']['entrypoint']);
+        self::assertSame(5, $manifest['home_onboarding_light_ui']['visible_step_count']);
 
         self::assertFileExists(
             $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'applications' . DIRECTORY_SEPARATOR . 'w4-control-center-home-updates.desktop'
@@ -157,6 +161,18 @@ final class LiveBundleGenerationTest extends TestCase
         );
         self::assertFileExists(
             $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'dconf' . DIRECTORY_SEPARATOR . 'db' . DIRECTORY_SEPARATOR . 'local.d' . DIRECTORY_SEPARATOR . '00-w4-home'
+        );
+        self::assertFileExists(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'xdg' . DIRECTORY_SEPARATOR . 'autostart' . DIRECTORY_SEPARATOR . 'w4-home-onboarding-light-ui.desktop'
+        );
+        self::assertFileExists(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'w4-home-onboarding-light-ui.sh'
+        );
+        self::assertFileExists(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'home-onboarding' . DIRECTORY_SEPARATOR . 'index.html'
+        );
+        self::assertFileExists(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'home-onboarding' . DIRECTORY_SEPARATOR . 'home-onboarding-ui.json'
         );
 
         $updatesLauncher = file_get_contents(
@@ -186,6 +202,19 @@ final class LiveBundleGenerationTest extends TestCase
         self::assertSame('control-center-gnome-launchers', $launcherManifest['kind']);
         self::assertSame(4, count($launcherManifest['launchers']));
         self::assertSame(1, count($launcherManifest['pending_modules']));
+
+        $autostartDesktop = file_get_contents(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'xdg' . DIRECTORY_SEPARATOR . 'autostart' . DIRECTORY_SEPARATOR . 'w4-home-onboarding-light-ui.desktop'
+        );
+        self::assertNotFalse($autostartDesktop);
+        self::assertStringContainsString('Exec=/usr/local/lib/w4/w4-home-onboarding-light-ui.sh', $autostartDesktop);
+
+        $onboardingLauncher = file_get_contents(
+            $liveDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'system-overlay' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'w4-home-onboarding-light-ui.sh'
+        );
+        self::assertNotFalse($onboardingLauncher);
+        self::assertStringContainsString('STATE_FILE="${STATE_DIR}/home-onboarding-light-ui-seen"', $onboardingLauncher);
+        self::assertStringContainsString('BUNDLE_DIR="/usr/share/w4/home-onboarding"', $onboardingLauncher);
 
         $composeScript = file_get_contents($liveDir . DIRECTORY_SEPARATOR . 'compose-live.sh');
         self::assertNotFalse($composeScript);

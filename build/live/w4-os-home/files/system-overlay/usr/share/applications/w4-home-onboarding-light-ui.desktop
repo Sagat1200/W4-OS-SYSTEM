@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=W4 Welcome
+Comment=Recorrido ligero de primer inicio para W4 OS Home
+Exec=/usr/local/lib/w4/w4-home-onboarding-light-ui.sh
+Icon=preferences-desktop
+Terminal=false
+Categories=System;Settings;
+OnlyShowIn=GNOME;
+StartupNotify=true

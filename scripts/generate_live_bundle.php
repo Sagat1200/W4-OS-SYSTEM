@@ -745,6 +745,9 @@ try {
         'control_center_gnome_launchers' => $overlayManifest['control_center_gnome_launchers'] ?? [
             'status' => 'not-declared',
         ],
+        'home_onboarding_light_ui' => $overlayManifest['home_onboarding_light_ui'] ?? [
+            'status' => 'not-declared',
+        ],
         'live_stack' => [
             'packages' => ['live-boot', 'live-config'],
             'bootloader_ready' => false,

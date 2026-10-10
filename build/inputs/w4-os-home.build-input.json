@@ -37,6 +37,7 @@
         "required": [
             "apparmor",
             "apt",
+            "at-spi2-core",
             "base-files",
             "bash",
             "btrfs-progs",
@@ -44,20 +45,24 @@
             "evince",
             "firefox-esr",
             "gdm3",
+            "gnome-accessibility-themes",
             "gnome-control-center",
             "gnome-session",
             "gnome-shell",
             "gnome-software",
             "gnome-terminal",
             "grub-efi-amd64",
+            "libatk-adaptor",
             "libreoffice",
             "linux-image-amd64",
             "nautilus",
             "network-manager",
+            "orca",
             "os-prober",
             "php-cli",
             "pipewire",
             "shim-signed",
+            "speech-dispatcher",
             "sudo",
             "systemd",
             "ufw",
@@ -72,6 +77,7 @@
         ]
     },
     "features": [
+        "accessibility-baseline",
         "desktop-defaults",
         "gnome-gdm-default-route",
         "home-onboarding",
@@ -85,7 +91,7 @@
     "counts": {
         "required_meta_packages": 4,
         "recommended_meta_packages": 0,
-        "required_packages": 29,
+        "required_packages": 34,
         "recommended_packages": 3
     }
 }

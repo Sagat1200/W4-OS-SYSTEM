@@ -14,18 +14,23 @@
   },
   "packages": {
     "required": [
+      "at-spi2-core",
       "evince",
       "firefox-esr",
       "gdm3",
+      "gnome-accessibility-themes",
       "gnome-control-center",
       "gnome-session",
       "gnome-shell",
       "gnome-software",
       "gnome-terminal",
+      "libatk-adaptor",
       "libreoffice",
       "nautilus",
       "os-prober",
+      "orca",
       "pipewire",
+      "speech-dispatcher",
       "vlc",
       "xdg-desktop-portal",
       "xdg-desktop-portal-gnome"
@@ -34,6 +39,7 @@
     "remove": []
   },
   "features": [
+    "accessibility-baseline",
     "desktop-defaults",
     "gnome-gdm-default-route",
     "home-onboarding",

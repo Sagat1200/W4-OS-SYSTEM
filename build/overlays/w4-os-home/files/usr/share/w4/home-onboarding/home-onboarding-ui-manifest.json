@@ -1,0 +1,20 @@
+{
+    "home_onboarding_light_ui_bundle_schema_version": 1,
+    "kind": "home-onboarding-light-ui-bundle-manifest",
+    "profile_id": "w4-os-home",
+    "generated_at": "2026-10-09T05:27:13Z",
+    "source_kind": "home-onboarding-light-ui-bundle",
+    "entry_resource": "index.html",
+    "visible_step_count": 5,
+    "deferred_step_count": 4,
+    "routes": {
+        "home": "index.html",
+        "data": "home-onboarding-ui.json"
+    },
+    "generated_files": [
+        "home-onboarding-ui-manifest.json",
+        "home-onboarding-ui.json",
+        "index.html",
+        "styles\/home-onboarding.css"
+    ]
+}

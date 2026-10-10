@@ -168,47 +168,42 @@ Salida obligatoria:
 8. Business piloto.
 9. Compliance, soporte y release.
 
-## Siguiente ciclo recomendado · MX-009
+## Siguiente ciclo recomendado · MX-010
 
 Objetivo del ciclo:
-traducir la base ya cerrada de `Home` en un primer recorrido visible y utilizable para tareas domesticas basicas, sin absorber todavia onboarding interactivo completo ni ampliar el catalogo de apps sin evidencia.
+abrir `Business` como el siguiente frente visible posterior a `MX-009`, traduciendo la politica ya aprobada de `KDE Plasma` a un contrato operativo inicial sin vender todavia una plataforma empresarial completa.
 
 Estado de avance dentro de este ciclo:
 
-- `ADR-006` ya fue aprobada y `GNOME` queda fijado como interfaz predeterminada de `Home`.
-- `MX-007` ya dejo validada la cadena real `rootfs -> overlay -> live` sobre `GNOME + GDM`.
-- `MX-008` ya queda tratado como baseline suficiente de `Settings` para `Home V1`.
-- El manifiesto real de `Home` ya declara `firefox-esr`, `libreoffice`, `nautilus`, `gnome-control-center` y `gnome-software`, y esos paquetes ya aparecen materializados en el `live-output` actual.
+- `ADR-013` ya fue aprobada y `KDE Plasma` queda fijado como interfaz predeterminada de `Business`.
+- `MX-010_BUSINESS_V1_DESKTOP_MATRIX.md` ya compara `KDE Plasma`, `GNOME`, `XFCE` y `Cinnamon` y deja a `KDE` como ruta principal.
+- `MX-004` y `MX-005` ya dejan una base local validada de update/recovery y seguridad baseline sobre la que `Business` puede apoyarse.
+- `MX-009` ya queda cerrado como baseline usable de `Home`, por lo que el siguiente movimiento ya no necesita reabrir producto visible de `Home`.
 
 Resultado ejecutivo esperado:
 
-- baseline minimo visible de `Home` congelado sobre artefacto real;
-- rutas de shell y `Settings` tratadas como parte del contrato utilizable;
-- apps y accesos minimos verificados sin inspeccion manual;
-- onboarding local abierto como readiness verificable antes de una UI grande;
-- handoff claro hacia slices posteriores de accesibilidad y apps adicionales.
+- contrato operativo inicial de `Business` abierto y trazable;
+- ruta visible de `Business` tratada sobre `KDE Plasma + SDDM`;
+- piloto delimitado por identidad de dispositivo, politica cacheada e inventario minimo;
+- reuse explicito del motor local de update ya validado;
+- handoff claro hacia slices posteriores de enrollment, politica y update empresarial.
 
 Entregables tecnicos obligatorios:
 
-1. contrato operativo propio de `MX-009` para `Home V1`;
-2. validador canonico del baseline utilizable sobre `live-output`;
-3. salida `json` y `text` reutilizable por QA o por futuros gates del pipeline;
-4. trazabilidad ejecutiva alineada para tratar `MX-009` como frente activo.
+1. contrato operativo propio de `MX-010` para `Business V1`;
+2. definicion del primer `Slice A` tecnico verificable;
+3. trazabilidad ejecutiva alineada para tratar `Business` como siguiente frente activo;
+4. una siguiente accion concreta que no dependa de reinterpretar `ADR-013` en cada ciclo.
 
-Ese aterrizaje operativo ya queda abierto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-009_HOME_USABLE_V1_CONTRACT.md`. La pieza baja `011`, `131`, `231`, `232`, `237` y `408` a una ruta conservadora: primero se congela el baseline visible de aplicaciones y entrypoints ya materializados, luego se decide si onboarding, accesibilidad, PDF y multimedia entran como slices posteriores con evidencia propia.
+Ese aterrizaje operativo ya queda abierto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_CONTRACT.md`. La pieza baja `012`, `211`, `213`, `222`, `224` y `409` a una ruta conservadora: baseline visible sobre `KDE Plasma + SDDM`, identidad de dispositivo, politica local con ultima version valida, inventario minimo y reuse del motor local de update/recovery ya validado.
 
 Resultado del siguiente paso:
-`src/Home/HomeUsabilityLiveOutputToolkit.php`, expuesto por `scripts/validate_home_usability_live_output.php`, ya valida sobre `build/live-output/w4-os-home/` la presencia de `firefox-esr`, `libreoffice`, `evince`, `vlc`, `nautilus`, `gnome-control-center`, `gnome-software`, los favoritos clave del shell y las rutas visibles `W4 Settings`/`Updates`. `tests/HomeUsabilityLiveOutputCliTest.php` congela ese contrato sobre un workspace sintetico; `manifests/w4-os-home.profile.json` ya promociona `evince` y `vlc` a `packages.required`; el rootfs fue recompuesto en WSL; y el `live-output` final ya cierra en verde con ambos paquetes presentes en `filesystem.manifest`.
+`MX-010` deja de depender solo de la matriz comparativa y de la ADR grafica, pasa de lectura puramente documental a frente operativo en `En analisis`, y fija como siguiente `Slice A` la materializacion de la base visible de `Business` sobre artefactos del pipeline.
 
 Siguiente paso despues de este corte:
-tomar este baseline ampliado ya materializado como base estable de `Home V1` y abrir onboarding local como readiness de primer inicio, sin saltar todavia a una UI completa ni reabrir el mismo cierre de packaging.
+abrir el `Slice A` de `MX-010` para delimitar `w4-desktop-kde-meta`, congelar `KDE Plasma + SDDM` como baseline visible de `Business`, y fijar el primer gate verificable sobre `build-input`, `rootfs` y `live-output`.
 
-Estado actual de ese subcorte:
-el validador real ya devuelve `yes` para `evince`, `vlc`, `firefox-esr`, `libreoffice`, `nautilus`, `gnome-control-center` y `gnome-software`, y mantiene alineadas las rutas visibles `W4 Settings`/`Updates` junto con los favoritos del shell. Sobre esa base, `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-009_HOME_ONBOARDING_LOCAL_READINESS.md`, `src/Home/HomeOnboardingLiveOutputToolkit.php` y `scripts/validate_home_onboarding_live_output.php` ya no solo abren el gate de `MX-009`: ya lo cierran en verde sobre `build/live-output/w4-os-home/`. El pipeline absorbio la inicializacion temprana de `W4_DEFAULT_TARGET`, la proyeccion de `${W4_DEFAULT_TARGET}.wants` a `image-root/system-overlay` y la compatibilidad Windows para leer esos `ReparsePoint`, por lo que onboarding local readiness ya queda materializado.
-
-Con ese suelo ya congelado, el siguiente paso deja de ser ambiguo: `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-009_HOME_ONBOARDING_LIGHT_UI_SLICE_B.md` abre `Slice B` como una UI ligera de onboarding local, no como wizard grande. El subcorte queda acotado a bienvenida breve, pocos pasos visibles, handoff a `W4 Settings` y updates, omision de opcionales y cierre sin reaparicion arbitraria. La accesibilidad completa sigue diferida para un contrato tecnico propio y no debe mezclarse con esta pieza ligera.
-
-Como guardrail de este frente, la regla principal queda congelada desde el arranque: `MX-009` no debe intentar cerrar todo `Home V1` de una sola vez. Primero se congela el baseline minimo visible y solo despues se habilitan slices mas amplios de onboarding, accesibilidad o catalogo.
+Como guardrail de este frente, la regla principal queda congelada desde el arranque: `MX-010` no debe intentar cerrar de una vez enrollment completo, portal, soporte remoto generico ni paridad plena de variantes. Primero se abre la base visible y solo despues se habilitan slices empresariales mas profundos.
 
 ## Referencia historica · MX-004
 

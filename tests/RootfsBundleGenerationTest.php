@@ -109,30 +109,45 @@ final class RootfsBundleGenerationTest extends TestCase
 
         $manifest = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'rootfs-manifest.json');
         self::assertContains('w4-desktop-gnome-meta', $manifest['meta_packages']['required']);
+        self::assertContains('at-spi2-core', $manifest['packages']['required']);
         self::assertContains('evince', $manifest['packages']['required']);
         self::assertContains('gdm3', $manifest['packages']['required']);
+        self::assertContains('gnome-accessibility-themes', $manifest['packages']['required']);
         self::assertContains('gnome-session', $manifest['packages']['required']);
         self::assertContains('gnome-shell', $manifest['packages']['required']);
         self::assertContains('gnome-software', $manifest['packages']['required']);
+        self::assertContains('libatk-adaptor', $manifest['packages']['required']);
         self::assertContains('nautilus', $manifest['packages']['required']);
+        self::assertContains('orca', $manifest['packages']['required']);
+        self::assertContains('speech-dispatcher', $manifest['packages']['required']);
         self::assertContains('vlc', $manifest['packages']['required']);
         self::assertContains('xdg-desktop-portal-gnome', $manifest['packages']['required']);
 
         $requiredPackages = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'packages.required.list');
         self::assertNotFalse($requiredPackages);
+        self::assertStringContainsString("at-spi2-core\n", $requiredPackages);
         self::assertStringContainsString("evince\n", $requiredPackages);
         self::assertStringContainsString("gdm3\n", $requiredPackages);
+        self::assertStringContainsString("gnome-accessibility-themes\n", $requiredPackages);
         self::assertStringContainsString("gnome-shell\n", $requiredPackages);
         self::assertStringContainsString("gnome-session\n", $requiredPackages);
+        self::assertStringContainsString("libatk-adaptor\n", $requiredPackages);
+        self::assertStringContainsString("orca\n", $requiredPackages);
+        self::assertStringContainsString("speech-dispatcher\n", $requiredPackages);
         self::assertStringContainsString("vlc\n", $requiredPackages);
 
         $buildScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'build-rootfs.sh');
         self::assertNotFalse($buildScript);
         self::assertStringContainsString('--include=', $buildScript);
+        self::assertStringContainsString('at-spi2-core', $buildScript);
         self::assertStringContainsString('evince', $buildScript);
         self::assertStringContainsString('gdm3', $buildScript);
+        self::assertStringContainsString('gnome-accessibility-themes', $buildScript);
         self::assertStringContainsString('gnome-shell', $buildScript);
         self::assertStringContainsString('gnome-session', $buildScript);
+        self::assertStringContainsString('libatk-adaptor', $buildScript);
+        self::assertStringContainsString('orca', $buildScript);
+        self::assertStringContainsString('speech-dispatcher', $buildScript);
         self::assertStringContainsString('vlc', $buildScript);
         self::assertStringContainsString('bootstrap_with_mmdebstrap()', $buildScript);
         self::assertStringContainsString('bootstrap_with_debootstrap()', $buildScript);

@@ -18,6 +18,7 @@
         "default_target": "graphical.target"
     },
     "features": [
+        "accessibility-baseline",
         "desktop-defaults",
         "gnome-gdm-default-route",
         "home-onboarding",
@@ -65,13 +66,20 @@
         "files\/etc\/w4\/desktop-defaults.json",
         "files\/etc\/w4\/os-release.env",
         "files\/etc\/w4\/profile.env",
+        "files\/etc\/xdg\/autostart\/w4-home-onboarding-light-ui.desktop",
         "files\/usr\/local\/lib\/w4\/w4-firstboot.sh",
+        "files\/usr\/local\/lib\/w4\/w4-home-onboarding-light-ui.sh",
         "files\/usr\/local\/lib\/w4\/w4-live-prep.sh",
         "files\/usr\/share\/applications\/w4-control-center-home-home.desktop",
         "files\/usr\/share\/applications\/w4-control-center-home-security.desktop",
         "files\/usr\/share\/applications\/w4-control-center-home-system.desktop",
         "files\/usr\/share\/applications\/w4-control-center-home-updates.desktop",
-        "files\/usr\/share\/w4\/branding\/home\/wallpapers\/w4-home-default.svg"
+        "files\/usr\/share\/applications\/w4-home-onboarding-light-ui.desktop",
+        "files\/usr\/share\/w4\/branding\/home\/wallpapers\/w4-home-default.svg",
+        "files\/usr\/share\/w4\/home-onboarding\/home-onboarding-ui-manifest.json",
+        "files\/usr\/share\/w4\/home-onboarding\/home-onboarding-ui.json",
+        "files\/usr\/share\/w4\/home-onboarding\/index.html",
+        "files\/usr\/share\/w4\/home-onboarding\/styles\/home-onboarding.css"
     ],
     "next_steps": [
         "aplicar overlay al rootfs",
@@ -108,6 +116,24 @@
             "files\/usr\/share\/applications\/w4-control-center-home-security.desktop",
             "files\/usr\/share\/applications\/w4-control-center-home-system.desktop",
             "files\/usr\/share\/applications\/w4-control-center-home-updates.desktop"
+        ]
+    },
+    "home_onboarding_light_ui": {
+        "status": "integrated",
+        "bundle_dir": "build\/home-onboarding-ui\/w4-os-home",
+        "runtime_root": "files\/usr\/share\/w4\/home-onboarding",
+        "entrypoint": "files\/usr\/share\/w4\/home-onboarding\/index.html",
+        "manifest": "files\/usr\/share\/w4\/home-onboarding\/home-onboarding-ui-manifest.json",
+        "visible_step_count": 5,
+        "deferred_step_count": 4,
+        "launcher": "files\/usr\/share\/applications\/w4-home-onboarding-light-ui.desktop",
+        "autostart": "files\/etc\/xdg\/autostart\/w4-home-onboarding-light-ui.desktop",
+        "launch_script": "files\/usr\/local\/lib\/w4\/w4-home-onboarding-light-ui.sh",
+        "generated_files": [
+            "files\/usr\/share\/w4\/home-onboarding\/home-onboarding-ui-manifest.json",
+            "files\/usr\/share\/w4\/home-onboarding\/home-onboarding-ui.json",
+            "files\/usr\/share\/w4\/home-onboarding\/index.html",
+            "files\/usr\/share\/w4\/home-onboarding\/styles\/home-onboarding.css"
         ]
     }
 }

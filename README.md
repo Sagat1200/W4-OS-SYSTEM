@@ -122,16 +122,16 @@ La prioridad del proyecto es construir, en este orden:
 
 ## Siguiente ciclo
 
-El siguiente ciclo tecnico activo corresponde a `MX-009 · Home utilizable` y se centra en:
+El siguiente ciclo tecnico activo corresponde a `MX-010 · Business piloto` y se centra en:
 
-- congelar el baseline minimo visible de `Home`;
-- validar apps y rutas de primera sesion sobre el `live-output` real;
-- abrir onboarding local como readiness tecnica verificable;
-- y dejar la UI completa, accesibilidad y ampliacion de apps como slices posteriores con evidencia propia.
+- abrir una ruta visible base de `Business` sobre `KDE Plasma + SDDM`;
+- delimitar identidad de dispositivo, politica cacheada e inventario minimo como piloto real;
+- reutilizar el motor local de `Update y recovery` ya validado en vez de abrir un flujo empresarial paralelo;
+- y dejar portal, soporte remoto generico y paridad plena de variantes como slices posteriores con evidencia propia.
 
-La base de este ciclo ya no es hipotetica: `MX-007` dejo validada la shell `GNOME + GDM` y `MX-008` ya deja `Settings` en una ruta `GNOME-augmented` aceptada como suficiente para `Home V1`. Eso permite que `MX-009` arranque sobre una experiencia visible real y no sobre intenciones sueltas de producto.
+La base de este ciclo ya no es hipotetica: `ADR-013` ya fija `KDE Plasma` como interfaz predeterminada de `Business`, `MX-010_BUSINESS_V1_DESKTOP_MATRIX.md` ya deja una comparativa formal de variantes, `MX-004` y `MX-005` ya cerraron la base local de update/recovery y seguridad, y `MX-009` ya deja a `Home` con un baseline usable validado sin necesidad de seguir reabriendo ese frente.
 
-El aterrizaje operativo de este frente ya queda abierto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-009_HOME_USABLE_V1_CONTRACT.md`. Ese documento baja `011`, `131`, `231`, `232`, `237` y `408` a una ruta conservadora: primero se congela el baseline visible de navegador, documentos, archivos y accesos a `Settings`/`Updates`; despues se decide si PDF, multimedia, onboarding y accesibilidad suben a baseline efectivo de `Home V1`.
+El aterrizaje operativo de este nuevo frente ya queda abierto en `Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_CONTRACT.md`. Ese documento baja `012`, `211`, `213`, `222`, `224` y `409` a una ruta conservadora: baseline visible sobre `KDE Plasma + SDDM`, identidad de dispositivo, politica local con ultima version valida, inventario minimo y reuse del motor local de update/recovery ya validado.
 
 Ese primer slice tecnico ya existe en codigo: `src/Home/HomeUsabilityLiveOutputToolkit.php`, expuesto por `scripts/validate_home_usability_live_output.php`, valida sobre `build/live-output/w4-os-home/` la presencia de `firefox-esr`, `libreoffice`, `evince`, `vlc`, `nautilus`, `gnome-control-center`, `gnome-software`, los favoritos clave del shell y las rutas visibles `W4 Settings`/`Updates`. La cobertura inicial vive en `tests/HomeUsabilityLiveOutputCliTest.php`, donde el contrato queda congelado sobre un workspace minimo aislado.
 
@@ -142,6 +142,16 @@ El siguiente subcorte ya queda encuadrado en `Docs/DEVELOPMENT/GRAPHIC INTERFACE
 La primera corrida real de ese gate encontro dos brechas concretas del pipeline ya absorbidas: primero, `scripts/generate_live_bundle.php` debia respetar `${W4_DEFAULT_TARGET}.wants` y proyectar esa activacion tambien dentro de `image-root/system-overlay`; segundo, el validador necesitaba aceptar la semantica `ReparsePoint` de Windows para leer esas entradas materializadas. `tests/LiveBundleGenerationTest.php` ya congela la activacion sobre `${W4_DEFAULT_TARGET}.wants`, `build/live/w4-os-home/compose-live.sh` fue regenerado y la recomposicion real de `build/live-output/w4-os-home/` ya vuelve a cerrar en verde con `scripts/validate_home_onboarding_live_output.php --profile w4-os-home --format text`. Con eso, onboarding local readiness deja de estar pendiente de rematerializacion y pasa a slice materializado de `MX-009`.
 
 Con esa base ya cerrada, el siguiente frente visible deja de ser abstracto: `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-009_HOME_ONBOARDING_LIGHT_UI_SLICE_B.md` abre `Slice B` de `MX-009` como una UI ligera de onboarding local. La regla queda explicitamente acotada: bienvenida breve, pocos pasos visibles, handoff a `W4 Settings` y updates, omision de opcionales y cierre sin reaparecer sin motivo. Todavia no se abre un wizard grande ni accesibilidad completa; esas piezas siguen diferidas para no mezclar producto visible con un frente transversal mayor.
+
+Ese `Slice B` ya tiene ahora un primer aterrizaje tecnico visible: `src/Home/HomeOnboardingLightUiToolkit.php`, expuesto por `scripts/generate_home_onboarding_ui_bundle.php`, genera en `build/home-onboarding-ui/w4-os-home/` un bundle pequeno con `index.html`, `home-onboarding-ui.json`, stylesheet y manifest propios. `tests/HomeOnboardingUiBundleCliTest.php` congela que el recorrido visible se limite a cinco pasos (`welcome`, `privacy`, `settings`, `updates`, `finish`) y que siga declarando como diferidos los frentes grandes (`local-account`, backup externo, telemetry opt-in y accesibilidad ampliada).
+
+Ese mismo slice ya deja tambien un anclaje real en el overlay y en el bundle live de `Home`: `scripts/generate_system_overlay.php` ahora integra el bundle bajo `files/usr/share/w4/home-onboarding/`, publica `files/usr/share/applications/w4-home-onboarding-light-ui.desktop`, registra `files/etc/xdg/autostart/w4-home-onboarding-light-ui.desktop` y materializa el launcher `files/usr/local/lib/w4/w4-home-onboarding-light-ui.sh` con control de reaparicion por estado local de usuario. `tests/SystemOverlayGenerationTest.php` y `tests/LiveBundleGenerationTest.php` ya congelan esa ruta. Con esto, onboarding ligero deja de ser solo contrato o referencia HTML y pasa a tener punto de entrada real dentro del overlay de `Home`.
+
+Ese anclaje ya quedo ademas validado sobre el artefacto final: tras rematerializar `build/live-output/w4-os-home/`, `scripts/validate_home_onboarding_live_output.php --profile w4-os-home --format text` ya cierra en verde confirmando `autostart`, launcher, script runtime y bundle `home-onboarding` dentro de `image-root/system-overlay/`, junto con los cinco pasos visibles esperados (`welcome`, `privacy`, `settings`, `updates`, `finish`). Con eso, `Slice B` pasa de anclaje integrado en pipeline a subcorte materializado sobre el `live-output` real de `Home`.
+
+El siguiente subcorte ya tambien queda cerrado sobre el mismo artefacto final: `Docs/DEVELOPMENT/GRAPHIC INTERFACE/HOME/MX-009_HOME_ACCESSIBILITY_BASELINE.md`, `src/Home/HomeAccessibilityLiveOutputToolkit.php` y `scripts/validate_home_accessibility_live_output.php` ya fijan y validan el baseline de accesibilidad de `Home`. Tras recomponer `build/live-output/w4-os-home/` desde `w4-os-home-mx009-accessibility-baseline`, el gate real ya confirma en verde `accessibility-baseline`, `orca`, `speech-dispatcher`, `at-spi2-core`, `libatk-adaptor`, `gnome-accessibility-themes`, `gsettings-desktop-schemas`, `gnome-control-center` y la ruta visible a `W4 Settings`. Con eso, `MX-009` deja materializado un baseline usable de `Home V1` con apps minimas, onboarding local, onboarding ligero y accesibilidad baseline verificable, sin vender todavia onboarding completo ni accesibilidad end-to-end.
+
+Con `MX-009` ya tratado como baseline usable cerrado, el siguiente movimiento de producto deja de ser ambiguo: `MX-010` pasa a abrir `Business` como piloto operativo y ya no solo como politica grafica. `Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_CONTRACT.md` fija que el primer slice real debe materializar la base visible de `Business` sobre `KDE Plasma + SDDM`, delimitando despues enrollment, politica e inventario sin vender todavia portal completo ni gestion remota generalista.
 
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 
