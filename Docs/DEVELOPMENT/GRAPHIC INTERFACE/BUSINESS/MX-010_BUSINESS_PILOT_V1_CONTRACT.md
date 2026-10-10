@@ -1,7 +1,7 @@
 # MX-010 · Business piloto V1 · Contrato operativo inicial
 
-Estado: activo con `Slice A` materializado
-Fecha: 2026-10-09
+Estado: activo con `Slice A` validado y `Slice B` materializado sobre `live-output`
+Fecha: 2026-10-10
 Alcance: `W4 OS Business V1`
 Dependencias: `MX-003`, `MX-004`, `MX-005`, `ADR-013_BUSINESS_GRAPHIC_CATALOG_AND_SELECTOR.md`
 
@@ -144,6 +144,24 @@ Este slice debe:
 3. dejar visible donde vive la ultima politica valida;
 4. distinguir readiness local de cualquier backend empresarial completo.
 
+Ese siguiente aterrizaje ya deja ahora una primera base ejecutable en el repo:
+
+- `Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_SLICE_B_ENROLLMENT_READINESS.md`
+- `config/editions/business/enrollment-readiness.json`
+- `src/Business/BusinessEnrollmentReadinessToolkit.php`
+- `scripts/validate_business_enrollment_readiness.php`
+- `tests/BusinessEnrollmentReadinessCliTest.php`
+- `src/Business/BusinessEnrollmentReadinessLiveOutputToolkit.php`
+- `scripts/validate_business_enrollment_readiness_live_output.php`
+- `tests/BusinessEnrollmentReadinessLiveOutputCliTest.php`
+- `build/overlays/w4-os-business/files/etc/w4/business-enrollment-readiness.json`
+- `build/install/w4-os-business/edition-policy.json`
+- `build/install/w4-os-business/runtime/install.env`
+
+Con ello, `Slice B` ya no depende solo del documento `222`: `Business` ya cuenta con un contrato fuente de readiness local, una copia runtime en el overlay, un bundle de instalacion que vuelve a publicar `edition-policy.json` y un validador ejecutable que confirma la frontera `unenrolled-ready`, el cache local de politica, el estado local de inventario y el puente de politica entre bundle y runtime. Sigue siendo deliberadamente local: todavia no equivale a enrollment real, backend de tokens ni sincronizacion remota.
+
+Ese mismo slice ya deja ademas una proyeccion materializada sobre `build/live-output/w4-os-business/`: el `system-overlay` ya publica `image-root/system-overlay/etc/w4/business-enrollment-readiness.json`, y `src/Business/BusinessEnrollmentReadinessLiveOutputToolkit.php`, expuesto por `scripts/validate_business_enrollment_readiness_live_output.php`, ya valida en verde sobre el arbol real `w4-business-live`, `profile.env`, el contrato runtime de readiness, la cache local de politica y el anclaje local de inventario. La recomposicion limpia completa del artefacto queda todavia pendiente de rerun cuando el mirror Debian deje de devolver `Hash Sum mismatch` en `apt-get update`, pero el gate funcional de `Slice B` ya no queda limitado a `overlay/install`.
+
 ### Slice C · Politica y update empresarial acotados
 
 Solo despues de la base visible y del readiness de inscripcion, el frente debe abrir la integracion piloto con politica y updates.
@@ -209,4 +227,4 @@ Con la apertura correcta de `MX-010`, `Business` deja de ser solo una ADR de esc
 - continuidad offline apoyada en la ultima politica valida,
 - y un siguiente slice tecnico claro sin prometer todavia gestion empresarial completa.
 
-Tras esta pasada, ese avance ya se traduce en una base KDE real sobre `manifests`, `build-input`, `rootfs`, `overlay`, `live` y `live-output`, dejando como siguiente gate natural la apertura del `Slice B` de enrollment readiness.
+Tras esta pasada, ese avance ya se traduce en una base KDE real sobre `manifests`, `build-input`, `rootfs`, `overlay`, `live` y `live-output`, con `Slice B` ya proyectado tambien sobre el artefacto final materializado. El siguiente gate natural pasa ahora a ser el `Slice C` de politica local cacheada e inventario minimo.

@@ -5,7 +5,12 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_ROOT="${W4_TARGET_ROOT:-/mnt/w4-install-target}"
 TARGET_DISK='/dev/sda'
 EXPECTED_HOSTNAME='w4-business-vm'
+EXPECTED_HOSTNAME_PREFIX='w4-business'
 EXPECTED_USER='w4admin'
+EXPECTED_DEFAULT_TARGET='graphical.target'
+EXPECTED_FIREWALL_BACKEND='ufw'
+EXPECTED_FIREWALL_INCOMING='deny'
+EXPECTED_FIREWALL_OUTGOING='allow'
 CRYPT_NAME='cryptroot'
 ROOT_SUBVOLUME='@'
 PASSPHRASE_FILE="${W4_DISK_PASSPHRASE_FILE:-${SCRIPT_DIR}/runtime/disk-passphrase.txt}"
@@ -86,11 +91,21 @@ mount_target_if_needed
 [[ -f "${TARGET_ROOT}/etc/crypttab" ]] || fail "falta /etc/crypttab"
 grep -q "${CRYPT_NAME}" "${TARGET_ROOT}/etc/crypttab" || fail "crypttab no referencia ${CRYPT_NAME}"
 grep -q "${EXPECTED_HOSTNAME}" "${TARGET_ROOT}/etc/hostname" || fail "hostname no coincide"
+[[ "${EXPECTED_HOSTNAME}" == "${EXPECTED_HOSTNAME_PREFIX}"* ]] || fail "hostname no respeta el prefijo de politica"
 grep -q "^${EXPECTED_USER}:" "${TARGET_ROOT}/etc/passwd" || fail "el usuario esperado no existe"
 test -d "${TARGET_ROOT}/home" || fail "falta /home en el target"
 test -d "${TARGET_ROOT}/boot/efi" || fail "falta /boot/efi en el target"
 test -e "${TARGET_ROOT}/boot" || fail "falta /boot en el target"
 test -f "${TARGET_ROOT}/boot/grub/grub.cfg" || fail "falta /boot/grub/grub.cfg"
 test -e "${TARGET_ROOT}/boot/efi/EFI/BOOT/BOOTX64.EFI" || fail "falta la ruta UEFI de fallback BOOTX64.EFI"
+test -f "${TARGET_ROOT}/etc/w4/edition-policy.env" || fail "falta /etc/w4/edition-policy.env"
+grep -q "W4_DEFAULT_TARGET=\"${EXPECTED_DEFAULT_TARGET}\"" "${TARGET_ROOT}/etc/w4/edition-policy.env" || fail "edition-policy.env no conserva el default target"
+grep -q "W4_HOSTNAME_PREFIX=\"${EXPECTED_HOSTNAME_PREFIX}\"" "${TARGET_ROOT}/etc/w4/edition-policy.env" || fail "edition-policy.env no conserva el hostname prefix"
+test -L "${TARGET_ROOT}/etc/systemd/system/${EXPECTED_DEFAULT_TARGET}.wants/w4-firstboot.service" || fail "w4-firstboot.service no quedo enlazado al default target esperado"
+
+if [[ "${EXPECTED_FIREWALL_BACKEND}" == "ufw" ]] && [[ -f "${TARGET_ROOT}/etc/default/ufw" ]]; then
+  grep -q "DEFAULT_INPUT_POLICY=\"${EXPECTED_FIREWALL_INCOMING^^}\"" "${TARGET_ROOT}/etc/default/ufw" || fail "ufw no conserva la politica de entrada esperada"
+  grep -q "DEFAULT_OUTPUT_POLICY=\"${EXPECTED_FIREWALL_OUTGOING^^}\"" "${TARGET_ROOT}/etc/default/ufw" || fail "ufw no conserva la politica de salida esperada"
+fi
 
 echo "Verificacion local completada para ${TARGET_ROOT}"

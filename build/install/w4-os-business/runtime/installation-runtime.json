@@ -2,20 +2,26 @@
     "installation_runtime_schema_version": 1,
     "kind": "installation-runtime",
     "profile_id": "w4-os-business",
-    "bundle_dir": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\install\\w4-os-business",
-    "runtime_dir": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\install\\w4-os-business\\runtime",
+    "bundle_dir": "build\\install\\w4-os-business",
+    "runtime_dir": "build\\install\\w4-os-business\\runtime",
     "selected_disk": "\/dev\/sda",
+    "edition_policy": {
+        "path": "edition-policy.json",
+        "default_target": "graphical.target",
+        "hostname_prefix": "w4-business",
+        "ssh_enabled": false,
+        "firewall_backend": "ufw",
+        "firewall_incoming": "deny",
+        "firewall_outgoing": "allow"
+    },
     "source": {
         "type": "squashfs",
         "path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\live-output\\w4-os-business\\image-root\\live\\filesystem.squashfs",
         "auto_detected": true
     },
     "generated_secrets": {
-        "enabled": true,
-        "files": [
-            "disk-passphrase.txt",
-            "local-user-password.txt"
-        ],
+        "enabled": false,
+        "files": [],
         "policies": {
             "passphrase": {
                 "ascii_only": true,

@@ -5,6 +5,9 @@ Destino: /dev/sda (31.84 GiB)
 Layout: GPT + ESP + /boot + LUKS2 + Btrfs
 Usuario inicial: w4admin
 Hostname: w4-business-vm
+Target por defecto: graphical.target
+SSH habilitado por politica: no
+Firewall por politica: ufw (deny/allow)
 Resumen destructivo: si
 Espacio estimado para root cifrada: 29.32 GiB
 

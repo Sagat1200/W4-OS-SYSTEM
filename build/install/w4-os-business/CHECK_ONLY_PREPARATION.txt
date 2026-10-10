@@ -2,9 +2,9 @@ W4 OS Check-Only Preparation
 
 Perfil: W4 OS Business
 Disco objetivo: /dev/sda
-Inventario usado: .\build\install\w4-os-business\disk-inventory.json
-Perfil derivado: C:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-business\installation-profile.derived.json
-Bundle: C:\W4\Packages\W4-OS SYSTEM\build\install\w4-os-business
+Inventario usado: build\install\w4-os-business\disk-inventory.json
+Perfil derivado: build\install\w4-os-business\installation-profile.derived.json
+Bundle: build\install\w4-os-business
 
 Secuencia recomendada dentro de la ISO live:
 1. Confirmar que el disco sigue vacio y coincide con el selector del perfil derivado.

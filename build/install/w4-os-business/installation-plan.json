@@ -9,6 +9,28 @@
         "name": "W4 OS Business VM Empty Disk (\/dev\/sda)",
         "edition": "business"
     },
+    "edition_policy": {
+        "profile_id": "w4-os-business",
+        "path": "edition-policy.json",
+        "branding": {
+            "edition": "Business",
+            "hostname_prefix": "w4-business"
+        },
+        "boot": {
+            "default_target": "graphical.target",
+            "firmware": "uefi"
+        },
+        "ssh": {
+            "enabled": false,
+            "root_login": false,
+            "authentication": "disabled"
+        },
+        "firewall": {
+            "backend": "ufw",
+            "incoming": "deny",
+            "outgoing": "allow"
+        }
+    },
     "plan_binding": {
         "selector": {
             "serial": "VBOX_HARDDISK_VBf47232ae-1187d276",
@@ -140,6 +162,7 @@
     "notes": [
         "Este plan es destructivo y esta limitado a discos vacios.",
         "La ejecucion real debe revalidar el binding_hash antes de escribir en disco.",
-        "El perfil unattended versiona solo referencias a secretos; no material secreto persistido."
+        "El perfil unattended versiona solo referencias a secretos; no material secreto persistido.",
+        "La instalacion debe respetar la politica de edicion versionada para arranque, hostname y hardening base."
     ]
 }

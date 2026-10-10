@@ -285,6 +285,11 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertSame([], $manifest['desktop_defaults']['dconf_profiles']);
         self::assertSame([], $manifest['desktop_defaults']['dconf_databases']);
         self::assertContains('files/usr/share/w4/branding/business/wallpapers/w4-business-default.svg', $manifest['desktop_defaults']['assets']);
+        self::assertSame('config/editions/business/enrollment-readiness.json', $manifest['business_enrollment_readiness']['path']);
+        self::assertSame('files/etc/w4/business-enrollment-readiness.json', $manifest['business_enrollment_readiness']['runtime_file']);
+        self::assertSame('unenrolled-ready', $manifest['business_enrollment_readiness']['initial_state']);
+        self::assertSame('/var/lib/w4/policy/last-known-policy.json', $manifest['business_enrollment_readiness']['policy_cache']);
+        self::assertSame('/var/lib/w4/inventory/device-state.json', $manifest['business_enrollment_readiness']['inventory_state']);
 
         $desktopDefaults = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'desktop-defaults.json');
         self::assertSame('w4-os-business', $desktopDefaults['profile_id']);
@@ -296,6 +301,14 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertContains('org.kde.dolphin.desktop', $desktopDefaults['favorites']);
         self::assertContains('systemsettings.desktop', $desktopDefaults['favorites']);
         self::assertContains('org.kde.konsole.desktop', $desktopDefaults['favorites']);
+
+        $enrollmentReadiness = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'business-enrollment-readiness.json');
+        self::assertSame('business-enrollment-readiness', $enrollmentReadiness['kind']);
+        self::assertSame('w4-os-business', $enrollmentReadiness['profile_id']);
+        self::assertSame('unenrolled-ready', $enrollmentReadiness['scope']['initial_state']);
+        self::assertSame('/var/lib/w4/device-identity/identity.json', $enrollmentReadiness['device_identity']['state_file']);
+        self::assertSame('/var/lib/w4/policy/last-known-policy.json', $enrollmentReadiness['policy']['last_known_policy_file']);
+        self::assertSame('/var/lib/w4/inventory/device-state.json', $enrollmentReadiness['inventory']['device_state_file']);
 
         $wallpaper = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'branding' . DIRECTORY_SEPARATOR . 'business' . DIRECTORY_SEPARATOR . 'wallpapers' . DIRECTORY_SEPARATOR . 'w4-business-default.svg');
         self::assertNotFalse($wallpaper);

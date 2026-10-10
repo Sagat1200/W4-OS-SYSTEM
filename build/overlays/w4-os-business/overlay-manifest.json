@@ -57,6 +57,7 @@
         "files\/etc\/systemd\/system\/w4-firstboot.service",
         "files\/etc\/systemd\/system\/w4-live-prep.service",
         "files\/etc\/ufw\/ufw.conf",
+        "files\/etc\/w4\/business-enrollment-readiness.json",
         "files\/etc\/w4\/desktop-defaults.json",
         "files\/etc\/w4\/os-release.env",
         "files\/etc\/w4\/profile.env",
@@ -80,5 +81,12 @@
         "assets": [
             "files\/usr\/share\/w4\/branding\/business\/wallpapers\/w4-business-default.svg"
         ]
+    },
+    "business_enrollment_readiness": {
+        "path": "config\/editions\/business\/enrollment-readiness.json",
+        "runtime_file": "files\/etc\/w4\/business-enrollment-readiness.json",
+        "initial_state": "unenrolled-ready",
+        "policy_cache": "\/var\/lib\/w4\/policy\/last-known-policy.json",
+        "inventory_state": "\/var\/lib\/w4\/inventory\/device-state.json"
     }
 }

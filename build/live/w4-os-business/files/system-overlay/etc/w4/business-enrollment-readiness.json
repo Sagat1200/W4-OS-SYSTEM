@@ -1,0 +1,47 @@
+{
+    "schema_version": 1,
+    "kind": "business-enrollment-readiness",
+    "profile_id": "w4-os-business",
+    "scope": {
+        "mode": "local-readiness",
+        "backend_required": false,
+        "initial_state": "unenrolled-ready"
+    },
+    "device_identity": {
+        "state_file": "\/var\/lib\/w4\/device-identity\/identity.json",
+        "private_key_file": "\/var\/lib\/w4\/device-identity\/device.key",
+        "credential_file": "\/var\/lib\/w4\/device-identity\/device.crt",
+        "hostname_prefix": "w4-business"
+    },
+    "enrollment": {
+        "token": {
+            "mode": "one-time",
+            "organization_scope": "required",
+            "expiration": "required",
+            "stored_on_image": false
+        },
+        "request": {
+            "proof_of_possession": "required",
+            "idempotency_key": "required"
+        },
+        "credential": {
+            "issued_during_enrollment": true,
+            "stored_on_image": false
+        }
+    },
+    "policy": {
+        "last_known_policy_file": "\/var\/lib\/w4\/policy\/last-known-policy.json",
+        "effective_policy_file": "\/var\/lib\/w4\/policy\/effective-policy.json",
+        "invalid_policy_behavior": "keep-last-valid"
+    },
+    "inventory": {
+        "device_state_file": "\/var\/lib\/w4\/inventory\/device-state.json"
+    },
+    "deferred_steps": [
+        "token-issuer-backend",
+        "device-keypair-materialization",
+        "credential-issuance",
+        "first-policy-download",
+        "remote-inventory-sync"
+    ]
+}

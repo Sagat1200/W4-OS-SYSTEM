@@ -220,6 +220,30 @@ manager, los defaults visibles de `Business` y la ausencia de payload heredado d
 Siguiente paso despues de este corte:
 usar este cierre del baseline `KDE Plasma + SDDM` como puente al `Slice B` de enrollment readiness.
 
+Ese siguiente subcorte ya tambien deja ahora una primera base ejecutable:
+`Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_SLICE_B_ENROLLMENT_READINESS.md`,
+`config/editions/business/enrollment-readiness.json`,
+`build/overlays/w4-os-business/files/etc/w4/business-enrollment-readiness.json`,
+`build/install/w4-os-business/edition-policy.json`,
+`build/install/w4-os-business/runtime/install.env`,
+`src/Business/BusinessEnrollmentReadinessToolkit.php` y
+`scripts/validate_business_enrollment_readiness.php` ya fijan y validan en verde
+la readiness local de enrollment para `Business`: estado `unenrolled-ready`,
+identidad local del dispositivo, cache de ultima politica valida, estado local de
+inventario y puente de politica entre bundle y runtime, sin vender todavia backend
+real de tokens ni enrollment empresarial completo.
+
+Ese mismo `Slice B` ya cuenta ademas con gate propio sobre el artefacto final:
+`src/Business/BusinessEnrollmentReadinessLiveOutputToolkit.php`, expuesto por
+`scripts/validate_business_enrollment_readiness_live_output.php`, ya valida en
+verde sobre `build/live-output/w4-os-business/` la proyeccion runtime de
+`business-enrollment-readiness.json`, `w4-business-live`, `profile.env`, la
+cache local de politica y el anclaje local de inventario. La recomposicion limpia
+completa del `live-output` se intento sobre WSL, pero el rerun quedo bloqueado por
+`Hash Sum mismatch` del mirror Debian durante `apt-get update`; por eso el gate
+funcional queda cerrado sobre el arbol materializado actual y el rerun limpio
+completo se mueve a backlog tecnico de infraestructura externa.
+
 Como guardrail de este frente, la regla principal queda congelada desde el arranque: `MX-010` no debe intentar cerrar de una vez enrollment completo, portal, soporte remoto generico ni paridad plena de variantes. Primero se abre la base visible y solo despues se habilitan slices empresariales mas profundos.
 
 ## Referencia historica · MX-004

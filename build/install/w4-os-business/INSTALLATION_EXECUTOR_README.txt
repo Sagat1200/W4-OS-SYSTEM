@@ -2,6 +2,8 @@ W4 OS Installation Executor
 
 Perfil: W4 OS Business
 Disco objetivo: /dev/sda
+Target por defecto: graphical.target
+Hostname prefix: w4-business
 Modo por defecto: verificacion sin escritura
 
 Archivos generados:

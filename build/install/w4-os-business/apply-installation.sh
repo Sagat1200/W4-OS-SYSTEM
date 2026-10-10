@@ -26,6 +26,15 @@ ROOT_LABEL='W4-SYSTEM'
 ESP_LABEL='W4-ESP'
 BOOT_LABEL='W4-BOOT'
 ROOT_SUBVOLUME='@'
+DEFAULT_TARGET='graphical.target'
+HOSTNAME_PREFIX='w4-business'
+EDITION_POLICY_PATH='edition-policy.json'
+SSH_POLICY_ENABLED='0'
+SSH_POLICY_AUTHENTICATION='disabled'
+SSH_POLICY_ROOT_LOGIN='0'
+FIREWALL_BACKEND='ufw'
+FIREWALL_INCOMING='deny'
+FIREWALL_OUTGOING='allow'
 ESP_SIZE_MIB='512'
 BOOT_SIZE_MIB='2048'
 TARGET_ROOT="${W4_TARGET_ROOT:-/mnt/w4-install-target}"
@@ -411,6 +420,26 @@ ensure_directories() {
     "${TARGET_ROOT}/var/lib/w4"
 }
 
+apply_policy_defaults() {
+  mkdir -p "${TARGET_ROOT}/etc/w4"
+  cat > "${TARGET_ROOT}/etc/w4/edition-policy.env" <<EOF
+W4_EDITION_POLICY_PATH="${EDITION_POLICY_PATH}"
+W4_DEFAULT_TARGET="${DEFAULT_TARGET}"
+W4_HOSTNAME_PREFIX="${HOSTNAME_PREFIX}"
+W4_SSH_ENABLED="${SSH_POLICY_ENABLED}"
+W4_SSH_AUTHENTICATION="${SSH_POLICY_AUTHENTICATION}"
+W4_SSH_ROOT_LOGIN="${SSH_POLICY_ROOT_LOGIN}"
+W4_FIREWALL_BACKEND="${FIREWALL_BACKEND}"
+W4_FIREWALL_INCOMING="${FIREWALL_INCOMING}"
+W4_FIREWALL_OUTGOING="${FIREWALL_OUTGOING}"
+EOF
+
+  if [[ "${FIREWALL_BACKEND}" == "ufw" ]] && [[ -f "${TARGET_ROOT}/etc/default/ufw" ]]; then
+    sed -i "s/^DEFAULT_INPUT_POLICY=.*/DEFAULT_INPUT_POLICY=\"${FIREWALL_INCOMING^^}\"/" "${TARGET_ROOT}/etc/default/ufw" || true
+    sed -i "s/^DEFAULT_OUTPUT_POLICY=.*/DEFAULT_OUTPUT_POLICY=\"${FIREWALL_OUTGOING^^}\"/" "${TARGET_ROOT}/etc/default/ufw" || true
+  fi
+}
+
 print_plan() {
   cat <<EOF
 W4 OS Executor
@@ -566,18 +595,20 @@ UUID=${BOOT_UUID} /boot ext4 defaults 0 2
 UUID=${ESP_UUID} /boot/efi vfat umask=0077 0 1
 EOF
 
+apply_policy_defaults
+
 if [[ -f "${TARGET_ROOT}/etc/locale.gen" ]]; then
   sed -i "s/^# *${LOCALE_VALUE} UTF-8/${LOCALE_VALUE} UTF-8/" "${TARGET_ROOT}/etc/locale.gen" || true
 fi
 
-mkdir -p "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants"
+mkdir -p "${TARGET_ROOT}/etc/systemd/system/${DEFAULT_TARGET}.wants"
 if [[ -f "${TARGET_ROOT}/lib/systemd/system/w4-firstboot.service" ]]; then
-  ln -sf /lib/systemd/system/w4-firstboot.service "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants/w4-firstboot.service"
+  ln -sf /lib/systemd/system/w4-firstboot.service "${TARGET_ROOT}/etc/systemd/system/${DEFAULT_TARGET}.wants/w4-firstboot.service"
+elif [[ -f "${TARGET_ROOT}/etc/systemd/system/w4-firstboot.service" ]]; then
+  ln -sf ../w4-firstboot.service "${TARGET_ROOT}/etc/systemd/system/${DEFAULT_TARGET}.wants/w4-firstboot.service"
 fi
 
-if [[ -f "${TARGET_ROOT}/lib/systemd/system/w4-live-prep.service" ]]; then
-  rm -f "${TARGET_ROOT}/etc/systemd/system/multi-user.target.wants/w4-live-prep.service"
-fi
+rm -f "${TARGET_ROOT}/etc/systemd/system/${DEFAULT_TARGET}.wants/w4-live-prep.service"
 
 mount_chroot_support
 ensure_kernel_boot_artifacts

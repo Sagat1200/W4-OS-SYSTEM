@@ -4,6 +4,11 @@
     "profile_id": "w4-os-business",
     "selected_disk": "\/dev\/sda",
     "default_mode": "check-only",
+    "edition_policy": {
+        "path": "edition-policy.json",
+        "default_target": "graphical.target",
+        "hostname_prefix": "w4-business"
+    },
     "required_env": [
         "W4_INSTALL_EXECUTE",
         "W4_INSTALL_SOURCE_ROOTFS or W4_INSTALL_SOURCE_SQUASHFS",

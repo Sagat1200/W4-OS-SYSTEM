@@ -233,6 +233,52 @@ function readDesktopDefaults(string $rootDir, string $profileId): array
 }
 
 /**
+ * @return array<string, mixed>
+ */
+function readBusinessEnrollmentReadiness(string $rootDir, string $profileId): array
+{
+    if ($profileId !== 'w4-os-business') {
+        return [];
+    }
+
+    $contractPath = $rootDir
+        . DIRECTORY_SEPARATOR . 'config'
+        . DIRECTORY_SEPARATOR . 'editions'
+        . DIRECTORY_SEPARATOR . 'business'
+        . DIRECTORY_SEPARATOR . 'enrollment-readiness.json';
+
+    if (!is_file($contractPath)) {
+        return [];
+    }
+
+    $raw = file_get_contents($contractPath);
+    if ($raw === false) {
+        throw new ValidationError(sprintf('No se pudo leer el contrato de enrollment readiness: %s', $contractPath));
+    }
+
+    try {
+        /** @var array<string, mixed> $contract */
+        $contract = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('Contrato de enrollment readiness invalido: %s', $exception->getMessage()));
+    }
+
+    if (($contract['schema_version'] ?? null) !== 1) {
+        throw new ValidationError(sprintf('%s: schema_version debe ser 1', $contractPath));
+    }
+
+    if (($contract['kind'] ?? null) !== 'business-enrollment-readiness') {
+        throw new ValidationError(sprintf('%s: kind debe ser business-enrollment-readiness', $contractPath));
+    }
+
+    if (($contract['profile_id'] ?? null) !== $profileId) {
+        throw new ValidationError(sprintf('%s: profile_id debe ser %s', $contractPath, $profileId));
+    }
+
+    return $contract;
+}
+
+/**
  * @param array<string, mixed> $buildInput
  * @param array<string, mixed> $editionPolicy
  * @return array<string, string>
@@ -1300,9 +1346,10 @@ function ensureHomeOnboardingLightUiBundle(string $rootDir, string $profileId): 
  * @param array<string, mixed> $buildInput
  * @param array<string, string> $vars
  * @param array<string, mixed> $desktopDefaults
+ * @param array<string, mixed> $businessEnrollmentReadiness
  * @return array<string, string>
  */
-function buildOverlayFiles(array $buildInput, array $vars, array $desktopDefaults): array
+function buildOverlayFiles(array $buildInput, array $vars, array $desktopDefaults, array $businessEnrollmentReadiness): array
 {
     $features = implode(',', $buildInput['features']);
 
@@ -1343,6 +1390,15 @@ function buildOverlayFiles(array $buildInput, array $vars, array $desktopDefault
             $files[desktopDefaultsDconfUserPath($desktopDefaults)] = buildUserDconfDefaults($desktopDefaults) . "\n";
             $files['files/etc/dconf/db/gdm.d/00-w4-login'] = buildGdmDconfDefaults($desktopDefaults) . "\n";
         }
+    }
+
+    if ($businessEnrollmentReadiness !== []) {
+        $readinessJson = json_encode($businessEnrollmentReadiness, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        if ($readinessJson === false) {
+            throw new ValidationError('No se pudo serializar business-enrollment-readiness.json');
+        }
+
+        $files['files/etc/w4/business-enrollment-readiness.json'] = $readinessJson . "\n";
     }
 
     return $files;
@@ -1412,8 +1468,9 @@ try {
 
     $editionPolicy = readEditionPolicy($rootDir, $resolvedProfileId);
     $desktopDefaults = readDesktopDefaults($rootDir, $resolvedProfileId);
+    $businessEnrollmentReadiness = readBusinessEnrollmentReadiness($rootDir, $resolvedProfileId);
     $vars = overlayVariables($buildInput, $editionPolicy);
-    $files = buildOverlayFiles($buildInput, $vars, $desktopDefaults);
+    $files = buildOverlayFiles($buildInput, $vars, $desktopDefaults, $businessEnrollmentReadiness);
     $controlCenterLaunchers = buildControlCenterLauncherOverlay($rootDir, $resolvedProfileId, $desktopDefaults);
     $homeOnboardingLightUi = buildHomeOnboardingLightUiOverlay($rootDir, $resolvedProfileId);
     if (is_array($controlCenterLaunchers['files'] ?? null) && $controlCenterLaunchers['files'] !== []) {
@@ -1507,6 +1564,16 @@ try {
             'assets' => [
                 desktopDefaultsAssetRuntimePath($desktopDefaults),
             ],
+        ];
+    }
+
+    if ($businessEnrollmentReadiness !== []) {
+        $overlayManifestData['business_enrollment_readiness'] = [
+            'path' => 'config/editions/business/enrollment-readiness.json',
+            'runtime_file' => 'files/etc/w4/business-enrollment-readiness.json',
+            'initial_state' => (string) ($businessEnrollmentReadiness['scope']['initial_state'] ?? 'unenrolled-ready'),
+            'policy_cache' => (string) ($businessEnrollmentReadiness['policy']['last_known_policy_file'] ?? ''),
+            'inventory_state' => (string) ($businessEnrollmentReadiness['inventory']['device_state_file'] ?? ''),
         ];
     }
 

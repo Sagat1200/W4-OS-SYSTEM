@@ -5,12 +5,17 @@
     "installation_profile_id": "w4-os-business-vm-empty-disk-dev-sda",
     "inventory_id": "virtualbox-live-business",
     "plan_kind": "installation-plan",
+    "edition_policy": {
+        "path": "edition-policy.json",
+        "default_target": "graphical.target"
+    },
     "generated_artifacts": [
         "CHECK_ONLY_PREPARATION.txt",
         "INSTALLATION_EXECUTOR_README.txt",
         "INSTALLATION_SUMMARY.txt",
         "apply-installation.sh",
         "disk-inventory.json",
+        "edition-policy.json",
         "installation-executor.json",
         "installation-plan.json",
         "installation-profile.derived.json",
