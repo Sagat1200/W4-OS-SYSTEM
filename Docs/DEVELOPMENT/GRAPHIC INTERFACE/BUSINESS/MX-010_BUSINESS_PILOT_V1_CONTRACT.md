@@ -1,6 +1,6 @@
 # MX-010 · Business piloto V1 · Contrato operativo inicial
 
-Estado: abierto
+Estado: activo con `Slice A` materializado
 Fecha: 2026-10-09
 Alcance: `W4 OS Business V1`
 Dependencias: `MX-003`, `MX-004`, `MX-005`, `ADR-013_BUSINESS_GRAPHIC_CATALOG_AND_SELECTOR.md`
@@ -131,7 +131,7 @@ Ese primer aterrizaje ya deja ahora una base implementada en el repo:
 - `build/overlays/w4-os-business/overlay-manifest.json`
 - `build/live/w4-os-business/live-manifest.json`
 
-Con ello, `MX-010` ya no depende solo de la ADR para su base visible: `Business` ya cuenta con composicion KDE propia en manifiestos y bundles del pipeline, y tambien con un validador ejecutable para el gate final. Aun asi, todavia falta rematerializar y validar el `live-output` final antes de tratar este slice como cerrado por completo.
+Con ello, `MX-010` ya no depende solo de la ADR para su base visible: `Business` ya cuenta con composicion KDE propia en manifiestos y bundles del pipeline, con un validador ejecutable para el gate final y con cierre materializado sobre `build/live-output/w4-os-business/`. `scripts/validate_business_kde_live_output.php --profile w4-os-business --format text` ya confirma en verde `graphical.target`, el baseline `KDE Plasma + SDDM`, los paquetes clave del shell/login manager, los defaults visibles de `Business` y la ausencia de payload heredado de `Home`/`GNOME` en el `system-overlay`.
 
 ### Slice B · Enrollment readiness del piloto
 
@@ -209,4 +209,4 @@ Con la apertura correcta de `MX-010`, `Business` deja de ser solo una ADR de esc
 - continuidad offline apoyada en la ultima politica valida,
 - y un siguiente slice tecnico claro sin prometer todavia gestion empresarial completa.
 
-Tras esta pasada, ese avance ya se traduce en una base KDE real sobre `manifests`, `build-input`, `rootfs`, `overlay` y `live`, dejando como siguiente gate natural la validacion de `live-output` y, despues, la apertura del `Slice B` de enrollment readiness.
+Tras esta pasada, ese avance ya se traduce en una base KDE real sobre `manifests`, `build-input`, `rootfs`, `overlay`, `live` y `live-output`, dejando como siguiente gate natural la apertura del `Slice B` de enrollment readiness.

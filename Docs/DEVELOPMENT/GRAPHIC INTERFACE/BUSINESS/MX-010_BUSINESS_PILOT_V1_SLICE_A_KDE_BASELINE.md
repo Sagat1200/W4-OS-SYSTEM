@@ -1,6 +1,6 @@
 # MX-010 · Business piloto V1 · Slice A · KDE baseline materializable
 
-Estado: implementado en pipeline; pendiente de validacion final en `live-output`
+Estado: materializado
 Fecha: 2026-10-09
 Alcance: `W4 OS Business V1`
 Dependencias: `MX-010_BUSINESS_PILOT_V1_CONTRACT.md`, `ADR-013_BUSINESS_GRAPHIC_CATALOG_AND_SELECTOR.md`, `MX-004`, `MX-005`
@@ -86,7 +86,24 @@ Este slice ya deja un primer aterrizaje tecnico verificable en el arbol real:
 5. `tests/ManifestToolkitTest.php`, `tests/SystemOverlayGenerationTest.php`, `tests/RootfsBundleGenerationTest.php` y `tests/LiveBundleGenerationTest.php` ya congelan este baseline en verde;
 6. `src/Business/BusinessKdeLiveOutputToolkit.php`, `scripts/validate_business_kde_live_output.php` y `tests/BusinessKdeLiveOutputCliTest.php` ya dejan fijado el gate ejecutable que debe cerrar el baseline KDE sobre `build/live-output/w4-os-business/`.
 
-Con ello, `Slice A` deja de ser solo contrato documental y pasa a tener una base implementada sobre manifests, overlay y bundles del pipeline, aunque todavia no cierre el gate final de `live-output` materializado.
+Con ello, `Slice A` deja de ser solo contrato documental y pasa a tener una base implementada sobre manifests, overlay y bundles del pipeline.
+
+## Cierre materializado
+
+Este slice ya queda ahora cerrado sobre `build/live-output/w4-os-business/` mediante:
+
+1. `src/Business/BusinessKdeLiveOutputToolkit.php`;
+2. `scripts/validate_business_kde_live_output.php`;
+3. `tests/BusinessKdeLiveOutputCliTest.php`;
+4. `build/live-output/w4-os-business/`.
+
+La validacion real ya confirma en verde:
+
+1. `W4_DEFAULT_TARGET=graphical.target`;
+2. `kde-sddm-default-route`, `desktop-defaults`, `business-policy-hooks`, `device-enrollment-ready`, `inventory-ready` y `reversible-branding-defaults` en `profile.env`;
+3. presencia materializada de `plasma-desktop`, `plasma-workspace`, `plasma-nm`, `sddm`, `dolphin`, `konsole`, `systemsettings` y `xdg-desktop-portal-kde` en `filesystem.manifest`;
+4. defaults visibles de `Business` con `KDE Plasma + SDDM`, wallpaper propio y favoritos de `Dolphin`, `System Settings` y `Konsole`;
+5. ausencia de payload heredado de `Home`/`GNOME` dentro del `system-overlay`.
 
 ## Criterio de cierre del slice
 
@@ -96,7 +113,7 @@ Este slice solo puede tratarse como materializado cuando:
 2. el pipeline propague esa composicion hasta artefactos verificables;
 3. la trazabilidad deje claro que esto cierra solo la base visible de `Business`, no el piloto empresarial completo.
 
-En esta pasada ya quedan satisfechos los dos primeros peldaños sobre `manifests`, `build-input`, `rootfs`, `overlay` y `live`, pero sigue pendiente el cierre sobre `live-output` final materializado.
+En esta pasada ya quedan satisfechos tambien los cierres sobre `live-output` final materializado, manteniendo claro que este logro congela solo la base visible de `Business` y no el piloto empresarial completo.
 
 ## Riesgo activo
 
@@ -113,7 +130,7 @@ Si eso ocurre, `MX-010` volvera a quedar bloqueado por sobrealcance.
 
 ## Resultado esperado del slice
 
-Con este `Slice A`, `Business` debe quedar listo para pasar de politica grafica aprobada a una ruta visible real sobre artefactos del pipeline, manteniendo separado:
+Con este `Slice A`, `Business` ya queda promovido desde politica grafica aprobada a una ruta visible real verificada sobre artefactos finales del pipeline, manteniendo separado:
 
 - baseline KDE materializable,
 - piloto empresarial posterior,

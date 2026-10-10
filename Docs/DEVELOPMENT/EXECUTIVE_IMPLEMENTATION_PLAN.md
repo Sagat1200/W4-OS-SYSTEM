@@ -209,12 +209,16 @@ sobre `KDE Plasma + SDDM`, y el pipeline ya la refleja en
 `build/live/w4-os-business/live-manifest.json`.
 
 Resultado del corte actual:
-`MX-010` deja de ser solo apertura documental y pasa a `En implementacion` con un
-`Slice A` ya materializado en manifests, defaults y bundles del pipeline, aunque
-todavia no cierre el gate final de `live-output` materializado.
+`MX-010` deja de ser solo apertura documental o cierre parcial de pipeline y pasa a
+quedar validado en su `Slice A` sobre `build/live-output/w4-os-business/`.
+`src/Business/BusinessKdeLiveOutputToolkit.php`, expuesto por
+`scripts/validate_business_kde_live_output.php`, ya confirma en verde
+`graphical.target`, la ruta `KDE Plasma + SDDM`, los paquetes clave del shell/login
+manager, los defaults visibles de `Business` y la ausencia de payload heredado de
+`Home`/`GNOME` dentro del `system-overlay`.
 
 Siguiente paso despues de este corte:
-rematerializar `live-output` real de `Business`, fijar un validador propio del baseline `KDE Plasma + SDDM` y usar ese cierre como puente al `Slice B` de enrollment readiness.
+usar este cierre del baseline `KDE Plasma + SDDM` como puente al `Slice B` de enrollment readiness.
 
 Como guardrail de este frente, la regla principal queda congelada desde el arranque: `MX-010` no debe intentar cerrar de una vez enrollment completo, portal, soporte remoto generico ni paridad plena de variantes. Primero se abre la base visible y solo despues se habilitan slices empresariales mas profundos.
 
