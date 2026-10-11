@@ -290,6 +290,11 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertSame('unenrolled-ready', $manifest['business_enrollment_readiness']['initial_state']);
         self::assertSame('/var/lib/w4/policy/last-known-policy.json', $manifest['business_enrollment_readiness']['policy_cache']);
         self::assertSame('/var/lib/w4/inventory/device-state.json', $manifest['business_enrollment_readiness']['inventory_state']);
+        self::assertSame('config/editions/business/pilot-local-state.json', $manifest['business_pilot_local_state']['path']);
+        self::assertSame('files/etc/w4/business-pilot-local-state.json', $manifest['business_pilot_local_state']['runtime_file']);
+        self::assertSame('edition-baseline-only', $manifest['business_pilot_local_state']['policy_state']);
+        self::assertSame('local-only', $manifest['business_pilot_local_state']['inventory_transport']);
+        self::assertSame('/var/lib/w4/policy/effective-policy.json', $manifest['business_pilot_local_state']['effective_policy']);
 
         $desktopDefaults = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'desktop-defaults.json');
         self::assertSame('w4-os-business', $desktopDefaults['profile_id']);
@@ -309,6 +314,14 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertSame('/var/lib/w4/device-identity/identity.json', $enrollmentReadiness['device_identity']['state_file']);
         self::assertSame('/var/lib/w4/policy/last-known-policy.json', $enrollmentReadiness['policy']['last_known_policy_file']);
         self::assertSame('/var/lib/w4/inventory/device-state.json', $enrollmentReadiness['inventory']['device_state_file']);
+
+        $pilotLocalState = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'business-pilot-local-state.json');
+        self::assertSame('business-pilot-local-state', $pilotLocalState['kind']);
+        self::assertSame('edition-baseline-only', $pilotLocalState['scope']['policy_state']);
+        self::assertSame('/etc/w4/edition-policy.env', $pilotLocalState['policy']['baseline_runtime_env']);
+        self::assertSame('/var/lib/w4/policy/effective-policy.json', $pilotLocalState['policy']['effective_policy_file']);
+        self::assertSame('/var/lib/w4/inventory/device-state.json', $pilotLocalState['inventory']['device_state_file']);
+        self::assertContains('profile_id', $pilotLocalState['inventory']['minimum_fields']);
 
         $wallpaper = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'branding' . DIRECTORY_SEPARATOR . 'business' . DIRECTORY_SEPARATOR . 'wallpapers' . DIRECTORY_SEPARATOR . 'w4-business-default.svg');
         self::assertNotFalse($wallpaper);

@@ -1,6 +1,6 @@
 # MX-010 · Business piloto V1 · Contrato operativo inicial
 
-Estado: activo con `Slice A` validado y `Slice B` materializado sobre `live-output`
+Estado: activo con `Slice A` validado y `Slice B`/`Slice C` materializados sobre `overlay`, `install` y `live-output`
 Fecha: 2026-10-10
 Alcance: `W4 OS Business V1`
 Dependencias: `MX-003`, `MX-004`, `MX-005`, `ADR-013_BUSINESS_GRAPHIC_CATALOG_AND_SELECTOR.md`
@@ -172,6 +172,24 @@ Este slice debe:
 2. limitar el plano remoto a inventario, estado, cohortes y ventana;
 3. dejar explicito que no existe todavia control remoto generico.
 
+Ese siguiente aterrizaje ya deja ahora una base ejecutable y verificable en el repo:
+
+- `Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_SLICE_C_LOCAL_POLICY_AND_INVENTORY.md`
+- `config/editions/business/pilot-local-state.json`
+- `src/Business/BusinessPilotLocalStateToolkit.php`
+- `scripts/validate_business_pilot_local_state.php`
+- `tests/BusinessPilotLocalStateCliTest.php`
+- `src/Business/BusinessPilotLocalStateLiveOutputToolkit.php`
+- `scripts/validate_business_pilot_local_state_live_output.php`
+- `tests/BusinessPilotLocalStateLiveOutputCliTest.php`
+- `build/overlays/w4-os-business/files/etc/w4/business-pilot-local-state.json`
+- `build/install/w4-os-business/runtime/install.env`
+- `build/live-output/w4-os-business/image-root/system-overlay/etc/w4/business-pilot-local-state.json`
+
+Con ello, `Slice C` ya no queda como idea futura: `Business` ya publica un contrato local `business-pilot-local-state`, una cache de ultima politica valida, un slot local de politica efectiva, un reporte local de conflictos y un inventario minimo local bajo una frontera `local-only`, sin vender todavia backend de politica central, inventario remoto sincronizado ni portal empresarial final.
+
+Ese mismo slice ya queda ademas validado en verde tanto sobre `overlay/install` como sobre el `live-output` materializado. `scripts/validate_business_pilot_local_state.php --profile w4-os-business --format text` ya confirma `policy_state=edition-baseline-only`, `last-known-policy`, `effective-policy`, `device-state`, `@inventory -> /var/lib/w4` y el puente runtime `W4_POLICY_*` / `W4_INVENTORY_*`; y `scripts/validate_business_pilot_local_state_live_output.php --profile w4-os-business --format text` ya confirma en verde la proyeccion runtime del contrato en `system-overlay`, la precedencia local `edition-baseline -> last-known-valid` y la frontera offline con `keep-last-valid`.
+
 ## Entregables obligatorios de apertura
 
 1. contrato operativo propio de `MX-010` para `Business V1`;
@@ -227,4 +245,4 @@ Con la apertura correcta de `MX-010`, `Business` deja de ser solo una ADR de esc
 - continuidad offline apoyada en la ultima politica valida,
 - y un siguiente slice tecnico claro sin prometer todavia gestion empresarial completa.
 
-Tras esta pasada, ese avance ya se traduce en una base KDE real sobre `manifests`, `build-input`, `rootfs`, `overlay`, `live` y `live-output`, con `Slice B` ya proyectado tambien sobre el artefacto final materializado. El siguiente gate natural pasa ahora a ser el `Slice C` de politica local cacheada e inventario minimo.
+Tras esta pasada, ese avance ya se traduce en una base KDE real sobre `manifests`, `build-input`, `rootfs`, `overlay`, `live` y `live-output`, con `Slice B` y `Slice C` ya proyectados tambien sobre el artefacto final materializado. El siguiente gate natural deja de ser abrir politica local y pasa a ser rerun la recomposicion limpia completa del `live-output` cuando el mirror Debian deje de derivar, manteniendo mientras tanto el cierre funcional del piloto sobre el arbol materializado actual.

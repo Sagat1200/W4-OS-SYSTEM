@@ -279,6 +279,52 @@ function readBusinessEnrollmentReadiness(string $rootDir, string $profileId): ar
 }
 
 /**
+ * @return array<string, mixed>
+ */
+function readBusinessPilotLocalState(string $rootDir, string $profileId): array
+{
+    if ($profileId !== 'w4-os-business') {
+        return [];
+    }
+
+    $contractPath = $rootDir
+        . DIRECTORY_SEPARATOR . 'config'
+        . DIRECTORY_SEPARATOR . 'editions'
+        . DIRECTORY_SEPARATOR . 'business'
+        . DIRECTORY_SEPARATOR . 'pilot-local-state.json';
+
+    if (!is_file($contractPath)) {
+        return [];
+    }
+
+    $raw = file_get_contents($contractPath);
+    if ($raw === false) {
+        throw new ValidationError(sprintf('No se pudo leer el contrato local de politica/inventario: %s', $contractPath));
+    }
+
+    try {
+        /** @var array<string, mixed> $contract */
+        $contract = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('Contrato local de politica/inventario invalido: %s', $exception->getMessage()));
+    }
+
+    if (($contract['schema_version'] ?? null) !== 1) {
+        throw new ValidationError(sprintf('%s: schema_version debe ser 1', $contractPath));
+    }
+
+    if (($contract['kind'] ?? null) !== 'business-pilot-local-state') {
+        throw new ValidationError(sprintf('%s: kind debe ser business-pilot-local-state', $contractPath));
+    }
+
+    if (($contract['profile_id'] ?? null) !== $profileId) {
+        throw new ValidationError(sprintf('%s: profile_id debe ser %s', $contractPath, $profileId));
+    }
+
+    return $contract;
+}
+
+/**
  * @param array<string, mixed> $buildInput
  * @param array<string, mixed> $editionPolicy
  * @return array<string, string>
@@ -1347,9 +1393,16 @@ function ensureHomeOnboardingLightUiBundle(string $rootDir, string $profileId): 
  * @param array<string, string> $vars
  * @param array<string, mixed> $desktopDefaults
  * @param array<string, mixed> $businessEnrollmentReadiness
+ * @param array<string, mixed> $businessPilotLocalState
  * @return array<string, string>
  */
-function buildOverlayFiles(array $buildInput, array $vars, array $desktopDefaults, array $businessEnrollmentReadiness): array
+function buildOverlayFiles(
+    array $buildInput,
+    array $vars,
+    array $desktopDefaults,
+    array $businessEnrollmentReadiness,
+    array $businessPilotLocalState
+): array
 {
     $features = implode(',', $buildInput['features']);
 
@@ -1399,6 +1452,15 @@ function buildOverlayFiles(array $buildInput, array $vars, array $desktopDefault
         }
 
         $files['files/etc/w4/business-enrollment-readiness.json'] = $readinessJson . "\n";
+    }
+
+    if ($businessPilotLocalState !== []) {
+        $localStateJson = json_encode($businessPilotLocalState, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        if ($localStateJson === false) {
+            throw new ValidationError('No se pudo serializar business-pilot-local-state.json');
+        }
+
+        $files['files/etc/w4/business-pilot-local-state.json'] = $localStateJson . "\n";
     }
 
     return $files;
@@ -1469,8 +1531,9 @@ try {
     $editionPolicy = readEditionPolicy($rootDir, $resolvedProfileId);
     $desktopDefaults = readDesktopDefaults($rootDir, $resolvedProfileId);
     $businessEnrollmentReadiness = readBusinessEnrollmentReadiness($rootDir, $resolvedProfileId);
+    $businessPilotLocalState = readBusinessPilotLocalState($rootDir, $resolvedProfileId);
     $vars = overlayVariables($buildInput, $editionPolicy);
-    $files = buildOverlayFiles($buildInput, $vars, $desktopDefaults, $businessEnrollmentReadiness);
+    $files = buildOverlayFiles($buildInput, $vars, $desktopDefaults, $businessEnrollmentReadiness, $businessPilotLocalState);
     $controlCenterLaunchers = buildControlCenterLauncherOverlay($rootDir, $resolvedProfileId, $desktopDefaults);
     $homeOnboardingLightUi = buildHomeOnboardingLightUiOverlay($rootDir, $resolvedProfileId);
     if (is_array($controlCenterLaunchers['files'] ?? null) && $controlCenterLaunchers['files'] !== []) {
@@ -1574,6 +1637,18 @@ try {
             'initial_state' => (string) ($businessEnrollmentReadiness['scope']['initial_state'] ?? 'unenrolled-ready'),
             'policy_cache' => (string) ($businessEnrollmentReadiness['policy']['last_known_policy_file'] ?? ''),
             'inventory_state' => (string) ($businessEnrollmentReadiness['inventory']['device_state_file'] ?? ''),
+        ];
+    }
+
+    if ($businessPilotLocalState !== []) {
+        $overlayManifestData['business_pilot_local_state'] = [
+            'path' => 'config/editions/business/pilot-local-state.json',
+            'runtime_file' => 'files/etc/w4/business-pilot-local-state.json',
+            'policy_state' => (string) ($businessPilotLocalState['scope']['policy_state'] ?? 'edition-baseline-only'),
+            'inventory_transport' => (string) ($businessPilotLocalState['scope']['inventory_transport'] ?? 'local-only'),
+            'last_known_policy' => (string) ($businessPilotLocalState['policy']['last_known_policy_file'] ?? ''),
+            'effective_policy' => (string) ($businessPilotLocalState['policy']['effective_policy_file'] ?? ''),
+            'inventory_state' => (string) ($businessPilotLocalState['inventory']['device_state_file'] ?? ''),
         ];
     }
 

@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.170 | 2026-10-10 | Activa | `MX-010` ya materializa `Slice C` de `Business` sobre politica local cacheada e inventario minimo tambien en `live-output` |
 | TECH | TECH-1.169 | 2026-10-10 | Activa | `MX-010` ya materializa `Slice B` de `Business` sobre el `live-output` final con gate propio |
 | TECH | TECH-1.168 | 2026-10-10 | Activa | `MX-010` ya materializa readiness local de enrollment para `Business` sobre overlay e instalacion |
 | TECH | TECH-1.167 | 2026-10-10 | Activa | `MX-010` ya valida el baseline KDE de `Business` sobre el `live-output` final |

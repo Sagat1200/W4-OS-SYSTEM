@@ -58,6 +58,7 @@
         "files\/etc\/systemd\/system\/w4-live-prep.service",
         "files\/etc\/ufw\/ufw.conf",
         "files\/etc\/w4\/business-enrollment-readiness.json",
+        "files\/etc\/w4\/business-pilot-local-state.json",
         "files\/etc\/w4\/desktop-defaults.json",
         "files\/etc\/w4\/os-release.env",
         "files\/etc\/w4\/profile.env",
@@ -87,6 +88,15 @@
         "runtime_file": "files\/etc\/w4\/business-enrollment-readiness.json",
         "initial_state": "unenrolled-ready",
         "policy_cache": "\/var\/lib\/w4\/policy\/last-known-policy.json",
+        "inventory_state": "\/var\/lib\/w4\/inventory\/device-state.json"
+    },
+    "business_pilot_local_state": {
+        "path": "config\/editions\/business\/pilot-local-state.json",
+        "runtime_file": "files\/etc\/w4\/business-pilot-local-state.json",
+        "policy_state": "edition-baseline-only",
+        "inventory_transport": "local-only",
+        "last_known_policy": "\/var\/lib\/w4\/policy\/last-known-policy.json",
+        "effective_policy": "\/var\/lib\/w4\/policy\/effective-policy.json",
         "inventory_state": "\/var\/lib\/w4\/inventory\/device-state.json"
     }
 }

@@ -217,9 +217,6 @@ quedar validado en su `Slice A` sobre `build/live-output/w4-os-business/`.
 manager, los defaults visibles de `Business` y la ausencia de payload heredado de
 `Home`/`GNOME` dentro del `system-overlay`.
 
-Siguiente paso despues de este corte:
-usar este cierre del baseline `KDE Plasma + SDDM` como puente al `Slice B` de enrollment readiness.
-
 Ese siguiente subcorte ya tambien deja ahora una primera base ejecutable:
 `Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_SLICE_B_ENROLLMENT_READINESS.md`,
 `config/editions/business/enrollment-readiness.json`,
@@ -243,6 +240,28 @@ completa del `live-output` se intento sobre WSL, pero el rerun quedo bloqueado p
 `Hash Sum mismatch` del mirror Debian durante `apt-get update`; por eso el gate
 funcional queda cerrado sobre el arbol materializado actual y el rerun limpio
 completo se mueve a backlog tecnico de infraestructura externa.
+
+Sobre esa misma base ya queda tambien materializado `Slice C`:
+`Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_SLICE_C_LOCAL_POLICY_AND_INVENTORY.md`,
+`config/editions/business/pilot-local-state.json`,
+`build/overlays/w4-os-business/files/etc/w4/business-pilot-local-state.json`,
+`build/install/w4-os-business/runtime/install.env`,
+`src/Business/BusinessPilotLocalStateToolkit.php`,
+`scripts/validate_business_pilot_local_state.php`,
+`src/Business/BusinessPilotLocalStateLiveOutputToolkit.php` y
+`scripts/validate_business_pilot_local_state_live_output.php` ya fijan y validan
+en verde la frontera local de politica e inventario para `Business`: politica
+base `edition-baseline-only`, continuidad `keep-last-valid`, `last-known-policy`,
+`effective-policy`, `conflicts.json`, `device-state.json`, precedencia local
+`edition-baseline -> last-known-valid` y transporte `local-only`, tanto sobre
+`overlay/install` como sobre el `system-overlay` materializado del
+`live-output`.
+
+Con ello, el siguiente paso ejecutivo deja de ser abrir politica local y pasa a
+reintentar la recomposicion limpia completa de `build/live-output/w4-os-business/`
+cuando el mirror Debian deje de derivar. Solo despues conviene decidir si el
+piloto abre un slice posterior acotado al plano remoto de inventario o ventanas
+de update, manteniendo fuera de alcance el backend empresarial generalista.
 
 Como guardrail de este frente, la regla principal queda congelada desde el arranque: `MX-010` no debe intentar cerrar de una vez enrollment completo, portal, soporte remoto generico ni paridad plena de variantes. Primero se abre la base visible y solo despues se habilitan slices empresariales mas profundos.
 

@@ -265,11 +265,65 @@ function installationPolicy(array $plan): array
 }
 
 /**
+ * @return array<string, mixed>
+ */
+function readBusinessPilotLocalState(string $rootDir, string $profileId): array
+{
+    if ($profileId !== 'w4-os-business') {
+        return [];
+    }
+
+    $contractPath = $rootDir
+        . DIRECTORY_SEPARATOR . 'config'
+        . DIRECTORY_SEPARATOR . 'editions'
+        . DIRECTORY_SEPARATOR . 'business'
+        . DIRECTORY_SEPARATOR . 'pilot-local-state.json';
+
+    if (!is_file($contractPath)) {
+        return [];
+    }
+
+    $raw = file_get_contents($contractPath);
+    if ($raw === false) {
+        throw new ValidationError(sprintf('No se pudo leer el contrato local de politica/inventario: %s', $contractPath));
+    }
+
+    try {
+        /** @var array<string, mixed> $contract */
+        $contract = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('Contrato local de politica/inventario invalido: %s', $exception->getMessage()));
+    }
+
+    if (($contract['schema_version'] ?? null) !== 1) {
+        throw new ValidationError(sprintf('%s: schema_version debe ser 1', $contractPath));
+    }
+
+    if (($contract['kind'] ?? null) !== 'business-pilot-local-state') {
+        throw new ValidationError(sprintf('%s: kind debe ser business-pilot-local-state', $contractPath));
+    }
+
+    if (($contract['profile_id'] ?? null) !== $profileId) {
+        throw new ValidationError(sprintf('%s: profile_id debe ser %s', $contractPath, $profileId));
+    }
+
+    return $contract;
+}
+
+/**
  * @param array{type:string,path:string,auto_detected:bool} $source
  * @param array{disk_passphrase?:string,local_user_password?:string} $generatedSecrets
  * @param array<string, mixed> $editionPolicy
+ * @param array<string, mixed> $businessPilotLocalState
  */
-function buildRuntimeEnv(string $runtimeDir, string $bundleDir, array $source, array $generatedSecrets, array $editionPolicy): string
+function buildRuntimeEnv(
+    string $runtimeDir,
+    string $bundleDir,
+    array $source,
+    array $generatedSecrets,
+    array $editionPolicy,
+    array $businessPilotLocalState
+): string
 {
     $exports = [
         '#!/usr/bin/env bash',
@@ -308,6 +362,19 @@ function buildRuntimeEnv(string $runtimeDir, string $bundleDir, array $source, a
     $exports[] = sprintf('export W4_FIREWALL_BACKEND="%s"', (string) $editionPolicy['firewall']['backend']);
     $exports[] = sprintf('export W4_FIREWALL_INCOMING="%s"', (string) $editionPolicy['firewall']['incoming']);
     $exports[] = sprintf('export W4_FIREWALL_OUTGOING="%s"', (string) $editionPolicy['firewall']['outgoing']);
+
+    if ($businessPilotLocalState !== []) {
+        $policyContract = is_array($businessPilotLocalState['policy'] ?? null) ? $businessPilotLocalState['policy'] : [];
+        $inventoryContract = is_array($businessPilotLocalState['inventory'] ?? null) ? $businessPilotLocalState['inventory'] : [];
+        $exports[] = sprintf('export W4_POLICY_BASELINE_SOURCE="%s"', relativePath($runtimeDir, $bundleDir . DIRECTORY_SEPARATOR . 'edition-policy.json'));
+        $exports[] = sprintf('export W4_POLICY_BASELINE_RUNTIME_ENV="%s"', (string) ($policyContract['baseline_runtime_env'] ?? '/etc/w4/edition-policy.env'));
+        $exports[] = sprintf('export W4_POLICY_LAST_KNOWN_FILE="%s"', (string) ($policyContract['last_known_policy_file'] ?? ''));
+        $exports[] = sprintf('export W4_POLICY_EFFECTIVE_FILE="%s"', (string) ($policyContract['effective_policy_file'] ?? ''));
+        $exports[] = sprintf('export W4_POLICY_INVALID_BEHAVIOR="%s"', (string) ($policyContract['invalid_policy_behavior'] ?? 'keep-last-valid'));
+        $exports[] = sprintf('export W4_INVENTORY_DEVICE_STATE_FILE="%s"', (string) ($inventoryContract['device_state_file'] ?? ''));
+        $exports[] = sprintf('export W4_INVENTORY_TRANSPORT="%s"', (string) ($inventoryContract['transport'] ?? 'local-only'));
+    }
+
     $exports[] = '';
 
     return implode("\n", $exports) . "\n";
@@ -564,6 +631,7 @@ try {
         throw new ValidationError('No se pudo determinar el profile_id del bundle');
     }
     $editionPolicy = installationPolicy($plan);
+    $businessPilotLocalState = readBusinessPilotLocalState($rootDir, $profileId);
 
     $runtimeDir ??= $bundleDir . DIRECTORY_SEPARATOR . 'runtime';
     if (!is_dir($runtimeDir) && !mkdir($runtimeDir, 0777, true) && !is_dir($runtimeDir)) {
@@ -618,7 +686,7 @@ try {
 
     if (file_put_contents(
         $runtimeDir . DIRECTORY_SEPARATOR . 'install.env',
-        buildRuntimeEnv($runtimeDir, $bundleDir, $source, $generatedSecrets, $editionPolicy)
+        buildRuntimeEnv($runtimeDir, $bundleDir, $source, $generatedSecrets, $editionPolicy, $businessPilotLocalState)
     ) === false) {
         throw new ValidationError('No se pudo escribir install.env');
     }

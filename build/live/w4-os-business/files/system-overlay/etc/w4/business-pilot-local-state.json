@@ -1,0 +1,43 @@
+{
+    "schema_version": 1,
+    "kind": "business-pilot-local-state",
+    "profile_id": "w4-os-business",
+    "scope": {
+        "mode": "local-policy-inventory",
+        "backend_required": false,
+        "policy_state": "edition-baseline-only",
+        "inventory_transport": "local-only"
+    },
+    "policy": {
+        "baseline_source": "edition-policy",
+        "baseline_runtime_env": "\/etc\/w4\/edition-policy.env",
+        "last_known_policy_file": "\/var\/lib\/w4\/policy\/last-known-policy.json",
+        "effective_policy_file": "\/var\/lib\/w4\/policy\/effective-policy.json",
+        "conflict_report_file": "\/var\/lib\/w4\/policy\/conflicts.json",
+        "invalid_policy_behavior": "keep-last-valid",
+        "precedence": [
+            "edition-baseline",
+            "last-known-valid",
+            "local-exception-none"
+        ]
+    },
+    "inventory": {
+        "device_state_file": "\/var\/lib\/w4\/inventory\/device-state.json",
+        "transport": "local-only",
+        "owner": "business-pilot",
+        "minimum_fields": [
+            "profile_id",
+            "hostname",
+            "policy_state",
+            "last_sync_at",
+            "update_channel"
+        ]
+    },
+    "deferred_steps": [
+        "signed-policy-manifests",
+        "policy-revision-feed",
+        "local-exception-model",
+        "remote-inventory-sync",
+        "fleet-compliance-reporting"
+    ]
+}
