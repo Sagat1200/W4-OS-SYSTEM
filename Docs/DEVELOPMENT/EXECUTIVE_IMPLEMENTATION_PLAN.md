@@ -253,7 +253,7 @@ base `edition-baseline-only`, continuidad `keep-last-valid`, `last-known-policy`
 `overlay/install` como sobre el `system-overlay` materializado del
 `live-output`.
 
-Con ello, el siguiente paso ejecutivo deja de ser abrir politica local y pasa a
+Con ello, el siguiente paso ejecutivo dejo de ser abrir politica local y paso a
 consolidar la recomposicion limpia ya conseguida sobre
 `build/live-output/w4-os-business-c174-clean/`. `scripts/generate_rootfs_bundle.php`
 ya resuelve el fallback de `debootstrap` para hosts Ubuntu cuyo script local no
@@ -263,9 +263,22 @@ en verde tambien para `scripts/validate_business_kde_live_output.php`,
 `scripts/validate_business_enrollment_readiness_live_output.php` y
 `scripts/validate_business_pilot_local_state_live_output.php`.
 
-Solo despues conviene decidir si el piloto abre un slice posterior acotado al
-plano remoto de inventario o ventanas de update, manteniendo fuera de alcance el
-backend empresarial generalista.
+Sobre ese mismo baseline ya queda ahora tambien materializado `Slice D`:
+`Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_SLICE_D_REMOTE_MINIMUM_INVENTORY.md`,
+`config/editions/business/remote-minimum-inventory.json`,
+`src/Business/BusinessRemoteMinimumInventoryToolkit.php`,
+`scripts/validate_business_remote_minimum_inventory.php`,
+`src/Business/BusinessRemoteMinimumInventoryLiveOutputToolkit.php` y
+`scripts/validate_business_remote_minimum_inventory_live_output.php` ya fijan y
+validan en verde una capa remota minima de inventario sobre `overlay`, `install`
+y `live-output`, con `inventory-remote-ready`, `business-remote-minimum-inventory.json`,
+cola local diferida, payload remoto minimo redaccionado y frontera
+`inventory-only`, sin vender todavia reconciliacion remota, reporting
+consolidado ni backend empresarial generalista.
+
+Con ello, el siguiente paso ejecutivo deja de ser decidir inventario remoto y
+pasa a decidir si el piloto abre un `Slice E` acotado a ventanas de update,
+manteniendo fuera de alcance el backend empresarial generalista.
 
 Como guardrail de este frente, la regla principal queda congelada desde el arranque: `MX-010` no debe intentar cerrar de una vez enrollment completo, portal, soporte remoto generico ni paridad plena de variantes. Primero se abre la base visible y solo despues se habilitan slices empresariales mas profundos.
 

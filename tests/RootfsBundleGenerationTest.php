@@ -191,6 +191,7 @@ final class RootfsBundleGenerationTest extends TestCase
         self::assertContains('w4-desktop-kde-meta', $manifest['meta_packages']['required']);
         self::assertContains('desktop-defaults', $manifest['features']);
         self::assertContains('kde-sddm-default-route', $manifest['features']);
+        self::assertContains('inventory-remote-ready', $manifest['features']);
         self::assertContains('dolphin', $manifest['packages']['required']);
         self::assertContains('konsole', $manifest['packages']['required']);
         self::assertContains('plasma-desktop', $manifest['packages']['required']);

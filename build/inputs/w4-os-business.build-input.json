@@ -16,7 +16,7 @@
         ]
     },
     "target": {
-        "release_channel": "stable",
+        "release_channel": "testing",
         "image_format": "iso"
     },
     "repositories": [
@@ -76,6 +76,7 @@
         "business-policy-hooks",
         "device-enrollment-ready",
         "inventory-ready",
+        "inventory-remote-ready",
         "kde-sddm-default-route",
         "reversible-branding-defaults"
     ],

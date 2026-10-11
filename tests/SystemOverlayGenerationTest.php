@@ -295,6 +295,11 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertSame('edition-baseline-only', $manifest['business_pilot_local_state']['policy_state']);
         self::assertSame('local-only', $manifest['business_pilot_local_state']['inventory_transport']);
         self::assertSame('/var/lib/w4/policy/effective-policy.json', $manifest['business_pilot_local_state']['effective_policy']);
+        self::assertSame('config/editions/business/remote-minimum-inventory.json', $manifest['business_remote_minimum_inventory']['path']);
+        self::assertSame('files/etc/w4/business-remote-minimum-inventory.json', $manifest['business_remote_minimum_inventory']['runtime_file']);
+        self::assertSame('configured-or-enrolled', $manifest['business_remote_minimum_inventory']['activation']);
+        self::assertSame('https-json-manifest', $manifest['business_remote_minimum_inventory']['transport']);
+        self::assertSame('/var/lib/w4/inventory/remote/pending/device-state.json', $manifest['business_remote_minimum_inventory']['queue_file']);
 
         $desktopDefaults = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'desktop-defaults.json');
         self::assertSame('w4-os-business', $desktopDefaults['profile_id']);
@@ -322,6 +327,14 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertSame('/var/lib/w4/policy/effective-policy.json', $pilotLocalState['policy']['effective_policy_file']);
         self::assertSame('/var/lib/w4/inventory/device-state.json', $pilotLocalState['inventory']['device_state_file']);
         self::assertContains('profile_id', $pilotLocalState['inventory']['minimum_fields']);
+
+        $remoteMinimumInventory = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'business-remote-minimum-inventory.json');
+        self::assertSame('business-remote-minimum-inventory', $remoteMinimumInventory['kind']);
+        self::assertSame('configured-or-enrolled', $remoteMinimumInventory['scope']['activation']);
+        self::assertSame('/var/lib/w4/inventory/device-state.json', $remoteMinimumInventory['payload']['source_device_state_file']);
+        self::assertSame('/var/lib/w4/inventory/remote/pending/device-state.json', $remoteMinimumInventory['payload']['queue_file']);
+        self::assertSame('/etc/w4/inventory/remote-endpoint.json', $remoteMinimumInventory['remote']['endpoint_config_file']);
+        self::assertContains('local_username', $remoteMinimumInventory['payload']['redacted_fields']);
 
         $wallpaper = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'branding' . DIRECTORY_SEPARATOR . 'business' . DIRECTORY_SEPARATOR . 'wallpapers' . DIRECTORY_SEPARATOR . 'w4-business-default.svg');
         self::assertNotFalse($wallpaper);

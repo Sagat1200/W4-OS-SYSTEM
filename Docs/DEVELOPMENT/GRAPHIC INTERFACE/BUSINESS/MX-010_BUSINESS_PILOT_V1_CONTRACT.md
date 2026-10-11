@@ -1,6 +1,6 @@
 # MX-010 · Business piloto V1 · Contrato operativo inicial
 
-Estado: activo con `Slice A` validado y `Slice B`/`Slice C` materializados sobre `overlay`, `install` y `live-output`
+Estado: activo con `Slice A` validado y `Slice B`/`Slice C`/`Slice D` materializados sobre `overlay`, `install` y `live-output`
 Fecha: 2026-10-10
 Alcance: `W4 OS Business V1`
 Dependencias: `MX-003`, `MX-004`, `MX-005`, `ADR-013_BUSINESS_GRAPHIC_CATALOG_AND_SELECTOR.md`
@@ -190,6 +190,38 @@ Con ello, `Slice C` ya no queda como idea futura: `Business` ya publica un contr
 
 Ese mismo slice ya queda ademas validado en verde tanto sobre `overlay/install` como sobre el `live-output` materializado. `scripts/validate_business_pilot_local_state.php --profile w4-os-business --format text` ya confirma `policy_state=edition-baseline-only`, `last-known-policy`, `effective-policy`, `device-state`, `@inventory -> /var/lib/w4` y el puente runtime `W4_POLICY_*` / `W4_INVENTORY_*`; y `scripts/validate_business_pilot_local_state_live_output.php --profile w4-os-business --format text` ya confirma en verde la proyeccion runtime del contrato en `system-overlay`, la precedencia local `edition-baseline -> last-known-valid` y la frontera offline con `keep-last-valid`.
 
+### Slice D · Inventario minimo remoto acotado
+
+Con la base local ya cerrada, el siguiente slice tecnico debe abrir solo la capa remota minima de inventario.
+
+Este slice debe:
+
+1. reutilizar el `device-state` local ya fijado por `Slice C`;
+2. dejar una cola local de inventario remoto diferido;
+3. tipar el endpoint remoto sin volverlo obligatorio;
+4. fijar un payload remoto minimo y redaccionado;
+5. mantener fuera de alcance ventanas de update, portal y backend empresarial generalista.
+
+Ese siguiente aterrizaje ya deja ahora una base ejecutable y verificable en el repo:
+
+- `Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_SLICE_D_REMOTE_MINIMUM_INVENTORY.md`
+- `config/editions/business/remote-minimum-inventory.json`
+- `manifests/w4-os-business.profile.json`
+- `src/Business/BusinessRemoteMinimumInventoryToolkit.php`
+- `scripts/validate_business_remote_minimum_inventory.php`
+- `tests/BusinessRemoteMinimumInventoryCliTest.php`
+- `src/Business/BusinessRemoteMinimumInventoryLiveOutputToolkit.php`
+- `scripts/validate_business_remote_minimum_inventory_live_output.php`
+- `tests/BusinessRemoteMinimumInventoryLiveOutputCliTest.php`
+- `build/overlays/w4-os-business/files/etc/w4/business-remote-minimum-inventory.json`
+- `build/install/w4-os-business/runtime/install.env`
+- `build/live-output/w4-os-business/image-root/system-overlay/etc/w4/business-remote-minimum-inventory.json`
+- `build/live-output/w4-os-business-c174-clean/image-root/system-overlay/etc/w4/business-remote-minimum-inventory.json`
+
+Con ello, `Slice D` ya no queda como decision pendiente: `Business` ya publica un contrato `business-remote-minimum-inventory`, una cola local `deferred-push`, un slot tipado para endpoint remoto, un payload remoto minimo con redaccion explicita y una frontera `inventory-only`, sin vender todavia reconciliacion remota, reporting consolidado, ventanas de update ni backend empresarial completo.
+
+Ese mismo slice ya queda ademas validado en verde tanto sobre `overlay/install` como sobre los dos arboles `live-output` de referencia. `scripts/validate_business_remote_minimum_inventory.php --profile w4-os-business --format text` ya confirma `configured-or-enrolled`, `source_device_state_file`, `queue_file`, `last_delivery_file`, `endpoint_config_file` y el puente runtime `W4_REMOTE_INVENTORY_*`; y `scripts/validate_business_remote_minimum_inventory_live_output.php --profile w4-os-business --live-output-dir build/live-output/w4-os-business-c174-clean --format text` ya confirma en verde la proyeccion runtime del contrato, la cola remota visible, el payload minimo redaccionado y la frontera remota acotada del piloto.
+
 ## Entregables obligatorios de apertura
 
 1. contrato operativo propio de `MX-010` para `Business V1`;
@@ -242,7 +274,8 @@ Con la apertura correcta de `MX-010`, `Business` deja de ser solo una ADR de esc
 
 - una ruta base visible sobre `KDE Plasma`,
 - un piloto delimitado por identidad, politica e inventario minimo,
+- una capa remota acotada para inventario minimo diferido,
 - continuidad offline apoyada en la ultima politica valida,
 - y un siguiente slice tecnico claro sin prometer todavia gestion empresarial completa.
 
-Tras esta pasada, ese avance ya se traduce en una base KDE real sobre `manifests`, `build-input`, `rootfs`, `overlay`, `live` y `live-output`, con `Slice B` y `Slice C` ya proyectados tambien sobre el artefacto final materializado y sobre el `live-output` limpio `w4-os-business-c174-clean`. El siguiente gate natural deja de ser recomponer el artefacto y pasa a decidir si `Business` abre un slice remoto acotado de inventario o ventanas de update, manteniendo mientras tanto el piloto dentro de su frontera local y sin vender backend empresarial generalista.
+Tras esta pasada, ese avance ya se traduce en una base KDE real sobre `manifests`, `build-input`, `rootfs`, `overlay`, `live` y `live-output`, con `Slice B`, `Slice C` y `Slice D` ya proyectados tambien sobre el artefacto final materializado y sobre el `live-output` limpio `w4-os-business-c174-clean`. El siguiente gate natural deja de ser abrir el inventario remoto minimo y pasa a decidir si `Business` abre un `Slice E` acotado a ventanas de update, manteniendo mientras tanto el piloto dentro de su frontera local/remota acotada y sin vender backend empresarial generalista.

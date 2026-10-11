@@ -1,0 +1,52 @@
+{
+    "schema_version": 1,
+    "kind": "business-remote-minimum-inventory",
+    "profile_id": "w4-os-business",
+    "scope": {
+        "mode": "remote-inventory-minimum",
+        "backend_required": false,
+        "activation": "configured-or-enrolled",
+        "delivery_state": "deferred-ready"
+    },
+    "payload": {
+        "source_device_state_file": "\/var\/lib\/w4\/inventory\/device-state.json",
+        "queue_file": "\/var\/lib\/w4\/inventory\/remote\/pending\/device-state.json",
+        "last_delivery_file": "\/var\/lib\/w4\/inventory\/remote\/last-delivery.json",
+        "last_payload_file": "\/var\/lib\/w4\/inventory\/remote\/last-payload.json",
+        "minimum_fields": [
+            "profile_id",
+            "hostname",
+            "policy_state",
+            "last_sync_at",
+            "update_channel",
+            "policy_revision"
+        ],
+        "redacted_fields": [
+            "local_username",
+            "installed_packages",
+            "recent_documents"
+        ]
+    },
+    "remote": {
+        "endpoint_config_file": "\/etc\/w4\/inventory\/remote-endpoint.json",
+        "transport": "https-json-manifest",
+        "transport_security": "tls-required",
+        "authentication_mode": "device-credential",
+        "delivery_mode": "deferred-push",
+        "retry_policy": "local-backoff",
+        "max_batch_size": 1
+    },
+    "boundaries": {
+        "policy_authority": "local-baseline",
+        "inventory_authority": "local-device-state",
+        "remote_writeback": "inventory-only",
+        "update_windows_deferred": true
+    },
+    "deferred_steps": [
+        "credential-bound-transport",
+        "inventory-reconciliation",
+        "fleet-reporting",
+        "update-window-cohort-feed",
+        "operator-portal"
+    ]
+}

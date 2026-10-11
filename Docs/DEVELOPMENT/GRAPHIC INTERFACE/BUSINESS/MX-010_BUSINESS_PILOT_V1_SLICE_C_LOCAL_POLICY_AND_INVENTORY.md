@@ -120,7 +120,9 @@ Mientras no existan:
 
 ## Siguiente paso recomendado
 
-El siguiente paso natural despues de este corte es:
+El siguiente paso natural despues de este corte ya quedo materializado como `Slice D` de inventario minimo remoto acotado.
 
-1. tratar `build/live-output/w4-os-business-c174-clean/` como baseline limpio verificable de `Business`;
-2. y decidir si conviene abrir un slice posterior acotado al plano remoto de inventario o ventanas de update, manteniendo fuera del alcance el backend empresarial generalista.
+Con ello, el siguiente frente recomendado pasa a ser:
+
+1. tratar `build/live-output/w4-os-business-c174-clean/` como baseline limpio verificable tambien para la capa remota minima;
+2. y decidir si conviene abrir un slice posterior acotado a ventanas de update, manteniendo fuera del alcance el backend empresarial generalista.

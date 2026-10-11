@@ -325,6 +325,52 @@ function readBusinessPilotLocalState(string $rootDir, string $profileId): array
 }
 
 /**
+ * @return array<string, mixed>
+ */
+function readBusinessRemoteMinimumInventory(string $rootDir, string $profileId): array
+{
+    if ($profileId !== 'w4-os-business') {
+        return [];
+    }
+
+    $contractPath = $rootDir
+        . DIRECTORY_SEPARATOR . 'config'
+        . DIRECTORY_SEPARATOR . 'editions'
+        . DIRECTORY_SEPARATOR . 'business'
+        . DIRECTORY_SEPARATOR . 'remote-minimum-inventory.json';
+
+    if (!is_file($contractPath)) {
+        return [];
+    }
+
+    $raw = file_get_contents($contractPath);
+    if ($raw === false) {
+        throw new ValidationError(sprintf('No se pudo leer el contrato remoto minimo de inventario: %s', $contractPath));
+    }
+
+    try {
+        /** @var array<string, mixed> $contract */
+        $contract = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('Contrato remoto minimo de inventario invalido: %s', $exception->getMessage()));
+    }
+
+    if (($contract['schema_version'] ?? null) !== 1) {
+        throw new ValidationError(sprintf('%s: schema_version debe ser 1', $contractPath));
+    }
+
+    if (($contract['kind'] ?? null) !== 'business-remote-minimum-inventory') {
+        throw new ValidationError(sprintf('%s: kind debe ser business-remote-minimum-inventory', $contractPath));
+    }
+
+    if (($contract['profile_id'] ?? null) !== $profileId) {
+        throw new ValidationError(sprintf('%s: profile_id debe ser %s', $contractPath, $profileId));
+    }
+
+    return $contract;
+}
+
+/**
  * @param array<string, mixed> $buildInput
  * @param array<string, mixed> $editionPolicy
  * @return array<string, string>
@@ -1401,7 +1447,8 @@ function buildOverlayFiles(
     array $vars,
     array $desktopDefaults,
     array $businessEnrollmentReadiness,
-    array $businessPilotLocalState
+    array $businessPilotLocalState,
+    array $businessRemoteMinimumInventory
 ): array
 {
     $features = implode(',', $buildInput['features']);
@@ -1461,6 +1508,15 @@ function buildOverlayFiles(
         }
 
         $files['files/etc/w4/business-pilot-local-state.json'] = $localStateJson . "\n";
+    }
+
+    if ($businessRemoteMinimumInventory !== []) {
+        $remoteInventoryJson = json_encode($businessRemoteMinimumInventory, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        if ($remoteInventoryJson === false) {
+            throw new ValidationError('No se pudo serializar business-remote-minimum-inventory.json');
+        }
+
+        $files['files/etc/w4/business-remote-minimum-inventory.json'] = $remoteInventoryJson . "\n";
     }
 
     return $files;
@@ -1532,8 +1588,16 @@ try {
     $desktopDefaults = readDesktopDefaults($rootDir, $resolvedProfileId);
     $businessEnrollmentReadiness = readBusinessEnrollmentReadiness($rootDir, $resolvedProfileId);
     $businessPilotLocalState = readBusinessPilotLocalState($rootDir, $resolvedProfileId);
+    $businessRemoteMinimumInventory = readBusinessRemoteMinimumInventory($rootDir, $resolvedProfileId);
     $vars = overlayVariables($buildInput, $editionPolicy);
-    $files = buildOverlayFiles($buildInput, $vars, $desktopDefaults, $businessEnrollmentReadiness, $businessPilotLocalState);
+    $files = buildOverlayFiles(
+        $buildInput,
+        $vars,
+        $desktopDefaults,
+        $businessEnrollmentReadiness,
+        $businessPilotLocalState,
+        $businessRemoteMinimumInventory
+    );
     $controlCenterLaunchers = buildControlCenterLauncherOverlay($rootDir, $resolvedProfileId, $desktopDefaults);
     $homeOnboardingLightUi = buildHomeOnboardingLightUiOverlay($rootDir, $resolvedProfileId);
     if (is_array($controlCenterLaunchers['files'] ?? null) && $controlCenterLaunchers['files'] !== []) {
@@ -1649,6 +1713,18 @@ try {
             'last_known_policy' => (string) ($businessPilotLocalState['policy']['last_known_policy_file'] ?? ''),
             'effective_policy' => (string) ($businessPilotLocalState['policy']['effective_policy_file'] ?? ''),
             'inventory_state' => (string) ($businessPilotLocalState['inventory']['device_state_file'] ?? ''),
+        ];
+    }
+
+    if ($businessRemoteMinimumInventory !== []) {
+        $overlayManifestData['business_remote_minimum_inventory'] = [
+            'path' => 'config/editions/business/remote-minimum-inventory.json',
+            'runtime_file' => 'files/etc/w4/business-remote-minimum-inventory.json',
+            'activation' => (string) ($businessRemoteMinimumInventory['scope']['activation'] ?? 'configured-or-enrolled'),
+            'transport' => (string) ($businessRemoteMinimumInventory['remote']['transport'] ?? ''),
+            'endpoint_config' => (string) ($businessRemoteMinimumInventory['remote']['endpoint_config_file'] ?? ''),
+            'queue_file' => (string) ($businessRemoteMinimumInventory['payload']['queue_file'] ?? ''),
+            'source_device_state' => (string) ($businessRemoteMinimumInventory['payload']['source_device_state_file'] ?? ''),
         ];
     }
 

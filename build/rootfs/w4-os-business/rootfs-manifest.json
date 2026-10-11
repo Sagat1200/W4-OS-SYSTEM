@@ -6,7 +6,7 @@
     "base_manifest_id": "w4-linux-base",
     "source_build_input": "w4-os-business.build-input.json",
     "target": {
-        "release_channel": "stable",
+        "release_channel": "testing",
         "image_format": "iso"
     },
     "upstream": {
@@ -77,6 +77,7 @@
         "business-policy-hooks",
         "device-enrollment-ready",
         "inventory-ready",
+        "inventory-remote-ready",
         "kde-sddm-default-route",
         "reversible-branding-defaults"
     ],

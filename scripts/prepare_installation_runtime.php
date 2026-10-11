@@ -311,6 +311,52 @@ function readBusinessPilotLocalState(string $rootDir, string $profileId): array
 }
 
 /**
+ * @return array<string, mixed>
+ */
+function readBusinessRemoteMinimumInventory(string $rootDir, string $profileId): array
+{
+    if ($profileId !== 'w4-os-business') {
+        return [];
+    }
+
+    $contractPath = $rootDir
+        . DIRECTORY_SEPARATOR . 'config'
+        . DIRECTORY_SEPARATOR . 'editions'
+        . DIRECTORY_SEPARATOR . 'business'
+        . DIRECTORY_SEPARATOR . 'remote-minimum-inventory.json';
+
+    if (!is_file($contractPath)) {
+        return [];
+    }
+
+    $raw = file_get_contents($contractPath);
+    if ($raw === false) {
+        throw new ValidationError(sprintf('No se pudo leer el contrato remoto minimo de inventario: %s', $contractPath));
+    }
+
+    try {
+        /** @var array<string, mixed> $contract */
+        $contract = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('Contrato remoto minimo de inventario invalido: %s', $exception->getMessage()));
+    }
+
+    if (($contract['schema_version'] ?? null) !== 1) {
+        throw new ValidationError(sprintf('%s: schema_version debe ser 1', $contractPath));
+    }
+
+    if (($contract['kind'] ?? null) !== 'business-remote-minimum-inventory') {
+        throw new ValidationError(sprintf('%s: kind debe ser business-remote-minimum-inventory', $contractPath));
+    }
+
+    if (($contract['profile_id'] ?? null) !== $profileId) {
+        throw new ValidationError(sprintf('%s: profile_id debe ser %s', $contractPath, $profileId));
+    }
+
+    return $contract;
+}
+
+/**
  * @param array{type:string,path:string,auto_detected:bool} $source
  * @param array{disk_passphrase?:string,local_user_password?:string} $generatedSecrets
  * @param array<string, mixed> $editionPolicy
@@ -322,7 +368,8 @@ function buildRuntimeEnv(
     array $source,
     array $generatedSecrets,
     array $editionPolicy,
-    array $businessPilotLocalState
+    array $businessPilotLocalState,
+    array $businessRemoteMinimumInventory
 ): string
 {
     $exports = [
@@ -373,6 +420,20 @@ function buildRuntimeEnv(
         $exports[] = sprintf('export W4_POLICY_INVALID_BEHAVIOR="%s"', (string) ($policyContract['invalid_policy_behavior'] ?? 'keep-last-valid'));
         $exports[] = sprintf('export W4_INVENTORY_DEVICE_STATE_FILE="%s"', (string) ($inventoryContract['device_state_file'] ?? ''));
         $exports[] = sprintf('export W4_INVENTORY_TRANSPORT="%s"', (string) ($inventoryContract['transport'] ?? 'local-only'));
+    }
+
+    if ($businessRemoteMinimumInventory !== []) {
+        $payloadContract = is_array($businessRemoteMinimumInventory['payload'] ?? null) ? $businessRemoteMinimumInventory['payload'] : [];
+        $remoteContract = is_array($businessRemoteMinimumInventory['remote'] ?? null) ? $businessRemoteMinimumInventory['remote'] : [];
+        $scope = is_array($businessRemoteMinimumInventory['scope'] ?? null) ? $businessRemoteMinimumInventory['scope'] : [];
+        $exports[] = sprintf('export W4_REMOTE_INVENTORY_SOURCE_FILE="%s"', (string) ($payloadContract['source_device_state_file'] ?? ''));
+        $exports[] = sprintf('export W4_REMOTE_INVENTORY_QUEUE_FILE="%s"', (string) ($payloadContract['queue_file'] ?? ''));
+        $exports[] = sprintf('export W4_REMOTE_INVENTORY_LAST_DELIVERY_FILE="%s"', (string) ($payloadContract['last_delivery_file'] ?? ''));
+        $exports[] = sprintf('export W4_REMOTE_INVENTORY_LAST_PAYLOAD_FILE="%s"', (string) ($payloadContract['last_payload_file'] ?? ''));
+        $exports[] = sprintf('export W4_REMOTE_INVENTORY_ENDPOINT_FILE="%s"', (string) ($remoteContract['endpoint_config_file'] ?? ''));
+        $exports[] = sprintf('export W4_REMOTE_INVENTORY_TRANSPORT="%s"', (string) ($remoteContract['transport'] ?? ''));
+        $exports[] = sprintf('export W4_REMOTE_INVENTORY_AUTH_MODE="%s"', (string) ($remoteContract['authentication_mode'] ?? ''));
+        $exports[] = sprintf('export W4_REMOTE_INVENTORY_ACTIVATION="%s"', (string) ($scope['activation'] ?? 'configured-or-enrolled'));
     }
 
     $exports[] = '';
@@ -632,6 +693,7 @@ try {
     }
     $editionPolicy = installationPolicy($plan);
     $businessPilotLocalState = readBusinessPilotLocalState($rootDir, $profileId);
+    $businessRemoteMinimumInventory = readBusinessRemoteMinimumInventory($rootDir, $profileId);
 
     $runtimeDir ??= $bundleDir . DIRECTORY_SEPARATOR . 'runtime';
     if (!is_dir($runtimeDir) && !mkdir($runtimeDir, 0777, true) && !is_dir($runtimeDir)) {
@@ -686,7 +748,15 @@ try {
 
     if (file_put_contents(
         $runtimeDir . DIRECTORY_SEPARATOR . 'install.env',
-        buildRuntimeEnv($runtimeDir, $bundleDir, $source, $generatedSecrets, $editionPolicy, $businessPilotLocalState)
+        buildRuntimeEnv(
+            $runtimeDir,
+            $bundleDir,
+            $source,
+            $generatedSecrets,
+            $editionPolicy,
+            $businessPilotLocalState,
+            $businessRemoteMinimumInventory
+        )
     ) === false) {
         throw new ValidationError('No se pudo escribir install.env');
     }
