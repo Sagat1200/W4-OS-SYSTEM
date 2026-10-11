@@ -300,6 +300,12 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertSame('configured-or-enrolled', $manifest['business_remote_minimum_inventory']['activation']);
         self::assertSame('https-json-manifest', $manifest['business_remote_minimum_inventory']['transport']);
         self::assertSame('/var/lib/w4/inventory/remote/pending/device-state.json', $manifest['business_remote_minimum_inventory']['queue_file']);
+        self::assertSame('config/editions/business/remote-update-windows.json', $manifest['business_remote_update_windows']['path']);
+        self::assertSame('files/etc/w4/business-remote-update-windows.json', $manifest['business_remote_update_windows']['runtime_file']);
+        self::assertSame('configured-or-enrolled', $manifest['business_remote_update_windows']['activation']);
+        self::assertSame('local-engine-only', $manifest['business_remote_update_windows']['enforcement']);
+        self::assertSame('testing', $manifest['business_remote_update_windows']['default_channel']);
+        self::assertSame('/var/lib/w4/update/remote/window-definition.json', $manifest['business_remote_update_windows']['window_definition_file']);
 
         $desktopDefaults = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'desktop-defaults.json');
         self::assertSame('w4-os-business', $desktopDefaults['profile_id']);
@@ -335,6 +341,14 @@ final class SystemOverlayGenerationTest extends TestCase
         self::assertSame('/var/lib/w4/inventory/remote/pending/device-state.json', $remoteMinimumInventory['payload']['queue_file']);
         self::assertSame('/etc/w4/inventory/remote-endpoint.json', $remoteMinimumInventory['remote']['endpoint_config_file']);
         self::assertContains('local_username', $remoteMinimumInventory['payload']['redacted_fields']);
+
+        $remoteUpdateWindows = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'business-remote-update-windows.json');
+        self::assertSame('business-remote-update-windows', $remoteUpdateWindows['kind']);
+        self::assertSame('local-engine-only', $remoteUpdateWindows['scope']['enforcement']);
+        self::assertSame('/var/lib/w4/update/remote/cohort-assignment.json', $remoteUpdateWindows['coordination']['cohort_assignment_file']);
+        self::assertSame('/var/lib/w4/update/remote/window-definition.json', $remoteUpdateWindows['coordination']['window_definition_file']);
+        self::assertSame('testing', $remoteUpdateWindows['policy']['default_channel']);
+        self::assertContains('snapshot', $remoteUpdateWindows['policy']['require_health_checks']);
 
         $wallpaper = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'branding' . DIRECTORY_SEPARATOR . 'business' . DIRECTORY_SEPARATOR . 'wallpapers' . DIRECTORY_SEPARATOR . 'w4-business-default.svg');
         self::assertNotFalse($wallpaper);

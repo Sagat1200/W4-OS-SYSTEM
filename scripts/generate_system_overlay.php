@@ -371,6 +371,52 @@ function readBusinessRemoteMinimumInventory(string $rootDir, string $profileId):
 }
 
 /**
+ * @return array<string, mixed>
+ */
+function readBusinessRemoteUpdateWindows(string $rootDir, string $profileId): array
+{
+    if ($profileId !== 'w4-os-business') {
+        return [];
+    }
+
+    $contractPath = $rootDir
+        . DIRECTORY_SEPARATOR . 'config'
+        . DIRECTORY_SEPARATOR . 'editions'
+        . DIRECTORY_SEPARATOR . 'business'
+        . DIRECTORY_SEPARATOR . 'remote-update-windows.json';
+
+    if (!is_file($contractPath)) {
+        return [];
+    }
+
+    $raw = file_get_contents($contractPath);
+    if ($raw === false) {
+        throw new ValidationError(sprintf('No se pudo leer el contrato remoto de ventanas de update: %s', $contractPath));
+    }
+
+    try {
+        /** @var array<string, mixed> $contract */
+        $contract = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('Contrato remoto de ventanas de update invalido: %s', $exception->getMessage()));
+    }
+
+    if (($contract['schema_version'] ?? null) !== 1) {
+        throw new ValidationError(sprintf('%s: schema_version debe ser 1', $contractPath));
+    }
+
+    if (($contract['kind'] ?? null) !== 'business-remote-update-windows') {
+        throw new ValidationError(sprintf('%s: kind debe ser business-remote-update-windows', $contractPath));
+    }
+
+    if (($contract['profile_id'] ?? null) !== $profileId) {
+        throw new ValidationError(sprintf('%s: profile_id debe ser %s', $contractPath, $profileId));
+    }
+
+    return $contract;
+}
+
+/**
  * @param array<string, mixed> $buildInput
  * @param array<string, mixed> $editionPolicy
  * @return array<string, string>
@@ -1448,7 +1494,8 @@ function buildOverlayFiles(
     array $desktopDefaults,
     array $businessEnrollmentReadiness,
     array $businessPilotLocalState,
-    array $businessRemoteMinimumInventory
+    array $businessRemoteMinimumInventory,
+    array $businessRemoteUpdateWindows
 ): array
 {
     $features = implode(',', $buildInput['features']);
@@ -1517,6 +1564,15 @@ function buildOverlayFiles(
         }
 
         $files['files/etc/w4/business-remote-minimum-inventory.json'] = $remoteInventoryJson . "\n";
+    }
+
+    if ($businessRemoteUpdateWindows !== []) {
+        $remoteUpdateWindowsJson = json_encode($businessRemoteUpdateWindows, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        if ($remoteUpdateWindowsJson === false) {
+            throw new ValidationError('No se pudo serializar business-remote-update-windows.json');
+        }
+
+        $files['files/etc/w4/business-remote-update-windows.json'] = $remoteUpdateWindowsJson . "\n";
     }
 
     return $files;
@@ -1589,6 +1645,7 @@ try {
     $businessEnrollmentReadiness = readBusinessEnrollmentReadiness($rootDir, $resolvedProfileId);
     $businessPilotLocalState = readBusinessPilotLocalState($rootDir, $resolvedProfileId);
     $businessRemoteMinimumInventory = readBusinessRemoteMinimumInventory($rootDir, $resolvedProfileId);
+    $businessRemoteUpdateWindows = readBusinessRemoteUpdateWindows($rootDir, $resolvedProfileId);
     $vars = overlayVariables($buildInput, $editionPolicy);
     $files = buildOverlayFiles(
         $buildInput,
@@ -1596,7 +1653,8 @@ try {
         $desktopDefaults,
         $businessEnrollmentReadiness,
         $businessPilotLocalState,
-        $businessRemoteMinimumInventory
+        $businessRemoteMinimumInventory,
+        $businessRemoteUpdateWindows
     );
     $controlCenterLaunchers = buildControlCenterLauncherOverlay($rootDir, $resolvedProfileId, $desktopDefaults);
     $homeOnboardingLightUi = buildHomeOnboardingLightUiOverlay($rootDir, $resolvedProfileId);
@@ -1725,6 +1783,18 @@ try {
             'endpoint_config' => (string) ($businessRemoteMinimumInventory['remote']['endpoint_config_file'] ?? ''),
             'queue_file' => (string) ($businessRemoteMinimumInventory['payload']['queue_file'] ?? ''),
             'source_device_state' => (string) ($businessRemoteMinimumInventory['payload']['source_device_state_file'] ?? ''),
+        ];
+    }
+
+    if ($businessRemoteUpdateWindows !== []) {
+        $overlayManifestData['business_remote_update_windows'] = [
+            'path' => 'config/editions/business/remote-update-windows.json',
+            'runtime_file' => 'files/etc/w4/business-remote-update-windows.json',
+            'activation' => (string) ($businessRemoteUpdateWindows['scope']['activation'] ?? 'configured-or-enrolled'),
+            'enforcement' => (string) ($businessRemoteUpdateWindows['scope']['enforcement'] ?? 'local-engine-only'),
+            'default_channel' => (string) ($businessRemoteUpdateWindows['policy']['default_channel'] ?? ''),
+            'window_definition_file' => (string) ($businessRemoteUpdateWindows['coordination']['window_definition_file'] ?? ''),
+            'cohort_assignment_file' => (string) ($businessRemoteUpdateWindows['coordination']['cohort_assignment_file'] ?? ''),
         ];
     }
 

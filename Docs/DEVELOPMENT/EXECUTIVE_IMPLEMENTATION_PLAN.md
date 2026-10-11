@@ -276,9 +276,26 @@ cola local diferida, payload remoto minimo redaccionado y frontera
 `inventory-only`, sin vender todavia reconciliacion remota, reporting
 consolidado ni backend empresarial generalista.
 
-Con ello, el siguiente paso ejecutivo deja de ser decidir inventario remoto y
-pasa a decidir si el piloto abre un `Slice E` acotado a ventanas de update,
-manteniendo fuera de alcance el backend empresarial generalista.
+Sobre ese mismo baseline ya queda ahora tambien materializado `Slice E`:
+`Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_SLICE_E_REMOTE_UPDATE_WINDOWS.md`,
+`config/editions/business/remote-update-windows.json`,
+`src/Business/BusinessRemoteUpdateWindowsToolkit.php`,
+`scripts/validate_business_remote_update_windows.php`,
+`src/Business/BusinessRemoteUpdateWindowsLiveOutputToolkit.php` y
+`scripts/validate_business_remote_update_windows_live_output.php` ya fijan y
+validan en verde una capa remota minima de ventanas de update sobre `overlay`,
+`install` y `live-output`, con `update-windows-remote-ready`,
+`business-remote-update-windows.json`, asignacion remota de cohorte y ventana,
+politica de canal y deferimiento, reuse del motor local `reuse-mx-004` y
+frontera `local-engine-only`, sin vender todavia firma remota de ventanas,
+scoring por cohorte, instalador remoto paralelo ni backend empresarial
+generalista.
+
+Con ello, el siguiente paso ejecutivo deja de ser decidir si el piloto abre
+ventanas de update remotas y pasa a decidir, solo cuando el roadmap lo
+justifique, si conviene endurecer mas adelante firma de ventanas, scoring de
+cohortes o scheduling operativo, manteniendo fuera de alcance el backend
+empresarial generalista.
 
 Como guardrail de este frente, la regla principal queda congelada desde el arranque: `MX-010` no debe intentar cerrar de una vez enrollment completo, portal, soporte remoto generico ni paridad plena de variantes. Primero se abre la base visible y solo despues se habilitan slices empresariales mas profundos.
 

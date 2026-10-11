@@ -23,6 +23,7 @@
         "device-enrollment-ready",
         "inventory-ready",
         "inventory-remote-ready",
+        "update-windows-remote-ready",
         "kde-sddm-default-route",
         "reversible-branding-defaults"
     ],
@@ -61,6 +62,7 @@
         "files\/etc\/w4\/business-enrollment-readiness.json",
         "files\/etc\/w4\/business-pilot-local-state.json",
         "files\/etc\/w4\/business-remote-minimum-inventory.json",
+        "files\/etc\/w4\/business-remote-update-windows.json",
         "files\/etc\/w4\/desktop-defaults.json",
         "files\/etc\/w4\/os-release.env",
         "files\/etc\/w4\/profile.env",
@@ -109,5 +111,14 @@
         "endpoint_config": "\/etc\/w4\/inventory\/remote-endpoint.json",
         "queue_file": "\/var\/lib\/w4\/inventory\/remote\/pending\/device-state.json",
         "source_device_state": "\/var\/lib\/w4\/inventory\/device-state.json"
+    },
+    "business_remote_update_windows": {
+        "path": "config\/editions\/business\/remote-update-windows.json",
+        "runtime_file": "files\/etc\/w4\/business-remote-update-windows.json",
+        "activation": "configured-or-enrolled",
+        "enforcement": "local-engine-only",
+        "default_channel": "testing",
+        "window_definition_file": "\/var\/lib\/w4\/update\/remote\/window-definition.json",
+        "cohort_assignment_file": "\/var\/lib\/w4\/update\/remote\/cohort-assignment.json"
     }
 }

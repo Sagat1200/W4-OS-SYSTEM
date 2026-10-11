@@ -126,7 +126,9 @@ Mientras no existan:
 
 ## Siguiente paso recomendado
 
-El siguiente paso natural despues de este corte es:
+El siguiente paso natural despues de este corte era:
 
 1. tratar `build/live-output/w4-os-business-c174-clean/` como baseline limpio verificable tambien para la capa remota minima de inventario;
 2. y decidir si conviene abrir un `Slice E` acotado a ventanas de update remotas, manteniendo fuera del alcance el backend empresarial generalista.
+
+Ese siguiente paso ya quedo materializado en `MX-010_BUSINESS_PILOT_V1_SLICE_E_REMOTE_UPDATE_WINDOWS.md`, que conserva la misma frontera conservadora: cohortes, ventanas y canal objetivo decididos remotamente, pero enforcement exclusivo por el motor local `reuse-mx-004` y sin instalador remoto paralelo.

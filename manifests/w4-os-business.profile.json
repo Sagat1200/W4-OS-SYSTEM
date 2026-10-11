@@ -40,6 +40,7 @@
     "device-enrollment-ready",
     "inventory-ready",
     "inventory-remote-ready",
+    "update-windows-remote-ready",
     "kde-sddm-default-route",
     "reversible-branding-defaults"
   ],

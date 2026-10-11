@@ -1,7 +1,7 @@
 # MX-010 · Business piloto V1 · Contrato operativo inicial
 
-Estado: activo con `Slice A` validado y `Slice B`/`Slice C`/`Slice D` materializados sobre `overlay`, `install` y `live-output`
-Fecha: 2026-10-10
+Estado: activo con `Slice A` validado y `Slice B`/`Slice C`/`Slice D`/`Slice E` materializados sobre `overlay`, `install` y `live-output`
+Fecha: 2026-10-11
 Alcance: `W4 OS Business V1`
 Dependencias: `MX-003`, `MX-004`, `MX-005`, `ADR-013_BUSINESS_GRAPHIC_CATALOG_AND_SELECTOR.md`
 
@@ -222,6 +222,39 @@ Con ello, `Slice D` ya no queda como decision pendiente: `Business` ya publica u
 
 Ese mismo slice ya queda ademas validado en verde tanto sobre `overlay/install` como sobre los dos arboles `live-output` de referencia. `scripts/validate_business_remote_minimum_inventory.php --profile w4-os-business --format text` ya confirma `configured-or-enrolled`, `source_device_state_file`, `queue_file`, `last_delivery_file`, `endpoint_config_file` y el puente runtime `W4_REMOTE_INVENTORY_*`; y `scripts/validate_business_remote_minimum_inventory_live_output.php --profile w4-os-business --live-output-dir build/live-output/w4-os-business-c174-clean --format text` ya confirma en verde la proyeccion runtime del contrato, la cola remota visible, el payload minimo redaccionado y la frontera remota acotada del piloto.
 
+
+### Slice E · Ventanas de update remotas acotadas
+
+Con la capa minima de inventario remoto ya cerrada, el siguiente slice tecnico debe abrir solo la coordinacion remota minima de ventanas de update.
+
+Este slice debe:
+
+1. reutilizar el motor local ya validado en `MX-004`;
+2. dejar una asignacion remota tipada de cohorte, ventana y canal objetivo;
+3. fijar archivos locales para `plan-request` y `last-result`;
+4. imponer health checks obligatorios antes de aplicar cambios;
+5. mantener fuera de alcance un instalador remoto paralelo y cualquier downgrade remoto.
+
+Ese siguiente aterrizaje ya deja ahora una base ejecutable y verificable en el repo:
+
+- `Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_SLICE_E_REMOTE_UPDATE_WINDOWS.md`
+- `config/editions/business/remote-update-windows.json`
+- `manifests/w4-os-business.profile.json`
+- `src/Business/BusinessRemoteUpdateWindowsToolkit.php`
+- `scripts/validate_business_remote_update_windows.php`
+- `tests/BusinessRemoteUpdateWindowsCliTest.php`
+- `src/Business/BusinessRemoteUpdateWindowsLiveOutputToolkit.php`
+- `scripts/validate_business_remote_update_windows_live_output.php`
+- `tests/BusinessRemoteUpdateWindowsLiveOutputCliTest.php`
+- `build/overlays/w4-os-business/files/etc/w4/business-remote-update-windows.json`
+- `build/install/w4-os-business/runtime/install.env`
+- `build/live-output/w4-os-business/image-root/system-overlay/etc/w4/business-remote-update-windows.json`
+- `build/live-output/w4-os-business-c174-clean/image-root/system-overlay/etc/w4/business-remote-update-windows.json`
+
+Con ello, `Slice E` ya no queda como decision pendiente: `Business` ya publica un contrato `business-remote-update-windows`, una asignacion remota de cohorte y ventana, una politica remota de canal y deferimiento, un puente runtime `W4_REMOTE_UPDATE_*` y una frontera `local-engine-only`, sin vender todavia firma remota de ventanas, scoring por cohorte, umbrales globales de pausa ni backend empresarial completo.
+
+Ese mismo slice ya queda ademas validado en verde tanto sobre `overlay/install` como sobre los dos arboles `live-output` de referencia. `scripts/validate_business_remote_update_windows.php --profile w4-os-business --format text` ya confirma `configured-or-enrolled`, `local-engine-only`, `cohort_assignment_file`, `window_definition_file`, `default_channel` y el puente runtime `W4_REMOTE_UPDATE_*`; y `scripts/validate_business_remote_update_windows_live_output.php --profile w4-os-business --live-output-dir build/live-output/w4-os-business-c174-clean --format text` ya confirma en verde la proyeccion runtime del contrato, la coordinacion remota de cohorte/ventana, la politica de deferimiento y la frontera remota sin instalador paralelo.
+
 ## Entregables obligatorios de apertura
 
 1. contrato operativo propio de `MX-010` para `Business V1`;
@@ -275,7 +308,8 @@ Con la apertura correcta de `MX-010`, `Business` deja de ser solo una ADR de esc
 - una ruta base visible sobre `KDE Plasma`,
 - un piloto delimitado por identidad, politica e inventario minimo,
 - una capa remota acotada para inventario minimo diferido,
+- una capa remota acotada para ventanas de update con enforcement local,
 - continuidad offline apoyada en la ultima politica valida,
-- y un siguiente slice tecnico claro sin prometer todavia gestion empresarial completa.
+- y un backlog siguiente ya claramente diferido sin prometer todavia gestion empresarial completa.
 
-Tras esta pasada, ese avance ya se traduce en una base KDE real sobre `manifests`, `build-input`, `rootfs`, `overlay`, `live` y `live-output`, con `Slice B`, `Slice C` y `Slice D` ya proyectados tambien sobre el artefacto final materializado y sobre el `live-output` limpio `w4-os-business-c174-clean`. El siguiente gate natural deja de ser abrir el inventario remoto minimo y pasa a decidir si `Business` abre un `Slice E` acotado a ventanas de update, manteniendo mientras tanto el piloto dentro de su frontera local/remota acotada y sin vender backend empresarial generalista.
+Tras esta pasada, ese avance ya se traduce en una base KDE real sobre `manifests`, `build-input`, `rootfs`, `overlay`, `live` y `live-output`, con `Slice B`, `Slice C`, `Slice D` y `Slice E` ya proyectados tambien sobre el artefacto final materializado y sobre el `live-output` limpio `w4-os-business-c174-clean`. El siguiente gate natural deja de ser abrir ventanas de update y pasa a decidir, solo si el roadmap lo justifica, si `Business` endurece mas adelante firma de ventanas, scoring de cohortes o scheduling operativo, manteniendo mientras tanto el piloto dentro de su frontera local/remota acotada y sin vender backend empresarial generalista.

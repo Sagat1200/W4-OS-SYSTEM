@@ -357,6 +357,52 @@ function readBusinessRemoteMinimumInventory(string $rootDir, string $profileId):
 }
 
 /**
+ * @return array<string, mixed>
+ */
+function readBusinessRemoteUpdateWindows(string $rootDir, string $profileId): array
+{
+    if ($profileId !== 'w4-os-business') {
+        return [];
+    }
+
+    $contractPath = $rootDir
+        . DIRECTORY_SEPARATOR . 'config'
+        . DIRECTORY_SEPARATOR . 'editions'
+        . DIRECTORY_SEPARATOR . 'business'
+        . DIRECTORY_SEPARATOR . 'remote-update-windows.json';
+
+    if (!is_file($contractPath)) {
+        return [];
+    }
+
+    $raw = file_get_contents($contractPath);
+    if ($raw === false) {
+        throw new ValidationError(sprintf('No se pudo leer el contrato remoto de ventanas de update: %s', $contractPath));
+    }
+
+    try {
+        /** @var array<string, mixed> $contract */
+        $contract = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('Contrato remoto de ventanas de update invalido: %s', $exception->getMessage()));
+    }
+
+    if (($contract['schema_version'] ?? null) !== 1) {
+        throw new ValidationError(sprintf('%s: schema_version debe ser 1', $contractPath));
+    }
+
+    if (($contract['kind'] ?? null) !== 'business-remote-update-windows') {
+        throw new ValidationError(sprintf('%s: kind debe ser business-remote-update-windows', $contractPath));
+    }
+
+    if (($contract['profile_id'] ?? null) !== $profileId) {
+        throw new ValidationError(sprintf('%s: profile_id debe ser %s', $contractPath, $profileId));
+    }
+
+    return $contract;
+}
+
+/**
  * @param array{type:string,path:string,auto_detected:bool} $source
  * @param array{disk_passphrase?:string,local_user_password?:string} $generatedSecrets
  * @param array<string, mixed> $editionPolicy
@@ -369,7 +415,8 @@ function buildRuntimeEnv(
     array $generatedSecrets,
     array $editionPolicy,
     array $businessPilotLocalState,
-    array $businessRemoteMinimumInventory
+    array $businessRemoteMinimumInventory,
+    array $businessRemoteUpdateWindows
 ): string
 {
     $exports = [
@@ -434,6 +481,23 @@ function buildRuntimeEnv(
         $exports[] = sprintf('export W4_REMOTE_INVENTORY_TRANSPORT="%s"', (string) ($remoteContract['transport'] ?? ''));
         $exports[] = sprintf('export W4_REMOTE_INVENTORY_AUTH_MODE="%s"', (string) ($remoteContract['authentication_mode'] ?? ''));
         $exports[] = sprintf('export W4_REMOTE_INVENTORY_ACTIVATION="%s"', (string) ($scope['activation'] ?? 'configured-or-enrolled'));
+    }
+
+    if ($businessRemoteUpdateWindows !== []) {
+        $coordinationContract = is_array($businessRemoteUpdateWindows['coordination'] ?? null) ? $businessRemoteUpdateWindows['coordination'] : [];
+        $policyContract = is_array($businessRemoteUpdateWindows['policy'] ?? null) ? $businessRemoteUpdateWindows['policy'] : [];
+        $boundaries = is_array($businessRemoteUpdateWindows['boundaries'] ?? null) ? $businessRemoteUpdateWindows['boundaries'] : [];
+        $scope = is_array($businessRemoteUpdateWindows['scope'] ?? null) ? $businessRemoteUpdateWindows['scope'] : [];
+        $exports[] = sprintf('export W4_REMOTE_UPDATE_COHORT_ASSIGNMENT_FILE="%s"', (string) ($coordinationContract['cohort_assignment_file'] ?? ''));
+        $exports[] = sprintf('export W4_REMOTE_UPDATE_WINDOW_DEFINITION_FILE="%s"', (string) ($coordinationContract['window_definition_file'] ?? ''));
+        $exports[] = sprintf('export W4_REMOTE_UPDATE_PLAN_REQUEST_FILE="%s"', (string) ($coordinationContract['plan_request_file'] ?? ''));
+        $exports[] = sprintf('export W4_REMOTE_UPDATE_LAST_RESULT_FILE="%s"', (string) ($coordinationContract['last_result_file'] ?? ''));
+        $exports[] = sprintf('export W4_REMOTE_UPDATE_DEFAULT_CHANNEL="%s"', (string) ($policyContract['default_channel'] ?? ''));
+        $exports[] = sprintf('export W4_REMOTE_UPDATE_TIMEZONE="%s"', (string) ($policyContract['schedule_timezone'] ?? 'UTC'));
+        $exports[] = sprintf('export W4_REMOTE_UPDATE_MAX_DEFERRAL_MINUTES="%s"', (string) ($policyContract['max_deferral_minutes'] ?? '0'));
+        $exports[] = sprintf('export W4_REMOTE_UPDATE_REBOOT_OUTSIDE_WINDOW="%s"', (($policyContract['reboot_outside_window'] ?? false) === true) ? '1' : '0');
+        $exports[] = sprintf('export W4_REMOTE_UPDATE_ENGINE="%s"', (string) ($boundaries['local_update_engine'] ?? 'reuse-mx-004'));
+        $exports[] = sprintf('export W4_REMOTE_UPDATE_ACTIVATION="%s"', (string) ($scope['activation'] ?? 'configured-or-enrolled'));
     }
 
     $exports[] = '';
@@ -694,6 +758,7 @@ try {
     $editionPolicy = installationPolicy($plan);
     $businessPilotLocalState = readBusinessPilotLocalState($rootDir, $profileId);
     $businessRemoteMinimumInventory = readBusinessRemoteMinimumInventory($rootDir, $profileId);
+    $businessRemoteUpdateWindows = readBusinessRemoteUpdateWindows($rootDir, $profileId);
 
     $runtimeDir ??= $bundleDir . DIRECTORY_SEPARATOR . 'runtime';
     if (!is_dir($runtimeDir) && !mkdir($runtimeDir, 0777, true) && !is_dir($runtimeDir)) {
@@ -755,7 +820,8 @@ try {
             $generatedSecrets,
             $editionPolicy,
             $businessPilotLocalState,
-            $businessRemoteMinimumInventory
+            $businessRemoteMinimumInventory,
+            $businessRemoteUpdateWindows
         )
     ) === false) {
         throw new ValidationError('No se pudo escribir install.env');

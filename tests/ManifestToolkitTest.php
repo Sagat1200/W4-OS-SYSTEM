@@ -168,6 +168,7 @@ final class ManifestToolkitTest extends TestCase
         self::assertContains('desktop-defaults', $business['features']);
         self::assertContains('kde-sddm-default-route', $business['features']);
         self::assertContains('inventory-remote-ready', $business['features']);
+        self::assertContains('update-windows-remote-ready', $business['features']);
         self::assertContains('dolphin', $business['required_packages']);
         self::assertContains('konsole', $business['required_packages']);
         self::assertContains('plasma-desktop', $business['required_packages']);

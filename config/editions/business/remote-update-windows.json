@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "kind": "business-remote-update-windows",
+  "profile_id": "w4-os-business",
+  "scope": {
+    "mode": "remote-update-windows",
+    "backend_required": false,
+    "activation": "configured-or-enrolled",
+    "enforcement": "local-engine-only"
+  },
+  "coordination": {
+    "source_device_state_file": "/var/lib/w4/inventory/device-state.json",
+    "source_remote_queue_file": "/var/lib/w4/inventory/remote/pending/device-state.json",
+    "cohort_assignment_file": "/var/lib/w4/update/remote/cohort-assignment.json",
+    "window_definition_file": "/var/lib/w4/update/remote/window-definition.json",
+    "plan_request_file": "/var/lib/w4/update/remote/plan-request.json",
+    "last_result_file": "/var/lib/w4/update/remote/last-result.json"
+  },
+  "policy": {
+    "update_channel_source": "device-state",
+    "allowed_channels": [
+      "testing",
+      "stable"
+    ],
+    "default_channel": "testing",
+    "schedule_timezone": "UTC",
+    "max_deferral_minutes": 1440,
+    "reboot_outside_window": false,
+    "require_health_checks": [
+      "compatibility",
+      "power",
+      "disk-space",
+      "snapshot",
+      "policy"
+    ]
+  },
+  "boundaries": {
+    "local_update_engine": "reuse-mx-004",
+    "remote_decides": [
+      "cohort",
+      "window",
+      "target-channel"
+    ],
+    "local_validates": [
+      "compatibility",
+      "power",
+      "disk-space",
+      "policy",
+      "health-checks"
+    ],
+    "remote_installer_allowed": false,
+    "downgrade_allowed": false
+  },
+  "deferred_steps": [
+    "remote-window-signing",
+    "cohort-health-scoring",
+    "fleet-pause-thresholds",
+    "rollback-approval-flow",
+    "operator-scheduling-ui"
+  ]
+}

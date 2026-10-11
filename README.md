@@ -164,6 +164,14 @@ Ese cierre ya cuenta ahora tambien con recomposicion limpia real sobre `build/li
 
 Sobre ese mismo baseline ya queda ademas materializado `Slice D`: `Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_SLICE_D_REMOTE_MINIMUM_INVENTORY.md`, `config/editions/business/remote-minimum-inventory.json`, `build/overlays/w4-os-business/files/etc/w4/business-remote-minimum-inventory.json`, `build/install/w4-os-business/runtime/install.env`, `src/Business/BusinessRemoteMinimumInventoryToolkit.php` y `src/Business/BusinessRemoteMinimumInventoryLiveOutputToolkit.php` ya fijan y validan en verde una capa remota acotada para inventario minimo: `source_device_state_file`, `queue_file`, `last_delivery_file`, `last_payload_file`, `endpoint_config_file`, `https-json-manifest`, `device-credential` y una frontera `inventory-only`, sin vender todavia reconciliacion remota, ventanas de update ni backend empresarial generalista. `scripts/validate_business_remote_minimum_inventory.php` y `scripts/validate_business_remote_minimum_inventory_live_output.php` ya cerraron en verde tanto sobre `overlay/install` como sobre `build/live-output/w4-os-business/` y `build/live-output/w4-os-business-c174-clean/`.
 
+Sobre ese mismo baseline ya queda tambien materializado `Slice E`: `Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_SLICE_E_REMOTE_UPDATE_WINDOWS.md`,
+`config/editions/business/remote-update-windows.json`,
+`build/overlays/w4-os-business/files/etc/w4/business-remote-update-windows.json`,
+`build/install/w4-os-business/runtime/install.env`, `src/Business/BusinessRemoteUpdateWindowsToolkit.php` y `src/Business/BusinessRemoteUpdateWindowsLiveOutputToolkit.php` ya fijan y validan en verde una capa remota acotada para ventanas de update: `cohort_assignment_file`, `window_definition_file`, `plan_request_file`, `last_result_file`, `default_channel=testing`, `schedule_timezone=UTC`, `max_deferral_minutes=1440`, health checks obligatorios y una frontera `local-engine-only`, sin vender todavia firma remota de ventanas, scoring por cohorte, instalador remoto paralelo ni backend empresarial generalista.
+`scripts/validate_business_remote_update_windows.php` y
+`scripts/validate_business_remote_update_windows_live_output.php` ya cerraron en verde tanto sobre
+`overlay/install` como sobre `build/live-output/w4-os-business/` y `build/live-output/w4-os-business-c174-clean/`.
+
 La referencia historica de `MX-004 · Update y recovery` se centro en:
 
 - coordinador durable de actualizacion con `operation_id`,
