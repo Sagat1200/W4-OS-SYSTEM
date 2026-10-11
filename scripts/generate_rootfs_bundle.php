@@ -211,6 +211,27 @@ reset_rootfs_dir() {
   mkdir -p "\${ROOTFS_DIR}"
 }
 
+resolve_debootstrap_script() {
+  local script_dir="/usr/share/debootstrap/scripts"
+  local requested="{$codename}"
+
+  if [[ -f "\${script_dir}/\${requested}" ]]; then
+    printf '%s\n' "\${script_dir}/\${requested}"
+    return 0
+  fi
+
+  for candidate in testing unstable sid stable bookworm; do
+    if [[ -f "\${script_dir}/\${candidate}" ]]; then
+      echo "WARN: debootstrap no conoce \${requested}; usando el script \${candidate} como compatibilidad." >&2
+      printf '%s\n' "\${script_dir}/\${candidate}"
+      return 0
+    fi
+  done
+
+  echo "ERROR: debootstrap no dispone de un script compatible para \${requested}." >&2
+  exit 1
+}
+
 bootstrap_with_mmdebstrap() {
   mmdebstrap \
     --variant=minbase \
@@ -221,7 +242,10 @@ bootstrap_with_mmdebstrap() {
 }
 
 bootstrap_with_debootstrap() {
-  debootstrap --keyring="\${HOST_BOOTSTRAP_KEYRING}" --merged-usr --variant=minbase {$codename} "\${ROOTFS_DIR}" https://deb.debian.org/debian/
+  local debootstrap_script
+  debootstrap_script="\$(resolve_debootstrap_script)"
+
+  debootstrap --keyring="\${HOST_BOOTSTRAP_KEYRING}" --script="\${debootstrap_script}" --merged-usr --variant=minbase {$codename} "\${ROOTFS_DIR}" https://deb.debian.org/debian/
 
   echo "==> Asegurando keyring Debian dentro del rootfs"
   ensure_debian_keyring_in_rootfs "\${ROOTFS_DIR}"

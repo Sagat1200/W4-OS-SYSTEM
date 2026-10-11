@@ -151,6 +151,9 @@ final class RootfsBundleGenerationTest extends TestCase
         self::assertStringContainsString('vlc', $buildScript);
         self::assertStringContainsString('bootstrap_with_mmdebstrap()', $buildScript);
         self::assertStringContainsString('bootstrap_with_debootstrap()', $buildScript);
+        self::assertStringContainsString('resolve_debootstrap_script()', $buildScript);
+        self::assertStringContainsString('debootstrap no conoce', $buildScript);
+        self::assertStringContainsString('--script="${debootstrap_script}"', $buildScript);
         self::assertStringContainsString('mmdebstrap fallo con codigo', $buildScript);
         self::assertStringContainsString('Bootstrap base Debian con debootstrap (fallback)', $buildScript);
         self::assertStringContainsString('reset_rootfs_dir()', $buildScript);
@@ -218,6 +221,8 @@ final class RootfsBundleGenerationTest extends TestCase
         self::assertStringContainsString('sddm', $buildScript);
         self::assertStringContainsString('systemsettings', $buildScript);
         self::assertStringContainsString('xdg-desktop-portal-kde', $buildScript);
+        self::assertStringContainsString('resolve_debootstrap_script()', $buildScript);
+        self::assertStringContainsString('--script="${debootstrap_script}"', $buildScript);
     }
 
     /**
