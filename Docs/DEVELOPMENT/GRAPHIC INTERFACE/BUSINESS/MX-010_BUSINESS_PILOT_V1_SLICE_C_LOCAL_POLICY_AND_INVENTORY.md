@@ -1,6 +1,6 @@
 # MX-010 · Business piloto V1 · Slice C · Politica local cacheada e inventario minimo
 
-Estado: materializado sobre `overlay`, `install` y `live-output`; recomposicion limpia completa pendiente por drift externo del mirror Debian
+Estado: materializado sobre `overlay`, `install` y `live-output`; recomposicion limpia confirmada sobre `build/live-output/w4-os-business-c174-clean/`
 Fecha: 2026-10-10
 Alcance: `W4 OS Business V1`
 Dependencias: `MX-010_BUSINESS_PILOT_V1_CONTRACT.md`, `MX-010_BUSINESS_PILOT_V1_SLICE_B_ENROLLMENT_READINESS.md`, `213_W4_OS_CENTRAL_POLICY_SYSTEM.md`, `222_W4_OS_DEVICE_ENROLLMENT.md`, `224_W4_OS_REMOTE_UPDATE_MANAGEMENT.md`
@@ -88,7 +88,7 @@ Este mismo slice ya queda proyectado sobre `build/live-output/w4-os-business/` m
 3. `src/Business/BusinessPilotLocalStateLiveOutputToolkit.php`, que ya valida en verde el contrato materializado en `image-root/system-overlay/etc/w4/business-pilot-local-state.json`;
 4. validacion real en verde confirmando `w4-business-live`, `profile.env`, la precedencia local, la cache de politica efectiva y el anclaje local de inventario.
 
-La recomposicion limpia completa del `live-output` se intento sobre WSL, pero `apt-get update` volvio a quedar bloqueado por `Hash Sum mismatch` del mirror Debian al reinstalar `live-boot/live-config`. Ese bloqueo sigue fuera del contrato `Business`; por eso esta pasada deja trazado que el cierre funcional del slice queda validado sobre el `system-overlay` materializado del `live-output`, mientras el rerun limpio completo del artefacto sigue pendiente de infraestructura externa.
+La recomposicion limpia completa del `live-output` ya quedo confirmada sobre WSL. El rerun limpio recompuso primero `/var/tmp/w4-os-system/w4-os-business-c174-clean/assembled-rootfs` y despues `build/live-output/w4-os-business-c174-clean/`, donde `scripts/validate_business_kde_live_output.php`, `scripts/validate_business_enrollment_readiness_live_output.php` y `scripts/validate_business_pilot_local_state_live_output.php` ya cerraron en verde sobre `w4-business-live`. Durante ese rerun tambien se corrigio `scripts/generate_rootfs_bundle.php` para que el fallback de `debootstrap` resuelva un script compatible en hosts Ubuntu cuyo `debootstrap` local no conoce `trixie`; con ello, este slice deja de depender solo del arbol materializado historico y pasa a tener un artefacto limpio verificable de punta a punta.
 
 ## Criterio de cierre del slice
 
@@ -120,7 +120,7 @@ Mientras no existan:
 
 ## Siguiente paso recomendado
 
-El siguiente paso natural despues de este corte es doble:
+El siguiente paso natural despues de este corte es:
 
-1. rerun la recomposicion limpia completa de `build/live-output/w4-os-business/` cuando el mirror Debian deje de devolver `Hash Sum mismatch`;
-2. y solo despues decidir si conviene abrir un slice posterior acotado al plano remoto de inventario/ventanas de update, manteniendo fuera del alcance el backend empresarial generalista.
+1. tratar `build/live-output/w4-os-business-c174-clean/` como baseline limpio verificable de `Business`;
+2. y decidir si conviene abrir un slice posterior acotado al plano remoto de inventario o ventanas de update, manteniendo fuera del alcance el backend empresarial generalista.

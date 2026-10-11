@@ -235,11 +235,7 @@ Ese mismo `Slice B` ya cuenta ademas con gate propio sobre el artefacto final:
 `scripts/validate_business_enrollment_readiness_live_output.php`, ya valida en
 verde sobre `build/live-output/w4-os-business/` la proyeccion runtime de
 `business-enrollment-readiness.json`, `w4-business-live`, `profile.env`, la
-cache local de politica y el anclaje local de inventario. La recomposicion limpia
-completa del `live-output` se intento sobre WSL, pero el rerun quedo bloqueado por
-`Hash Sum mismatch` del mirror Debian durante `apt-get update`; por eso el gate
-funcional queda cerrado sobre el arbol materializado actual y el rerun limpio
-completo se mueve a backlog tecnico de infraestructura externa.
+cache local de politica y el anclaje local de inventario.
 
 Sobre esa misma base ya queda tambien materializado `Slice C`:
 `Docs/DEVELOPMENT/GRAPHIC INTERFACE/BUSINESS/MX-010_BUSINESS_PILOT_V1_SLICE_C_LOCAL_POLICY_AND_INVENTORY.md`,
@@ -258,10 +254,18 @@ base `edition-baseline-only`, continuidad `keep-last-valid`, `last-known-policy`
 `live-output`.
 
 Con ello, el siguiente paso ejecutivo deja de ser abrir politica local y pasa a
-reintentar la recomposicion limpia completa de `build/live-output/w4-os-business/`
-cuando el mirror Debian deje de derivar. Solo despues conviene decidir si el
-piloto abre un slice posterior acotado al plano remoto de inventario o ventanas
-de update, manteniendo fuera de alcance el backend empresarial generalista.
+consolidar la recomposicion limpia ya conseguida sobre
+`build/live-output/w4-os-business-c174-clean/`. `scripts/generate_rootfs_bundle.php`
+ya resuelve el fallback de `debootstrap` para hosts Ubuntu cuyo script local no
+conoce `trixie`, `tests/RootfsBundleGenerationTest.php` ya congela esa
+compatibilidad, y el rerun limpio en WSL ya recompuso ese `live-output` y lo dejo
+en verde tambien para `scripts/validate_business_kde_live_output.php`,
+`scripts/validate_business_enrollment_readiness_live_output.php` y
+`scripts/validate_business_pilot_local_state_live_output.php`.
+
+Solo despues conviene decidir si el piloto abre un slice posterior acotado al
+plano remoto de inventario o ventanas de update, manteniendo fuera de alcance el
+backend empresarial generalista.
 
 Como guardrail de este frente, la regla principal queda congelada desde el arranque: `MX-010` no debe intentar cerrar de una vez enrollment completo, portal, soporte remoto generico ni paridad plena de variantes. Primero se abre la base visible y solo despues se habilitan slices empresariales mas profundos.
 
