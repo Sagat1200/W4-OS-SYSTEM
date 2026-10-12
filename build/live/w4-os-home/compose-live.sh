@@ -129,6 +129,68 @@ unmount_work_rootfs() {
   umount -lf "${WORK_ROOTFS}/dev" 2>/dev/null || true
 }
 
+resolve_systemd_unit_path() {
+  local rootfs_dir="${1}"
+  local unit_name="${2}"
+  local candidate=""
+
+  for candidate in \
+    "${rootfs_dir}/etc/systemd/system/${unit_name}" \
+    "${rootfs_dir}/usr/lib/systemd/system/${unit_name}" \
+    "${rootfs_dir}/lib/systemd/system/${unit_name}"; do
+    if [[ -e "${candidate}" ]]; then
+      printf '%s\n' "${candidate#${rootfs_dir}}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+ensure_default_target_link() {
+  local rootfs_dir="${1}"
+  local target_unit_path=""
+
+  target_unit_path="$(resolve_systemd_unit_path "${rootfs_dir}" "${W4_DEFAULT_TARGET}" 2>/dev/null || true)"
+  if [[ -z "${target_unit_path}" ]]; then
+    return 0
+  fi
+
+  mkdir -p "${rootfs_dir}/etc/systemd/system"
+  ln -sfn "${target_unit_path}" "${rootfs_dir}/etc/systemd/system/default.target"
+}
+
+enable_display_manager_for_graphical_target() {
+  local rootfs_dir="${1}"
+  local display_manager_unit_path=""
+  local candidate=""
+
+  if [[ "${W4_DEFAULT_TARGET}" != "graphical.target" ]]; then
+    return 0
+  fi
+
+  for candidate in \
+    "gdm3.service" \
+    "gdm.service" \
+    "sddm.service" \
+    "lightdm.service"; do
+    display_manager_unit_path="$(resolve_systemd_unit_path "${rootfs_dir}" "${candidate}" 2>/dev/null || true)"
+    if [[ -n "${display_manager_unit_path}" ]]; then
+      break
+    fi
+  done
+
+  if [[ -z "${display_manager_unit_path}" ]]; then
+    return 0
+  fi
+
+  mkdir -p \
+    "${rootfs_dir}/etc/systemd/system" \
+    "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants"
+  ln -sfn "${display_manager_unit_path}" "${rootfs_dir}/etc/systemd/system/display-manager.service"
+  ln -sfn ../display-manager.service "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/display-manager.service"
+}
+
 apply_system_overlay() {
   local rootfs_dir="${1}"
 
@@ -170,6 +232,9 @@ apply_system_overlay() {
   if [[ -f "${rootfs_dir}/etc/systemd/system/w4-live-prep.service" ]]; then
     ln -sfn ../w4-live-prep.service "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-live-prep.service"
   fi
+
+  ensure_default_target_link "${rootfs_dir}"
+  enable_display_manager_for_graphical_target "${rootfs_dir}"
 
   printf '%s\n' "${PROFILE_ID}" > "${rootfs_dir}/var/lib/w4/system-overlay-profile"
   printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "${rootfs_dir}/var/lib/w4/system-overlay-applied-at"
@@ -248,12 +313,24 @@ project_system_overlay_runtime_state() {
 
   mkdir -p "${wants_dir}"
 
+  if [[ -e "${rootfs_dir}/etc/systemd/system/default.target" ]]; then
+    cp -a "${rootfs_dir}/etc/systemd/system/default.target" "${stage_systemd_dir}/default.target"
+  fi
+
+  if [[ -e "${rootfs_dir}/etc/systemd/system/display-manager.service" ]]; then
+    cp -a "${rootfs_dir}/etc/systemd/system/display-manager.service" "${stage_systemd_dir}/display-manager.service"
+  fi
+
   if [[ -e "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-firstboot.service" ]]; then
     cp -a "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-firstboot.service" "${wants_dir}/w4-firstboot.service"
   fi
 
   if [[ -e "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-live-prep.service" ]]; then
     cp -a "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-live-prep.service" "${wants_dir}/w4-live-prep.service"
+  fi
+
+  if [[ -e "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/display-manager.service" ]]; then
+    cp -a "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/display-manager.service" "${wants_dir}/display-manager.service"
   fi
 }
 

@@ -82,10 +82,14 @@ final class LiveBundleGenerationTest extends TestCase
         self::assertStringContainsString('chmod 0755 "${rootfs_dir}/etc/ufw"', $composeScript);
         self::assertStringContainsString('chmod 0644 "${rootfs_dir}/etc/ufw/ufw.conf"', $composeScript);
         self::assertStringContainsString('W4_DEFAULT_TARGET="${W4_DEFAULT_TARGET:-multi-user.target}"', $composeScript);
+        self::assertStringContainsString('ensure_default_target_link() {', $composeScript);
+        self::assertStringContainsString('ln -sfn "${target_unit_path}" "${rootfs_dir}/etc/systemd/system/default.target"', $composeScript);
         self::assertStringContainsString('mkdir -p "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants"', $composeScript);
         self::assertStringContainsString('ln -sfn ../w4-firstboot.service "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-firstboot.service"', $composeScript);
         self::assertStringContainsString('ln -sfn ../w4-live-prep.service "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-live-prep.service"', $composeScript);
+        self::assertStringContainsString('ensure_default_target_link "${rootfs_dir}"', $composeScript);
         self::assertStringContainsString('project_system_overlay_runtime_state() {', $composeScript);
+        self::assertStringContainsString('cp -a "${rootfs_dir}/etc/systemd/system/default.target" "${stage_systemd_dir}/default.target"', $composeScript);
         self::assertStringContainsString('local wants_dir="${stage_systemd_dir}/${W4_DEFAULT_TARGET}.wants"', $composeScript);
         self::assertStringContainsString('cp -a "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-firstboot.service" "${wants_dir}/w4-firstboot.service"', $composeScript);
         self::assertStringContainsString('cp -a "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-live-prep.service" "${wants_dir}/w4-live-prep.service"', $composeScript);
@@ -219,13 +223,19 @@ final class LiveBundleGenerationTest extends TestCase
         $composeScript = file_get_contents($liveDir . DIRECTORY_SEPARATOR . 'compose-live.sh');
         self::assertNotFalse($composeScript);
         self::assertStringContainsString('W4_DEFAULT_TARGET="${W4_DEFAULT_TARGET:-graphical.target}"', $composeScript);
+        self::assertStringContainsString('enable_display_manager_for_graphical_target() {', $composeScript);
+        self::assertStringContainsString('ln -sfn "${display_manager_unit_path}" "${rootfs_dir}/etc/systemd/system/display-manager.service"', $composeScript);
+        self::assertStringContainsString('ln -sfn ../display-manager.service "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/display-manager.service"', $composeScript);
         self::assertStringContainsString('mkdir -p "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants"', $composeScript);
         self::assertStringContainsString('ln -sfn ../w4-firstboot.service "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-firstboot.service"', $composeScript);
         self::assertStringContainsString('ln -sfn ../w4-live-prep.service "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-live-prep.service"', $composeScript);
+        self::assertStringContainsString('enable_display_manager_for_graphical_target "${rootfs_dir}"', $composeScript);
         self::assertStringContainsString('project_system_overlay_runtime_state() {', $composeScript);
+        self::assertStringContainsString('cp -a "${rootfs_dir}/etc/systemd/system/display-manager.service" "${stage_systemd_dir}/display-manager.service"', $composeScript);
         self::assertStringContainsString('local wants_dir="${stage_systemd_dir}/${W4_DEFAULT_TARGET}.wants"', $composeScript);
         self::assertStringContainsString('cp -a "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-firstboot.service" "${wants_dir}/w4-firstboot.service"', $composeScript);
         self::assertStringContainsString('cp -a "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/w4-live-prep.service" "${wants_dir}/w4-live-prep.service"', $composeScript);
+        self::assertStringContainsString('cp -a "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/display-manager.service" "${wants_dir}/display-manager.service"', $composeScript);
         self::assertStringContainsString('project_system_overlay_runtime_state "${WORK_ROOTFS}" "${STAGE_OUTPUT_DIR}"', $composeScript);
         self::assertLessThan(
             strpos($composeScript, 'mkdir -p "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants"'),
@@ -301,6 +311,8 @@ final class LiveBundleGenerationTest extends TestCase
         $composeScript = file_get_contents($liveDir . DIRECTORY_SEPARATOR . 'compose-live.sh');
         self::assertNotFalse($composeScript);
         self::assertStringContainsString('W4_DEFAULT_TARGET="${W4_DEFAULT_TARGET:-graphical.target}"', $composeScript);
+        self::assertStringContainsString('enable_display_manager_for_graphical_target "${rootfs_dir}"', $composeScript);
+        self::assertStringContainsString('ln -sfn ../display-manager.service "${rootfs_dir}/etc/systemd/system/${W4_DEFAULT_TARGET}.wants/display-manager.service"', $composeScript);
     }
 
     /**
