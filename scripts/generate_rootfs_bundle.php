@@ -76,6 +76,8 @@ function defaultRootfsDirectories(): array
         '/etc/apt',
         '/etc/apt/sources.list.d',
         '/etc/default',
+        '/etc/network',
+        '/etc/network/interfaces.d',
         '/etc/systemd/system',
         '/home',
         '/proc',

@@ -11,7 +11,12 @@
         "edition": "Home",
         "distribution_name": "W4 OS",
         "volume_id": "W4_OS_HOME_LIVE",
-        "iso_filename": "w4-os-home-live-amd64.iso"
+        "iso_filename": "w4-os-home-live-amd64.iso",
+        "default_target": "graphical.target"
+    },
+    "edition_policy": {
+        "path": "config\/editions\/home\/policy.json",
+        "default_target": "graphical.target"
     },
     "iso_tooling_required": [
         "xorriso",

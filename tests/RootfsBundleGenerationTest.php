@@ -122,6 +122,8 @@ final class RootfsBundleGenerationTest extends TestCase
         self::assertContains('speech-dispatcher', $manifest['packages']['required']);
         self::assertContains('vlc', $manifest['packages']['required']);
         self::assertContains('xdg-desktop-portal-gnome', $manifest['packages']['required']);
+        self::assertContains('/etc/network', $manifest['rootfs_directories']);
+        self::assertContains('/etc/network/interfaces.d', $manifest['rootfs_directories']);
 
         $requiredPackages = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'packages.required.list');
         self::assertNotFalse($requiredPackages);
@@ -157,6 +159,8 @@ final class RootfsBundleGenerationTest extends TestCase
         self::assertStringContainsString('mmdebstrap fallo con codigo', $buildScript);
         self::assertStringContainsString('Bootstrap base Debian con debootstrap (fallback)', $buildScript);
         self::assertStringContainsString('reset_rootfs_dir()', $buildScript);
+        self::assertStringContainsString('mkdir -p "${ROOTFS_DIR}/etc/network"', $buildScript);
+        self::assertStringContainsString('mkdir -p "${ROOTFS_DIR}/etc/network/interfaces.d"', $buildScript);
     }
 
     public function testGenerateBusinessRootfsBundleIncludesKdeAndSddmBaseline(): void
