@@ -83,6 +83,71 @@ final class W4ctlCliTest extends TestCase
         self::assertStringContainsString('Debe indicar un PROFILE_ID usando --profile', $result['stderr']);
     }
 
+    public function testLiveInspectReturnsMaterializedLiveSummary(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'live:inspect',
+            '--profile',
+            'w4-os-home',
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('ok', $payload['status']);
+        self::assertSame('live:inspect', $payload['command']);
+        self::assertSame('w4-os-home', $payload['profile_id']);
+        self::assertSame('w4live', $payload['live_summary']['live_user']);
+        self::assertSame('w4-home-live', $payload['live_summary']['live_hostname']);
+        self::assertSame('graphical.target', $payload['live_summary']['default_target']);
+        self::assertSame('build/live-output/w4-os-home', $payload['live_output_dir']);
+        self::assertSame('build/live/w4-os-home/live-manifest.json', $payload['live_manifest_path']);
+        self::assertSame(0, $payload['filesystem']['missing_required_package_count']);
+        self::assertTrue($payload['live_summary']['iso_tooling_available']);
+        self::assertContains('home-onboarding', $payload['features']);
+    }
+
+    public function testArtifactManifestReadsOverlayManifest(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'artifact:manifest',
+            '--artifact',
+            'overlay',
+            '--profile',
+            'w4-os-home',
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('ok', $payload['status']);
+        self::assertSame('artifact:manifest', $payload['command']);
+        self::assertSame('overlay', $payload['artifact']);
+        self::assertSame('w4-os-home', $payload['profile_id']);
+        self::assertSame('build/overlays/w4-os-home/overlay-manifest.json', $payload['manifest_path']);
+        self::assertSame('system-overlay', $payload['manifest_kind']);
+        self::assertGreaterThan(0, $payload['generated_file_count']);
+        self::assertSame('system-overlay', $payload['artifact_manifest']['kind']);
+        self::assertContains('w4-firstboot.service', $payload['artifact_manifest']['services']);
+    }
+
+    public function testArtifactManifestRejectsUnsupportedArtifact(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'artifact:manifest',
+            '--artifact',
+            'runtime',
+            '--profile',
+            'w4-os-home',
+        ]);
+
+        self::assertSame(1, $result['exitCode']);
+        self::assertStringContainsString('Artifact no soportado: runtime', $result['stderr']);
+    }
+
     /**
      * @param list<string> $command
      * @return array{exitCode:int,stdout:string,stderr:string}
