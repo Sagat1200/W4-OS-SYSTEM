@@ -20,7 +20,9 @@
     </MediaRegistry>
     <ExtraData>
       <ExtraDataItem name="GUI/LastCloseAction" value="PowerOff"/>
-      <ExtraDataItem name="GUI/LastNormalWindowPosition" value="-1585,145,1280,854"/>
+      <ExtraDataItem name="GUI/LastNormalWindowPosition" value="-1920,23,1920,1009,max"/>
+      <ExtraDataItem name="GUI/LastScaleWindowPosition" value="-1279,276,640,480"/>
+      <ExtraDataItem name="GUI/Scale" value="true"/>
       <ExtraDataItem name="GUI/ScaleFactor" value="1"/>
     </ExtraData>
     <Hardware>
@@ -54,8 +56,8 @@
       <AudioAdapter driver="Null"/>
       <Clipboard/>
       <GuestProperties>
-        <GuestProperty name="/VirtualBox/GuestAdd/GuiOnFocus" value="1" timestamp="1791788773492901900" flags="TRANSIENT, RDONLYGUEST"/>
-        <GuestProperty name="/VirtualBox/HostInfo/GUI/LanguageID" value="es_ES" timestamp="1791788804124513900" flags="RDONLYGUEST"/>
+        <GuestProperty name="/VirtualBox/GuestAdd/GuiOnFocus" value="1" timestamp="1791789848025943600" flags="TRANSIENT, RDONLYGUEST"/>
+        <GuestProperty name="/VirtualBox/HostInfo/GUI/LanguageID" value="es_ES" timestamp="1791789849012900500" flags="RDONLYGUEST"/>
         <GuestProperty name="/VirtualBox/HostInfo/VBoxRev" value="173730" timestamp="1791787598267403502" flags="TRANSIENT, RDONLYGUEST"/>
         <GuestProperty name="/VirtualBox/HostInfo/VBoxVer" value="7.2.8" timestamp="1791787598267403500" flags="TRANSIENT, RDONLYGUEST"/>
         <GuestProperty name="/VirtualBox/HostInfo/VBoxVerExt" value="7.2.8" timestamp="1791787598267403501" flags="TRANSIENT, RDONLYGUEST"/>

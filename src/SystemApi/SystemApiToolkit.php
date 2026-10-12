@@ -10,6 +10,9 @@ use W4\OS\W4ctl\W4ctlApplication;
 final class SystemApiToolkit
 {
     private const API_VERSION = '1.0';
+    private const PROPOSED_BUS_NAME = 'org.w4.System1';
+    private const PROPOSED_OBJECT_PATH = '/org/w4/System1';
+    private const PROPOSED_INTERFACE = 'org.w4.System1.Manager';
 
     private W4ctlApplication $w4ctl;
 
@@ -51,6 +54,26 @@ final class SystemApiToolkit
             'transport' => [
                 'default' => 'local-cli-json',
                 'tcp_listener_enabled_by_default' => false,
+            ],
+            'binding' => [
+                'status' => 'local-manager-ready',
+                'dbus' => [
+                    'bus' => 'system',
+                    'name' => self::PROPOSED_BUS_NAME,
+                    'object_path' => self::PROPOSED_OBJECT_PATH,
+                    'interface' => self::PROPOSED_INTERFACE,
+                    'methods' => [
+                        'Call',
+                        'GetCapabilities',
+                    ],
+                ],
+                'local_manager' => [
+                    'script' => 'scripts/system_api_manager.php',
+                    'commands' => [
+                        'call',
+                        'get-capabilities',
+                    ],
+                ],
             ],
             'methods' => [
                 [
