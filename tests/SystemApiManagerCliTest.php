@@ -55,6 +55,31 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertSame('profile:show', $payload['result']['data']['command']);
     }
 
+    public function testCallDispatchesDbusRuntimeDiagnosis(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'manager-dbus-runtime-001',
+            'method' => 'system.dbus-runtime',
+            'params' => [],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'call',
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('system.dbus-runtime', $payload['result']['method']);
+        self::assertSame('system-api-dbus-runtime-diagnosis', $payload['result']['resource']['kind']);
+        self::assertSame('local-system-api-runtime-probe', $payload['result']['resource']['provider']);
+    }
+
     public function testCallReturnsProtocolErrorForInvalidJson(): void
     {
         $result = $this->runPhpScript([

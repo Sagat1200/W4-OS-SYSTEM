@@ -26,7 +26,35 @@ final class SystemApiCliTest extends TestCase
         self::assertSame('system.capabilities', $payload['result']['method']);
         self::assertSame('system-api-capabilities', $payload['result']['resource']['kind']);
         self::assertContains('profiles.list', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('system.dbus-runtime', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('updates.plan', array_column($payload['result']['data']['methods'], 'name'));
+    }
+
+    public function testDbusRuntimeMethodReturnsRuntimeDiagnosis(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-dbus-runtime-001',
+            'method' => 'system.dbus-runtime',
+            'params' => [],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('system.dbus-runtime', $payload['result']['method']);
+        self::assertSame('system-api-dbus-runtime-diagnosis', $payload['result']['resource']['kind']);
+        self::assertSame('org.w4.System1', $payload['result']['resource']['id']);
+        self::assertSame('local-system-api-runtime-probe', $payload['result']['resource']['provider']);
+        self::assertSame('system-api-dbus-runtime-diagnosis', $payload['result']['data']['kind']);
+        self::assertArrayHasKey('missing_capabilities', $payload['result']['data']);
     }
 
     public function testProfilesGetReusesW4ctlContract(): void

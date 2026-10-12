@@ -15,10 +15,12 @@ final class SystemApiToolkit
     private const PROPOSED_INTERFACE = 'org.w4.System1.Manager';
 
     private W4ctlApplication $w4ctl;
+    private SystemApiDbusRuntimeProbeToolkit $dbusRuntimeProbe;
 
     public function __construct(string $rootDir)
     {
         $this->w4ctl = new W4ctlApplication($rootDir);
+        $this->dbusRuntimeProbe = new SystemApiDbusRuntimeProbeToolkit();
     }
 
     /**
@@ -94,6 +96,11 @@ final class SystemApiToolkit
                     'mutates_state' => false,
                 ],
                 [
+                    'name' => 'system.dbus-runtime',
+                    'resource_kind' => 'system-api-dbus-runtime-diagnosis',
+                    'mutates_state' => false,
+                ],
+                [
                     'name' => 'profiles.get',
                     'resource_kind' => 'edition-profile',
                     'mutates_state' => false,
@@ -159,6 +166,17 @@ final class SystemApiToolkit
 
         if ($method === 'system.capabilities') {
             return $this->createCapabilitiesResponse($requestId);
+        }
+
+        if ($method === 'system.dbus-runtime') {
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'system.dbus-runtime',
+                resourceKind: 'system-api-dbus-runtime-diagnosis',
+                resourceId: 'org.w4.System1',
+                data: $this->dbusRuntimeProbe->createReport(),
+                provider: 'local-system-api-runtime-probe'
+            );
         }
 
         [$command, $options, $resourceKind, $resourceId] = $this->translateMethod($method, $params);
@@ -240,7 +258,8 @@ final class SystemApiToolkit
         string $method,
         string $resourceKind,
         ?string $resourceId,
-        array $data
+        array $data,
+        string $provider = 'local-w4ctl-facade'
     ): array {
         $observedAt = gmdate('c');
 
@@ -255,7 +274,7 @@ final class SystemApiToolkit
                     'kind' => $resourceKind,
                     'revision' => $this->buildRevision($data),
                     'observed_at' => $observedAt,
-                    'provider' => 'local-w4ctl-facade',
+                    'provider' => $provider,
                 ],
                 'capabilities' => [
                     'read-state',

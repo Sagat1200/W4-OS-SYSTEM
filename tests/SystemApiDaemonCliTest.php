@@ -26,6 +26,15 @@ final class SystemApiDaemonCliTest extends TestCase
                     ],
                 ],
             ], JSON_THROW_ON_ERROR),
+            json_encode([
+                'command' => 'call',
+                'request' => [
+                    'api_version' => '1.0',
+                    'request_id' => 'daemon-dbus-runtime-001',
+                    'method' => 'system.dbus-runtime',
+                    'params' => [],
+                ],
+            ], JSON_THROW_ON_ERROR),
         ];
 
         $result = $this->runDaemon(implode(PHP_EOL, $inputLines) . PHP_EOL);
@@ -33,7 +42,7 @@ final class SystemApiDaemonCliTest extends TestCase
         self::assertSame(0, $result['exitCode'], $result['stderr']);
 
         $responses = $this->decodeNdjson($result['stdout']);
-        self::assertCount(2, $responses);
+        self::assertCount(3, $responses);
 
         self::assertSame('daemon-cap-001', $responses[0]['request_id']);
         self::assertNull($responses[0]['error']);
@@ -43,6 +52,11 @@ final class SystemApiDaemonCliTest extends TestCase
         self::assertNull($responses[1]['error']);
         self::assertSame('profiles.get', $responses[1]['result']['method']);
         self::assertSame('w4-os-home', $responses[1]['result']['resource']['id']);
+
+        self::assertSame('daemon-dbus-runtime-001', $responses[2]['request_id']);
+        self::assertNull($responses[2]['error']);
+        self::assertSame('system.dbus-runtime', $responses[2]['result']['method']);
+        self::assertSame('system-api-dbus-runtime-diagnosis', $responses[2]['result']['resource']['kind']);
     }
 
     public function testServeStdioReturnsProtocolErrorForInvalidEnvelope(): void
