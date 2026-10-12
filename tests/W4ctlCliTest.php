@@ -148,6 +148,55 @@ final class W4ctlCliTest extends TestCase
         self::assertStringContainsString('Artifact no soportado: runtime', $result['stderr']);
     }
 
+    public function testUpdatePlanCreatesCanonicalPlanInCustomPath(): void
+    {
+        $outputPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4ctl-update-plan-' . bin2hex(random_bytes(6)) . '.json';
+
+        try {
+            $result = $this->runPhpScript([
+                $this->scriptPath(),
+                'update:plan',
+                '--request',
+                'examples/update/home-lab-to-1.0.1.update-request.json',
+                '--operation-id',
+                'w4ctl-update-cli-001',
+                '--output',
+                $outputPath,
+            ]);
+
+            self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+            $payload = $this->decodeJson($result['stdout']);
+            self::assertSame('ok', $payload['status']);
+            self::assertSame('update:plan', $payload['command']);
+            self::assertSame('w4-os-home', $payload['profile_id']);
+            self::assertSame('w4ctl-update-cli-001', $payload['operation_id']);
+            self::assertSame('1.0.1-lab', $payload['target_version']);
+            self::assertSame('live-apt', $payload['apply_mode']);
+            self::assertSame($this->normalizePath($outputPath), $payload['output_path']);
+
+            $plan = $this->decodeJsonFile($outputPath);
+            self::assertSame('update-plan', $plan['kind']);
+            self::assertSame('w4ctl-update-cli-001', $plan['operation_id']);
+            self::assertSame('pending_health', $plan['health_check_manifest']['pending_state']);
+        } finally {
+            if (is_file($outputPath)) {
+                unlink($outputPath);
+            }
+        }
+    }
+
+    public function testUpdatePlanRejectsMissingRequest(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'update:plan',
+        ]);
+
+        self::assertSame(1, $result['exitCode']);
+        self::assertStringContainsString('Debe indicar un archivo usando --request', $result['stderr']);
+    }
+
     /**
      * @param list<string> $command
      * @return array{exitCode:int,stdout:string,stderr:string}
@@ -189,6 +238,22 @@ final class W4ctlCliTest extends TestCase
         $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
         return $data;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decodeJsonFile(string $path): array
+    {
+        $raw = file_get_contents($path);
+        self::assertNotFalse($raw, sprintf('No se pudo leer %s', $path));
+
+        return $this->decodeJson($raw);
+    }
+
+    private function normalizePath(string $path): string
+    {
+        return str_replace(DIRECTORY_SEPARATOR, '/', $path);
     }
 
     private function scriptPath(): string

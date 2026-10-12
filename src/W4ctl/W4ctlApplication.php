@@ -8,18 +8,21 @@ use JsonException;
 use W4\OS\Manifest\ManifestToolkit;
 use W4\OS\Support\ArtifactMetadataToolkit;
 use W4\OS\Support\ValidationError;
+use W4\OS\Update\UpdateToolkit;
 
 final class W4ctlApplication
 {
     private string $rootDir;
     private ManifestToolkit $manifestToolkit;
     private ArtifactMetadataToolkit $metadataToolkit;
+    private UpdateToolkit $updateToolkit;
 
     public function __construct(string $rootDir)
     {
         $this->rootDir = $rootDir;
         $this->manifestToolkit = new ManifestToolkit($rootDir);
         $this->metadataToolkit = new ArtifactMetadataToolkit();
+        $this->updateToolkit = new UpdateToolkit();
     }
 
     /**
@@ -38,6 +41,7 @@ final class W4ctlApplication
             'build:validate' => $this->handleBuildValidate($options),
             'live:inspect' => $this->handleLiveInspect($options),
             'artifact:manifest' => $this->handleArtifactManifest($options),
+            'update:plan' => $this->handleUpdatePlan($options),
             default => throw new ValidationError(sprintf('Comando no soportado: %s', $command)),
         };
     }
@@ -314,6 +318,57 @@ final class W4ctlApplication
     }
 
     /**
+     * @param array<string, string|bool> $options
+     * @return array<string, mixed>
+     */
+    private function handleUpdatePlan(array $options): array
+    {
+        $requestPathOption = $options['request'] ?? null;
+        if (!is_string($requestPathOption) || $requestPathOption === '') {
+            throw new ValidationError('Debe indicar un archivo usando --request');
+        }
+
+        $requestPath = $this->toAbsolutePath($requestPathOption);
+        $request = $this->updateToolkit->readJsonFile($requestPath);
+        $this->updateToolkit->validateUpdateRequest($request, $requestPath);
+
+        $operationId = $options['operation-id'] ?? null;
+        if ($operationId !== null && (!is_string($operationId) || $operationId === '')) {
+            throw new ValidationError('Debe indicar un OPERATION_ID valido usando --operation-id');
+        }
+
+        $plan = $this->updateToolkit->createUpdatePlan(
+            $request,
+            is_string($operationId) ? $operationId : null
+        );
+        $this->updateToolkit->validateUpdatePlan($plan, $requestPath);
+
+        $outputPathOption = $options['output'] ?? null;
+        $outputPath = is_string($outputPathOption) && $outputPathOption !== ''
+            ? $this->toAbsolutePath($outputPathOption)
+            : $this->rootDir
+                . DIRECTORY_SEPARATOR . 'build'
+                . DIRECTORY_SEPARATOR . 'update'
+                . DIRECTORY_SEPARATOR . 'plans'
+                . DIRECTORY_SEPARATOR . $plan['operation_id'] . '.update-plan.json';
+
+        $this->ensureDirectory(dirname($outputPath), 'No se pudo crear la carpeta de salida');
+        $this->writeJsonFile($outputPath, $plan, 'No se pudo escribir el update plan');
+
+        return $this->metadataToolkit->createSuccessPayload((string) $plan['profile_id'], [
+            'command' => 'update:plan',
+            'request_path' => $this->relativePath($requestPath),
+            'output_path' => $this->relativePath($outputPath),
+            'operation_id' => $plan['operation_id'],
+            'source_version' => $plan['source_version'],
+            'target_version' => $plan['target_version'],
+            'repository_snapshot' => $plan['repository_snapshot'],
+            'apply_mode' => $plan['execution']['apply_mode'] ?? null,
+            'stages' => $plan['execution']['stages'] ?? [],
+        ]);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function renderHelp(): array
@@ -357,6 +412,15 @@ final class W4ctlApplication
                         '--artifact <rootfs|overlay|live|iso>',
                         '--profile <PROFILE_ID>',
                         '--manifest <PATH opcional>',
+                    ],
+                ],
+                [
+                    'name' => 'update:plan',
+                    'description' => 'Genera un update-plan canonico desde un update-request.',
+                    'arguments' => [
+                        '--request <PATH>',
+                        '--operation-id <ID opcional>',
+                        '--output <PATH opcional>',
                     ],
                 ],
             ],
@@ -457,6 +521,22 @@ final class W4ctlApplication
     }
 
     /**
+     * @param array<string, mixed> $payload
+     */
+    private function writeJsonFile(string $path, array $payload, string $errorMessage): void
+    {
+        $json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            throw new ValidationError('No se pudo serializar el archivo JSON');
+        }
+
+        $written = file_put_contents($path, $json . PHP_EOL);
+        if ($written === false) {
+            throw new ValidationError(sprintf('%s: %s', $errorMessage, $path));
+        }
+    }
+
+    /**
      * @return list<string>
      */
     private function readFilesystemManifestPackages(string $path): array
@@ -535,6 +615,17 @@ final class W4ctlApplication
         }
 
         return $this->rootDir . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
+    }
+
+    private function ensureDirectory(string $path, string $errorMessage): void
+    {
+        if (is_dir($path)) {
+            return;
+        }
+
+        if (!mkdir($path, 0777, true) && !is_dir($path)) {
+            throw new ValidationError(sprintf('%s: %s', $errorMessage, $path));
+        }
     }
 
     private function relativePath(string $path): string
