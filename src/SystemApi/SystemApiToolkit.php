@@ -76,6 +76,16 @@ final class SystemApiToolkit
                         'get-capabilities',
                     ],
                 ],
+                'local_dbus_bridge' => [
+                    'script' => 'scripts/system_api_dbus_bridge.php',
+                    'commands' => [
+                        'Call',
+                        'GetCapabilities',
+                        'DiagnoseRuntime',
+                        'DescribeRuntime',
+                        'serve-stdio-bridge',
+                    ],
+                ],
                 'local_daemon' => [
                     'script' => 'scripts/system_api_daemon.php',
                     'commands' => [
