@@ -8,7 +8,7 @@
 ** Written by VirtualBox 7.2.8 (r173730)
 -->
 <VirtualBox xmlns="http://www.virtualbox.org/" version="1.19-windows">
-  <Machine uuid="{64e3dcf3-a96a-465b-a63a-7ff0c394f8f0}" name="W4-OS Home Test" OSType="Debian_64" snapshotFolder="Snapshots" lastStateChange="2026-10-12T06:00:15Z">
+  <Machine uuid="{64e3dcf3-a96a-465b-a63a-7ff0c394f8f0}" name="W4-OS Home Test" OSType="Debian_64" snapshotFolder="Snapshots" lastStateChange="2026-10-12T06:16:58Z">
     <MediaRegistry>
       <HardDisks>
         <HardDisk uuid="{56d76cba-8e49-4bbe-8b43-44262fd4c206}" location="W4-OS-Home-Test.vdi" format="VDI" type="Normal"/>
@@ -53,7 +53,7 @@
       <AudioAdapter driver="Null"/>
       <Clipboard/>
       <GuestProperties>
-        <GuestProperty name="/VirtualBox/HostInfo/GUI/LanguageID" value="es_ES" timestamp="1791782401546809300" flags="RDONLYGUEST"/>
+        <GuestProperty name="/VirtualBox/HostInfo/GUI/LanguageID" value="es_ES" timestamp="1791785851418601400" flags=""/>
       </GuestProperties>
       <StorageControllers>
         <StorageController name="IDE" type="PIIX4" PortCount="2" useHostIOCache="true" Bootable="true">
