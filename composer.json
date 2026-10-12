@@ -23,6 +23,8 @@
         "scripts/read_system_api.php",
         "scripts/system_api_manager.php",
         "scripts/system_api_daemon.php",
+        "scripts/generate_system_api_dbus_binding.php",
+        "scripts/check_system_api_dbus_runtime.php",
         "scripts/validate_manifests.php",
         "scripts/generate_build_input.php",
         "scripts/advance_update_operation.php",
