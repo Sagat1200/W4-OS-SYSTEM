@@ -20,6 +20,7 @@
     },
     "bin": [
         "scripts/w4ctl.php",
+        "scripts/read_system_api.php",
         "scripts/validate_manifests.php",
         "scripts/generate_build_input.php",
         "scripts/advance_update_operation.php",

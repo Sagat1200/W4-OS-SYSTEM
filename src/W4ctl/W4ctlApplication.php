@@ -34,6 +34,15 @@ final class W4ctlApplication
         $command = $arguments[1] ?? 'help';
         $options = $this->parseOptions(array_slice($arguments, 2));
 
+        return $this->handleCommand($command, $options);
+    }
+
+    /**
+     * @param array<string, string|bool> $options
+     * @return array<string, mixed>
+     */
+    public function handleCommand(string $command, array $options = []): array
+    {
         return match ($command) {
             'help', '--help', '-h' => $this->renderHelp(),
             'profile:list' => $this->handleProfileList(),
