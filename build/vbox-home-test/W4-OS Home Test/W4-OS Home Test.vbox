@@ -8,7 +8,7 @@
 ** Written by VirtualBox 7.2.8 (r173730)
 -->
 <VirtualBox xmlns="http://www.virtualbox.org/" version="1.19-windows">
-  <Machine uuid="{64e3dcf3-a96a-465b-a63a-7ff0c394f8f0}" name="W4-OS Home Test" OSType="Debian_64" snapshotFolder="Snapshots" lastStateChange="2026-10-12T06:46:38Z">
+  <Machine uuid="{64e3dcf3-a96a-465b-a63a-7ff0c394f8f0}" name="W4-OS Home Test" OSType="Debian_64" snapshotFolder="Snapshots" lastStateChange="2026-10-12T08:19:27Z">
     <MediaRegistry>
       <HardDisks>
         <HardDisk uuid="{56d76cba-8e49-4bbe-8b43-44262fd4c206}" location="W4-OS-Home-Test.vdi" format="VDI" type="Normal"/>
@@ -19,10 +19,10 @@
       </DVDImages>
     </MediaRegistry>
     <ExtraData>
+      <ExtraDataItem name="GUI/Fullscreen" value="true"/>
       <ExtraDataItem name="GUI/LastCloseAction" value="PowerOff"/>
       <ExtraDataItem name="GUI/LastNormalWindowPosition" value="-1920,23,1920,1009,max"/>
       <ExtraDataItem name="GUI/LastScaleWindowPosition" value="-1279,276,640,480,max"/>
-      <ExtraDataItem name="GUI/Scale" value="true"/>
       <ExtraDataItem name="GUI/ScaleFactor" value="1"/>
     </ExtraData>
     <Hardware>
@@ -56,11 +56,7 @@
       <AudioAdapter driver="Null"/>
       <Clipboard/>
       <GuestProperties>
-        <GuestProperty name="/VirtualBox/GuestAdd/GuiOnFocus" value="1" timestamp="1791789848025943600" flags="TRANSIENT, RDONLYGUEST"/>
-        <GuestProperty name="/VirtualBox/HostInfo/GUI/LanguageID" value="es_ES" timestamp="1791789863609914200" flags="RDONLYGUEST"/>
-        <GuestProperty name="/VirtualBox/HostInfo/VBoxRev" value="173730" timestamp="1791787598267403502" flags="TRANSIENT, RDONLYGUEST"/>
-        <GuestProperty name="/VirtualBox/HostInfo/VBoxVer" value="7.2.8" timestamp="1791787598267403500" flags="TRANSIENT, RDONLYGUEST"/>
-        <GuestProperty name="/VirtualBox/HostInfo/VBoxVerExt" value="7.2.8" timestamp="1791787598267403501" flags="TRANSIENT, RDONLYGUEST"/>
+        <GuestProperty name="/VirtualBox/HostInfo/GUI/LanguageID" value="es_ES" timestamp="1791793029743886700" flags="RDONLYGUEST"/>
       </GuestProperties>
       <StorageControllers>
         <StorageController name="IDE" type="PIIX4" PortCount="2" useHostIOCache="true" Bootable="true">
