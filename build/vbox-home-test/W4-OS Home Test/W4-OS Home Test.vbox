@@ -8,12 +8,13 @@
 ** Written by VirtualBox 7.2.8 (r173730)
 -->
 <VirtualBox xmlns="http://www.virtualbox.org/" version="1.19-windows">
-  <Machine uuid="{64e3dcf3-a96a-465b-a63a-7ff0c394f8f0}" name="W4-OS Home Test" OSType="Debian_64" snapshotFolder="Snapshots" lastStateChange="2026-10-12T06:17:41Z">
+  <Machine uuid="{64e3dcf3-a96a-465b-a63a-7ff0c394f8f0}" name="W4-OS Home Test" OSType="Debian_64" snapshotFolder="Snapshots" lastStateChange="2026-10-12T06:22:04Z">
     <MediaRegistry>
       <HardDisks>
         <HardDisk uuid="{56d76cba-8e49-4bbe-8b43-44262fd4c206}" location="W4-OS-Home-Test.vdi" format="VDI" type="Normal"/>
       </HardDisks>
       <DVDImages>
+        <Image uuid="{0a0a73e3-e1c6-4225-bc41-e924c0719def}" location="C:/Users/user/Downloads/live-image-amd64.hybrid.iso"/>
         <Image uuid="{2912c0df-8c62-4a32-93d3-ffbd1a776794}" location="C:/W4/Packages/W4-OS SYSTEM/build/iso-output/w4-os-home-test/w4-os-home-test-live-amd64.iso"/>
       </DVDImages>
     </MediaRegistry>
@@ -57,7 +58,9 @@
       </GuestProperties>
       <StorageControllers>
         <StorageController name="IDE" type="PIIX4" PortCount="2" useHostIOCache="true" Bootable="true">
-          <AttachedDevice passthrough="false" type="DVD" hotpluggable="false" port="0" device="0"/>
+          <AttachedDevice passthrough="false" type="DVD" hotpluggable="false" port="0" device="0">
+            <Image uuid="{0a0a73e3-e1c6-4225-bc41-e924c0719def}"/>
+          </AttachedDevice>
         </StorageController>
         <StorageController name="SATA" type="AHCI" PortCount="2" useHostIOCache="false" Bootable="true" IDE0MasterEmulationPort="0" IDE0SlaveEmulationPort="1" IDE1MasterEmulationPort="2" IDE1SlaveEmulationPort="3">
           <AttachedDevice type="HardDisk" hotpluggable="false" port="0" device="0">
