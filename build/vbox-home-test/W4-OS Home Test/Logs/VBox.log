@@ -1826,3 +1826,89 @@
 00:00:25.178870 VMSVGA: 3D disabled, but command 1099 will be processed
 00:00:25.179092 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1280 h=800 bpp=32 cbLine=0x1400 flags=0x1 origin=0,0
 00:00:34.808192 drvNATAsyncIoThread: Wakeup socket read error in poll loop: 10040
+00:15:46.147757 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=0000000000000000 w=1280 h=800 bpp=0 cbLine=0x0 flags=0x2 origin=0,0
+00:15:47.216339 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1280 h=800 bpp=32 cbLine=0x1400 flags=0x1 origin=0,0
+00:15:47.217175 GUI: UIMachineLogic: Guest-screen count changed
+00:16:19.308175 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=0000000000000000 w=1280 h=800 bpp=0 cbLine=0x0 flags=0x2 origin=0,0
+00:17:08.564867 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1280 h=800 bpp=32 cbLine=0x1400 flags=0x1 origin=0,0
+00:17:08.581451 GUI: UIMachineLogic: Guest-screen count changed
+00:18:13.843834 GUI: UIMachineView::handleScaleChange: Screen=0
+00:18:13.847317 GUI: UIMachineViewNormal::adjustGuestScreenSize: Adjust guest-screen size if necessary
+00:18:13.847356 GUI: UIMachineView::sltPerformGuestResize: Sending guest size-hint to screen 0 as 1097x545
+00:18:13.847381 VMMDev: SetVideoModeHint: Got a video mode hint (1097x545x32)@(0x0),(1;0) at 0
+00:18:13.859847 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:18:21.915281 GUI: UIMachineView::handleScaleChange: Screen=0
+00:18:21.915386 GUI: UIMachineViewNormal::adjustGuestScreenSize: Adjust guest-screen size if necessary
+00:18:21.927518 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:18:26.660691 GUI: UIMachineView::handleScaleChange: Screen=0
+00:18:26.665307 GUI: UIMachineViewNormal::adjustGuestScreenSize: Adjust guest-screen size if necessary
+00:18:26.665396 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:18:53.602086 GUI: UIMachineView::handleScaleChange: Screen=0
+00:18:53.605154 GUI: UIMachineViewNormal::adjustGuestScreenSize: Adjust guest-screen size if necessary
+00:18:53.611100 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:19:20.446498 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:19:24.232346 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:19:25.866041 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:19:28.276944 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:19:40.133094 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:19:41.576917 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:19:43.124166 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:19:56.729650 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:20:00.607511 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:20:07.250687 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:20:07.504476 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:20:13.671851 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:20:14.893580 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:20:18.233259 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:34:12.363564 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=0000000000000000 w=1280 h=800 bpp=0 cbLine=0x0 flags=0x2 origin=0,0
+00:34:12.694913 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1280 h=800 bpp=32 cbLine=0x1400 flags=0x1 origin=0,0
+00:34:12.711519 GUI: UIMachineLogic: Guest-screen count changed
+00:34:13.372478 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:34:17.326381 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:34:20.092176 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:37:16.146512 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=0000000000000000 w=1280 h=800 bpp=0 cbLine=0x0 flags=0x2 origin=0,0
+00:37:16.151839 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1280 h=768 bpp=32 cbLine=0x1400 flags=0x1 origin=0,0
+00:37:16.170702 GUI: UIMachineLogic: Guest-screen count changed
+00:37:16.914340 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:37:27.228561 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:37:38.840772 DnD: User Interface Privilege Isolation (UIPI) is running with SECURITY_MANDATORY_MEDIUM_RID
+00:37:38.841681 GUI: UIMachineViewScale::resendSizeHint: Restoring guest size-hint for screen 0 to 800x600
+00:37:38.841718 VMMDev: SetVideoModeHint: Got a video mode hint (800x600x32)@(0x0),(1;0) at 0
+00:37:39.962060 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:37:54.561096 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:38:10.987291 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=0000000000000000 w=1280 h=768 bpp=0 cbLine=0x0 flags=0x2 origin=0,0
+00:38:10.991220 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1280 h=800 bpp=32 cbLine=0x1400 flags=0x1 origin=0,0
+00:38:10.997301 GUI: UIMachineLogic: Guest-screen count changed
+00:38:25.674461 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=0000000000000000 w=1280 h=800 bpp=0 cbLine=0x0 flags=0x2 origin=0,0
+00:38:25.679991 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1280 h=960 bpp=32 cbLine=0x1400 flags=0x1 origin=0,0
+00:38:25.688997 GUI: UIMachineLogic: Guest-screen count changed
+00:38:33.233127 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=0000000000000000 w=1280 h=960 bpp=0 cbLine=0x0 flags=0x2 origin=0,0
+00:38:33.237505 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1280 h=800 bpp=32 cbLine=0x1400 flags=0x1 origin=0,0
+00:38:33.243790 GUI: UIMachineLogic: Guest-screen count changed
+00:38:45.739907 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=0000000000000000 w=1280 h=800 bpp=0 cbLine=0x0 flags=0x2 origin=0,0
+00:38:45.746647 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1920 h=1200 bpp=32 cbLine=0x1E00 flags=0x1 origin=0,0
+00:38:45.751386 GUI: UIMachineLogic: Guest-screen count changed
+00:38:56.539416 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=0000000000000000 w=1920 h=1200 bpp=0 cbLine=0x0 flags=0x2 origin=0,0
+00:38:56.548705 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1920 h=1080 bpp=32 cbLine=0x1E00 flags=0x1 origin=0,0
+00:38:56.552001 GUI: UIMachineLogic: Guest-screen count changed
+00:39:13.596757 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=0000000000000000 w=1920 h=1080 bpp=0 cbLine=0x0 flags=0x2 origin=0,0
+00:39:13.601418 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1280 h=720 bpp=32 cbLine=0x1400 flags=0x1 origin=0,0
+00:39:13.606334 GUI: UIMachineLogic: Guest-screen count changed
+00:39:21.464125 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=0000000000000000 w=1280 h=720 bpp=0 cbLine=0x0 flags=0x2 origin=0,0
+00:39:21.468275 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1280 h=768 bpp=32 cbLine=0x1400 flags=0x1 origin=0,0
+00:39:21.474499 GUI: UIMachineLogic: Guest-screen count changed
+00:39:26.362980 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=0000000000000000 w=1280 h=768 bpp=0 cbLine=0x0 flags=0x2 origin=0,0
+00:39:26.367027 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1280 h=800 bpp=32 cbLine=0x1400 flags=0x1 origin=0,0
+00:39:26.371099 GUI: UIMachineLogic: Guest-screen count changed
+00:39:40.878139 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=0000000000000000 w=1280 h=800 bpp=0 cbLine=0x0 flags=0x2 origin=0,0
+00:39:40.882637 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1280 h=960 bpp=32 cbLine=0x1400 flags=0x1 origin=0,0
+00:39:40.889018 GUI: UIMachineLogic: Guest-screen count changed
+00:39:48.856911 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=0000000000000000 w=1280 h=960 bpp=0 cbLine=0x0 flags=0x2 origin=0,0
+00:39:48.861669 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1280 h=1024 bpp=32 cbLine=0x1400 flags=0x1 origin=0,0
+00:39:48.867428 GUI: UIMachineLogic: Guest-screen count changed
+00:39:57.578829 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=0000000000000000 w=1280 h=1024 bpp=0 cbLine=0x0 flags=0x2 origin=0,0
+00:39:57.585695 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1920 h=1080 bpp=32 cbLine=0x1E00 flags=0x1 origin=0,0
+00:39:57.591012 GUI: UIMachineLogic: Guest-screen count changed
+00:43:20.426508 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=0000000000000000 w=1920 h=1080 bpp=0 cbLine=0x0 flags=0x2 origin=0,0
+00:43:20.432740 Display::i_handleDisplayResize: uScreenId=0 pvVRAM=000001df9e000000 w=1920 h=1200 bpp=32 cbLine=0x1E00 flags=0x1 origin=0,0
+00:43:20.436528 GUI: UIMachineLogic: Guest-screen count changed

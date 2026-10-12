@@ -74,6 +74,13 @@ final class SystemApiToolkit
                         'get-capabilities',
                     ],
                 ],
+                'local_daemon' => [
+                    'script' => 'scripts/system_api_daemon.php',
+                    'commands' => [
+                        'serve-stdio',
+                    ],
+                    'protocol' => 'ndjson',
+                ],
             ],
             'methods' => [
                 [

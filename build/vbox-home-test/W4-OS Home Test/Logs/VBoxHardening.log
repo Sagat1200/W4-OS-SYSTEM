@@ -4640,3 +4640,232 @@
 255c.1224: supR3HardenedScreenImage/LdrLoadDll: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\System32\mswsock.dll
 255c.1224: supR3HardenedMonitor_LdrLoadDll: pName=C:\WINDOWS\system32\mswsock.dll (rcNtResolve=0xc0150008) *pfFlags=0x0 pwszSearchPath=0000000000000001:<flags> [calling]
 255c.1224: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe2f290000 'C:\WINDOWS\system32\mswsock.dll'
+255c.156c: supR3HardenedScreenImage/NtCreateSection: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\System32\imageres.dll
+255c.156c: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 00000000000012fc (hFile=000000000000029c) with 0xc0000022 -> STATUS_TRUST_FAILURE
+255c.156c: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 00000000000008a0 (hFile=00000000000012fc) with 0xc0000022 -> STATUS_TRUST_FAILURE
+255c.156c: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 00000000000012fc (hFile=00000000000008a0) with 0xc0000022 -> STATUS_TRUST_FAILURE
+255c.156c: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 00000000000008a0 (hFile=00000000000012fc) with 0xc0000022 -> STATUS_TRUST_FAILURE
+255c.156c: supR3HardenedScreenImage/LdrLoadDll: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdumdim64.dll
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdumdim64.dll (rcNtResolve=0xc0150008) *pfFlags=0x0 pwszSearchPath=0000000000000009:<flags> [calling]
+255c.156c: supR3HardenedScreenImage/NtCreateSection: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdumdim64.dll
+255c.156c: supR3HardenedDllNotificationCallback: load   00007ffe0bb00000 LB 0x00163000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdumdim64.dll [fFlags=0x0]
+255c.156c: supR3HardenedScreenImage/LdrLoadDll: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdumdim64.dll
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-synch-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-synch-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-synch-l1-2-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-fibers-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-fibers-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-fibers-l1-1-1'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe32070000 'C:\WINDOWS\System32\kernel32.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe0bb00000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdumdim64.dll'
+255c.156c: supR3HardenedDllNotificationCallback: load   00007ffda8d20000 LB 0x03a04000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll [fFlags=0x0]
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-synch-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-synch-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-synch-l1-2-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-fibers-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-fibers-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-fibers-l1-1-1'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe32070000 'C:\WINDOWS\System32\kernel32.dll'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-string-l1-1-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-string-l1-1-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-string-l1-1-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-localization-l1-2-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-localization-l1-2-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-localization-l1-2-1'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-datetime-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-datetime-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-datetime-l1-1-1'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-localization-obsolete-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-localization-obsolete-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-localization-obsolete-l1-2-0'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffda8d20000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll'
+255c.156c: supR3HardenedDllNotificationCallback: load   00007ffe262b0000 LB 0x0023f000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll [fFlags=0x0]
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-synch-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-synch-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-synch-l1-2-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-fibers-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-fibers-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-fibers-l1-1-1'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe32070000 'C:\WINDOWS\System32\kernel32.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe262b0000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll'
+255c.156c: supR3HardenedDllNotificationCallback: Unload 00007ffda8d20000 LB 0x03a04000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll [flags=0x0]
+255c.156c: supR3HardenedDllNotificationCallback: Unload 00007ffe262b0000 LB 0x0023f000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll [flags=0x0]
+255c.156c: supR3HardenedDllNotificationCallback: load   00007ffda8d20000 LB 0x03a04000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll [fFlags=0x0]
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-synch-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-synch-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-synch-l1-2-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-fibers-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-fibers-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-fibers-l1-1-1'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe32070000 'C:\WINDOWS\System32\kernel32.dll'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-string-l1-1-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-string-l1-1-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-string-l1-1-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-localization-l1-2-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-localization-l1-2-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-localization-l1-2-1'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-datetime-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-datetime-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-datetime-l1-1-1'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-localization-obsolete-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-localization-obsolete-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-localization-obsolete-l1-2-0'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffda8d20000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll'
+255c.156c: supR3HardenedDllNotificationCallback: load   00007ffe262b0000 LB 0x0023f000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll [fFlags=0x0]
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-synch-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-synch-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-synch-l1-2-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-fibers-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-fibers-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-fibers-l1-1-1'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe32070000 'C:\WINDOWS\System32\kernel32.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe262b0000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll'
+255c.156c: supR3HardenedDllNotificationCallback: Unload 00007ffda8d20000 LB 0x03a04000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll [flags=0x0]
+255c.156c: supR3HardenedDllNotificationCallback: Unload 00007ffe262b0000 LB 0x0023f000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll [flags=0x0]
+255c.156c: supR3HardenedDllNotificationCallback: load   00007ffda8d20000 LB 0x03a04000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll [fFlags=0x0]
+255c.156c: supR3HardenedScreenImage/LdrLoadDll: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-synch-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-synch-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-synch-l1-2-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-fibers-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-fibers-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-fibers-l1-1-1'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe32070000 'C:\WINDOWS\System32\kernel32.dll'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-string-l1-1-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-string-l1-1-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-string-l1-1-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-localization-l1-2-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-localization-l1-2-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-localization-l1-2-1'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-datetime-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-datetime-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-datetime-l1-1-1'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-localization-obsolete-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-localization-obsolete-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-localization-obsolete-l1-2-0'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffda8d20000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll'
+255c.156c: supR3HardenedDllNotificationCallback: load   00007ffe262b0000 LB 0x0023f000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll [fFlags=0x0]
+255c.156c: supR3HardenedScreenImage/LdrLoadDll: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-synch-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-synch-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-synch-l1-2-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-fibers-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-fibers-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-fibers-l1-1-1'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe32070000 'C:\WINDOWS\System32\kernel32.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe262b0000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll'
+255c.156c: supR3HardenedDllNotificationCallback: Unload 00007ffda8d20000 LB 0x03a04000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll [flags=0x0]
+255c.156c: supR3HardenedDllNotificationCallback: Unload 00007ffe262b0000 LB 0x0023f000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll [flags=0x0]
+255c.156c: supR3HardenedDllNotificationCallback: load   00007ffda8d20000 LB 0x03a04000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll [fFlags=0x0]
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-synch-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-synch-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-synch-l1-2-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-fibers-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-fibers-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-fibers-l1-1-1'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe32070000 'C:\WINDOWS\System32\kernel32.dll'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-string-l1-1-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-string-l1-1-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-string-l1-1-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-localization-l1-2-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-localization-l1-2-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-localization-l1-2-1'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-datetime-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-datetime-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-datetime-l1-1-1'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-localization-obsolete-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-localization-obsolete-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-localization-obsolete-l1-2-0'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffda8d20000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll'
+255c.156c: supR3HardenedDllNotificationCallback: load   00007ffe262b0000 LB 0x0023f000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll [fFlags=0x0]
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-synch-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-synch-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-synch-l1-2-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-fibers-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-fibers-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-fibers-l1-1-1'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe32070000 'C:\WINDOWS\System32\kernel32.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe262b0000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll'
+255c.156c: supR3HardenedDllNotificationCallback: Unload 00007ffda8d20000 LB 0x03a04000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll [flags=0x0]
+255c.156c: supR3HardenedDllNotificationCallback: Unload 00007ffe262b0000 LB 0x0023f000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll [flags=0x0]
+255c.156c: supR3HardenedDllNotificationCallback: load   00007ffda8d20000 LB 0x03a04000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll [fFlags=0x0]
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-synch-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-synch-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-synch-l1-2-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-fibers-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-fibers-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-fibers-l1-1-1'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe32070000 'C:\WINDOWS\System32\kernel32.dll'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-string-l1-1-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-string-l1-1-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-string-l1-1-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-localization-l1-2-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-localization-l1-2-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-localization-l1-2-1'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-datetime-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-datetime-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-datetime-l1-1-1'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-localization-obsolete-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-localization-obsolete-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-localization-obsolete-l1-2-0'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffda8d20000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll'
+255c.156c: supR3HardenedDllNotificationCallback: load   00007ffe262b0000 LB 0x0023f000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll [fFlags=0x0]
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-synch-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-synch-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-synch-l1-2-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-fibers-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-fibers-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-fibers-l1-1-1'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe32070000 'C:\WINDOWS\System32\kernel32.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe262b0000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll'
+255c.156c: supR3HardenedDllNotificationCallback: Unload 00007ffda8d20000 LB 0x03a04000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll [flags=0x0]
+255c.156c: supR3HardenedDllNotificationCallback: Unload 00007ffe262b0000 LB 0x0023f000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll [flags=0x0]
+255c.156c: supR3HardenedDllNotificationCallback: load   00007ffda8d20000 LB 0x03a04000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll [fFlags=0x0]
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-synch-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-synch-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-synch-l1-2-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-fibers-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-fibers-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-fibers-l1-1-1'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe32070000 'C:\WINDOWS\System32\kernel32.dll'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-string-l1-1-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-string-l1-1-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-string-l1-1-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-localization-l1-2-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-localization-l1-2-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-localization-l1-2-1'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-datetime-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-datetime-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-datetime-l1-1-1'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-localization-obsolete-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-localization-obsolete-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-localization-obsolete-l1-2-0'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffda8d20000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll'
+255c.156c: supR3HardenedDllNotificationCallback: load   00007ffe262b0000 LB 0x0023f000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll [fFlags=0x0]
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-synch-l1-2-0) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-synch-l1-2-0 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-synch-l1-2-0'
+255c.156c: supR3HardenedIsApiSetDll: ApiSetQueryApiSetPresence(api-ms-win-core-fibers-l1-1-1) -> 0x0, fPresent=1
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=api-ms-win-core-fibers-l1-1-1 (rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000000801:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe30350000 'api-ms-win-core-fibers-l1-1-1'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe32070000 'C:\WINDOWS\System32\kernel32.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe262b0000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll'
+255c.156c: supR3HardenedScreenImage/LdrLoadDll: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdumdim64.dll
+255c.156c: supR3HardenedMonitor_LdrLoadDll: pName=C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdumdim64.dll (rcNtResolve=0xc0150008) *pfFlags=0x0 pwszSearchPath=0000000000000009:<flags> [calling]
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe0bb00000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdumdim64.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffda8d20000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe262b0000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffda8d20000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe262b0000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffda8d20000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe262b0000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffda8d20000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe262b0000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffda8d20000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe262b0000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffda8d20000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe262b0000 'C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll'
+255c.156c: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffe31420000 'C:\WINDOWS\System32\gdi32.dll'
+255c.156c: supR3HardenedDllNotificationCallback: Unload 00007ffda8d20000 LB 0x03a04000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igd9dxva64.dll [flags=0x0]
+255c.156c: supR3HardenedDllNotificationCallback: Unload 00007ffe262b0000 LB 0x0023f000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdgmm64.dll [flags=0x0]
+255c.156c: supR3HardenedDllNotificationCallback: Unload 00007ffe0bb00000 LB 0x00163000 C:\Windows\System32\DriverStore\FileRepository\iigd_dch.inf_amd64_a086f01cc7be643a\igdumdim64.dll [flags=0x0]
