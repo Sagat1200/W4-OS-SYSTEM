@@ -4613,3 +4613,129 @@
 33d4.2c40: supR3HardenedScreenImage/LdrLoadDll: cache hit (22900) on \Device\HarddiskVolume3\Windows\System32\dsparse.dll [avoiding WinVerifyTrust]
 33d4.2c40: supR3HardenedDllNotificationCallback: load   00007ffd58c30000 LB 0x00158000 C:\WINDOWS\SYSTEM32\DNSAPI.dll [fFlags=0x0]
 33d4.2c40: supR3HardenedScreenImage/LdrLoadDll: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\System32\dnsapi.dll [avoiding WinVerifyTrust]
+33d4.2c40: supR3HardNtViCallWinVerifyTrustCatFile: hFile=0000000000001714 pwszName=\Device\HarddiskVolume3\Windows\System32\dsparse.dll
+33d4.2c40: supR3HardNtViCallWinVerifyTrustCatFile: Cached context 0000027f351eb360
+33d4.2c40: supR3HardNtViCallWinVerifyTrustCatFile: hCatAdmin=0000027f351eb360
+33d4.2c40: supR3HardenedScreenImage/LdrLoadDll: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\System32\wintrust.dll
+33d4.2c40: supR3HardenedWinVerifyCacheProcessImportTodos: Processing 'rpcrt4.dll'...
+33d4.2c40: supR3HardenedWinVerifyCacheProcessImportTodos: 'rpcrt4.dll' -> '\Device\HarddiskVolume3\Windows\System32\rpcrt4.dll' [rcNtRedir=0xc0150008]
+33d4.2c40: supR3HardenedWinVerifyCacheProcessImportTodos: Processing 'msvcrt.dll'...
+33d4.2c40: supR3HardenedWinVerifyCacheProcessImportTodos: 'msvcrt.dll' -> '\Device\HarddiskVolume3\Windows\System32\msvcrt.dll' [rcNtRedir=0xc0150008]
+33d4.2c40: supR3HardenedWinVerifyCacheProcessImportTodos: Processing 'dsparse.dll'...
+33d4.2c40: supR3HardenedWinVerifyCacheProcessImportTodos: 'dsparse.dll' -> '\Device\HarddiskVolume3\Windows\System32\dsparse.dll' [rcNtRedir=0xc0150008]
+33d4.2c40: supR3HardenedScreenImage/Imports: cache hit (22900) on \Device\HarddiskVolume3\Windows\System32\dsparse.dll [lacks WinVerifyTrust]
+33d4.2c40: supR3HardenedWinVerifyCacheProcessImportTodos: Processing 'rpcrt4.dll'...
+33d4.2c40: supR3HardenedWinVerifyCacheProcessImportTodos: 'rpcrt4.dll' -> '\Device\HarddiskVolume3\Windows\System32\rpcrt4.dll' [rcNtRedir=0xc0150008]
+33d4.2c40: supR3HardenedWinVerifyCacheProcessImportTodos: Processing 'rpcrt4.dll'...
+33d4.2c40: supR3HardenedWinVerifyCacheProcessImportTodos: 'rpcrt4.dll' -> '\Device\HarddiskVolume3\Windows\System32\rpcrt4.dll' [rcNtRedir=0xc0150008]
+33d4.2c40: supR3HardenedMonitor_LdrLoadDll: pName=C:\WINDOWS\System32\WINTRUST.DLL (Input=WINTRUST.DLL, rcNtResolve=0xc0150008) *pfFlags=0x0 pwszSearchPath=0000000000000001:<flags> [calling]
+33d4.2c40: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd5ab10000 'C:\WINDOWS\System32\WINTRUST.DLL'
+33d4.2c40: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd5afa0000 'C:\WINDOWS\System32\CRYPT32.dll'
+33d4.2c40: supR3HardNtViCallWinVerifyTrustCatFile: cbHash=20 wszDigest=4B9DA5E37FF0C4843D6EA0765243BE5EB70ECEDB
+33d4.2c40: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd59230000 'C:\WINDOWS\system32\rsaenh.dll'
+33d4.2c40: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd5afa0000 'C:\WINDOWS\System32\crypt32.dll'
+33d4.2c40: supR3HardNtViCallWinVerifyTrustCatFile: WinVerifyTrust => 0x0; cat='C:\WINDOWS\system32\CatRoot\{F750E6C3-38EE-11D1-85E5-00C04FC295EE}\Microsoft-OneCore-CoreSystem-Core-merged-Package~31bf3856ad364e35~amd64~~10.0.26100.9168.cat'; file='\Device\HarddiskVolume3\Windows\System32\dsparse.dll'
+33d4.2c40: supR3HardNtViCallWinVerifyTrustCatFile -> 0 (org 22900)
+33d4.2c40: supR3HardenedWinVerifyCacheProcessWvtTodos: 0 (was 22900) fWinVerifyTrust=1 for '\Device\HarddiskVolume3\Windows\System32\dsparse.dll'
+33d4.2c40: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd59230000 'C:\WINDOWS\system32\rsaenh.dll'
+33d4.2c40: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd5afa0000 'C:\WINDOWS\System32\crypt32.dll'
+33d4.2c40: supR3HardenedWinVerifyCacheProcessWvtTodos: 0 (was 0) fWinVerifyTrust=1 for '\Device\HarddiskVolume3\Windows\System32\dnsapi.dll'
+33d4.2c40: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd59230000 'C:\WINDOWS\system32\rsaenh.dll'
+33d4.2c40: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd5afa0000 'C:\WINDOWS\System32\crypt32.dll'
+33d4.2c40: supR3HardenedWinVerifyCacheProcessWvtTodos: 0 (was 0) fWinVerifyTrust=1 for '\Device\HarddiskVolume3\Windows\System32\dhcpcsvc.dll'
+33d4.2c40: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd59230000 'C:\WINDOWS\system32\rsaenh.dll'
+33d4.2c40: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd5afa0000 'C:\WINDOWS\System32\crypt32.dll'
+33d4.2c40: supR3HardenedWinVerifyCacheProcessWvtTodos: 0 (was 0) fWinVerifyTrust=1 for '\Device\HarddiskVolume3\Windows\System32\dhcpcsvc6.dll'
+33d4.2c40: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd59230000 'C:\WINDOWS\system32\rsaenh.dll'
+33d4.2c40: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd5afa0000 'C:\WINDOWS\System32\crypt32.dll'
+33d4.2c40: supR3HardenedWinVerifyCacheProcessWvtTodos: 0 (was 0) fWinVerifyTrust=1 for '\Device\HarddiskVolume3\Windows\System32\nsi.dll'
+33d4.2c40: supR3HardenedScreenImage/LdrLoadDll: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\System32\mswsock.dll
+33d4.2c40: supR3HardenedMonitor_LdrLoadDll: pName=C:\WINDOWS\system32\mswsock.dll (rcNtResolve=0xc0150008) *pfFlags=0x0 pwszSearchPath=0000000000000001:<flags> [calling]
+33d4.2c40: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd59870000 'C:\WINDOWS\system32\mswsock.dll'
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001160 (hFile=000000000000179c) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 000000000000179c (hFile=0000000000001160) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001160 (hFile=000000000000179c) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 000000000000179c (hFile=0000000000001160) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedScreenImage/NtCreateSection: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\System32\imageres.dll
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001768 (hFile=0000000000001238) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001238 (hFile=0000000000001768) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001768 (hFile=0000000000001238) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001258 (hFile=0000000000001158) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000000c10 (hFile=000000000000126c) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 000000000000126c (hFile=0000000000000c10) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000000c10 (hFile=000000000000126c) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 000000000000126c (hFile=0000000000000c10) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001164 (hFile=000000000000114c) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 000000000000114c (hFile=0000000000001164) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001164 (hFile=000000000000114c) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 000000000000114c (hFile=0000000000001164) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedScreenImage/LdrLoadDll: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\System32\ole32.dll
+33d4.3db8: supR3HardenedMonitor_LdrLoadDll: pName=C:\WINDOWS\system32\ole32.dll (rcNtResolve=0xc0150008) *pfFlags=0x0 pwszSearchPath=0000000000000009:<flags> [calling]
+33d4.3db8: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd5bf10000 'C:\WINDOWS\system32\ole32.dll'
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 000000000000111c (hFile=0000000000001164) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001164 (hFile=000000000000111c) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 000000000000111c (hFile=0000000000001164) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001164 (hFile=000000000000111c) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedScreenImage/NtCreateSection: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\System32\imageres.dll
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 00000000000017d4 (hFile=0000000000000940) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000000940 (hFile=00000000000017d4) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 00000000000017d4 (hFile=0000000000000940) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000000940 (hFile=00000000000017d4) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001210 (hFile=000000000000122c) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 000000000000122c (hFile=0000000000001210) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001210 (hFile=000000000000122c) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 000000000000122c (hFile=0000000000001210) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001490 (hFile=0000000000001144) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001144 (hFile=0000000000001490) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001490 (hFile=0000000000001144) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001144 (hFile=0000000000001490) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedWinVerifyCacheScheduleImports: Import todo: #0 'msvcrt.dll'.
+33d4.3db8: supHardenedWinVerifyImageByHandle: -> 0 (\Device\HarddiskVolume3\Windows\System32\TextShaping.dll)
+33d4.3db8: supR3HardenedWinVerifyCacheInsert: \Device\HarddiskVolume3\Windows\System32\TextShaping.dll
+33d4.3db8: supR3HardenedDllNotificationCallback: load   00007ffd43410000 LB 0x000fb000 C:\WINDOWS\SYSTEM32\TextShaping.dll [fFlags=0x0]
+33d4.3db8: supR3HardenedScreenImage/LdrLoadDll: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\System32\TextShaping.dll [avoiding WinVerifyTrust]
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000000be0 (hFile=0000000000001748) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001748 (hFile=0000000000000be0) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000000be0 (hFile=0000000000001748) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001748 (hFile=0000000000000be0) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001304 (hFile=00000000000011d4) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 00000000000011d4 (hFile=0000000000001304) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001304 (hFile=00000000000011d4) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 00000000000011d4 (hFile=0000000000001304) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001498 (hFile=00000000000011b4) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 00000000000011b4 (hFile=0000000000001498) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001498 (hFile=00000000000011b4) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 00000000000011b4 (hFile=0000000000001498) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 00000000000012f4 (hFile=0000000000001710) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001710 (hFile=00000000000012f4) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 00000000000012f4 (hFile=0000000000001710) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001710 (hFile=00000000000012f4) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001740 (hFile=0000000000001304) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001304 (hFile=0000000000001740) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001740 (hFile=0000000000001304) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3db8: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 0000000000001304 (hFile=0000000000001740) with 0xc0000022 -> STATUS_TRUST_FAILURE
+33d4.3cd8: supR3HardenedDllNotificationCallback: Unload 00007ffd44080000 LB 0x0000d000 C:\Program Files\Oracle\VirtualBox\VBoxGuestPropSvc.DLL [flags=0x0]
+33d4.2864: supR3HardenedDllNotificationCallback: Unload 00007ffd44090000 LB 0x0000c000 C:\Program Files\Oracle\VirtualBox\VBoxGuestControlSvc.DLL [flags=0x0]
+33d4.3d6c: supR3HardenedDllNotificationCallback: Unload 00007ffd46750000 LB 0x00016000 C:\Program Files\Oracle\VirtualBox\VBoxSharedFolders.DLL [flags=0x0]
+33d4.36b0: supR3HardenedDllNotificationCallback: Unload 00007ffd54660000 LB 0x0000d000 C:\Program Files\Oracle\VirtualBox\VBoxDragAndDropSvc.DLL [flags=0x0]
+33d4.146c: supR3HardenedWinVerifyCacheScheduleImports: Import todo: #0 'msvcrt.dll'.
+33d4.146c: supHardenedWinVerifyImageByHandle: -> 22900 (\Device\HarddiskVolume3\Windows\System32\edputil.dll)
+33d4.146c: supR3HardenedWinVerifyCacheInsert: \Device\HarddiskVolume3\Windows\System32\edputil.dll
+33d4.146c: supR3HardenedDllNotificationCallback: load   00007ffd363b0000 LB 0x00029000 C:\WINDOWS\SYSTEM32\edputil.dll [fFlags=0x0]
+33d4.146c: supR3HardenedScreenImage/LdrLoadDll: cache hit (22900) on \Device\HarddiskVolume3\Windows\System32\edputil.dll [avoiding WinVerifyTrust]
+33d4.146c: supR3HardenedDllNotificationCallback: Unload 00007ffd458d0000 LB 0x00022000 C:\Program Files\Oracle\VirtualBox\VBoxSharedClipboard.DLL [flags=0x0]
+33d4.3ca0: supR3HardenedDllNotificationCallback: Unload 00007ffc97df0000 LB 0x00af7000 C:\Program Files\Oracle\VirtualBox\VBoxDD.DLL [flags=0x0]
+33d4.3ca0: supR3HardenedDllNotificationCallback: Unload 00007ffd22740000 LB 0x00075000 C:\Program Files\Oracle\VirtualBox\VBoxDDU.dll [flags=0x0]
+33d4.3ca0: supR3HardenedDllNotificationCallback: Unload 00007ffc96f90000 LB 0x00e5e000 C:\Program Files\Oracle\VirtualBox\VBoxDD2.dll [flags=0x0]
+33d4.3db8: supR3HardenedDllNotificationCallback: Unload 00007ffc988f0000 LB 0x005b7000 C:\Program Files\Oracle\VirtualBox\VBoxVMM.DLL [flags=0x0]
+33d4.3db8: supR3HardenedDllNotificationCallback: Unload 00007ffd44240000 LB 0x00015000 C:\WINDOWS\system32\wbem\wbemsvc.dll [flags=0x0]
+33d4.3db8: supR3HardenedDllNotificationCallback: Unload 00007ffd350b0000 LB 0x0005c000 C:\WINDOWS\system32\dataexchange.dll [flags=0x0]
+33d4.3db8: supR3HardenedDllNotificationCallback: Unload 00007ffd4d7d0000 LB 0x00250000 C:\WINDOWS\system32\twinapi.appcore.dll [flags=0x0]
+33d4.3db8: supR3HardenedDllNotificationCallback: Unload 00007ffd424b0000 LB 0x000f5000 C:\WINDOWS\system32\wbem\fastprox.dll [flags=0x0]
+33d4.3db8: supR3HardenedDllNotificationCallback: Unload 00007ffd17aa0000 LB 0x000eb000 C:\Program Files\Oracle\VirtualBox\VBoxProxyStub.dll [flags=0x0]
+33d4.3db8: supR3HardenedDllNotificationCallback: Unload 00007ffd441e0000 LB 0x00012000 C:\WINDOWS\system32\wbem\wbemprox.dll [flags=0x0]
+33d4.3db8: supR3HardenedDllNotificationCallback: Unload 00007ffd461a0000 LB 0x0007a000 C:\WINDOWS\SYSTEM32\wbemcomn.dll [flags=0x0]
+33d4.3db8: supR3HardenedDllNotificationCallback: Unload 00007ffc991e0000 LB 0x00433000 C:\Program Files\Oracle\VirtualBox\VBoxC.dll [flags=0x0]
+33d4.3db8: Terminating the normal way: rcExit=0
+1948.2778: supR3HardNtChildWaitFor[2]: Quitting: ExitCode=0x0 (rcNtWait=0x0, rcNt1=0x0, rcNt2=0x103, rcNt3=0x103, 628064 ms, the end);
+1220.40ac: supR3HardNtChildWaitFor[1]: Quitting: ExitCode=0x0 (rcNtWait=0x0, rcNt1=0x0, rcNt2=0x103, rcNt3=0x103, 629131 ms, the end);
