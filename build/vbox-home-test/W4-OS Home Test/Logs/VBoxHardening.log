@@ -4655,3 +4655,28 @@
 3ec4.2a14: supR3HardenedScreenImage/LdrLoadDll: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\System32\mswsock.dll
 3ec4.2a14: supR3HardenedMonitor_LdrLoadDll: pName=C:\WINDOWS\system32\mswsock.dll (rcNtResolve=0xc0150008) *pfFlags=0x0 pwszSearchPath=0000000000000001:<flags> [calling]
 3ec4.2a14: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd59870000 'C:\WINDOWS\system32\mswsock.dll'
+3ec4.3bc4: supR3HardenedDllNotificationCallback: Unload 00007ffd467c0000 LB 0x0000d000 C:\Program Files\Oracle\VirtualBox\VBoxGuestPropSvc.DLL [flags=0x0]
+3ec4.17f0: supR3HardenedDllNotificationCallback: Unload 00007ffd46a60000 LB 0x0000c000 C:\Program Files\Oracle\VirtualBox\VBoxGuestControlSvc.DLL [flags=0x0]
+3ec4.3e9c: supR3HardenedDllNotificationCallback: Unload 00007ffd46af0000 LB 0x00016000 C:\Program Files\Oracle\VirtualBox\VBoxSharedFolders.DLL [flags=0x0]
+3ec4.3b20: supR3HardenedDllNotificationCallback: Unload 00007ffd49f60000 LB 0x0000d000 C:\Program Files\Oracle\VirtualBox\VBoxDragAndDropSvc.DLL [flags=0x0]
+3ec4.37fc: supR3HardenedWinVerifyCacheScheduleImports: Import todo: #0 'msvcrt.dll'.
+3ec4.37fc: supHardenedWinVerifyImageByHandle: -> 22900 (\Device\HarddiskVolume3\Windows\System32\edputil.dll)
+3ec4.37fc: supR3HardenedWinVerifyCacheInsert: \Device\HarddiskVolume3\Windows\System32\edputil.dll
+3ec4.37fc: supR3HardenedDllNotificationCallback: load   00007ffd363b0000 LB 0x00029000 C:\WINDOWS\SYSTEM32\edputil.dll [fFlags=0x0]
+3ec4.37fc: supR3HardenedScreenImage/LdrLoadDll: cache hit (22900) on \Device\HarddiskVolume3\Windows\System32\edputil.dll [avoiding WinVerifyTrust]
+3ec4.37fc: supR3HardenedDllNotificationCallback: Unload 00007ffd3d530000 LB 0x00022000 C:\Program Files\Oracle\VirtualBox\VBoxSharedClipboard.DLL [flags=0x0]
+3ec4.1f88: supR3HardenedDllNotificationCallback: Unload 00007ffc95950000 LB 0x00af7000 C:\Program Files\Oracle\VirtualBox\VBoxDD.DLL [flags=0x0]
+3ec4.1f88: supR3HardenedDllNotificationCallback: Unload 00007ffcdc9e0000 LB 0x00075000 C:\Program Files\Oracle\VirtualBox\VBoxDDU.dll [flags=0x0]
+3ec4.1f88: supR3HardenedDllNotificationCallback: Unload 00007ffc94af0000 LB 0x00e5e000 C:\Program Files\Oracle\VirtualBox\VBoxDD2.dll [flags=0x0]
+3ec4.46b8: supR3HardenedDllNotificationCallback: Unload 00007ffcb4d00000 LB 0x005b7000 C:\Program Files\Oracle\VirtualBox\VBoxVMM.DLL [flags=0x0]
+3ec4.46b8: supR3HardenedDllNotificationCallback: Unload 00007ffd44240000 LB 0x00015000 C:\WINDOWS\system32\wbem\wbemsvc.dll [flags=0x0]
+3ec4.46b8: supR3HardenedDllNotificationCallback: Unload 00007ffd424b0000 LB 0x000f5000 C:\WINDOWS\system32\wbem\fastprox.dll [flags=0x0]
+3ec4.46b8: supR3HardenedDllNotificationCallback: Unload 00007ffd441e0000 LB 0x00012000 C:\WINDOWS\system32\wbem\wbemprox.dll [flags=0x0]
+3ec4.46b8: supR3HardenedDllNotificationCallback: Unload 00007ffd461a0000 LB 0x0007a000 C:\WINDOWS\SYSTEM32\wbemcomn.dll [flags=0x0]
+3ec4.46b8: supR3HardenedDllNotificationCallback: Unload 00007ffd350b0000 LB 0x0005c000 C:\WINDOWS\system32\dataexchange.dll [flags=0x0]
+3ec4.46b8: supR3HardenedDllNotificationCallback: Unload 00007ffd4d7d0000 LB 0x00250000 C:\WINDOWS\system32\twinapi.appcore.dll [flags=0x0]
+3ec4.46b8: supR3HardenedDllNotificationCallback: Unload 00007ffcd9400000 LB 0x000eb000 C:\Program Files\Oracle\VirtualBox\VBoxProxyStub.dll [flags=0x0]
+3ec4.46b8: supR3HardenedDllNotificationCallback: Unload 00007ffc9e3b0000 LB 0x00433000 C:\Program Files\Oracle\VirtualBox\VBoxC.dll [flags=0x0]
+3ec4.46b8: Terminating the normal way: rcExit=0
+4190.37d8: supR3HardNtChildWaitFor[2]: Quitting: ExitCode=0x0 (rcNtWait=0x0, rcNt1=0x0, rcNt2=0x103, rcNt3=0x103, 1850426 ms, the end);
+2768.37c8: supR3HardNtChildWaitFor[1]: Quitting: ExitCode=0x0 (rcNtWait=0x0, rcNt1=0x0, rcNt2=0x103, rcNt3=0x103, 1851506 ms, the end);
