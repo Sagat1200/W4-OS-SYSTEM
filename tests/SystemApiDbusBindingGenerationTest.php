@@ -50,9 +50,18 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('org.w4.System1.Manager', $manifest['interface']);
         self::assertSame('pending-runtime-adapter', $manifest['binding_status']);
         self::assertFalse($manifest['enabled_by_default']);
-        self::assertSame('stdio-ndjson-daemon', $manifest['transport']['current_local_runtime']);
+        self::assertSame('stdio-ndjson-host', $manifest['transport']['current_local_runtime']);
         self::assertSame('dbus-system-bus', $manifest['transport']['future_public_binding']);
         self::assertSame('files/usr/share/w4/system-api/org.w4.System1.runtime-adapter.json', $manifest['activation']['adapter_specification']);
+        self::assertSame('files/usr/local/bin/w4-system-api-dbus-runtime-host', $manifest['activation']['runtime_entrypoint']);
+        self::assertSame('files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-host.php', $manifest['runtime_host']['entrypoint']);
+        self::assertSame('files/usr/local/bin/w4-system-api-dbus-runtime-host', $manifest['runtime_host']['wrapper']);
+        self::assertContains('DescribeHost', $manifest['runtime_host']['commands']);
+        self::assertContains('serve-stdio-host', $manifest['runtime_host']['commands']);
+        self::assertSame('files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-adapter.php', $manifest['runtime_adapter']['entrypoint']);
+        self::assertSame('files/usr/local/bin/w4-system-api-dbus-runtime-adapter', $manifest['runtime_adapter']['wrapper']);
+        self::assertContains('DescribeSpecification', $manifest['runtime_adapter']['commands']);
+        self::assertContains('serve-stdio-adapter', $manifest['runtime_adapter']['commands']);
         self::assertSame('files/usr/local/lib/w4/system-api/w4-system-api-dbus-bridge.php', $manifest['runtime_bridge']['entrypoint']);
         self::assertSame('files/usr/local/bin/w4-system-api-dbus-bridge', $manifest['runtime_bridge']['wrapper']);
         self::assertSame('files/usr/local/lib/w4/system-api/w4-system-api-bridge-readiness.php', $manifest['runtime_bridge']['readiness_entrypoint']);
@@ -69,6 +78,10 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertContains('system-api-dbus-binding-manifest.json', $manifest['generated_files']);
         self::assertContains('apply-binding.sh', $manifest['generated_files']);
         self::assertContains('files/usr/share/w4/system-api/org.w4.System1.runtime-adapter.json', $manifest['generated_files']);
+        self::assertContains('files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-host.php', $manifest['generated_files']);
+        self::assertContains('files/usr/local/bin/w4-system-api-dbus-runtime-host', $manifest['generated_files']);
+        self::assertContains('files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-adapter.php', $manifest['generated_files']);
+        self::assertContains('files/usr/local/bin/w4-system-api-dbus-runtime-adapter', $manifest['generated_files']);
         self::assertContains('files/usr/local/lib/w4/system-api/w4-system-api-dbus-bridge.php', $manifest['generated_files']);
         self::assertContains('files/usr/local/bin/w4-system-api-dbus-bridge-readiness', $manifest['generated_files']);
         self::assertContains('files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-diagnose.php', $manifest['generated_files']);
@@ -90,20 +103,22 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertNotFalse($serviceFile);
         self::assertStringContainsString('Name=org.w4.System1', $serviceFile);
         self::assertStringContainsString('SystemdService=w4-system-api.service', $serviceFile);
-        self::assertStringContainsString('Exec=/usr/local/bin/w4-system-api-dbus-bridge serve-dbus', $serviceFile);
-        self::assertStringContainsString('Pending runtime adapter', $serviceFile);
+        self::assertStringContainsString('Exec=/usr/local/bin/w4-system-api-dbus-runtime-host serve-dbus', $serviceFile);
+        self::assertStringContainsString('packaged runtime host exists', $serviceFile);
 
         $systemdUnit = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'systemd' . DIRECTORY_SEPARATOR . 'system' . DIRECTORY_SEPARATOR . 'w4-system-api.service');
         self::assertNotFalse($systemdUnit);
         self::assertStringContainsString('Type=dbus', $systemdUnit);
         self::assertStringContainsString('BusName=org.w4.System1', $systemdUnit);
         self::assertStringContainsString('EnvironmentFile=-/etc/w4/system-api-binding.env', $systemdUnit);
-        self::assertStringContainsString('ExecStart=/usr/local/bin/w4-system-api-dbus-bridge serve-dbus', $systemdUnit);
+        self::assertStringContainsString('ExecStart=/usr/local/bin/w4-system-api-dbus-runtime-host serve-dbus', $systemdUnit);
 
         $bindingEnv = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api-binding.env');
         self::assertNotFalse($bindingEnv);
         self::assertStringContainsString('W4_SYSTEM_API_BINDING_STATUS="pending-runtime-adapter"', $bindingEnv);
         self::assertStringContainsString('W4_SYSTEM_API_BRIDGE_ENTRY="/usr/local/bin/w4-system-api-dbus-bridge"', $bindingEnv);
+        self::assertStringContainsString('W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY="/usr/local/bin/w4-system-api-dbus-runtime-adapter"', $bindingEnv);
+        self::assertStringContainsString('W4_SYSTEM_API_RUNTIME_HOST_ENTRY="/usr/local/bin/w4-system-api-dbus-runtime-host"', $bindingEnv);
         self::assertStringContainsString('W4_SYSTEM_API_READINESS_ENTRY="/usr/local/bin/w4-system-api-dbus-bridge-readiness"', $bindingEnv);
         self::assertStringContainsString('W4_SYSTEM_API_DIAGNOSTICS_ENTRY="/usr/local/bin/w4-system-api-dbus-runtime-diagnose"', $bindingEnv);
 
@@ -175,6 +190,43 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('system-api-dbus-runtime-adapter-spec', $bridgeServeDbusPayload['adapter_specification']['kind']);
         self::assertArrayHasKey('runtime_diagnosis', $bridgeServeDbusPayload);
 
+        $runtimeAdapterScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-runtime-adapter.php');
+        self::assertNotFalse($runtimeAdapterScript);
+        self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-adapter'", $runtimeAdapterScript);
+        self::assertStringContainsString("case 'serve-stdio-adapter':", $runtimeAdapterScript);
+
+        $runtimeAdapterWrapper = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-runtime-adapter');
+        self::assertNotFalse($runtimeAdapterWrapper);
+        self::assertStringContainsString('/usr/bin/php /usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-adapter.php "$@"', $runtimeAdapterWrapper);
+
+        $runtimeHostScriptPath = $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-runtime-host.php';
+        $runtimeHostScript = file_get_contents($runtimeHostScriptPath);
+        self::assertNotFalse($runtimeHostScript);
+        self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-host'", $runtimeHostScript);
+        self::assertStringContainsString("case 'DescribeHost':", $runtimeHostScript);
+        self::assertStringContainsString("case 'serve-stdio-host':", $runtimeHostScript);
+
+        $runtimeHostWrapper = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-runtime-host');
+        self::assertNotFalse($runtimeHostWrapper);
+        self::assertStringContainsString('/usr/bin/php /usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-host.php "$@"', $runtimeHostWrapper);
+
+        $runtimeHostDescribe = $this->runGeneratedPhpScript([
+            $runtimeHostScriptPath,
+            'DescribeHost',
+        ]);
+        self::assertSame(0, $runtimeHostDescribe['exitCode'], $runtimeHostDescribe['stderr']);
+        $runtimeHostDescribePayload = $this->decodeJson($runtimeHostDescribe['stdout']);
+        self::assertSame('system-api-dbus-runtime-host', $runtimeHostDescribePayload['kind']);
+        self::assertSame('stdio-ndjson-host', $runtimeHostDescribePayload['transport']);
+
+        $runtimeHostServeDbus = $this->runGeneratedPhpScript([
+            $runtimeHostScriptPath,
+            'serve-dbus',
+        ]);
+        self::assertSame(3, $runtimeHostServeDbus['exitCode'], $runtimeHostServeDbus['stderr']);
+        $runtimeHostServeDbusPayload = $this->decodeJson($runtimeHostServeDbus['stdout']);
+        self::assertSame('packaged-runtime-host', $runtimeHostServeDbusPayload['bridge_kind']);
+
         $readinessScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'w4-system-api-bridge-readiness.php');
         self::assertNotFalse($readinessScript);
         self::assertStringContainsString("'kind' => 'system-api-dbus-bridge-readiness'", $readinessScript);
@@ -198,6 +250,10 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertStringContainsString('usr/share/dbus-1/system-services', $applyScript);
         self::assertStringContainsString('etc/systemd/system/w4-system-api.service', $applyScript);
         self::assertStringContainsString('usr/local/lib/w4/system-api/w4-system-api-dbus-bridge.php', $applyScript);
+        self::assertStringContainsString('usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-adapter.php', $applyScript);
+        self::assertStringContainsString('usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-host.php', $applyScript);
+        self::assertStringContainsString('usr/local/bin/w4-system-api-dbus-runtime-adapter', $applyScript);
+        self::assertStringContainsString('usr/local/bin/w4-system-api-dbus-runtime-host', $applyScript);
         self::assertStringContainsString('usr/local/bin/w4-system-api-dbus-bridge-readiness', $applyScript);
         self::assertStringContainsString('usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-diagnose.php', $applyScript);
         self::assertStringContainsString('usr/local/bin/w4-system-api-dbus-runtime-diagnose', $applyScript);
