@@ -52,6 +52,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertFalse($manifest['enabled_by_default']);
         self::assertSame('stdio-ndjson-daemon', $manifest['transport']['current_local_runtime']);
         self::assertSame('dbus-system-bus', $manifest['transport']['future_public_binding']);
+        self::assertSame('files/usr/share/w4/system-api/org.w4.System1.runtime-adapter.json', $manifest['activation']['adapter_specification']);
         self::assertSame('files/usr/local/lib/w4/system-api/w4-system-api-dbus-bridge.php', $manifest['runtime_bridge']['entrypoint']);
         self::assertSame('files/usr/local/bin/w4-system-api-dbus-bridge', $manifest['runtime_bridge']['wrapper']);
         self::assertSame('files/usr/local/lib/w4/system-api/w4-system-api-bridge-readiness.php', $manifest['runtime_bridge']['readiness_entrypoint']);
@@ -67,6 +68,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertContains('check-readiness', $manifest['runtime_bridge']['commands']);
         self::assertContains('system-api-dbus-binding-manifest.json', $manifest['generated_files']);
         self::assertContains('apply-binding.sh', $manifest['generated_files']);
+        self::assertContains('files/usr/share/w4/system-api/org.w4.System1.runtime-adapter.json', $manifest['generated_files']);
         self::assertContains('files/usr/local/lib/w4/system-api/w4-system-api-dbus-bridge.php', $manifest['generated_files']);
         self::assertContains('files/usr/local/bin/w4-system-api-dbus-bridge-readiness', $manifest['generated_files']);
         self::assertContains('files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-diagnose.php', $manifest['generated_files']);
@@ -77,6 +79,12 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertStringContainsString('<method name="Call">', $xml);
         self::assertStringContainsString('<method name="GetCapabilities">', $xml);
         self::assertStringContainsString('<property name="BindingStatus" type="s" access="read"/>', $xml);
+
+        $adapterSpecification = $this->decodeJsonFile($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'org.w4.System1.runtime-adapter.json');
+        self::assertSame('system-api-dbus-runtime-adapter-spec', $adapterSpecification['kind']);
+        self::assertSame('pending-runtime-adapter', $adapterSpecification['status']);
+        self::assertSame('serve-dbus', $adapterSpecification['activation']['entry_command']);
+        self::assertContains('bus-name-ownership', $adapterSpecification['required_capabilities']);
 
         $serviceFile = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'share' . DIRECTORY_SEPARATOR . 'dbus-1' . DIRECTORY_SEPARATOR . 'system-services' . DIRECTORY_SEPARATOR . 'org.w4.System1.service');
         self::assertNotFalse($serviceFile);
@@ -131,6 +139,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('system-api-dbus-bridge-runtime', $bridgeDescribePayload['kind']);
         self::assertSame('pending-runtime-adapter', $bridgeDescribePayload['binding_status']);
         self::assertContains('Call', $bridgeDescribePayload['commands']);
+        self::assertSame('system-api-dbus-runtime-adapter-spec', $bridgeDescribePayload['adapter_specification']['kind']);
 
         $pendingCallRequestPath = $outputDir . DIRECTORY_SEPARATOR . 'pending-call-request.json';
         file_put_contents(
@@ -163,6 +172,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('system-api-dbus-runtime-activation', $bridgeServeDbusPayload['kind']);
         self::assertSame('packaged-dbus-bridge', $bridgeServeDbusPayload['bridge_kind']);
         self::assertSame('serve-dbus', $bridgeServeDbusPayload['requested_command']);
+        self::assertSame('system-api-dbus-runtime-adapter-spec', $bridgeServeDbusPayload['adapter_specification']['kind']);
         self::assertArrayHasKey('runtime_diagnosis', $bridgeServeDbusPayload);
 
         $readinessScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'w4-system-api-bridge-readiness.php');

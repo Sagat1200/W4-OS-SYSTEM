@@ -73,6 +73,7 @@ final class SystemApiDbusBridge
                 'diagnose_runtime' => 'scripts/check_system_api_dbus_runtime.php',
                 'serve_dbus' => 'pending-runtime-adapter',
             ],
+            'adapter_specification' => $this->runtimeActivation->createAdapterSpecification(),
         ]);
     }
 

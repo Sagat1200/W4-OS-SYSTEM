@@ -28,6 +28,7 @@ final class SystemApiDbusBindingToolkit
     {
         $files = [
             'files/usr/share/w4/system-api/org.w4.System1.Manager.xml' => $this->buildIntrospectionXml(),
+            'files/usr/share/w4/system-api/org.w4.System1.runtime-adapter.json' => $this->buildRuntimeAdapterSpecificationJson(),
             'files/usr/share/dbus-1/system-services/org.w4.System1.service' => $this->buildDbusServiceFile(),
             'files/etc/systemd/system/w4-system-api.service' => $this->buildSystemdUnit(),
             'files/etc/w4/system-api-binding.env' => $this->buildBindingEnv(),
@@ -73,6 +74,7 @@ final class SystemApiDbusBindingToolkit
                     'systemd_unit' => 'files/etc/systemd/system/w4-system-api.service',
                     'runtime_env' => 'files/etc/w4/system-api-binding.env',
                     'adapter_status' => self::BINDING_STATUS,
+                    'adapter_specification' => 'files/usr/share/w4/system-api/org.w4.System1.runtime-adapter.json',
                 ],
                 'runtime_bridge' => [
                     'entrypoint' => 'files/usr/local/lib/w4/system-api/w4-system-api-dbus-bridge.php',
@@ -165,6 +167,53 @@ WantedBy=multi-user.target
 UNIT;
     }
 
+    private function buildRuntimeAdapterSpecificationJson(): string
+    {
+        $payload = [
+            'api_version' => self::API_VERSION,
+            'kind' => 'system-api-dbus-runtime-adapter-spec',
+            'status' => self::BINDING_STATUS,
+            'bus_name' => self::BUS_NAME,
+            'object_path' => self::OBJECT_PATH,
+            'interface' => self::INTERFACE_NAME,
+            'activation' => [
+                'entry_command' => 'serve-dbus',
+                'service_file' => '/usr/share/dbus-1/system-services/org.w4.System1.service',
+                'systemd_unit' => '/etc/systemd/system/w4-system-api.service',
+            ],
+            'required_capabilities' => [
+                'php-dbus-runtime-adapter',
+                'bus-name-ownership',
+                'dbus-method-dispatch',
+            ],
+            'required_methods' => [
+                'Call',
+                'GetCapabilities',
+            ],
+            'optional_methods' => [
+                'DiagnoseRuntime',
+                'DescribeRuntime',
+            ],
+            'protocol' => [
+                'input' => 'string-json',
+                'output' => 'string-json',
+                'transport' => 'dbus-system-bus',
+            ],
+            'exit_codes' => [
+                '0' => 'runtime-active',
+                '1' => 'configuration-error',
+                '3' => 'runtime-pending',
+            ],
+        ];
+
+        $encoded = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($encoded === false) {
+            throw new \RuntimeException('No se pudo serializar la especificacion del runtime adapter D-Bus');
+        }
+
+        return $encoded . PHP_EOL;
+    }
+
     private function buildBindingEnv(): string
     {
         return <<<ENV
@@ -217,6 +266,7 @@ $runtime = [
         'get_capabilities' => 'pending-runtime-adapter',
         'diagnose_runtime' => '/usr/local/bin/w4-system-api-dbus-runtime-diagnose',
     ],
+    'adapter_specification' => createAdapterSpecification(),
     'notes' => [
         'Este bridge empaquetado fija la semantica del binding D-Bus final.',
         'El adaptador D-Bus PHP real todavia no ha sido materializado en esta edicion.',
@@ -517,11 +567,55 @@ function createPendingActivationReport(array $runtimeDiagnosis): array
         'bus_name' => W4_SYSTEM_API_BUS_NAME,
         'object_path' => W4_SYSTEM_API_OBJECT_PATH,
         'interface' => W4_SYSTEM_API_INTERFACE,
+        'adapter_specification' => createAdapterSpecification(),
         'runtime_diagnosis' => $runtimeDiagnosis,
         'missing_capabilities' => is_array($runtimeDiagnosis['missing_capabilities'] ?? null)
             ? $runtimeDiagnosis['missing_capabilities']
             : [],
         'next_action' => 'materialize-runtime-adapter',
+    ];
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function createAdapterSpecification(): array
+{
+    return [
+        'api_version' => '1.0',
+        'kind' => 'system-api-dbus-runtime-adapter-spec',
+        'status' => W4_SYSTEM_API_STATUS,
+        'bus_name' => W4_SYSTEM_API_BUS_NAME,
+        'object_path' => W4_SYSTEM_API_OBJECT_PATH,
+        'interface' => W4_SYSTEM_API_INTERFACE,
+        'activation' => [
+            'entry_command' => 'serve-dbus',
+            'service_file' => '/usr/share/dbus-1/system-services/org.w4.System1.service',
+            'systemd_unit' => '/etc/systemd/system/w4-system-api.service',
+        ],
+        'required_capabilities' => [
+            'php-dbus-runtime-adapter',
+            'bus-name-ownership',
+            'dbus-method-dispatch',
+        ],
+        'required_methods' => [
+            'Call',
+            'GetCapabilities',
+        ],
+        'optional_methods' => [
+            'DiagnoseRuntime',
+            'DescribeRuntime',
+        ],
+        'protocol' => [
+            'input' => 'string-json',
+            'output' => 'string-json',
+            'transport' => 'dbus-system-bus',
+        ],
+        'exit_codes' => [
+            '0' => 'runtime-active',
+            '1' => 'configuration-error',
+            '3' => 'runtime-pending',
+        ],
     ];
 }
 

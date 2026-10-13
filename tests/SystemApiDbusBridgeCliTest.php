@@ -25,6 +25,8 @@ final class SystemApiDbusBridgeCliTest extends TestCase
         self::assertContains('Call', $payload['commands']);
         self::assertContains('serve-stdio-bridge', $payload['commands']);
         self::assertContains('serve-dbus', $payload['commands']);
+        self::assertSame('system-api-dbus-runtime-adapter-spec', $payload['adapter_specification']['kind']);
+        self::assertSame('serve-dbus', $payload['adapter_specification']['activation']['entry_command']);
     }
 
     public function testGetCapabilitiesDelegatesToSystemApiManager(): void
@@ -126,6 +128,7 @@ final class SystemApiDbusBridgeCliTest extends TestCase
         self::assertSame('pending-runtime-adapter', $payload['status']);
         self::assertSame('local-dbus-bridge', $payload['bridge_kind']);
         self::assertSame('serve-dbus', $payload['requested_command']);
+        self::assertSame('system-api-dbus-runtime-adapter-spec', $payload['adapter_specification']['kind']);
         self::assertArrayHasKey('runtime_diagnosis', $payload);
         self::assertArrayHasKey('missing_capabilities', $payload);
     }

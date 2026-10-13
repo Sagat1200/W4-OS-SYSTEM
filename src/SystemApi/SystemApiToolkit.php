@@ -86,6 +86,8 @@ final class SystemApiToolkit
                         'serve-stdio-bridge',
                         'serve-dbus',
                     ],
+                    'adapter_status' => 'pending-runtime-adapter',
+                    'activation_command' => 'serve-dbus',
                 ],
                 'local_daemon' => [
                     'script' => 'scripts/system_api_daemon.php',
