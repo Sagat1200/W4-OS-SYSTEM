@@ -122,6 +122,7 @@ final class SystemApiToolkit
                     'commands' => [
                         'DescribeLauncher',
                         'DescribeLaunchPlan',
+                        'DescribeActivationBootstrap',
                         'DescribeHost',
                         'DescribeSpecification',
                         'DescribeRuntime',
@@ -133,6 +134,7 @@ final class SystemApiToolkit
                     ],
                     'status' => 'launcher-ready',
                     'transport' => 'stdio-ndjson-launcher',
+                    'handoff_mode' => 'child-process-stdio-relay',
                 ],
                 'local_daemon' => [
                     'script' => 'scripts/system_api_daemon.php',

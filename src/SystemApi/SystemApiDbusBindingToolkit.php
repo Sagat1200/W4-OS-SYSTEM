@@ -29,6 +29,7 @@ final class SystemApiDbusBindingToolkit
         $files = [
             'files/usr/share/w4/system-api/org.w4.System1.Manager.xml' => $this->buildIntrospectionXml(),
             'files/usr/share/w4/system-api/org.w4.System1.runtime-adapter.json' => $this->buildRuntimeAdapterSpecificationJson(),
+            'files/usr/share/w4/system-api/org.w4.System1.runtime-bootstrap.json' => $this->buildRuntimeBootstrapJson(),
             'files/usr/share/dbus-1/system-services/org.w4.System1.service' => $this->buildDbusServiceFile(),
             'files/etc/systemd/system/w4-system-api.service' => $this->buildSystemdUnit(),
             'files/etc/w4/system-api-binding.env' => $this->buildBindingEnv(),
@@ -81,6 +82,7 @@ final class SystemApiDbusBindingToolkit
                     'runtime_env' => 'files/etc/w4/system-api-binding.env',
                     'adapter_status' => self::BINDING_STATUS,
                     'adapter_specification' => 'files/usr/share/w4/system-api/org.w4.System1.runtime-adapter.json',
+                    'bootstrap_specification' => 'files/usr/share/w4/system-api/org.w4.System1.runtime-bootstrap.json',
                     'runtime_entrypoint' => 'files/usr/local/bin/w4-system-api-dbus-runtime-launcher',
                 ],
                 'runtime_launcher' => [
@@ -88,9 +90,11 @@ final class SystemApiDbusBindingToolkit
                     'wrapper' => 'files/usr/local/bin/w4-system-api-dbus-runtime-launcher',
                     'runtime_status' => 'launcher-ready',
                     'transport' => 'stdio-ndjson-launcher',
+                    'handoff_mode' => 'child-process-stdio-relay',
                     'commands' => [
                         'DescribeLauncher',
                         'DescribeLaunchPlan',
+                        'DescribeActivationBootstrap',
                         'DescribeHost',
                         'DescribeSpecification',
                         'DescribeRuntime',
@@ -268,6 +272,59 @@ UNIT;
         return $encoded . PHP_EOL;
     }
 
+    private function buildRuntimeBootstrapJson(): string
+    {
+        $payload = [
+            'api_version' => self::API_VERSION,
+            'kind' => 'system-api-dbus-runtime-bootstrap',
+            'status' => self::BINDING_STATUS,
+            'bus_name' => self::BUS_NAME,
+            'object_path' => self::OBJECT_PATH,
+            'interface' => self::INTERFACE_NAME,
+            'launcher' => [
+                'entrypoint' => '/usr/local/bin/w4-system-api-dbus-runtime-launcher',
+                'command' => 'serve-dbus',
+                'transport' => 'stdio-ndjson-launcher',
+            ],
+            'host_handoff' => [
+                'entrypoint' => '/usr/local/bin/w4-system-api-dbus-runtime-host',
+                'command' => 'serve-stdio-host',
+                'mode' => 'child-process-stdio-relay',
+            ],
+            'runtime_adapter' => [
+                'entrypoint' => '/usr/local/bin/w4-system-api-dbus-runtime-adapter',
+                'command' => 'serve-dbus',
+                'status' => self::BINDING_STATUS,
+                'required_capabilities' => [
+                    'php-dbus-runtime-adapter',
+                    'bus-name-ownership',
+                    'dbus-method-dispatch',
+                ],
+            ],
+            'environment_contract' => [
+                'W4_SYSTEM_API_BUS_NAME',
+                'W4_SYSTEM_API_OBJECT_PATH',
+                'W4_SYSTEM_API_INTERFACE',
+                'W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY',
+                'W4_SYSTEM_API_RUNTIME_HOST_ENTRY',
+                'W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY',
+            ],
+            'phases' => [
+                'launch-runtime-launcher',
+                'handoff-to-runtime-host',
+                'materialize-runtime-adapter',
+                'own-org.w4.System1',
+            ],
+        ];
+
+        $encoded = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($encoded === false) {
+            throw new \RuntimeException('No se pudo serializar la especificacion de bootstrap del runtime D-Bus');
+        }
+
+        return $encoded . PHP_EOL;
+    }
+
     private function buildBindingEnv(): string
     {
         return <<<ENV
@@ -281,6 +338,7 @@ W4_SYSTEM_API_BRIDGE_ENTRY="/usr/local/bin/w4-system-api-dbus-bridge"
 W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY="/usr/local/bin/w4-system-api-dbus-runtime-adapter"
 W4_SYSTEM_API_RUNTIME_HOST_ENTRY="/usr/local/bin/w4-system-api-dbus-runtime-host"
 W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY="/usr/local/bin/w4-system-api-dbus-runtime-launcher"
+W4_SYSTEM_API_RUNTIME_BOOTSTRAP_SPEC="/usr/share/w4/system-api/org.w4.System1.runtime-bootstrap.json"
 W4_SYSTEM_API_READINESS_ENTRY="/usr/local/bin/w4-system-api-dbus-bridge-readiness"
 W4_SYSTEM_API_DIAGNOSTICS_ENTRY="/usr/local/bin/w4-system-api-dbus-runtime-diagnose"
 ENV;
@@ -1629,6 +1687,10 @@ switch ($command) {
         emitJson(createLaunchPlan());
         exit(0);
 
+    case 'DescribeActivationBootstrap':
+        emitJson(createActivationBootstrap());
+        exit(0);
+
     case 'DescribeHost':
         emitJson(createHostDescription());
         exit(0);
@@ -1695,6 +1757,7 @@ function createLauncherDescription(): array
         'commands' => [
             'DescribeLauncher',
             'DescribeLaunchPlan',
+            'DescribeActivationBootstrap',
             'DescribeHost',
             'DescribeSpecification',
             'DescribeRuntime',
@@ -1704,6 +1767,7 @@ function createLauncherDescription(): array
             'serve-stdio-launcher',
             'serve-dbus',
         ],
+        'handoff_mode' => 'child-process-stdio-relay',
         'delegates_to' => [
             'runtime_host' => '/usr/local/bin/w4-system-api-dbus-runtime-host',
             'call' => 'packaged-runtime-host',
@@ -1731,8 +1795,56 @@ function createLaunchPlan(): array
         'handoff' => [
             'kind' => 'runtime-host',
             'strategy' => 'launch-host-process-and-own-bus',
+            'mode' => 'child-process-stdio-relay',
         ],
+        'activation_bootstrap' => createActivationBootstrap(),
         'adapter_specification' => createAdapterSpecification(),
+    ];
+}
+
+function createActivationBootstrap(): array
+{
+    return [
+        'api_version' => '1.0',
+        'kind' => 'system-api-dbus-runtime-bootstrap',
+        'status' => W4_SYSTEM_API_STATUS,
+        'bus_name' => W4_SYSTEM_API_BUS_NAME,
+        'object_path' => W4_SYSTEM_API_OBJECT_PATH,
+        'interface' => W4_SYSTEM_API_INTERFACE,
+        'launcher' => [
+            'entrypoint' => '/usr/local/bin/w4-system-api-dbus-runtime-launcher',
+            'command' => 'serve-dbus',
+            'transport' => 'stdio-ndjson-launcher',
+        ],
+        'host_handoff' => [
+            'entrypoint' => '/usr/local/bin/w4-system-api-dbus-runtime-host',
+            'command' => 'serve-stdio-host',
+            'mode' => 'child-process-stdio-relay',
+        ],
+        'runtime_adapter' => [
+            'entrypoint' => '/usr/local/bin/w4-system-api-dbus-runtime-adapter',
+            'command' => 'serve-dbus',
+            'status' => W4_SYSTEM_API_STATUS,
+            'required_capabilities' => [
+                'php-dbus-runtime-adapter',
+                'bus-name-ownership',
+                'dbus-method-dispatch',
+            ],
+        ],
+        'environment_contract' => [
+            'W4_SYSTEM_API_BUS_NAME',
+            'W4_SYSTEM_API_OBJECT_PATH',
+            'W4_SYSTEM_API_INTERFACE',
+            'W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY',
+            'W4_SYSTEM_API_RUNTIME_HOST_ENTRY',
+            'W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY',
+        ],
+        'phases' => [
+            'launch-runtime-launcher',
+            'handoff-to-runtime-host',
+            'materialize-runtime-adapter',
+            'own-org.w4.System1',
+        ],
     ];
 }
 
@@ -1964,6 +2076,7 @@ function handleLauncherEnvelope(string $line): array
             resourceId: W4_SYSTEM_API_BUS_NAME
         ),
         'Call' => createPendingCallResponse(is_array($decoded['request'] ?? null) ? $decoded['request'] : []),
+        'DescribeActivationBootstrap' => createActivationBootstrap(),
         'ServeDbus' => createPendingActivationReport(buildRuntimeDiagnosis(), 'packaged-runtime-launcher'),
         default => createProtocolError(sprintf('Metodo de runtime launcher no soportado: %s', trim($method))),
     };
@@ -2024,6 +2137,7 @@ function createPendingActivationReport(array $runtimeDiagnosis, string $bridgeKi
         'object_path' => W4_SYSTEM_API_OBJECT_PATH,
         'interface' => W4_SYSTEM_API_INTERFACE,
         'adapter_specification' => createAdapterSpecification(),
+        'activation_bootstrap' => createActivationBootstrap(),
         'launch_plan' => createLaunchPlan(),
         'runtime_diagnosis' => $runtimeDiagnosis,
         'missing_capabilities' => is_array($runtimeDiagnosis['missing_capabilities'] ?? null)

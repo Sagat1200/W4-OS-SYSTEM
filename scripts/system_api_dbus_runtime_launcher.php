@@ -57,6 +57,7 @@ try {
     $output = match ($command) {
         'DescribeLauncher' => $launcher->describeLauncher(),
         'DescribeLaunchPlan' => $launcher->describeLaunchPlan(),
+        'DescribeActivationBootstrap' => $launcher->describeActivationBootstrap(),
         'DescribeHost' => $launcher->describeHost(),
         'DescribeSpecification' => $launcher->describeSpecification(),
         'DescribeRuntime' => $launcher->describeRuntime(),

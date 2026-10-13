@@ -8,12 +8,14 @@ use W4\OS\Support\ValidationError;
 
 final class SystemApiDbusRuntimeLauncher
 {
+    private string $rootDir;
     private SystemApiDbusRuntimeHost $runtimeHost;
     private SystemApiDbusRuntimeActivationToolkit $activationToolkit;
     private SystemApiDbusRuntimeProbeToolkit $runtimeProbe;
 
     public function __construct(string $rootDir)
     {
+        $this->rootDir = $rootDir;
         $this->runtimeHost = new SystemApiDbusRuntimeHost($rootDir);
         $this->activationToolkit = new SystemApiDbusRuntimeActivationToolkit();
         $this->runtimeProbe = new SystemApiDbusRuntimeProbeToolkit();
@@ -31,6 +33,7 @@ final class SystemApiDbusRuntimeLauncher
             'commands' => [
                 'DescribeLauncher',
                 'DescribeLaunchPlan',
+                'DescribeActivationBootstrap',
                 'DescribeHost',
                 'DescribeSpecification',
                 'DescribeRuntime',
@@ -40,6 +43,7 @@ final class SystemApiDbusRuntimeLauncher
                 'serve-stdio-launcher',
                 'serve-dbus',
             ],
+            'handoff_mode' => 'child-process-stdio-relay',
             'launch_plan' => $this->createLaunchPlan(),
         ]);
     }
@@ -47,6 +51,11 @@ final class SystemApiDbusRuntimeLauncher
     public function describeLaunchPlan(): string
     {
         return $this->encodeJson($this->createLaunchPlan());
+    }
+
+    public function describeActivationBootstrap(): string
+    {
+        return $this->encodeJson($this->activationToolkit->createActivationBootstrap());
     }
 
     public function describeHost(): string
@@ -96,14 +105,29 @@ final class SystemApiDbusRuntimeLauncher
      */
     public function serveStdioLauncher($input, $output): void
     {
-        while (($line = fgets($input)) !== false) {
-            $line = trim($line);
-            if ($line === '') {
-                continue;
-            }
+        $childProcess = $this->launchRuntimeHostProcess();
+        $hostInput = $childProcess['stdin'];
+        $hostOutput = $childProcess['stdout'];
+        $hostError = $childProcess['stderr'];
 
-            fwrite($output, $this->handleEnvelopeLine($line));
-            fflush($output);
+        try {
+            while (($line = fgets($input)) !== false) {
+                $line = trim($line);
+                if ($line === '') {
+                    continue;
+                }
+
+                if ($this->shouldHandleEnvelopeLocally($line)) {
+                    $responseLine = $this->handleEnvelopeLine($line);
+                } else {
+                    $responseLine = $this->relayEnvelopeToRuntimeHost($line, $hostInput, $hostOutput, $hostError);
+                }
+
+                fwrite($output, $responseLine);
+                fflush($output);
+            }
+        } finally {
+            $this->closeRuntimeHostProcess($childProcess);
         }
     }
 
@@ -116,6 +140,7 @@ final class SystemApiDbusRuntimeLauncher
             $response = match ($method) {
                 'DescribeLauncher' => $this->decodeResponseJson($this->describeLauncher()),
                 'DescribeLaunchPlan' => $this->decodeResponseJson($this->describeLaunchPlan()),
+                'DescribeActivationBootstrap' => $this->decodeResponseJson($this->describeActivationBootstrap()),
                 'ServeDbus' => $this->decodeResponseJson($this->serveDbus()),
                 default => $this->decodeResponseJson($this->runtimeHost->invoke($method, $this->resolveArguments($envelope))),
             };
@@ -156,9 +181,98 @@ final class SystemApiDbusRuntimeLauncher
             'handoff' => [
                 'kind' => 'runtime-host',
                 'strategy' => 'launch-host-process-and-own-bus',
+                'mode' => 'child-process-stdio-relay',
             ],
+            'activation_bootstrap' => $this->activationToolkit->createActivationBootstrap(),
             'adapter_specification' => $this->activationToolkit->createAdapterSpecification(),
         ];
+    }
+
+    /**
+     * @return array{process: resource, stdin: resource, stdout: resource, stderr: resource}
+     */
+    private function launchRuntimeHostProcess(): array
+    {
+        $descriptorSpec = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+
+        $command = [
+            PHP_BINARY,
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'system_api_dbus_runtime_host.php',
+            'serve-stdio-host',
+        ];
+
+        $process = proc_open($command, $descriptorSpec, $pipes, $this->rootDir);
+        if (!is_resource($process)) {
+            throw new ValidationError('No se pudo iniciar el runtime host desde el launcher');
+        }
+
+        if (!isset($pipes[0], $pipes[1], $pipes[2]) || !is_resource($pipes[0]) || !is_resource($pipes[1]) || !is_resource($pipes[2])) {
+            proc_close($process);
+            throw new ValidationError('El launcher no pudo abrir los pipes del runtime host');
+        }
+
+        stream_set_blocking($pipes[2], false);
+
+        return [
+            'process' => $process,
+            'stdin' => $pipes[0],
+            'stdout' => $pipes[1],
+            'stderr' => $pipes[2],
+        ];
+    }
+
+    /**
+     * @param resource $hostInput
+     * @param resource $hostOutput
+     * @param resource $hostError
+     */
+    private function relayEnvelopeToRuntimeHost(string $line, $hostInput, $hostOutput, $hostError): string
+    {
+        $written = fwrite($hostInput, $line . PHP_EOL);
+        if ($written === false) {
+            throw new ValidationError('El launcher no pudo enviar el envelope al runtime host');
+        }
+
+        fflush($hostInput);
+
+        $responseLine = fgets($hostOutput);
+        if (!is_string($responseLine) || trim($responseLine) === '') {
+            $errorOutput = stream_get_contents($hostError);
+            $detail = is_string($errorOutput) && trim($errorOutput) !== ''
+                ? sprintf(': %s', trim($errorOutput))
+                : '';
+
+            throw new ValidationError(sprintf('El runtime host no devolvio respuesta al launcher%s', $detail));
+        }
+
+        return $responseLine;
+    }
+
+    private function shouldHandleEnvelopeLocally(string $line): bool
+    {
+        try {
+            $envelope = $this->decodeEnvelope($line);
+            $method = $this->requireMethod($envelope);
+        } catch (ValidationError) {
+            return true;
+        }
+
+        return in_array($method, ['DescribeLauncher', 'DescribeLaunchPlan', 'DescribeActivationBootstrap', 'ServeDbus'], true);
+    }
+
+    /**
+     * @param array{process: resource, stdin: resource, stdout: resource, stderr: resource} $childProcess
+     */
+    private function closeRuntimeHostProcess(array $childProcess): void
+    {
+        fclose($childProcess['stdin']);
+        fclose($childProcess['stdout']);
+        fclose($childProcess['stderr']);
+        proc_close($childProcess['process']);
     }
 
     /**

@@ -20,9 +20,30 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         $payload = $this->decodeJson($result['stdout']);
         self::assertSame('system-api-dbus-runtime-launcher', $payload['kind']);
         self::assertSame('launcher-ready', $payload['status']);
+        self::assertSame('child-process-stdio-relay', $payload['handoff_mode']);
+        self::assertContains('DescribeActivationBootstrap', $payload['commands']);
         self::assertContains('DescribeLaunchPlan', $payload['commands']);
         self::assertSame('system-api-dbus-runtime-launch-plan', $payload['launch_plan']['kind']);
+        self::assertSame('system-api-dbus-runtime-bootstrap', $payload['launch_plan']['activation_bootstrap']['kind']);
+        self::assertSame('child-process-stdio-relay', $payload['launch_plan']['handoff']['mode']);
         self::assertSame('serve-stdio-host', $payload['launch_plan']['target_runtime']['command']);
+    }
+
+    public function testDescribeActivationBootstrapReturnsBootstrapContract(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'DescribeActivationBootstrap',
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('system-api-dbus-runtime-bootstrap', $payload['kind']);
+        self::assertSame('pending-runtime-adapter', $payload['status']);
+        self::assertSame('serve-dbus', $payload['launcher']['command']);
+        self::assertSame('child-process-stdio-relay', $payload['host_handoff']['mode']);
+        self::assertContains('bus-name-ownership', $payload['runtime_adapter']['required_capabilities']);
     }
 
     public function testServeDbusReturnsActivationWithLaunchPlan(): void
@@ -37,6 +58,7 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         $payload = $this->decodeJson($result['stdout']);
         self::assertSame('system-api-dbus-runtime-activation', $payload['kind']);
         self::assertSame('local-runtime-launcher', $payload['bridge_kind']);
+        self::assertSame('system-api-dbus-runtime-bootstrap', $payload['activation_bootstrap']['kind']);
         self::assertSame('system-api-dbus-runtime-launch-plan', $payload['launch_plan']['kind']);
     }
 
@@ -49,6 +71,10 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
             ], JSON_THROW_ON_ERROR),
             json_encode([
                 'method' => 'DescribeLaunchPlan',
+                'arguments' => [],
+            ], JSON_THROW_ON_ERROR),
+            json_encode([
+                'method' => 'DescribeActivationBootstrap',
                 'arguments' => [],
             ], JSON_THROW_ON_ERROR),
             json_encode([
@@ -75,11 +101,12 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertSame(0, $result['exitCode'], $result['stderr']);
 
         $responses = $this->decodeNdjson($result['stdout']);
-        self::assertCount(3, $responses);
+        self::assertCount(4, $responses);
         self::assertSame('system-api-dbus-runtime-launcher', $responses[0]['kind']);
         self::assertSame('system-api-dbus-runtime-launch-plan', $responses[1]['kind']);
-        self::assertSame('runtime-launcher-call-001', $responses[2]['request_id']);
-        self::assertSame('system.dbus-runtime', $responses[2]['result']['method']);
+        self::assertSame('system-api-dbus-runtime-bootstrap', $responses[2]['kind']);
+        self::assertSame('runtime-launcher-call-001', $responses[3]['request_id']);
+        self::assertSame('system.dbus-runtime', $responses[3]['result']['method']);
     }
 
     /**

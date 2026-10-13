@@ -9,6 +9,55 @@ final class SystemApiDbusRuntimeActivationToolkit
     /**
      * @return array<string, mixed>
      */
+    public function createActivationBootstrap(): array
+    {
+        return [
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-runtime-bootstrap',
+            'status' => 'pending-runtime-adapter',
+            'bus_name' => 'org.w4.System1',
+            'object_path' => '/org/w4/System1',
+            'interface' => 'org.w4.System1.Manager',
+            'launcher' => [
+                'entrypoint' => 'scripts/system_api_dbus_runtime_launcher.php',
+                'command' => 'serve-dbus',
+                'transport' => 'stdio-ndjson-launcher',
+            ],
+            'host_handoff' => [
+                'entrypoint' => 'scripts/system_api_dbus_runtime_host.php',
+                'command' => 'serve-stdio-host',
+                'mode' => 'child-process-stdio-relay',
+            ],
+            'runtime_adapter' => [
+                'entrypoint' => 'scripts/system_api_dbus_runtime_adapter.php',
+                'command' => 'serve-dbus',
+                'status' => 'pending-runtime-adapter',
+                'required_capabilities' => [
+                    'php-dbus-runtime-adapter',
+                    'bus-name-ownership',
+                    'dbus-method-dispatch',
+                ],
+            ],
+            'environment_contract' => [
+                'W4_SYSTEM_API_BUS_NAME',
+                'W4_SYSTEM_API_OBJECT_PATH',
+                'W4_SYSTEM_API_INTERFACE',
+                'W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY',
+                'W4_SYSTEM_API_RUNTIME_HOST_ENTRY',
+                'W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY',
+            ],
+            'phases' => [
+                'launch-runtime-launcher',
+                'handoff-to-runtime-host',
+                'materialize-runtime-adapter',
+                'own-org.w4.System1',
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     public function createAdapterSpecification(): array
     {
         return [
@@ -73,6 +122,7 @@ final class SystemApiDbusRuntimeActivationToolkit
             'object_path' => '/org/w4/System1',
             'interface' => 'org.w4.System1.Manager',
             'adapter_specification' => $this->createAdapterSpecification(),
+            'activation_bootstrap' => $this->createActivationBootstrap(),
             'runtime_diagnosis' => $runtimeDiagnosis,
             'missing_capabilities' => $missingCapabilities,
             'next_action' => 'materialize-runtime-adapter',
