@@ -35,6 +35,10 @@ final class SystemApiCliTest extends TestCase
         self::assertSame('scripts/system_api_dbus_runtime_host.php', $payload['result']['data']['binding']['local_runtime_host']['script']);
         self::assertSame('host-ready', $payload['result']['data']['binding']['local_runtime_host']['status']);
         self::assertSame('stdio-ndjson-host', $payload['result']['data']['binding']['local_runtime_host']['transport']);
+        self::assertSame('scripts/system_api_dbus_runtime_launcher.php', $payload['result']['data']['binding']['local_runtime_launcher']['script']);
+        self::assertSame('launcher-ready', $payload['result']['data']['binding']['local_runtime_launcher']['status']);
+        self::assertSame('stdio-ndjson-launcher', $payload['result']['data']['binding']['local_runtime_launcher']['transport']);
+        self::assertContains('DescribeLaunchPlan', $payload['result']['data']['binding']['local_runtime_launcher']['commands']);
         self::assertContains('profiles.list', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-runtime', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('updates.plan', array_column($payload['result']['data']['methods'], 'name'));

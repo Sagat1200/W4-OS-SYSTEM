@@ -117,6 +117,23 @@ final class SystemApiToolkit
                     'status' => 'host-ready',
                     'transport' => 'stdio-ndjson-host',
                 ],
+                'local_runtime_launcher' => [
+                    'script' => 'scripts/system_api_dbus_runtime_launcher.php',
+                    'commands' => [
+                        'DescribeLauncher',
+                        'DescribeLaunchPlan',
+                        'DescribeHost',
+                        'DescribeSpecification',
+                        'DescribeRuntime',
+                        'DiagnoseRuntime',
+                        'GetCapabilities',
+                        'Call',
+                        'serve-stdio-launcher',
+                        'serve-dbus',
+                    ],
+                    'status' => 'launcher-ready',
+                    'transport' => 'stdio-ndjson-launcher',
+                ],
                 'local_daemon' => [
                     'script' => 'scripts/system_api_daemon.php',
                     'commands' => [
