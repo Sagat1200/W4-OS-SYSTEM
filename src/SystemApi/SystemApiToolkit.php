@@ -102,6 +102,21 @@ final class SystemApiToolkit
                     ],
                     'status' => 'spec-ready',
                 ],
+                'local_runtime_host' => [
+                    'script' => 'scripts/system_api_dbus_runtime_host.php',
+                    'commands' => [
+                        'DescribeHost',
+                        'DescribeSpecification',
+                        'DescribeRuntime',
+                        'DiagnoseRuntime',
+                        'GetCapabilities',
+                        'Call',
+                        'serve-stdio-host',
+                        'serve-dbus',
+                    ],
+                    'status' => 'host-ready',
+                    'transport' => 'stdio-ndjson-host',
+                ],
                 'local_daemon' => [
                     'script' => 'scripts/system_api_daemon.php',
                     'commands' => [

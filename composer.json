@@ -25,6 +25,7 @@
         "scripts/system_api_daemon.php",
         "scripts/system_api_dbus_bridge.php",
         "scripts/system_api_dbus_runtime_adapter.php",
+        "scripts/system_api_dbus_runtime_host.php",
         "scripts/generate_system_api_dbus_binding.php",
         "scripts/check_system_api_dbus_runtime.php",
         "scripts/validate_manifests.php",
