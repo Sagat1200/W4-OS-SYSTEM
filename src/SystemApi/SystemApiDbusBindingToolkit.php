@@ -95,6 +95,7 @@ final class SystemApiDbusBindingToolkit
                         'DescribeLauncher',
                         'DescribeLaunchPlan',
                         'DescribeActivationBootstrap',
+                        'DescribeActivationPreparation',
                         'DescribeHost',
                         'DescribeSpecification',
                         'DescribeRuntime',
@@ -1691,6 +1692,10 @@ switch ($command) {
         emitJson(createActivationBootstrap());
         exit(0);
 
+    case 'DescribeActivationPreparation':
+        emitJson(createActivationPreparation());
+        exit(0);
+
     case 'DescribeHost':
         emitJson(createHostDescription());
         exit(0);
@@ -1758,6 +1763,7 @@ function createLauncherDescription(): array
             'DescribeLauncher',
             'DescribeLaunchPlan',
             'DescribeActivationBootstrap',
+            'DescribeActivationPreparation',
             'DescribeHost',
             'DescribeSpecification',
             'DescribeRuntime',
@@ -1845,6 +1851,53 @@ function createActivationBootstrap(): array
             'materialize-runtime-adapter',
             'own-org.w4.System1',
         ],
+    ];
+}
+
+function createActivationPreparation(): array
+{
+    $runtimeDiagnosis = buildRuntimeDiagnosis();
+    $missingCapabilities = is_array($runtimeDiagnosis['missing_capabilities'] ?? null)
+        ? $runtimeDiagnosis['missing_capabilities']
+        : [];
+    $ready = ($runtimeDiagnosis['ready'] ?? false) === true;
+
+    return [
+        'api_version' => '1.0',
+        'kind' => 'system-api-dbus-runtime-activation-context',
+        'status' => $ready ? 'ready-for-runtime-adapter' : 'pending-runtime-adapter',
+        'ready' => $ready,
+        'binding_status' => W4_SYSTEM_API_STATUS,
+        'resolved_contract' => [
+            'bus_name' => W4_SYSTEM_API_BUS_NAME,
+            'object_path' => W4_SYSTEM_API_OBJECT_PATH,
+            'interface' => W4_SYSTEM_API_INTERFACE,
+            'runtime_launcher_entry' => getenv('W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-launcher',
+            'runtime_host_entry' => getenv('W4_SYSTEM_API_RUNTIME_HOST_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-host',
+            'runtime_adapter_entry' => getenv('W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-adapter',
+            'runtime_bootstrap_spec' => getenv('W4_SYSTEM_API_RUNTIME_BOOTSTRAP_SPEC') ?: '/usr/share/w4/system-api/org.w4.System1.runtime-bootstrap.json',
+        ],
+        'activation_bootstrap' => createActivationBootstrap(),
+        'runtime_diagnosis' => $runtimeDiagnosis,
+        'execution_plan' => [
+            'launcher' => [
+                'entrypoint' => getenv('W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-launcher',
+                'command' => 'serve-dbus',
+                'transport' => 'stdio-ndjson-launcher',
+            ],
+            'host_handoff' => [
+                'entrypoint' => getenv('W4_SYSTEM_API_RUNTIME_HOST_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-host',
+                'command' => 'serve-stdio-host',
+                'mode' => 'child-process-stdio-relay',
+            ],
+            'runtime_adapter' => [
+                'entrypoint' => getenv('W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-adapter',
+                'command' => 'serve-dbus',
+                'ownership_goal' => W4_SYSTEM_API_BUS_NAME,
+            ],
+        ],
+        'unresolved_requirements' => $missingCapabilities,
+        'next_action' => $ready ? 'attempt-runtime-adapter' : 'materialize-runtime-adapter',
     ];
 }
 
@@ -2065,6 +2118,7 @@ function handleLauncherEnvelope(string $line): array
     return match (trim($method)) {
         'DescribeLauncher' => createLauncherDescription(),
         'DescribeLaunchPlan' => createLaunchPlan(),
+        'DescribeActivationPreparation' => createActivationPreparation(),
         'DescribeHost' => createHostDescription(),
         'DescribeSpecification' => createAdapterSpecification(),
         'DescribeRuntime' => createAdapterRuntime(),
@@ -2138,6 +2192,7 @@ function createPendingActivationReport(array $runtimeDiagnosis, string $bridgeKi
         'interface' => W4_SYSTEM_API_INTERFACE,
         'adapter_specification' => createAdapterSpecification(),
         'activation_bootstrap' => createActivationBootstrap(),
+        'activation_preparation' => createActivationPreparation(),
         'launch_plan' => createLaunchPlan(),
         'runtime_diagnosis' => $runtimeDiagnosis,
         'missing_capabilities' => is_array($runtimeDiagnosis['missing_capabilities'] ?? null)

@@ -63,6 +63,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertContains('DescribeLauncher', $manifest['runtime_launcher']['commands']);
         self::assertContains('DescribeLaunchPlan', $manifest['runtime_launcher']['commands']);
         self::assertContains('DescribeActivationBootstrap', $manifest['runtime_launcher']['commands']);
+        self::assertContains('DescribeActivationPreparation', $manifest['runtime_launcher']['commands']);
         self::assertContains('serve-stdio-launcher', $manifest['runtime_launcher']['commands']);
         self::assertSame('files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-host.php', $manifest['runtime_host']['entrypoint']);
         self::assertSame('files/usr/local/bin/w4-system-api-dbus-runtime-host', $manifest['runtime_host']['wrapper']);
@@ -228,9 +229,11 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertStringContainsString("case 'DescribeLauncher':", $runtimeLauncherScript);
         self::assertStringContainsString("case 'DescribeLaunchPlan':", $runtimeLauncherScript);
         self::assertStringContainsString("case 'DescribeActivationBootstrap':", $runtimeLauncherScript);
+        self::assertStringContainsString("case 'DescribeActivationPreparation':", $runtimeLauncherScript);
         self::assertStringContainsString("case 'serve-stdio-launcher':", $runtimeLauncherScript);
         self::assertStringContainsString("'handoff_mode' => 'child-process-stdio-relay'", $runtimeLauncherScript);
         self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-bootstrap'", $runtimeLauncherScript);
+        self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-activation-context'", $runtimeLauncherScript);
         self::assertStringContainsString("'launcher_transport' => 'stdio-ndjson-launcher'", $runtimeLauncherScript);
 
         $runtimeLauncherWrapper = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-runtime-launcher');
@@ -259,6 +262,17 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('system-api-dbus-runtime-bootstrap', $runtimeLauncherBootstrapPayload['kind']);
         self::assertSame('child-process-stdio-relay', $runtimeLauncherBootstrapPayload['host_handoff']['mode']);
 
+        $runtimeLauncherPreparation = $this->runGeneratedPhpScript([
+            $runtimeLauncherScriptPath,
+            'DescribeActivationPreparation',
+        ]);
+        self::assertSame(0, $runtimeLauncherPreparation['exitCode'], $runtimeLauncherPreparation['stderr']);
+        $runtimeLauncherPreparationPayload = $this->decodeJson($runtimeLauncherPreparation['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation-context', $runtimeLauncherPreparationPayload['kind']);
+        self::assertSame('/usr/local/bin/w4-system-api-dbus-runtime-launcher', $runtimeLauncherPreparationPayload['resolved_contract']['runtime_launcher_entry']);
+        self::assertSame('/usr/local/bin/w4-system-api-dbus-runtime-host', $runtimeLauncherPreparationPayload['resolved_contract']['runtime_host_entry']);
+        self::assertSame('/usr/local/bin/w4-system-api-dbus-runtime-adapter', $runtimeLauncherPreparationPayload['resolved_contract']['runtime_adapter_entry']);
+
         $runtimeLauncherServeDbus = $this->runGeneratedPhpScript([
             $runtimeLauncherScriptPath,
             'serve-dbus',
@@ -267,6 +281,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         $runtimeLauncherServeDbusPayload = $this->decodeJson($runtimeLauncherServeDbus['stdout']);
         self::assertSame('packaged-runtime-launcher', $runtimeLauncherServeDbusPayload['bridge_kind']);
         self::assertSame('system-api-dbus-runtime-bootstrap', $runtimeLauncherServeDbusPayload['activation_bootstrap']['kind']);
+        self::assertSame('system-api-dbus-runtime-activation-context', $runtimeLauncherServeDbusPayload['activation_preparation']['kind']);
         self::assertSame('system-api-dbus-runtime-launch-plan', $runtimeLauncherServeDbusPayload['launch_plan']['kind']);
 
         $runtimeHostScriptPath = $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-runtime-host.php';

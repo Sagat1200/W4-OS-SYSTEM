@@ -40,6 +40,7 @@ final class SystemApiCliTest extends TestCase
         self::assertSame('stdio-ndjson-launcher', $payload['result']['data']['binding']['local_runtime_launcher']['transport']);
         self::assertSame('child-process-stdio-relay', $payload['result']['data']['binding']['local_runtime_launcher']['handoff_mode']);
         self::assertContains('DescribeActivationBootstrap', $payload['result']['data']['binding']['local_runtime_launcher']['commands']);
+        self::assertContains('DescribeActivationPreparation', $payload['result']['data']['binding']['local_runtime_launcher']['commands']);
         self::assertContains('DescribeLaunchPlan', $payload['result']['data']['binding']['local_runtime_launcher']['commands']);
         self::assertContains('profiles.list', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-runtime', array_column($payload['result']['data']['methods'], 'name'));

@@ -56,6 +56,78 @@ final class SystemApiDbusRuntimeActivationToolkit
     }
 
     /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, string>|null $environment
+     * @param array<string, string> $entrypoints
+     * @return array<string, mixed>
+     */
+    public function createActivationPreparation(
+        array $runtimeDiagnosis,
+        ?array $environment = null,
+        array $entrypoints = []
+    ): array {
+        $env = $environment ?? $this->captureEnvironment();
+        $missingCapabilities = $this->normalizeMissingCapabilities($runtimeDiagnosis);
+        $ready = ($runtimeDiagnosis['ready'] ?? false) === true;
+
+        $resolvedContract = [
+            'bus_name' => $this->resolveStringValue($env, 'W4_SYSTEM_API_BUS_NAME', 'org.w4.System1'),
+            'object_path' => $this->resolveStringValue($env, 'W4_SYSTEM_API_OBJECT_PATH', '/org/w4/System1'),
+            'interface' => $this->resolveStringValue($env, 'W4_SYSTEM_API_INTERFACE', 'org.w4.System1.Manager'),
+            'runtime_launcher_entry' => $this->resolveEntrypoint(
+                $env,
+                'W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY',
+                $entrypoints['runtime_launcher_entry'] ?? 'scripts/system_api_dbus_runtime_launcher.php'
+            ),
+            'runtime_host_entry' => $this->resolveEntrypoint(
+                $env,
+                'W4_SYSTEM_API_RUNTIME_HOST_ENTRY',
+                $entrypoints['runtime_host_entry'] ?? 'scripts/system_api_dbus_runtime_host.php'
+            ),
+            'runtime_adapter_entry' => $this->resolveEntrypoint(
+                $env,
+                'W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY',
+                $entrypoints['runtime_adapter_entry'] ?? 'scripts/system_api_dbus_runtime_adapter.php'
+            ),
+            'runtime_bootstrap_spec' => $this->resolveEntrypoint(
+                $env,
+                'W4_SYSTEM_API_RUNTIME_BOOTSTRAP_SPEC',
+                $entrypoints['runtime_bootstrap_spec'] ?? 'embedded:DescribeActivationBootstrap'
+            ),
+        ];
+
+        return [
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-runtime-activation-context',
+            'status' => $ready ? 'ready-for-runtime-adapter' : 'pending-runtime-adapter',
+            'ready' => $ready,
+            'binding_status' => 'pending-runtime-adapter',
+            'resolved_contract' => $resolvedContract,
+            'activation_bootstrap' => $this->createActivationBootstrap(),
+            'runtime_diagnosis' => $runtimeDiagnosis,
+            'execution_plan' => [
+                'launcher' => [
+                    'entrypoint' => $resolvedContract['runtime_launcher_entry'],
+                    'command' => 'serve-dbus',
+                    'transport' => 'stdio-ndjson-launcher',
+                ],
+                'host_handoff' => [
+                    'entrypoint' => $resolvedContract['runtime_host_entry'],
+                    'command' => 'serve-stdio-host',
+                    'mode' => 'child-process-stdio-relay',
+                ],
+                'runtime_adapter' => [
+                    'entrypoint' => $resolvedContract['runtime_adapter_entry'],
+                    'command' => 'serve-dbus',
+                    'ownership_goal' => $resolvedContract['bus_name'],
+                ],
+            ],
+            'unresolved_requirements' => $missingCapabilities,
+            'next_action' => $ready ? 'attempt-runtime-adapter' : 'materialize-runtime-adapter',
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function createAdapterSpecification(): array
@@ -104,13 +176,7 @@ final class SystemApiDbusRuntimeActivationToolkit
      */
     public function createPendingActivationReport(array $runtimeDiagnosis, string $bridgeKind): array
     {
-        /** @var list<string> $missingCapabilities */
-        $missingCapabilities = is_array($runtimeDiagnosis['missing_capabilities'] ?? null)
-            ? array_values(array_filter(
-                $runtimeDiagnosis['missing_capabilities'],
-                static fn (mixed $value): bool => is_string($value) && trim($value) !== ''
-            ))
-            : [];
+        $missingCapabilities = $this->normalizeMissingCapabilities($runtimeDiagnosis);
 
         return [
             'api_version' => '1.0',
@@ -123,9 +189,66 @@ final class SystemApiDbusRuntimeActivationToolkit
             'interface' => 'org.w4.System1.Manager',
             'adapter_specification' => $this->createAdapterSpecification(),
             'activation_bootstrap' => $this->createActivationBootstrap(),
+            'activation_preparation' => $this->createActivationPreparation($runtimeDiagnosis),
             'runtime_diagnosis' => $runtimeDiagnosis,
             'missing_capabilities' => $missingCapabilities,
-            'next_action' => 'materialize-runtime-adapter',
+            'next_action' => (($runtimeDiagnosis['ready'] ?? false) === true)
+                ? 'attempt-runtime-adapter'
+                : 'materialize-runtime-adapter',
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function captureEnvironment(): array
+    {
+        $environment = getenv();
+        if (!is_array($environment)) {
+            return [];
+        }
+
+        $captured = [];
+        foreach ($environment as $key => $value) {
+            if (is_string($key) && is_string($value)) {
+                $captured[$key] = $value;
+            }
+        }
+
+        return $captured;
+    }
+
+    /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @return list<string>
+     */
+    private function normalizeMissingCapabilities(array $runtimeDiagnosis): array
+    {
+        return is_array($runtimeDiagnosis['missing_capabilities'] ?? null)
+            ? array_values(array_filter(
+                $runtimeDiagnosis['missing_capabilities'],
+                static fn (mixed $value): bool => is_string($value) && trim($value) !== ''
+            ))
+            : [];
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveStringValue(array $environment, string $key, string $default): string
+    {
+        $value = $environment[$key] ?? null;
+
+        return is_string($value) && trim($value) !== '' ? trim($value) : $default;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveEntrypoint(array $environment, string $key, string $default): string
+    {
+        $value = $environment[$key] ?? null;
+
+        return is_string($value) && trim($value) !== '' ? trim($value) : $default;
     }
 }

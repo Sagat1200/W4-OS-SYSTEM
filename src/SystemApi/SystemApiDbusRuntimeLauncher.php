@@ -34,6 +34,7 @@ final class SystemApiDbusRuntimeLauncher
                 'DescribeLauncher',
                 'DescribeLaunchPlan',
                 'DescribeActivationBootstrap',
+                'DescribeActivationPreparation',
                 'DescribeHost',
                 'DescribeSpecification',
                 'DescribeRuntime',
@@ -56,6 +57,20 @@ final class SystemApiDbusRuntimeLauncher
     public function describeActivationBootstrap(): string
     {
         return $this->encodeJson($this->activationToolkit->createActivationBootstrap());
+    }
+
+    public function describeActivationPreparation(): string
+    {
+        return $this->encodeJson($this->activationToolkit->createActivationPreparation(
+            $this->runtimeProbe->createReport(),
+            null,
+            [
+                'runtime_launcher_entry' => 'scripts/system_api_dbus_runtime_launcher.php',
+                'runtime_host_entry' => 'scripts/system_api_dbus_runtime_host.php',
+                'runtime_adapter_entry' => 'scripts/system_api_dbus_runtime_adapter.php',
+                'runtime_bootstrap_spec' => 'embedded:DescribeActivationBootstrap',
+            ]
+        ));
     }
 
     public function describeHost(): string
@@ -141,6 +156,7 @@ final class SystemApiDbusRuntimeLauncher
                 'DescribeLauncher' => $this->decodeResponseJson($this->describeLauncher()),
                 'DescribeLaunchPlan' => $this->decodeResponseJson($this->describeLaunchPlan()),
                 'DescribeActivationBootstrap' => $this->decodeResponseJson($this->describeActivationBootstrap()),
+                'DescribeActivationPreparation' => $this->decodeResponseJson($this->describeActivationPreparation()),
                 'ServeDbus' => $this->decodeResponseJson($this->serveDbus()),
                 default => $this->decodeResponseJson($this->runtimeHost->invoke($method, $this->resolveArguments($envelope))),
             };
@@ -261,7 +277,7 @@ final class SystemApiDbusRuntimeLauncher
             return true;
         }
 
-        return in_array($method, ['DescribeLauncher', 'DescribeLaunchPlan', 'DescribeActivationBootstrap', 'ServeDbus'], true);
+        return in_array($method, ['DescribeLauncher', 'DescribeLaunchPlan', 'DescribeActivationBootstrap', 'DescribeActivationPreparation', 'ServeDbus'], true);
     }
 
     /**

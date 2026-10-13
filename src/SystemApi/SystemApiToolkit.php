@@ -123,6 +123,7 @@ final class SystemApiToolkit
                         'DescribeLauncher',
                         'DescribeLaunchPlan',
                         'DescribeActivationBootstrap',
+                        'DescribeActivationPreparation',
                         'DescribeHost',
                         'DescribeSpecification',
                         'DescribeRuntime',

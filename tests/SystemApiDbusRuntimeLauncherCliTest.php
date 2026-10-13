@@ -22,6 +22,7 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertSame('launcher-ready', $payload['status']);
         self::assertSame('child-process-stdio-relay', $payload['handoff_mode']);
         self::assertContains('DescribeActivationBootstrap', $payload['commands']);
+        self::assertContains('DescribeActivationPreparation', $payload['commands']);
         self::assertContains('DescribeLaunchPlan', $payload['commands']);
         self::assertSame('system-api-dbus-runtime-launch-plan', $payload['launch_plan']['kind']);
         self::assertSame('system-api-dbus-runtime-bootstrap', $payload['launch_plan']['activation_bootstrap']['kind']);
@@ -46,6 +47,25 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertContains('bus-name-ownership', $payload['runtime_adapter']['required_capabilities']);
     }
 
+    public function testDescribeActivationPreparationReturnsResolvedContext(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'DescribeActivationPreparation',
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation-context', $payload['kind']);
+        self::assertFalse($payload['ready']);
+        self::assertSame('pending-runtime-adapter', $payload['status']);
+        self::assertSame('scripts/system_api_dbus_runtime_launcher.php', $payload['resolved_contract']['runtime_launcher_entry']);
+        self::assertSame('scripts/system_api_dbus_runtime_host.php', $payload['resolved_contract']['runtime_host_entry']);
+        self::assertSame('scripts/system_api_dbus_runtime_adapter.php', $payload['resolved_contract']['runtime_adapter_entry']);
+        self::assertSame('materialize-runtime-adapter', $payload['next_action']);
+    }
+
     public function testServeDbusReturnsActivationWithLaunchPlan(): void
     {
         $result = $this->runPhpScript([
@@ -59,6 +79,7 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertSame('system-api-dbus-runtime-activation', $payload['kind']);
         self::assertSame('local-runtime-launcher', $payload['bridge_kind']);
         self::assertSame('system-api-dbus-runtime-bootstrap', $payload['activation_bootstrap']['kind']);
+        self::assertSame('system-api-dbus-runtime-activation-context', $payload['activation_preparation']['kind']);
         self::assertSame('system-api-dbus-runtime-launch-plan', $payload['launch_plan']['kind']);
     }
 
@@ -75,6 +96,10 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
             ], JSON_THROW_ON_ERROR),
             json_encode([
                 'method' => 'DescribeActivationBootstrap',
+                'arguments' => [],
+            ], JSON_THROW_ON_ERROR),
+            json_encode([
+                'method' => 'DescribeActivationPreparation',
                 'arguments' => [],
             ], JSON_THROW_ON_ERROR),
             json_encode([
@@ -101,12 +126,13 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertSame(0, $result['exitCode'], $result['stderr']);
 
         $responses = $this->decodeNdjson($result['stdout']);
-        self::assertCount(4, $responses);
+        self::assertCount(5, $responses);
         self::assertSame('system-api-dbus-runtime-launcher', $responses[0]['kind']);
         self::assertSame('system-api-dbus-runtime-launch-plan', $responses[1]['kind']);
         self::assertSame('system-api-dbus-runtime-bootstrap', $responses[2]['kind']);
-        self::assertSame('runtime-launcher-call-001', $responses[3]['request_id']);
-        self::assertSame('system.dbus-runtime', $responses[3]['result']['method']);
+        self::assertSame('system-api-dbus-runtime-activation-context', $responses[3]['kind']);
+        self::assertSame('runtime-launcher-call-001', $responses[4]['request_id']);
+        self::assertSame('system.dbus-runtime', $responses[4]['result']['method']);
     }
 
     /**
