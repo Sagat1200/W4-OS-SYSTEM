@@ -59,8 +59,12 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-diagnose.php', $manifest['runtime_bridge']['diagnostics_entrypoint']);
         self::assertSame('files/usr/local/bin/w4-system-api-dbus-runtime-diagnose', $manifest['runtime_bridge']['diagnostics_wrapper']);
         self::assertSame('pending-runtime-adapter', $manifest['runtime_bridge']['runtime_status']);
+        self::assertContains('Call', $manifest['runtime_bridge']['commands']);
+        self::assertContains('GetCapabilities', $manifest['runtime_bridge']['commands']);
+        self::assertContains('DiagnoseRuntime', $manifest['runtime_bridge']['commands']);
+        self::assertContains('DescribeRuntime', $manifest['runtime_bridge']['commands']);
+        self::assertContains('serve-stdio-bridge', $manifest['runtime_bridge']['commands']);
         self::assertContains('check-readiness', $manifest['runtime_bridge']['commands']);
-        self::assertContains('diagnose-runtime', $manifest['runtime_bridge']['commands']);
         self::assertContains('system-api-dbus-binding-manifest.json', $manifest['generated_files']);
         self::assertContains('apply-binding.sh', $manifest['generated_files']);
         self::assertContains('files/usr/local/lib/w4/system-api/w4-system-api-dbus-bridge.php', $manifest['generated_files']);
@@ -98,12 +102,57 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         $bridgeScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-bridge.php');
         self::assertNotFalse($bridgeScript);
         self::assertStringContainsString("const W4_SYSTEM_API_STATUS = 'pending-runtime-adapter';", $bridgeScript);
+        self::assertStringContainsString("'kind' => 'system-api-dbus-bridge-runtime'", $bridgeScript);
+        self::assertStringContainsString("'Call'", $bridgeScript);
+        self::assertStringContainsString("'GetCapabilities'", $bridgeScript);
+        self::assertStringContainsString("'DescribeRuntime'", $bridgeScript);
+        self::assertStringContainsString("'serve-stdio-bridge'", $bridgeScript);
+        self::assertStringContainsString("case 'Call':", $bridgeScript);
+        self::assertStringContainsString("case 'GetCapabilities':", $bridgeScript);
+        self::assertStringContainsString("case 'DiagnoseRuntime':", $bridgeScript);
+        self::assertStringContainsString("case 'DescribeRuntime':", $bridgeScript);
+        self::assertStringContainsString("case 'serve-stdio-bridge':", $bridgeScript);
         self::assertStringContainsString("case 'serve-dbus':", $bridgeScript);
+        self::assertStringContainsString("'code' => 'BINDING_PENDING'", $bridgeScript);
+        self::assertStringContainsString('El runtime D-Bus para %s sigue pendiente', $bridgeScript);
         self::assertStringContainsString('org.w4.System1', $bridgeScript);
 
         $bridgeWrapper = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-bridge');
         self::assertNotFalse($bridgeWrapper);
         self::assertStringContainsString('/usr/bin/php /usr/local/lib/w4/system-api/w4-system-api-dbus-bridge.php "$@"', $bridgeWrapper);
+
+        $bridgeScriptPath = $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-bridge.php';
+        $bridgeDescribe = $this->runGeneratedPhpScript([
+            $bridgeScriptPath,
+            'DescribeRuntime',
+        ]);
+        self::assertSame(0, $bridgeDescribe['exitCode'], $bridgeDescribe['stderr']);
+        $bridgeDescribePayload = $this->decodeJson($bridgeDescribe['stdout']);
+        self::assertSame('system-api-dbus-bridge-runtime', $bridgeDescribePayload['kind']);
+        self::assertSame('pending-runtime-adapter', $bridgeDescribePayload['binding_status']);
+        self::assertContains('Call', $bridgeDescribePayload['commands']);
+
+        $pendingCallRequestPath = $outputDir . DIRECTORY_SEPARATOR . 'pending-call-request.json';
+        file_put_contents(
+            $pendingCallRequestPath,
+            json_encode([
+                'api_version' => '1.0',
+                'request_id' => 'binding-call-001',
+                'method' => 'system.dbus-runtime',
+                'params' => [],
+            ], JSON_THROW_ON_ERROR)
+        );
+        $bridgeCall = $this->runGeneratedPhpScript([
+            $bridgeScriptPath,
+            'Call',
+            '--request-file',
+            $pendingCallRequestPath,
+        ]);
+        self::assertSame(0, $bridgeCall['exitCode'], $bridgeCall['stderr']);
+        $bridgeCallPayload = $this->decodeJson($bridgeCall['stdout']);
+        self::assertSame('binding-call-001', $bridgeCallPayload['request_id']);
+        self::assertNull($bridgeCallPayload['result']);
+        self::assertSame('BINDING_PENDING', $bridgeCallPayload['error']['code']);
 
         $readinessScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'w4-system-api-bridge-readiness.php');
         self::assertNotFalse($readinessScript);
@@ -151,6 +200,38 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
 
         $process = proc_open($command, $descriptorSpec, $pipes, $this->rootDir);
         self::assertIsResource($process, 'No se pudo ejecutar generate_system_api_dbus_binding.php');
+
+        fclose($pipes[0]);
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+
+        $exitCode = proc_close($process);
+
+        return [
+            'exitCode' => $exitCode,
+            'stdout' => is_string($stdout) ? $stdout : '',
+            'stderr' => is_string($stderr) ? $stderr : '',
+        ];
+    }
+
+    /**
+     * @param list<string> $command
+     * @return array{exitCode:int,stdout:string,stderr:string}
+     */
+    private function runGeneratedPhpScript(array $command): array
+    {
+        array_unshift($command, PHP_BINARY);
+
+        $descriptorSpec = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+
+        $process = proc_open($command, $descriptorSpec, $pipes, $this->rootDir);
+        self::assertIsResource($process, 'No se pudo ejecutar el bridge empaquetado');
 
         fclose($pipes[0]);
         $stdout = stream_get_contents($pipes[1]);

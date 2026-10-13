@@ -14,12 +14,10 @@
         <HardDisk uuid="{56d76cba-8e49-4bbe-8b43-44262fd4c206}" location="W4-OS-Home-Test.vdi" format="VDI" type="Normal"/>
       </HardDisks>
       <DVDImages>
-        <Image uuid="{d3c0c17a-fed8-403e-a2f7-a615bcc0920e}" location="C:/W4/Packages/W4-OS SYSTEM/build/iso-output/w4-os-home/w4-os-home-live-amd64.iso"/>
         <Image uuid="{2912c0df-8c62-4a32-93d3-ffbd1a776794}" location="C:/W4/Packages/W4-OS SYSTEM/build/iso-output/w4-os-home-test/w4-os-home-test-live-amd64.iso"/>
       </DVDImages>
     </MediaRegistry>
     <ExtraData>
-      <ExtraDataItem name="GUI/Fullscreen" value="true"/>
       <ExtraDataItem name="GUI/LastCloseAction" value="PowerOff"/>
       <ExtraDataItem name="GUI/LastNormalWindowPosition" value="-1920,23,1920,1009,max"/>
       <ExtraDataItem name="GUI/LastScaleWindowPosition" value="-1279,276,640,480,max"/>
@@ -56,7 +54,7 @@
       <AudioAdapter driver="Null"/>
       <Clipboard/>
       <GuestProperties>
-        <GuestProperty name="/VirtualBox/HostInfo/GUI/LanguageID" value="es_ES" timestamp="1791793029743886700" flags="RDONLYGUEST"/>
+        <GuestProperty name="/VirtualBox/HostInfo/GUI/LanguageID" value="es_ES" timestamp="1791869032632499600" flags=""/>
       </GuestProperties>
       <StorageControllers>
         <StorageController name="IDE" type="PIIX4" PortCount="2" useHostIOCache="true" Bootable="true">
