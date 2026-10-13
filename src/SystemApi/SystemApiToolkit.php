@@ -89,6 +89,19 @@ final class SystemApiToolkit
                     'adapter_status' => 'pending-runtime-adapter',
                     'activation_command' => 'serve-dbus',
                 ],
+                'local_runtime_adapter' => [
+                    'script' => 'scripts/system_api_dbus_runtime_adapter.php',
+                    'commands' => [
+                        'Call',
+                        'GetCapabilities',
+                        'DiagnoseRuntime',
+                        'DescribeRuntime',
+                        'DescribeSpecification',
+                        'serve-stdio-adapter',
+                        'serve-dbus',
+                    ],
+                    'status' => 'spec-ready',
+                ],
                 'local_daemon' => [
                     'script' => 'scripts/system_api_daemon.php',
                     'commands' => [

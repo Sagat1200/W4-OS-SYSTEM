@@ -29,6 +29,9 @@ final class SystemApiCliTest extends TestCase
         self::assertContains('Call', $payload['result']['data']['binding']['local_dbus_bridge']['commands']);
         self::assertSame('pending-runtime-adapter', $payload['result']['data']['binding']['local_dbus_bridge']['adapter_status']);
         self::assertSame('serve-dbus', $payload['result']['data']['binding']['local_dbus_bridge']['activation_command']);
+        self::assertSame('scripts/system_api_dbus_runtime_adapter.php', $payload['result']['data']['binding']['local_runtime_adapter']['script']);
+        self::assertSame('spec-ready', $payload['result']['data']['binding']['local_runtime_adapter']['status']);
+        self::assertContains('DescribeSpecification', $payload['result']['data']['binding']['local_runtime_adapter']['commands']);
         self::assertContains('profiles.list', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-runtime', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('updates.plan', array_column($payload['result']['data']['methods'], 'name'));
