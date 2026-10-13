@@ -35,6 +35,7 @@ final class SystemApiDbusRuntimeLauncher
                 'DescribeLaunchPlan',
                 'DescribeActivationBootstrap',
                 'DescribeActivationPreparation',
+                'AttemptActivation',
                 'DescribeHost',
                 'DescribeSpecification',
                 'DescribeRuntime',
@@ -63,6 +64,21 @@ final class SystemApiDbusRuntimeLauncher
     {
         return $this->encodeJson($this->activationToolkit->createActivationPreparation(
             $this->runtimeProbe->createReport(),
+            null,
+            [
+                'runtime_launcher_entry' => 'scripts/system_api_dbus_runtime_launcher.php',
+                'runtime_host_entry' => 'scripts/system_api_dbus_runtime_host.php',
+                'runtime_adapter_entry' => 'scripts/system_api_dbus_runtime_adapter.php',
+                'runtime_bootstrap_spec' => 'embedded:DescribeActivationBootstrap',
+            ]
+        ));
+    }
+
+    public function attemptActivation(): string
+    {
+        return $this->encodeJson($this->activationToolkit->createActivationAttempt(
+            $this->runtimeProbe->createReport(),
+            'local-runtime-launcher',
             null,
             [
                 'runtime_launcher_entry' => 'scripts/system_api_dbus_runtime_launcher.php',
@@ -157,6 +173,7 @@ final class SystemApiDbusRuntimeLauncher
                 'DescribeLaunchPlan' => $this->decodeResponseJson($this->describeLaunchPlan()),
                 'DescribeActivationBootstrap' => $this->decodeResponseJson($this->describeActivationBootstrap()),
                 'DescribeActivationPreparation' => $this->decodeResponseJson($this->describeActivationPreparation()),
+                'AttemptActivation' => $this->decodeResponseJson($this->attemptActivation()),
                 'ServeDbus' => $this->decodeResponseJson($this->serveDbus()),
                 default => $this->decodeResponseJson($this->runtimeHost->invoke($method, $this->resolveArguments($envelope))),
             };
@@ -277,7 +294,7 @@ final class SystemApiDbusRuntimeLauncher
             return true;
         }
 
-        return in_array($method, ['DescribeLauncher', 'DescribeLaunchPlan', 'DescribeActivationBootstrap', 'DescribeActivationPreparation', 'ServeDbus'], true);
+        return in_array($method, ['DescribeLauncher', 'DescribeLaunchPlan', 'DescribeActivationBootstrap', 'DescribeActivationPreparation', 'AttemptActivation', 'ServeDbus'], true);
     }
 
     /**

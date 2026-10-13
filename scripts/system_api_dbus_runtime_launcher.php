@@ -59,6 +59,7 @@ try {
         'DescribeLaunchPlan' => $launcher->describeLaunchPlan(),
         'DescribeActivationBootstrap' => $launcher->describeActivationBootstrap(),
         'DescribeActivationPreparation' => $launcher->describeActivationPreparation(),
+        'AttemptActivation' => $launcher->attemptActivation(),
         'DescribeHost' => $launcher->describeHost(),
         'DescribeSpecification' => $launcher->describeSpecification(),
         'DescribeRuntime' => $launcher->describeRuntime(),

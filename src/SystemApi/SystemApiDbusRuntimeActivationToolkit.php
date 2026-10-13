@@ -128,6 +128,40 @@ final class SystemApiDbusRuntimeActivationToolkit
     }
 
     /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, string>|null $environment
+     * @param array<string, string> $entrypoints
+     * @return array<string, mixed>
+     */
+    public function createActivationAttempt(
+        array $runtimeDiagnosis,
+        string $bridgeKind,
+        ?array $environment = null,
+        array $entrypoints = []
+    ): array {
+        $preparation = $this->createActivationPreparation($runtimeDiagnosis, $environment, $entrypoints);
+        $ready = ($preparation['ready'] ?? false) === true;
+        $blockingReason = $ready ? 'runtime-adapter-not-materialized' : 'missing-runtime-capabilities';
+
+        return [
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-runtime-activation-attempt',
+            'status' => $ready ? 'ready-to-attempt-runtime-adapter' : 'blocked-missing-capabilities',
+            'attempted' => false,
+            'bridge_kind' => $bridgeKind,
+            'requested_command' => 'AttemptActivation',
+            'bus_name' => $preparation['resolved_contract']['bus_name'],
+            'object_path' => $preparation['resolved_contract']['object_path'],
+            'interface' => $preparation['resolved_contract']['interface'],
+            'blocking_reason' => $blockingReason,
+            'activation_preparation' => $preparation,
+            'runtime_diagnosis' => $runtimeDiagnosis,
+            'missing_capabilities' => $this->normalizeMissingCapabilities($runtimeDiagnosis),
+            'next_action' => $ready ? 'execute-runtime-adapter' : 'materialize-runtime-adapter',
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function createAdapterSpecification(): array
@@ -190,6 +224,7 @@ final class SystemApiDbusRuntimeActivationToolkit
             'adapter_specification' => $this->createAdapterSpecification(),
             'activation_bootstrap' => $this->createActivationBootstrap(),
             'activation_preparation' => $this->createActivationPreparation($runtimeDiagnosis),
+            'activation_attempt' => $this->createActivationAttempt($runtimeDiagnosis, $bridgeKind),
             'runtime_diagnosis' => $runtimeDiagnosis,
             'missing_capabilities' => $missingCapabilities,
             'next_action' => (($runtimeDiagnosis['ready'] ?? false) === true)

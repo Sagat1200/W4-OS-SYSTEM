@@ -10,11 +10,13 @@ final class SystemApiDbusRuntimeAdapter
 {
     private SystemApiDbusBridge $bridge;
     private SystemApiDbusRuntimeActivationToolkit $activationToolkit;
+    private SystemApiDbusRuntimeProbeToolkit $runtimeProbe;
 
     public function __construct(string $rootDir)
     {
         $this->bridge = new SystemApiDbusBridge($rootDir);
         $this->activationToolkit = new SystemApiDbusRuntimeActivationToolkit();
+        $this->runtimeProbe = new SystemApiDbusRuntimeProbeToolkit();
     }
 
     public function call(string $requestJson): string
@@ -34,17 +36,68 @@ final class SystemApiDbusRuntimeAdapter
 
     public function describeRuntime(): string
     {
-        return $this->bridge->describeRuntime();
+        return $this->encodeJson([
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-runtime-adapter',
+            'status' => 'pending-runtime-adapter',
+            'bus_name' => 'org.w4.System1',
+            'object_path' => '/org/w4/System1',
+            'interface' => 'org.w4.System1.Manager',
+            'commands' => [
+                'DescribeSpecification',
+                'DescribeActivationPreparation',
+                'AttemptActivation',
+                'DescribeRuntime',
+                'DiagnoseRuntime',
+                'GetCapabilities',
+                'Call',
+                'serve-stdio-adapter',
+                'serve-dbus',
+            ],
+            'adapter_specification' => $this->activationToolkit->createAdapterSpecification(),
+        ]);
     }
 
     public function serveDbus(): string
     {
-        return $this->bridge->serveDbus();
+        return $this->encodeJson($this->activationToolkit->createPendingActivationReport(
+            $this->runtimeProbe->createReport(),
+            'local-runtime-adapter'
+        ));
     }
 
     public function describeSpecification(): string
     {
         return $this->encodeJson($this->activationToolkit->createAdapterSpecification());
+    }
+
+    public function describeActivationPreparation(): string
+    {
+        return $this->encodeJson($this->activationToolkit->createActivationPreparation(
+            $this->runtimeProbe->createReport(),
+            null,
+            [
+                'runtime_launcher_entry' => 'scripts/system_api_dbus_runtime_launcher.php',
+                'runtime_host_entry' => 'scripts/system_api_dbus_runtime_host.php',
+                'runtime_adapter_entry' => 'scripts/system_api_dbus_runtime_adapter.php',
+                'runtime_bootstrap_spec' => 'embedded:DescribeActivationBootstrap',
+            ]
+        ));
+    }
+
+    public function attemptActivation(): string
+    {
+        return $this->encodeJson($this->activationToolkit->createActivationAttempt(
+            $this->runtimeProbe->createReport(),
+            'local-runtime-adapter',
+            null,
+            [
+                'runtime_launcher_entry' => 'scripts/system_api_dbus_runtime_launcher.php',
+                'runtime_host_entry' => 'scripts/system_api_dbus_runtime_host.php',
+                'runtime_adapter_entry' => 'scripts/system_api_dbus_runtime_adapter.php',
+                'runtime_bootstrap_spec' => 'embedded:DescribeActivationBootstrap',
+            ]
+        ));
     }
 
     public function invoke(string $method, array $arguments = []): string
@@ -55,6 +108,8 @@ final class SystemApiDbusRuntimeAdapter
             'DiagnoseRuntime' => $this->diagnoseRuntime(),
             'DescribeRuntime' => $this->describeRuntime(),
             'DescribeSpecification' => $this->describeSpecification(),
+            'DescribeActivationPreparation' => $this->describeActivationPreparation(),
+            'AttemptActivation' => $this->attemptActivation(),
             'ServeDbus' => $this->serveDbus(),
             default => throw new ValidationError(sprintf('Metodo de runtime adapter no soportado: %s', $method)),
         };

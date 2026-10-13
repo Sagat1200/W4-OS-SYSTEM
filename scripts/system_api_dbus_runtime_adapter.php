@@ -60,6 +60,8 @@ try {
         'DiagnoseRuntime' => $adapter->diagnoseRuntime(),
         'DescribeRuntime' => $adapter->describeRuntime(),
         'DescribeSpecification' => $adapter->describeSpecification(),
+        'DescribeActivationPreparation' => $adapter->describeActivationPreparation(),
+        'AttemptActivation' => $adapter->attemptActivation(),
         'serve-dbus' => $adapter->serveDbus(),
         'serve-stdio-adapter' => serveAdapter($adapter, $outputPath),
         default => throw new ValidationError(sprintf('Comando no soportado: %s', $command)),
