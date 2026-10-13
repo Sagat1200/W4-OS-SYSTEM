@@ -154,6 +154,17 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertNull($bridgeCallPayload['result']);
         self::assertSame('BINDING_PENDING', $bridgeCallPayload['error']['code']);
 
+        $bridgeServeDbus = $this->runGeneratedPhpScript([
+            $bridgeScriptPath,
+            'serve-dbus',
+        ]);
+        self::assertSame(3, $bridgeServeDbus['exitCode'], $bridgeServeDbus['stderr']);
+        $bridgeServeDbusPayload = $this->decodeJson($bridgeServeDbus['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation', $bridgeServeDbusPayload['kind']);
+        self::assertSame('packaged-dbus-bridge', $bridgeServeDbusPayload['bridge_kind']);
+        self::assertSame('serve-dbus', $bridgeServeDbusPayload['requested_command']);
+        self::assertArrayHasKey('runtime_diagnosis', $bridgeServeDbusPayload);
+
         $readinessScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'w4-system-api-bridge-readiness.php');
         self::assertNotFalse($readinessScript);
         self::assertStringContainsString("'kind' => 'system-api-dbus-bridge-readiness'", $readinessScript);

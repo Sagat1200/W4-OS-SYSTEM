@@ -84,6 +84,7 @@ final class SystemApiToolkit
                         'DiagnoseRuntime',
                         'DescribeRuntime',
                         'serve-stdio-bridge',
+                        'serve-dbus',
                     ],
                 ],
                 'local_daemon' => [

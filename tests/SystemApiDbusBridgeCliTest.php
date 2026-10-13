@@ -24,6 +24,7 @@ final class SystemApiDbusBridgeCliTest extends TestCase
         self::assertSame('org.w4.System1', $payload['bus_name']);
         self::assertContains('Call', $payload['commands']);
         self::assertContains('serve-stdio-bridge', $payload['commands']);
+        self::assertContains('serve-dbus', $payload['commands']);
     }
 
     public function testGetCapabilitiesDelegatesToSystemApiManager(): void
@@ -109,6 +110,24 @@ final class SystemApiDbusBridgeCliTest extends TestCase
         self::assertSame('system.capabilities', $responses[1]['result']['method']);
         self::assertSame('bridge-stdio-call-001', $responses[2]['request_id']);
         self::assertSame('profiles.get', $responses[2]['result']['method']);
+    }
+
+    public function testServeDbusReturnsActivationReportAndExitCodeThree(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'serve-dbus',
+        ]);
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation', $payload['kind']);
+        self::assertSame('pending-runtime-adapter', $payload['status']);
+        self::assertSame('local-dbus-bridge', $payload['bridge_kind']);
+        self::assertSame('serve-dbus', $payload['requested_command']);
+        self::assertArrayHasKey('runtime_diagnosis', $payload);
+        self::assertArrayHasKey('missing_capabilities', $payload);
     }
 
     /**

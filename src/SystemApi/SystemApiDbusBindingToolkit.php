@@ -258,7 +258,7 @@ switch ($command) {
         exit(2);
 
     case 'serve-dbus':
-        fwrite(STDERR, "ERROR: W4 System API D-Bus bridge pendiente. Falta materializar el adaptador runtime que posea org.w4.System1.\n");
+        emitJson(createPendingActivationReport(buildRuntimeDiagnosis()));
         exit(3);
 
     default:
@@ -499,6 +499,29 @@ function createProtocolError(string $message): array
             'message' => $message,
             'retryable' => false,
         ],
+    ];
+}
+
+/**
+ * @param array<string, mixed> $runtimeDiagnosis
+ * @return array<string, mixed>
+ */
+function createPendingActivationReport(array $runtimeDiagnosis): array
+{
+    return [
+        'api_version' => '1.0',
+        'kind' => 'system-api-dbus-runtime-activation',
+        'status' => 'pending-runtime-adapter',
+        'bridge_kind' => 'packaged-dbus-bridge',
+        'requested_command' => 'serve-dbus',
+        'bus_name' => W4_SYSTEM_API_BUS_NAME,
+        'object_path' => W4_SYSTEM_API_OBJECT_PATH,
+        'interface' => W4_SYSTEM_API_INTERFACE,
+        'runtime_diagnosis' => $runtimeDiagnosis,
+        'missing_capabilities' => is_array($runtimeDiagnosis['missing_capabilities'] ?? null)
+            ? $runtimeDiagnosis['missing_capabilities']
+            : [],
+        'next_action' => 'materialize-runtime-adapter',
     ];
 }
 

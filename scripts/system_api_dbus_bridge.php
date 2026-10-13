@@ -59,6 +59,7 @@ try {
         'GetCapabilities' => $bridge->getCapabilities($requestId),
         'DiagnoseRuntime' => $bridge->diagnoseRuntime(),
         'DescribeRuntime' => $bridge->describeRuntime(),
+        'serve-dbus' => $bridge->serveDbus(),
         'serve-stdio-bridge' => serveBridge($bridge, $outputPath),
         default => throw new ValidationError(sprintf('Comando no soportado: %s', $command)),
     };
@@ -72,6 +73,10 @@ try {
         }
 
         echo $output;
+    }
+
+    if ($command === 'serve-dbus') {
+        exit(3);
     }
 
     exit(0);

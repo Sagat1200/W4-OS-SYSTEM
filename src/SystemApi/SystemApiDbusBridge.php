@@ -15,11 +15,13 @@ final class SystemApiDbusBridge
 
     private SystemApiManager $manager;
     private SystemApiDbusRuntimeProbeToolkit $runtimeProbe;
+    private SystemApiDbusRuntimeActivationToolkit $runtimeActivation;
 
     public function __construct(string $rootDir)
     {
         $this->manager = new SystemApiManager($rootDir);
         $this->runtimeProbe = new SystemApiDbusRuntimeProbeToolkit();
+        $this->runtimeActivation = new SystemApiDbusRuntimeActivationToolkit();
     }
 
     public function call(string $requestJson): string
@@ -35,6 +37,16 @@ final class SystemApiDbusBridge
     public function diagnoseRuntime(): string
     {
         return $this->encodeJson($this->runtimeProbe->createReport());
+    }
+
+    public function serveDbus(): string
+    {
+        return $this->encodeJson(
+            $this->runtimeActivation->createPendingActivationReport(
+                $this->runtimeProbe->createReport(),
+                'local-dbus-bridge'
+            )
+        );
     }
 
     public function describeRuntime(): string
@@ -53,11 +65,13 @@ final class SystemApiDbusBridge
                 'DiagnoseRuntime',
                 'DescribeRuntime',
                 'serve-stdio-bridge',
+                'serve-dbus',
             ],
             'delegates_to' => [
                 'call' => 'scripts/system_api_manager.php call',
                 'get_capabilities' => 'scripts/system_api_manager.php get-capabilities',
                 'diagnose_runtime' => 'scripts/check_system_api_dbus_runtime.php',
+                'serve_dbus' => 'pending-runtime-adapter',
             ],
         ]);
     }
@@ -94,6 +108,7 @@ final class SystemApiDbusBridge
                 ),
                 'DiagnoseRuntime' => $this->decodeResponseJson($this->diagnoseRuntime()),
                 'DescribeRuntime' => $this->decodeResponseJson($this->describeRuntime()),
+                'ServeDbus' => $this->decodeResponseJson($this->serveDbus()),
                 default => $this->createProtocolError(
                     'NOT_SUPPORTED',
                     sprintf('Metodo de bridge no soportado: %s', $method)
