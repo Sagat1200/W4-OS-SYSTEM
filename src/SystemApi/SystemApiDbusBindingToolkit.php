@@ -1537,6 +1537,16 @@ function createActivationPreparation(): array
         ? $runtimeDiagnosis['missing_capabilities']
         : [];
     $ready = ($runtimeDiagnosis['ready'] ?? false) === true;
+    $runtimeBackend = createRuntimeBackend($runtimeDiagnosis);
+    $resolvedContract = [
+        'bus_name' => W4_SYSTEM_API_BUS_NAME,
+        'object_path' => W4_SYSTEM_API_OBJECT_PATH,
+        'interface' => W4_SYSTEM_API_INTERFACE,
+        'runtime_launcher_entry' => getenv('W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-launcher',
+        'runtime_host_entry' => getenv('W4_SYSTEM_API_RUNTIME_HOST_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-host',
+        'runtime_adapter_entry' => getenv('W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-adapter',
+        'runtime_bootstrap_spec' => getenv('W4_SYSTEM_API_RUNTIME_BOOTSTRAP_SPEC') ?: '/usr/share/w4/system-api/org.w4.System1.runtime-bootstrap.json',
+    ];
 
     return [
         'api_version' => '1.0',
@@ -1544,17 +1554,10 @@ function createActivationPreparation(): array
         'status' => $ready ? 'ready-for-runtime-adapter' : 'pending-runtime-adapter',
         'ready' => $ready,
         'binding_status' => W4_SYSTEM_API_STATUS,
-        'resolved_contract' => [
-            'bus_name' => W4_SYSTEM_API_BUS_NAME,
-            'object_path' => W4_SYSTEM_API_OBJECT_PATH,
-            'interface' => W4_SYSTEM_API_INTERFACE,
-            'runtime_launcher_entry' => getenv('W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-launcher',
-            'runtime_host_entry' => getenv('W4_SYSTEM_API_RUNTIME_HOST_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-host',
-            'runtime_adapter_entry' => getenv('W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-adapter',
-            'runtime_bootstrap_spec' => getenv('W4_SYSTEM_API_RUNTIME_BOOTSTRAP_SPEC') ?: '/usr/share/w4/system-api/org.w4.System1.runtime-bootstrap.json',
-        ],
+        'resolved_contract' => $resolvedContract,
         'activation_bootstrap' => createActivationBootstrap(),
         'runtime_diagnosis' => $runtimeDiagnosis,
+        'runtime_backend' => $runtimeBackend,
         'execution_plan' => [
             'launcher' => [
                 'entrypoint' => getenv('W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-launcher',
@@ -1571,9 +1574,10 @@ function createActivationPreparation(): array
                 'command' => 'serve-dbus',
                 'ownership_goal' => W4_SYSTEM_API_BUS_NAME,
             ],
+            'runtime_backend' => createRuntimeBackendExecutionPlan($runtimeBackend, $resolvedContract),
         ],
         'unresolved_requirements' => $missingCapabilities,
-        'next_action' => $ready ? 'attempt-runtime-adapter' : 'materialize-runtime-adapter',
+        'next_action' => resolvePreparationNextAction($ready, $runtimeBackend),
     ];
 }
 
@@ -1585,24 +1589,41 @@ function createActivationAttempt(): array
     $runtimeDiagnosis = buildRuntimeDiagnosis();
     $preparation = createActivationPreparation();
     $ready = ($preparation['ready'] ?? false) === true;
+    $runtimeBackend = is_array($preparation['runtime_backend'] ?? null) ? $preparation['runtime_backend'] : [];
+    $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null) ? $runtimeBackend['selected_backend'] : 'contract-pending';
+    $nativeBackend = $selectedBackend === 'native-dbus-extension';
+    $nativeReady = $nativeBackend && (($runtimeBackend['materialized'] ?? false) === true);
 
     return [
         'api_version' => '1.0',
         'kind' => 'system-api-dbus-runtime-activation-attempt',
-        'status' => $ready ? 'ready-to-attempt-runtime-adapter' : 'blocked-missing-capabilities',
+        'status' => !$ready
+            ? 'blocked-missing-capabilities'
+            : ($nativeReady ? 'ready-to-launch-native-runtime' : ($nativeBackend ? 'blocked-native-runtime-backend' : 'ready-to-attempt-runtime-adapter')),
         'attempted' => false,
         'bridge_kind' => 'packaged-runtime-adapter',
         'requested_command' => 'AttemptActivation',
         'bus_name' => W4_SYSTEM_API_BUS_NAME,
         'object_path' => W4_SYSTEM_API_OBJECT_PATH,
         'interface' => W4_SYSTEM_API_INTERFACE,
-        'blocking_reason' => $ready ? 'runtime-adapter-not-materialized' : 'missing-runtime-capabilities',
+        'blocking_reason' => !$ready
+            ? 'missing-runtime-capabilities'
+            : ($nativeReady
+                ? 'native-runtime-service-not-launched'
+                : ($nativeBackend
+                    ? (is_string($runtimeBackend['blocking_reason'] ?? null) ? $runtimeBackend['blocking_reason'] : 'dbus-extension-api-incomplete')
+                    : 'runtime-adapter-not-materialized')),
         'activation_preparation' => $preparation,
         'runtime_diagnosis' => $runtimeDiagnosis,
+        'runtime_backend' => $runtimeBackend,
         'missing_capabilities' => is_array($runtimeDiagnosis['missing_capabilities'] ?? null)
             ? $runtimeDiagnosis['missing_capabilities']
             : [],
-        'next_action' => $ready ? 'execute-runtime-adapter' : 'materialize-runtime-adapter',
+        'next_action' => !$ready
+            ? 'materialize-runtime-adapter'
+            : ($nativeReady
+                ? 'execute-native-runtime-service'
+                : ($nativeBackend ? 'complete-native-runtime-backend' : 'execute-runtime-adapter')),
     ];
 }
 
@@ -1617,23 +1638,39 @@ function createActivationExecution(): array
     $runtimeAdapterPlan = is_array($preparation['execution_plan']['runtime_adapter'] ?? null)
         ? $preparation['execution_plan']['runtime_adapter']
         : [];
-    $ready = ($attempt['status'] ?? null) === 'ready-to-attempt-runtime-adapter';
+    $runtimeBackendPlan = is_array($preparation['execution_plan']['runtime_backend'] ?? null)
+        ? $preparation['execution_plan']['runtime_backend']
+        : [];
+    $readyForAdapter = ($attempt['status'] ?? null) === 'ready-to-attempt-runtime-adapter';
+    $readyForNative = ($attempt['status'] ?? null) === 'ready-to-launch-native-runtime';
 
     return [
         'api_version' => '1.0',
         'kind' => 'system-api-dbus-runtime-activation-result',
-        'status' => $ready ? 'execution-pending-runtime-adapter' : 'execution-blocked',
+        'status' => $readyForNative
+            ? 'execution-pending-native-runtime-service'
+            : ($readyForAdapter ? 'execution-pending-runtime-adapter' : 'execution-blocked'),
         'executed' => false,
         'exit_code' => 3,
         'bridge_kind' => 'packaged-runtime-adapter',
         'requested_command' => 'ExecuteActivation',
-        'target_command' => [
-            'entrypoint' => $runtimeAdapterPlan['entrypoint'] ?? null,
-            'command' => $runtimeAdapterPlan['command'] ?? null,
-        ],
+        'target_command' => $readyForNative
+            ? [
+                'entrypoint' => $runtimeBackendPlan['entrypoint'] ?? null,
+                'command' => $runtimeBackendPlan['command'] ?? null,
+                'command_role' => $runtimeBackendPlan['command_role'] ?? null,
+                'activation_mode' => $runtimeBackendPlan['activation_mode'] ?? null,
+            ]
+            : [
+                'entrypoint' => $runtimeAdapterPlan['entrypoint'] ?? null,
+                'command' => $runtimeAdapterPlan['command'] ?? null,
+                'command_role' => 'runtime-adapter-activation',
+                'activation_mode' => 'activation-contract',
+            ],
         'blocking_reason' => $attempt['blocking_reason'] ?? 'runtime-adapter-not-materialized',
         'activation_attempt' => $attempt,
         'runtime_diagnosis' => $runtimeDiagnosis,
+        'runtime_backend' => $attempt['runtime_backend'] ?? [],
         'next_action' => $attempt['next_action'] ?? 'materialize-runtime-adapter',
     ];
 }
@@ -1641,7 +1678,7 @@ function createActivationExecution(): array
 function performActivationExecution(): array
 {
     $activationExecution = createActivationExecution();
-    if (($activationExecution['status'] ?? null) !== 'execution-pending-runtime-adapter') {
+    if (!in_array($activationExecution['status'] ?? null, ['execution-pending-runtime-adapter', 'execution-pending-native-runtime-service'], true)) {
         return $activationExecution;
     }
 
@@ -1746,6 +1783,61 @@ function finalizeActivationExecution(array $activationExecution, array $commandR
     };
 
     return $activationExecution;
+}
+
+/**
+ * @param array<string, mixed> $runtimeBackend
+ * @param array<string, string> $resolvedContract
+ * @return array<string, mixed>
+ */
+function createRuntimeBackendExecutionPlan(array $runtimeBackend, array $resolvedContract): array
+{
+    $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null)
+        ? $runtimeBackend['selected_backend']
+        : 'contract-pending';
+
+    if ($selectedBackend === 'native-dbus-extension') {
+        return [
+            'selected_backend' => 'native-dbus-extension',
+            'entrypoint' => $resolvedContract['runtime_adapter_entry'],
+            'command' => 'serve-dbus',
+            'command_role' => 'native-runtime-service-bootstrap',
+            'activation_mode' => 'long-running-dbus-service',
+            'ownership_goal' => $resolvedContract['bus_name'],
+            'service_lifecycle' => 'request-name-and-wait-loop',
+        ];
+    }
+
+    return [
+        'selected_backend' => $selectedBackend,
+        'entrypoint' => $resolvedContract['runtime_adapter_entry'],
+        'command' => 'serve-dbus',
+        'command_role' => 'runtime-adapter-activation',
+        'activation_mode' => 'activation-contract',
+        'ownership_goal' => $resolvedContract['bus_name'],
+    ];
+}
+
+/**
+ * @param array<string, mixed> $runtimeBackend
+ */
+function resolvePreparationNextAction(bool $ready, array $runtimeBackend): string
+{
+    if (!$ready) {
+        return 'materialize-runtime-adapter';
+    }
+
+    $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null)
+        ? $runtimeBackend['selected_backend']
+        : 'contract-pending';
+
+    if ($selectedBackend !== 'native-dbus-extension') {
+        return 'attempt-runtime-adapter';
+    }
+
+    return (($runtimeBackend['materialized'] ?? false) === true)
+        ? 'launch-native-runtime-service'
+        : 'complete-native-runtime-backend';
 }
 
 /**
@@ -2722,6 +2814,16 @@ function createActivationPreparation(): array
         ? $runtimeDiagnosis['missing_capabilities']
         : [];
     $ready = ($runtimeDiagnosis['ready'] ?? false) === true;
+    $runtimeBackend = createRuntimeBackend($runtimeDiagnosis);
+    $resolvedContract = [
+        'bus_name' => W4_SYSTEM_API_BUS_NAME,
+        'object_path' => W4_SYSTEM_API_OBJECT_PATH,
+        'interface' => W4_SYSTEM_API_INTERFACE,
+        'runtime_launcher_entry' => getenv('W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-launcher',
+        'runtime_host_entry' => getenv('W4_SYSTEM_API_RUNTIME_HOST_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-host',
+        'runtime_adapter_entry' => getenv('W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-adapter',
+        'runtime_bootstrap_spec' => getenv('W4_SYSTEM_API_RUNTIME_BOOTSTRAP_SPEC') ?: '/usr/share/w4/system-api/org.w4.System1.runtime-bootstrap.json',
+    ];
 
     return [
         'api_version' => '1.0',
@@ -2729,17 +2831,10 @@ function createActivationPreparation(): array
         'status' => $ready ? 'ready-for-runtime-adapter' : 'pending-runtime-adapter',
         'ready' => $ready,
         'binding_status' => W4_SYSTEM_API_STATUS,
-        'resolved_contract' => [
-            'bus_name' => W4_SYSTEM_API_BUS_NAME,
-            'object_path' => W4_SYSTEM_API_OBJECT_PATH,
-            'interface' => W4_SYSTEM_API_INTERFACE,
-            'runtime_launcher_entry' => getenv('W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-launcher',
-            'runtime_host_entry' => getenv('W4_SYSTEM_API_RUNTIME_HOST_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-host',
-            'runtime_adapter_entry' => getenv('W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-adapter',
-            'runtime_bootstrap_spec' => getenv('W4_SYSTEM_API_RUNTIME_BOOTSTRAP_SPEC') ?: '/usr/share/w4/system-api/org.w4.System1.runtime-bootstrap.json',
-        ],
+        'resolved_contract' => $resolvedContract,
         'activation_bootstrap' => createActivationBootstrap(),
         'runtime_diagnosis' => $runtimeDiagnosis,
+        'runtime_backend' => $runtimeBackend,
         'execution_plan' => [
             'launcher' => [
                 'entrypoint' => getenv('W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-launcher',
@@ -2756,9 +2851,10 @@ function createActivationPreparation(): array
                 'command' => 'serve-dbus',
                 'ownership_goal' => W4_SYSTEM_API_BUS_NAME,
             ],
+            'runtime_backend' => createRuntimeBackendExecutionPlan($runtimeBackend, $resolvedContract),
         ],
         'unresolved_requirements' => $missingCapabilities,
-        'next_action' => $ready ? 'attempt-runtime-adapter' : 'materialize-runtime-adapter',
+        'next_action' => resolvePreparationNextAction($ready, $runtimeBackend),
     ];
 }
 
@@ -2767,24 +2863,41 @@ function createActivationAttempt(): array
     $runtimeDiagnosis = buildRuntimeDiagnosis();
     $preparation = createActivationPreparation();
     $ready = ($preparation['ready'] ?? false) === true;
+    $runtimeBackend = is_array($preparation['runtime_backend'] ?? null) ? $preparation['runtime_backend'] : [];
+    $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null) ? $runtimeBackend['selected_backend'] : 'contract-pending';
+    $nativeBackend = $selectedBackend === 'native-dbus-extension';
+    $nativeReady = $nativeBackend && (($runtimeBackend['materialized'] ?? false) === true);
 
     return [
         'api_version' => '1.0',
         'kind' => 'system-api-dbus-runtime-activation-attempt',
-        'status' => $ready ? 'ready-to-attempt-runtime-adapter' : 'blocked-missing-capabilities',
+        'status' => !$ready
+            ? 'blocked-missing-capabilities'
+            : ($nativeReady ? 'ready-to-launch-native-runtime' : ($nativeBackend ? 'blocked-native-runtime-backend' : 'ready-to-attempt-runtime-adapter')),
         'attempted' => false,
         'bridge_kind' => 'packaged-runtime-launcher',
         'requested_command' => 'AttemptActivation',
         'bus_name' => W4_SYSTEM_API_BUS_NAME,
         'object_path' => W4_SYSTEM_API_OBJECT_PATH,
         'interface' => W4_SYSTEM_API_INTERFACE,
-        'blocking_reason' => $ready ? 'runtime-adapter-not-materialized' : 'missing-runtime-capabilities',
+        'blocking_reason' => !$ready
+            ? 'missing-runtime-capabilities'
+            : ($nativeReady
+                ? 'native-runtime-service-not-launched'
+                : ($nativeBackend
+                    ? (is_string($runtimeBackend['blocking_reason'] ?? null) ? $runtimeBackend['blocking_reason'] : 'dbus-extension-api-incomplete')
+                    : 'runtime-adapter-not-materialized')),
         'activation_preparation' => $preparation,
         'runtime_diagnosis' => $runtimeDiagnosis,
+        'runtime_backend' => $runtimeBackend,
         'missing_capabilities' => is_array($runtimeDiagnosis['missing_capabilities'] ?? null)
             ? $runtimeDiagnosis['missing_capabilities']
             : [],
-        'next_action' => $ready ? 'execute-runtime-adapter' : 'materialize-runtime-adapter',
+        'next_action' => !$ready
+            ? 'materialize-runtime-adapter'
+            : ($nativeReady
+                ? 'execute-native-runtime-service'
+                : ($nativeBackend ? 'complete-native-runtime-backend' : 'execute-runtime-adapter')),
     ];
 }
 
@@ -2796,23 +2909,39 @@ function createActivationExecution(): array
     $runtimeAdapterPlan = is_array($preparation['execution_plan']['runtime_adapter'] ?? null)
         ? $preparation['execution_plan']['runtime_adapter']
         : [];
-    $ready = ($attempt['status'] ?? null) === 'ready-to-attempt-runtime-adapter';
+    $runtimeBackendPlan = is_array($preparation['execution_plan']['runtime_backend'] ?? null)
+        ? $preparation['execution_plan']['runtime_backend']
+        : [];
+    $readyForAdapter = ($attempt['status'] ?? null) === 'ready-to-attempt-runtime-adapter';
+    $readyForNative = ($attempt['status'] ?? null) === 'ready-to-launch-native-runtime';
 
     return [
         'api_version' => '1.0',
         'kind' => 'system-api-dbus-runtime-activation-result',
-        'status' => $ready ? 'execution-pending-runtime-adapter' : 'execution-blocked',
+        'status' => $readyForNative
+            ? 'execution-pending-native-runtime-service'
+            : ($readyForAdapter ? 'execution-pending-runtime-adapter' : 'execution-blocked'),
         'executed' => false,
         'exit_code' => 3,
         'bridge_kind' => 'packaged-runtime-launcher',
         'requested_command' => 'ExecuteActivation',
-        'target_command' => [
-            'entrypoint' => $runtimeAdapterPlan['entrypoint'] ?? null,
-            'command' => $runtimeAdapterPlan['command'] ?? null,
-        ],
+        'target_command' => $readyForNative
+            ? [
+                'entrypoint' => $runtimeBackendPlan['entrypoint'] ?? null,
+                'command' => $runtimeBackendPlan['command'] ?? null,
+                'command_role' => $runtimeBackendPlan['command_role'] ?? null,
+                'activation_mode' => $runtimeBackendPlan['activation_mode'] ?? null,
+            ]
+            : [
+                'entrypoint' => $runtimeAdapterPlan['entrypoint'] ?? null,
+                'command' => $runtimeAdapterPlan['command'] ?? null,
+                'command_role' => 'runtime-adapter-activation',
+                'activation_mode' => 'activation-contract',
+            ],
         'blocking_reason' => $attempt['blocking_reason'] ?? 'runtime-adapter-not-materialized',
         'activation_attempt' => $attempt,
         'runtime_diagnosis' => $runtimeDiagnosis,
+        'runtime_backend' => $attempt['runtime_backend'] ?? [],
         'next_action' => $attempt['next_action'] ?? 'materialize-runtime-adapter',
     ];
 }
@@ -2820,7 +2949,7 @@ function createActivationExecution(): array
 function performActivationExecution(): array
 {
     $activationExecution = createActivationExecution();
-    if (($activationExecution['status'] ?? null) !== 'execution-pending-runtime-adapter') {
+    if (!in_array($activationExecution['status'] ?? null, ['execution-pending-runtime-adapter', 'execution-pending-native-runtime-service'], true)) {
         return $activationExecution;
     }
 
@@ -2828,6 +2957,227 @@ function performActivationExecution(): array
         $activationExecution,
         executeTargetCommand(is_array($activationExecution['target_command'] ?? null) ? $activationExecution['target_command'] : null)
     );
+}
+
+/**
+ * @param array<string, mixed> $runtimeDiagnosis
+ * @return array<string, mixed>
+ */
+function createRuntimeBackend(array $runtimeDiagnosis): array
+{
+    $environment = captureEnvironment();
+    $selectedBackend = $environment['W4_SYSTEM_API_RUNTIME_BACKEND'] ?? 'contract-pending';
+    $selectedBackend = is_string($selectedBackend) && trim($selectedBackend) !== ''
+        ? trim($selectedBackend)
+        : 'contract-pending';
+    $ready = ($runtimeDiagnosis['ready'] ?? false) === true;
+    $nativeDbusClass = resolveNativeDbusClassName($environment);
+    $nativeDbusHasServiceClass = $nativeDbusClass !== null;
+    $nativeDbusHasBusSystemConstant = resolveNativeDbusFeatureAvailability(
+        $environment,
+        'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM',
+        static fn (?string $resolvedClassName): bool => is_string($resolvedClassName) && defined($resolvedClassName . '::BUS_SYSTEM'),
+        $nativeDbusClass
+    );
+    $nativeDbusHasRequestNameMethod = resolveNativeDbusFeatureAvailability(
+        $environment,
+        'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME',
+        static fn (?string $resolvedClassName): bool => is_string($resolvedClassName) && method_exists($resolvedClassName, 'requestName'),
+        $nativeDbusClass
+    );
+    $nativeDbusHasRegisterObjectMethod = resolveNativeDbusFeatureAvailability(
+        $environment,
+        'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT',
+        static fn (?string $resolvedClassName): bool => is_string($resolvedClassName) && method_exists($resolvedClassName, 'registerObject'),
+        $nativeDbusClass
+    );
+    $nativeDbusHasWaitLoopMethod = resolveNativeDbusFeatureAvailability(
+        $environment,
+        'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP',
+        static fn (?string $resolvedClassName): bool => is_string($resolvedClassName) && method_exists($resolvedClassName, 'waitLoop'),
+        $nativeDbusClass
+    );
+    $nativeDbusMissingApi = [];
+    if (!$nativeDbusHasServiceClass) {
+        $nativeDbusMissingApi[] = 'dbus-service-class';
+    }
+    if (!$nativeDbusHasBusSystemConstant) {
+        $nativeDbusMissingApi[] = 'Dbus::BUS_SYSTEM';
+    }
+    if (!$nativeDbusHasRequestNameMethod) {
+        $nativeDbusMissingApi[] = 'requestName';
+    }
+    if (!$nativeDbusHasRegisterObjectMethod) {
+        $nativeDbusMissingApi[] = 'registerObject';
+    }
+    if (!$nativeDbusHasWaitLoopMethod) {
+        $nativeDbusMissingApi[] = 'waitLoop';
+    }
+    $nativeDbusCompatibleForService = $nativeDbusHasServiceClass
+        && $nativeDbusHasBusSystemConstant
+        && $nativeDbusHasRequestNameMethod
+        && $nativeDbusHasRegisterObjectMethod
+        && $nativeDbusHasWaitLoopMethod;
+
+    return match ($selectedBackend) {
+        'experimental-embedded-runtime' => [
+            'kind' => 'system-api-dbus-runtime-backend',
+            'selected_backend' => 'experimental-embedded-runtime',
+            'status' => $ready ? 'experimental-runtime-backend-materialized' : W4_SYSTEM_API_STATUS,
+            'materialized' => $ready,
+            'transport' => 'stdio-activation-contract',
+            'ownership_model' => 'process-local-activation-contract',
+            'supports_bus_ownership' => false,
+            'blocking_reason' => $ready ? null : 'missing-runtime-capabilities',
+        ],
+        'native-dbus-extension' => [
+            'kind' => 'system-api-dbus-runtime-backend',
+            'selected_backend' => 'native-dbus-extension',
+            'status' => ($ready && $nativeDbusCompatibleForService)
+                ? 'native-runtime-backend-materialized'
+                : W4_SYSTEM_API_STATUS,
+            'materialized' => $ready && $nativeDbusCompatibleForService,
+            'transport' => 'dbus-system-bus',
+            'ownership_model' => 'native-php-dbus-extension',
+            'supports_bus_ownership' => true,
+            'native_runtime_api' => [
+                'class_name' => $nativeDbusClass,
+                'class_available' => $nativeDbusHasServiceClass,
+                'has_bus_system_constant' => $nativeDbusHasBusSystemConstant,
+                'has_request_name_method' => $nativeDbusHasRequestNameMethod,
+                'has_register_object_method' => $nativeDbusHasRegisterObjectMethod,
+                'has_wait_loop_method' => $nativeDbusHasWaitLoopMethod,
+                'compatible_for_service' => $nativeDbusCompatibleForService,
+                'missing_api' => $nativeDbusMissingApi,
+                'service_contract' => [
+                    'bus_name' => W4_SYSTEM_API_BUS_NAME,
+                    'object_path' => W4_SYSTEM_API_OBJECT_PATH,
+                    'interface' => W4_SYSTEM_API_INTERFACE,
+                    'required_methods' => [
+                        'requestName',
+                        'registerObject',
+                        'waitLoop',
+                    ],
+                ],
+            ],
+            'blocking_reason' => !$ready
+                ? 'missing-runtime-capabilities'
+                : ($nativeDbusCompatibleForService
+                    ? null
+                    : ($nativeDbusHasServiceClass
+                        ? 'dbus-extension-api-incomplete'
+                        : 'dbus-extension-service-backend-unavailable')),
+        ],
+        'contract-pending' => [
+            'kind' => 'system-api-dbus-runtime-backend',
+            'selected_backend' => 'contract-pending',
+            'status' => W4_SYSTEM_API_STATUS,
+            'materialized' => false,
+            'transport' => 'contract-only',
+            'ownership_model' => 'not-materialized',
+            'supports_bus_ownership' => false,
+            'blocking_reason' => $ready ? 'runtime-backend-not-configured' : 'missing-runtime-capabilities',
+        ],
+        default => [
+            'kind' => 'system-api-dbus-runtime-backend',
+            'selected_backend' => $selectedBackend,
+            'status' => $ready ? 'unsupported-runtime-backend' : W4_SYSTEM_API_STATUS,
+            'materialized' => false,
+            'transport' => 'unknown',
+            'ownership_model' => 'unsupported',
+            'supports_bus_ownership' => false,
+            'blocking_reason' => $ready ? 'unsupported-runtime-backend' : 'missing-runtime-capabilities',
+        ],
+    };
+}
+
+/**
+ * @param array<string, string> $environment
+ */
+function resolveNativeDbusClassName(array $environment): ?string
+{
+    $overrideClassName = $environment['W4_SYSTEM_API_NATIVE_DBUS_CLASS'] ?? null;
+    if (is_string($overrideClassName) && trim($overrideClassName) !== '') {
+        return trim($overrideClassName);
+    }
+
+    foreach (['Dbus', 'DBus'] as $candidate) {
+        if (class_exists($candidate)) {
+            return $candidate;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * @param array<string, string> $environment
+ * @param callable(?string): bool $fallback
+ */
+function resolveNativeDbusFeatureAvailability(
+    array $environment,
+    string $overrideKey,
+    callable $fallback,
+    ?string $className
+): bool {
+    $override = resolveBoolOverride($environment, $overrideKey);
+
+    return $override ?? $fallback($className);
+}
+
+/**
+ * @param array<string, mixed> $runtimeBackend
+ * @param array<string, string> $resolvedContract
+ * @return array<string, mixed>
+ */
+function createRuntimeBackendExecutionPlan(array $runtimeBackend, array $resolvedContract): array
+{
+    $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null)
+        ? $runtimeBackend['selected_backend']
+        : 'contract-pending';
+
+    if ($selectedBackend === 'native-dbus-extension') {
+        return [
+            'selected_backend' => 'native-dbus-extension',
+            'entrypoint' => $resolvedContract['runtime_adapter_entry'],
+            'command' => 'serve-dbus',
+            'command_role' => 'native-runtime-service-bootstrap',
+            'activation_mode' => 'long-running-dbus-service',
+            'ownership_goal' => $resolvedContract['bus_name'],
+            'service_lifecycle' => 'request-name-and-wait-loop',
+        ];
+    }
+
+    return [
+        'selected_backend' => $selectedBackend,
+        'entrypoint' => $resolvedContract['runtime_adapter_entry'],
+        'command' => 'serve-dbus',
+        'command_role' => 'runtime-adapter-activation',
+        'activation_mode' => 'activation-contract',
+        'ownership_goal' => $resolvedContract['bus_name'],
+    ];
+}
+
+/**
+ * @param array<string, mixed> $runtimeBackend
+ */
+function resolvePreparationNextAction(bool $ready, array $runtimeBackend): string
+{
+    if (!$ready) {
+        return 'materialize-runtime-adapter';
+    }
+
+    $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null)
+        ? $runtimeBackend['selected_backend']
+        : 'contract-pending';
+
+    if ($selectedBackend !== 'native-dbus-extension') {
+        return 'attempt-runtime-adapter';
+    }
+
+    return (($runtimeBackend['materialized'] ?? false) === true)
+        ? 'launch-native-runtime-service'
+        : 'complete-native-runtime-backend';
 }
 
 /**

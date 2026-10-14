@@ -104,7 +104,7 @@ final class SystemApiDbusRuntimeLauncher
             ]
         );
 
-        if (($report['status'] ?? null) !== 'execution-pending-runtime-adapter') {
+        if (!in_array($report['status'] ?? null, ['execution-pending-runtime-adapter', 'execution-pending-native-runtime-service'], true)) {
             return $this->encodeJson($report);
         }
 
