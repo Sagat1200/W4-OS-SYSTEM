@@ -450,11 +450,20 @@ function emitJson(array $payload): void
 
 function buildRuntimeDiagnosis(): array
 {
-    $hasDbusExtension = extension_loaded('dbus') || extension_loaded('php_dbus') || extension_loaded('php-dbus');
-    $hasBusctl = commandLooksAvailable('busctl');
-    $hasGdbus = commandLooksAvailable('gdbus');
-    $hasDbusDaemon = commandLooksAvailable('dbus-daemon');
-    $hasSystemBusSocket = file_exists('/run/dbus/system_bus_socket');
+    $environment = captureEnvironment();
+    $hasDbusExtension = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION')
+        ?? (extension_loaded('dbus') || extension_loaded('php_dbus') || extension_loaded('php-dbus'));
+    $hasBusctl = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_BUSCTL')
+        ?? commandLooksAvailable('busctl');
+    $hasGdbus = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_GDBUS')
+        ?? commandLooksAvailable('gdbus');
+    $hasDbusDaemon = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON')
+        ?? commandLooksAvailable('dbus-daemon');
+    $hasSystemBusSocket = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET')
+        ?? (PHP_OS_FAMILY !== 'Windows' && file_exists($environment['W4_SYSTEM_API_PROBE_SYSTEM_BUS_SOCKET'] ?? '/run/dbus/system_bus_socket'));
+    $phpBinary = $environment['W4_SYSTEM_API_PROBE_PHP_BINARY'] ?? PHP_BINARY;
+    $phpVersion = $environment['W4_SYSTEM_API_PROBE_PHP_VERSION'] ?? PHP_VERSION;
+    $osFamily = $environment['W4_SYSTEM_API_PROBE_OS_FAMILY'] ?? PHP_OS_FAMILY;
 
     $missingCapabilities = [];
     if (!$hasDbusExtension) {
@@ -484,9 +493,9 @@ function buildRuntimeDiagnosis(): array
         'object_path' => W4_SYSTEM_API_OBJECT_PATH,
         'interface' => W4_SYSTEM_API_INTERFACE,
         'environment' => [
-            'os_family' => PHP_OS_FAMILY,
-            'php_binary' => PHP_BINARY,
-            'php_version' => PHP_VERSION,
+            'os_family' => $osFamily,
+            'php_binary' => $phpBinary,
+            'php_version' => $phpVersion,
         ],
         'probes' => [
             'php_dbus_extension' => $hasDbusExtension,
@@ -750,6 +759,43 @@ function commandLooksAvailable(string $command): bool
 
     return is_string($resolved) && trim($resolved) !== '';
 }
+
+/**
+ * @return array<string, string>
+ */
+function captureEnvironment(): array
+{
+    $environment = getenv();
+    if (!is_array($environment)) {
+        return [];
+    }
+
+    $captured = [];
+    foreach ($environment as $key => $value) {
+        if (is_string($key) && is_string($value)) {
+            $captured[$key] = $value;
+        }
+    }
+
+    return $captured;
+}
+
+/**
+ * @param array<string, string> $environment
+ */
+function resolveBoolOverride(array $environment, string $key): ?bool
+{
+    $value = $environment[$key] ?? null;
+    if (!is_string($value) || trim($value) === '') {
+        return null;
+    }
+
+    return match (strtolower(trim($value))) {
+        '1', 'true', 'yes', 'on' => true,
+        '0', 'false', 'no', 'off' => false,
+        default => null,
+    };
+}
 PHP;
     }
 
@@ -894,8 +940,9 @@ switch ($command) {
         exit(0);
 
     case 'ExecuteActivation':
-        emitJson(createActivationExecution());
-        exit(createActivationExecution()['exit_code']);
+        $activationExecution = performActivationExecution();
+        emitJson($activationExecution);
+        exit($activationExecution['exit_code']);
 
     case 'DescribeRuntime':
         emitJson(createAdapterRuntime());
@@ -1134,7 +1181,7 @@ function handleAdapterEnvelope(string $line): array
         'DescribeSpecification' => createAdapterSpecification(),
         'DescribeActivationPreparation' => createActivationPreparation(),
         'AttemptActivation' => createActivationAttempt(),
-        'ExecuteActivation' => createActivationExecution(),
+        'ExecuteActivation' => performActivationExecution(),
         'DescribeRuntime' => createAdapterRuntime(),
         'DiagnoseRuntime' => buildRuntimeDiagnosis(),
         'GetCapabilities' => createPendingResponse(
@@ -1375,6 +1422,116 @@ function createActivationExecution(): array
     ];
 }
 
+function performActivationExecution(): array
+{
+    $activationExecution = createActivationExecution();
+    if (($activationExecution['status'] ?? null) !== 'execution-pending-runtime-adapter') {
+        return $activationExecution;
+    }
+
+    return finalizeActivationExecution(
+        $activationExecution,
+        executeTargetCommand(is_array($activationExecution['target_command'] ?? null) ? $activationExecution['target_command'] : null)
+    );
+}
+
+/**
+ * @param array<string, mixed>|null $targetCommand
+ * @return array<string, mixed>
+ */
+function executeTargetCommand(?array $targetCommand): array
+{
+    if (!is_array($targetCommand)) {
+        fwrite(STDERR, "ERROR: target_command debe ser un objeto para ejecutar la activacion del runtime adapter.\n");
+        exit(1);
+    }
+
+    $entrypoint = $targetCommand['entrypoint'] ?? null;
+    $command = $targetCommand['command'] ?? null;
+    if (!is_string($entrypoint) || trim($entrypoint) === '' || !is_string($command) || trim($command) === '') {
+        fwrite(STDERR, "ERROR: target_command.entrypoint y target_command.command deben ser strings no vacios.\n");
+        exit(1);
+    }
+
+    $resolvedEntrypoint = trim($entrypoint);
+    $processCommand = str_ends_with(strtolower($resolvedEntrypoint), '.php')
+        ? [PHP_BINARY, $resolvedEntrypoint, trim($command)]
+        : [$resolvedEntrypoint, trim($command)];
+
+    $descriptorSpec = [
+        0 => ['pipe', 'r'],
+        1 => ['pipe', 'w'],
+        2 => ['pipe', 'w'],
+    ];
+
+    $process = proc_open($processCommand, $descriptorSpec, $pipes, null, captureEnvironment());
+    if (!is_resource($process)) {
+        fwrite(STDERR, sprintf("ERROR: No se pudo ejecutar el target command %s %s\n", $resolvedEntrypoint, $command));
+        exit(1);
+    }
+
+    fclose($pipes[0]);
+    $stdout = stream_get_contents($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+
+    $exitCode = proc_close($process);
+    $payload = null;
+
+    if (is_string($stdout) && trim($stdout) !== '') {
+        try {
+            $decoded = json_decode($stdout, true, 512, JSON_THROW_ON_ERROR);
+            if (is_array($decoded)) {
+                $payload = $decoded;
+            }
+        } catch (\JsonException) {
+            $payload = null;
+        }
+    }
+
+    return [
+        'invoked' => true,
+        'entrypoint' => $resolvedEntrypoint,
+        'command' => trim($command),
+        'exit_code' => $exitCode,
+        'stdout' => is_string($stdout) ? $stdout : '',
+        'stderr' => is_string($stderr) ? $stderr : '',
+        'payload' => $payload,
+    ];
+}
+
+/**
+ * @param array<string, mixed> $activationExecution
+ * @param array<string, mixed> $commandResult
+ * @return array<string, mixed>
+ */
+function finalizeActivationExecution(array $activationExecution, array $commandResult): array
+{
+    $exitCode = is_int($commandResult['exit_code'] ?? null) ? $commandResult['exit_code'] : 1;
+
+    $activationExecution['executed'] = true;
+    $activationExecution['exit_code'] = $exitCode;
+    $activationExecution['status'] = match ($exitCode) {
+        0 => 'execution-completed',
+        3 => 'execution-attempted-pending-runtime-adapter',
+        default => 'execution-attempted-failed',
+    };
+    $activationExecution['blocking_reason'] = match ($exitCode) {
+        0 => null,
+        3 => 'runtime-adapter-returned-pending',
+        default => 'runtime-adapter-command-failed',
+    };
+    $activationExecution['command_result'] = $commandResult;
+    $activationExecution['next_action'] = match ($exitCode) {
+        0 => 'observe-runtime-adapter-state',
+        3 => 'inspect-runtime-adapter-report',
+        default => 'inspect-runtime-adapter-error',
+    };
+
+    return $activationExecution;
+}
+
 /**
  * @return array<string, mixed>
  */
@@ -1553,11 +1710,20 @@ function createAdapterRuntime(): array
 
 function buildRuntimeDiagnosis(): array
 {
-    $hasDbusExtension = extension_loaded('dbus') || extension_loaded('php_dbus') || extension_loaded('php-dbus');
-    $hasBusctl = commandLooksAvailable('busctl');
-    $hasGdbus = commandLooksAvailable('gdbus');
-    $hasDbusDaemon = commandLooksAvailable('dbus-daemon');
-    $hasSystemBusSocket = file_exists('/run/dbus/system_bus_socket');
+    $environment = captureEnvironment();
+    $hasDbusExtension = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION')
+        ?? (extension_loaded('dbus') || extension_loaded('php_dbus') || extension_loaded('php-dbus'));
+    $hasBusctl = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_BUSCTL')
+        ?? commandLooksAvailable('busctl');
+    $hasGdbus = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_GDBUS')
+        ?? commandLooksAvailable('gdbus');
+    $hasDbusDaemon = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON')
+        ?? commandLooksAvailable('dbus-daemon');
+    $hasSystemBusSocket = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET')
+        ?? (PHP_OS_FAMILY !== 'Windows' && file_exists($environment['W4_SYSTEM_API_PROBE_SYSTEM_BUS_SOCKET'] ?? '/run/dbus/system_bus_socket'));
+    $phpBinary = $environment['W4_SYSTEM_API_PROBE_PHP_BINARY'] ?? PHP_BINARY;
+    $phpVersion = $environment['W4_SYSTEM_API_PROBE_PHP_VERSION'] ?? PHP_VERSION;
+    $osFamily = $environment['W4_SYSTEM_API_PROBE_OS_FAMILY'] ?? PHP_OS_FAMILY;
 
     $missingCapabilities = [];
     if (!$hasDbusExtension) {
@@ -1587,9 +1753,9 @@ function buildRuntimeDiagnosis(): array
         'object_path' => W4_SYSTEM_API_OBJECT_PATH,
         'interface' => W4_SYSTEM_API_INTERFACE,
         'environment' => [
-            'os_family' => PHP_OS_FAMILY,
-            'php_binary' => PHP_BINARY,
-            'php_version' => PHP_VERSION,
+            'os_family' => $osFamily,
+            'php_binary' => $phpBinary,
+            'php_version' => $phpVersion,
         ],
         'probes' => [
             'php_dbus_extension' => $hasDbusExtension,
@@ -1847,6 +2013,43 @@ function commandLooksAvailable(string $command): bool
 
     return is_string($resolved) && trim($resolved) !== '';
 }
+
+/**
+ * @return array<string, string>
+ */
+function captureEnvironment(): array
+{
+    $environment = getenv();
+    if (!is_array($environment)) {
+        return [];
+    }
+
+    $captured = [];
+    foreach ($environment as $key => $value) {
+        if (is_string($key) && is_string($value)) {
+            $captured[$key] = $value;
+        }
+    }
+
+    return $captured;
+}
+
+/**
+ * @param array<string, string> $environment
+ */
+function resolveBoolOverride(array $environment, string $key): ?bool
+{
+    $value = $environment[$key] ?? null;
+    if (!is_string($value) || trim($value) === '') {
+        return null;
+    }
+
+    return match (strtolower(trim($value))) {
+        '1', 'true', 'yes', 'on' => true,
+        '0', 'false', 'no', 'off' => false,
+        default => null,
+    };
+}
 PHP;
     }
 
@@ -1887,8 +2090,9 @@ switch ($command) {
         exit(0);
 
     case 'ExecuteActivation':
-        emitJson(createActivationExecution());
-        exit(createActivationExecution()['exit_code']);
+        $activationExecution = performActivationExecution();
+        emitJson($activationExecution);
+        exit($activationExecution['exit_code']);
 
     case 'DescribeHost':
         emitJson(createHostDescription());
@@ -2152,6 +2356,116 @@ function createActivationExecution(): array
     ];
 }
 
+function performActivationExecution(): array
+{
+    $activationExecution = createActivationExecution();
+    if (($activationExecution['status'] ?? null) !== 'execution-pending-runtime-adapter') {
+        return $activationExecution;
+    }
+
+    return finalizeActivationExecution(
+        $activationExecution,
+        executeTargetCommand(is_array($activationExecution['target_command'] ?? null) ? $activationExecution['target_command'] : null)
+    );
+}
+
+/**
+ * @param array<string, mixed>|null $targetCommand
+ * @return array<string, mixed>
+ */
+function executeTargetCommand(?array $targetCommand): array
+{
+    if (!is_array($targetCommand)) {
+        fwrite(STDERR, "ERROR: target_command debe ser un objeto para ejecutar la activacion del runtime launcher.\n");
+        exit(1);
+    }
+
+    $entrypoint = $targetCommand['entrypoint'] ?? null;
+    $command = $targetCommand['command'] ?? null;
+    if (!is_string($entrypoint) || trim($entrypoint) === '' || !is_string($command) || trim($command) === '') {
+        fwrite(STDERR, "ERROR: target_command.entrypoint y target_command.command deben ser strings no vacios.\n");
+        exit(1);
+    }
+
+    $resolvedEntrypoint = trim($entrypoint);
+    $processCommand = str_ends_with(strtolower($resolvedEntrypoint), '.php')
+        ? [PHP_BINARY, $resolvedEntrypoint, trim($command)]
+        : [$resolvedEntrypoint, trim($command)];
+
+    $descriptorSpec = [
+        0 => ['pipe', 'r'],
+        1 => ['pipe', 'w'],
+        2 => ['pipe', 'w'],
+    ];
+
+    $process = proc_open($processCommand, $descriptorSpec, $pipes, null, captureEnvironment());
+    if (!is_resource($process)) {
+        fwrite(STDERR, sprintf("ERROR: No se pudo ejecutar el target command %s %s\n", $resolvedEntrypoint, $command));
+        exit(1);
+    }
+
+    fclose($pipes[0]);
+    $stdout = stream_get_contents($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+
+    $exitCode = proc_close($process);
+    $payload = null;
+
+    if (is_string($stdout) && trim($stdout) !== '') {
+        try {
+            $decoded = json_decode($stdout, true, 512, JSON_THROW_ON_ERROR);
+            if (is_array($decoded)) {
+                $payload = $decoded;
+            }
+        } catch (\JsonException) {
+            $payload = null;
+        }
+    }
+
+    return [
+        'invoked' => true,
+        'entrypoint' => $resolvedEntrypoint,
+        'command' => trim($command),
+        'exit_code' => $exitCode,
+        'stdout' => is_string($stdout) ? $stdout : '',
+        'stderr' => is_string($stderr) ? $stderr : '',
+        'payload' => $payload,
+    ];
+}
+
+/**
+ * @param array<string, mixed> $activationExecution
+ * @param array<string, mixed> $commandResult
+ * @return array<string, mixed>
+ */
+function finalizeActivationExecution(array $activationExecution, array $commandResult): array
+{
+    $exitCode = is_int($commandResult['exit_code'] ?? null) ? $commandResult['exit_code'] : 1;
+
+    $activationExecution['executed'] = true;
+    $activationExecution['exit_code'] = $exitCode;
+    $activationExecution['status'] = match ($exitCode) {
+        0 => 'execution-completed',
+        3 => 'execution-attempted-pending-runtime-adapter',
+        default => 'execution-attempted-failed',
+    };
+    $activationExecution['blocking_reason'] = match ($exitCode) {
+        0 => null,
+        3 => 'runtime-adapter-returned-pending',
+        default => 'runtime-adapter-command-failed',
+    };
+    $activationExecution['command_result'] = $commandResult;
+    $activationExecution['next_action'] = match ($exitCode) {
+        0 => 'observe-runtime-adapter-state',
+        3 => 'inspect-runtime-adapter-report',
+        default => 'inspect-runtime-adapter-error',
+    };
+
+    return $activationExecution;
+}
+
 function createHostDescription(): array
 {
     return [
@@ -2205,11 +2519,20 @@ function createAdapterRuntime(): array
 
 function buildRuntimeDiagnosis(): array
 {
-    $hasDbusExtension = extension_loaded('dbus') || extension_loaded('php_dbus') || extension_loaded('php-dbus');
-    $hasBusctl = commandLooksAvailable('busctl');
-    $hasGdbus = commandLooksAvailable('gdbus');
-    $hasDbusDaemon = commandLooksAvailable('dbus-daemon');
-    $hasSystemBusSocket = file_exists('/run/dbus/system_bus_socket');
+    $environment = captureEnvironment();
+    $hasDbusExtension = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION')
+        ?? (extension_loaded('dbus') || extension_loaded('php_dbus') || extension_loaded('php-dbus'));
+    $hasBusctl = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_BUSCTL')
+        ?? commandLooksAvailable('busctl');
+    $hasGdbus = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_GDBUS')
+        ?? commandLooksAvailable('gdbus');
+    $hasDbusDaemon = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON')
+        ?? commandLooksAvailable('dbus-daemon');
+    $hasSystemBusSocket = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET')
+        ?? (PHP_OS_FAMILY !== 'Windows' && file_exists($environment['W4_SYSTEM_API_PROBE_SYSTEM_BUS_SOCKET'] ?? '/run/dbus/system_bus_socket'));
+    $phpBinary = $environment['W4_SYSTEM_API_PROBE_PHP_BINARY'] ?? PHP_BINARY;
+    $phpVersion = $environment['W4_SYSTEM_API_PROBE_PHP_VERSION'] ?? PHP_VERSION;
+    $osFamily = $environment['W4_SYSTEM_API_PROBE_OS_FAMILY'] ?? PHP_OS_FAMILY;
 
     $missingCapabilities = [];
     if (!$hasDbusExtension) {
@@ -2239,9 +2562,9 @@ function buildRuntimeDiagnosis(): array
         'object_path' => W4_SYSTEM_API_OBJECT_PATH,
         'interface' => W4_SYSTEM_API_INTERFACE,
         'environment' => [
-            'os_family' => PHP_OS_FAMILY,
-            'php_binary' => PHP_BINARY,
-            'php_version' => PHP_VERSION,
+            'os_family' => $osFamily,
+            'php_binary' => $phpBinary,
+            'php_version' => $phpVersion,
         ],
         'probes' => [
             'php_dbus_extension' => $hasDbusExtension,
@@ -2371,7 +2694,7 @@ function handleLauncherEnvelope(string $line): array
         'DescribeLaunchPlan' => createLaunchPlan(),
         'DescribeActivationPreparation' => createActivationPreparation(),
         'AttemptActivation' => createActivationAttempt(),
-        'ExecuteActivation' => createActivationExecution(),
+        'ExecuteActivation' => performActivationExecution(),
         'DescribeHost' => createHostDescription(),
         'DescribeSpecification' => createAdapterSpecification(),
         'DescribeRuntime' => createAdapterRuntime(),
@@ -2509,6 +2832,43 @@ function commandLooksAvailable(string $command): bool
     }
 
     return is_string($resolved) && trim($resolved) !== '';
+}
+
+/**
+ * @return array<string, string>
+ */
+function captureEnvironment(): array
+{
+    $environment = getenv();
+    if (!is_array($environment)) {
+        return [];
+    }
+
+    $captured = [];
+    foreach ($environment as $key => $value) {
+        if (is_string($key) && is_string($value)) {
+            $captured[$key] = $value;
+        }
+    }
+
+    return $captured;
+}
+
+/**
+ * @param array<string, string> $environment
+ */
+function resolveBoolOverride(array $environment, string $key): ?bool
+{
+    $value = $environment[$key] ?? null;
+    if (!is_string($value) || trim($value) === '') {
+        return null;
+    }
+
+    return match (strtolower(trim($value))) {
+        '1', 'true', 'yes', 'on' => true,
+        '0', 'false', 'no', 'off' => false,
+        default => null,
+    };
 }
 PHP;
     }

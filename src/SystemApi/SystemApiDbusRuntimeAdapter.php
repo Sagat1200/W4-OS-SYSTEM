@@ -103,7 +103,7 @@ final class SystemApiDbusRuntimeAdapter
 
     public function executeActivation(): string
     {
-        return $this->encodeJson($this->activationToolkit->createActivationExecution(
+        $report = $this->activationToolkit->createActivationExecution(
             $this->runtimeProbe->createReport(),
             'local-runtime-adapter',
             null,
@@ -113,6 +113,15 @@ final class SystemApiDbusRuntimeAdapter
                 'runtime_adapter_entry' => 'scripts/system_api_dbus_runtime_adapter.php',
                 'runtime_bootstrap_spec' => 'embedded:DescribeActivationBootstrap',
             ]
+        );
+
+        if (($report['status'] ?? null) !== 'execution-pending-runtime-adapter') {
+            return $this->encodeJson($report);
+        }
+
+        return $this->encodeJson($this->finalizeActivationExecution(
+            $report,
+            $this->executeTargetCommand($report['target_command'] ?? null)
         ));
     }
 
@@ -257,6 +266,132 @@ final class SystemApiDbusRuntimeAdapter
         }
 
         return trim($value);
+    }
+
+    /**
+     * @param mixed $targetCommand
+     * @return array<string, mixed>
+     */
+    private function executeTargetCommand(mixed $targetCommand): array
+    {
+        if (!is_array($targetCommand)) {
+            throw new ValidationError('target_command debe ser un objeto para ejecutar la activacion');
+        }
+
+        $entrypoint = $targetCommand['entrypoint'] ?? null;
+        $command = $targetCommand['command'] ?? null;
+
+        if (!is_string($entrypoint) || trim($entrypoint) === '') {
+            throw new ValidationError('target_command.entrypoint debe ser un string no vacio');
+        }
+
+        if (!is_string($command) || trim($command) === '') {
+            throw new ValidationError('target_command.command debe ser un string no vacio');
+        }
+
+        $resolvedEntrypoint = trim($entrypoint);
+        $processCommand = str_ends_with(strtolower($resolvedEntrypoint), '.php')
+            ? [PHP_BINARY, $resolvedEntrypoint, trim($command)]
+            : [$resolvedEntrypoint, trim($command)];
+
+        $descriptorSpec = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+
+        $process = proc_open(
+            $processCommand,
+            $descriptorSpec,
+            $pipes,
+            dirname(__DIR__, 2),
+            $this->captureEnvironment()
+        );
+
+        if (!is_resource($process)) {
+            throw new ValidationError(sprintf('No se pudo ejecutar el target command %s %s', $resolvedEntrypoint, $command));
+        }
+
+        fclose($pipes[0]);
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+
+        $exitCode = proc_close($process);
+        $payload = null;
+
+        if (is_string($stdout) && trim($stdout) !== '') {
+            try {
+                $decoded = json_decode($stdout, true, 512, JSON_THROW_ON_ERROR);
+                if (is_array($decoded)) {
+                    $payload = $decoded;
+                }
+            } catch (\JsonException) {
+                $payload = null;
+            }
+        }
+
+        return [
+            'invoked' => true,
+            'entrypoint' => $resolvedEntrypoint,
+            'command' => trim($command),
+            'exit_code' => $exitCode,
+            'stdout' => is_string($stdout) ? $stdout : '',
+            'stderr' => is_string($stderr) ? $stderr : '',
+            'payload' => $payload,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     * @param array<string, mixed> $commandResult
+     * @return array<string, mixed>
+     */
+    private function finalizeActivationExecution(array $report, array $commandResult): array
+    {
+        $exitCode = is_int($commandResult['exit_code'] ?? null) ? $commandResult['exit_code'] : 1;
+
+        $report['executed'] = true;
+        $report['exit_code'] = $exitCode;
+        $report['status'] = match ($exitCode) {
+            0 => 'execution-completed',
+            3 => 'execution-attempted-pending-runtime-adapter',
+            default => 'execution-attempted-failed',
+        };
+        $report['blocking_reason'] = match ($exitCode) {
+            0 => null,
+            3 => 'runtime-adapter-returned-pending',
+            default => 'runtime-adapter-command-failed',
+        };
+        $report['command_result'] = $commandResult;
+        $report['next_action'] = match ($exitCode) {
+            0 => 'observe-runtime-adapter-state',
+            3 => 'inspect-runtime-adapter-report',
+            default => 'inspect-runtime-adapter-error',
+        };
+
+        return $report;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function captureEnvironment(): array
+    {
+        $environment = getenv();
+        if (!is_array($environment)) {
+            return [];
+        }
+
+        $captured = [];
+        foreach ($environment as $key => $value) {
+            if (is_string($key) && is_string($value)) {
+                $captured[$key] = $value;
+            }
+        }
+
+        return $captured;
     }
 
     /**

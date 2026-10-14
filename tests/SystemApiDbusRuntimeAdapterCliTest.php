@@ -78,6 +78,27 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertSame('system-api-dbus-runtime-activation-attempt', $payload['activation_attempt']['kind']);
     }
 
+    public function testExecuteActivationRunsTargetCommandWhenRuntimeIsReady(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'ExecuteActivation',
+        ], '', $this->readyRuntimeEnvironment());
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation-result', $payload['kind']);
+        self::assertTrue($payload['executed']);
+        self::assertSame('execution-attempted-pending-runtime-adapter', $payload['status']);
+        self::assertSame('runtime-adapter-returned-pending', $payload['blocking_reason']);
+        self::assertSame('inspect-runtime-adapter-report', $payload['next_action']);
+        self::assertSame('scripts/system_api_dbus_runtime_adapter.php', $payload['command_result']['entrypoint']);
+        self::assertSame('serve-dbus', $payload['command_result']['command']);
+        self::assertSame(3, $payload['command_result']['exit_code']);
+        self::assertSame('system-api-dbus-runtime-activation', $payload['command_result']['payload']['kind']);
+    }
+
     public function testCallDelegatesToSystemApiContract(): void
     {
         $request = [
@@ -168,7 +189,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
      * @param list<string> $command
      * @return array{exitCode:int,stdout:string,stderr:string}
      */
-    private function runPhpScript(array $command, string $stdin = ''): array
+    private function runPhpScript(array $command, string $stdin = '', array $extraEnvironment = []): array
     {
         array_unshift($command, PHP_BINARY);
 
@@ -178,7 +199,8 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             2 => ['pipe', 'w'],
         ];
 
-        $process = proc_open($command, $descriptorSpec, $pipes, dirname(__DIR__));
+        $environment = array_merge($_ENV, $extraEnvironment);
+        $process = proc_open($command, $descriptorSpec, $pipes, dirname(__DIR__), $environment);
         self::assertIsResource($process, 'No se pudo ejecutar system_api_dbus_runtime_adapter.php');
 
         fwrite($pipes[0], $stdin);
@@ -233,5 +255,22 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
     private function scriptPath(): string
     {
         return dirname(__DIR__) . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'system_api_dbus_runtime_adapter.php';
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function readyRuntimeEnvironment(): array
+    {
+        return [
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '1',
+            'W4_SYSTEM_API_PROBE_HAS_BUSCTL' => '1',
+            'W4_SYSTEM_API_PROBE_HAS_GDBUS' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON' => '1',
+            'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET' => '1',
+            'W4_SYSTEM_API_PROBE_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_PROBE_PHP_BINARY' => '/usr/bin/php',
+            'W4_SYSTEM_API_PROBE_PHP_VERSION' => '8.4.3',
+        ];
     }
 }
