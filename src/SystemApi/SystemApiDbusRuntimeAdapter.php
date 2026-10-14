@@ -53,6 +53,8 @@ final class SystemApiDbusRuntimeAdapter
                 'DescribeActivationPreparation',
                 'AttemptActivation',
                 'ExecuteActivation',
+                'DescribeNativeRuntimeService',
+                'StartNativeRuntimeService',
                 'DescribeRuntime',
                 'DiagnoseRuntime',
                 'GetCapabilities',
@@ -97,6 +99,21 @@ final class SystemApiDbusRuntimeAdapter
         );
         $report['runtime_backend'] = $runtimeBackend;
         $report['exit_code'] = 3;
+
+        return $this->encodeJson($report);
+    }
+
+    public function describeNativeRuntimeService(): string
+    {
+        return $this->encodeJson(
+            $this->runtimeBackend->createNativeRuntimeServiceDefinition($this->runtimeProbe->createReport())
+        );
+    }
+
+    public function startNativeRuntimeService(): string
+    {
+        $report = $this->runtimeBackend->createNativeRuntimeServiceStartupReport($this->runtimeProbe->createReport());
+        $this->persistNativeRuntimeArtifacts($report);
 
         return $this->encodeJson($report);
     }
@@ -170,6 +187,8 @@ final class SystemApiDbusRuntimeAdapter
             'DescribeActivationPreparation' => $this->describeActivationPreparation(),
             'AttemptActivation' => $this->attemptActivation(),
             'ExecuteActivation' => $this->executeActivation(),
+            'DescribeNativeRuntimeService' => $this->describeNativeRuntimeService(),
+            'StartNativeRuntimeService' => $this->startNativeRuntimeService(),
             'ServeDbus' => $this->serveDbus(),
             default => throw new ValidationError(sprintf('Metodo de runtime adapter no soportado: %s', $method)),
         };
@@ -385,6 +404,9 @@ final class SystemApiDbusRuntimeAdapter
     private function finalizeActivationExecution(array $report, array $commandResult): array
     {
         $exitCode = is_int($commandResult['exit_code'] ?? null) ? $commandResult['exit_code'] : 1;
+        $commandRole = is_string($report['target_command']['command_role'] ?? null)
+            ? $report['target_command']['command_role']
+            : 'runtime-adapter-activation';
 
         $report['executed'] = true;
         $report['exit_code'] = $exitCode;
@@ -395,13 +417,19 @@ final class SystemApiDbusRuntimeAdapter
         };
         $report['blocking_reason'] = match ($exitCode) {
             0 => null,
-            3 => 'runtime-adapter-returned-pending',
+            3 => $commandRole === 'native-runtime-service-bootstrap'
+                ? 'native-runtime-service-returned-pending'
+                : 'runtime-adapter-returned-pending',
             default => 'runtime-adapter-command-failed',
         };
         $report['command_result'] = $commandResult;
         $report['next_action'] = match ($exitCode) {
-            0 => 'observe-runtime-adapter-state',
-            3 => 'inspect-runtime-adapter-report',
+            0 => $commandRole === 'native-runtime-service-bootstrap'
+                ? 'observe-native-runtime-service-state'
+                : 'observe-runtime-adapter-state',
+            3 => $commandRole === 'native-runtime-service-bootstrap'
+                ? 'inspect-native-runtime-service-report'
+                : 'inspect-runtime-adapter-report',
             default => 'inspect-runtime-adapter-error',
         };
 
@@ -470,5 +498,58 @@ final class SystemApiDbusRuntimeAdapter
         }
 
         return $encoded . PHP_EOL;
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     */
+    private function persistNativeRuntimeArtifacts(array $report): void
+    {
+        if (($report['startup_acknowledged'] ?? false) !== true) {
+            return;
+        }
+
+        $serviceDefinition = is_array($report['service_definition'] ?? null) ? $report['service_definition'] : [];
+        $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
+        $readyMarkerPath = $this->optionalArtifactPath($artifacts, 'ready_marker_path');
+        $statusFilePath = $this->optionalArtifactPath($artifacts, 'status_file_path');
+        $pidFilePath = $this->optionalArtifactPath($artifacts, 'pid_file_path');
+
+        if ($readyMarkerPath !== null) {
+            $this->writeArtifactFile($readyMarkerPath, "native-runtime-service-started\n");
+        }
+
+        if ($statusFilePath !== null) {
+            $statusPayload = json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($statusPayload !== false) {
+                $this->writeArtifactFile($statusFilePath, $statusPayload . PHP_EOL);
+            }
+        }
+
+        if ($pidFilePath !== null) {
+            $this->writeArtifactFile($pidFilePath, "0\n");
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $artifacts
+     */
+    private function optionalArtifactPath(array $artifacts, string $field): ?string
+    {
+        $value = $artifacts[$field] ?? null;
+
+        return is_string($value) && trim($value) !== '' ? trim($value) : null;
+    }
+
+    private function writeArtifactFile(string $path, string $contents): void
+    {
+        $directory = dirname($path);
+        if ($directory !== '' && !is_dir($directory) && !mkdir($directory, 0777, true) && !is_dir($directory)) {
+            throw new ValidationError(sprintf('No se pudo crear el directorio de artefacto %s', $directory));
+        }
+
+        if (file_put_contents($path, $contents) === false) {
+            throw new ValidationError(sprintf('No se pudo escribir el artefacto %s', $path));
+        }
     }
 }

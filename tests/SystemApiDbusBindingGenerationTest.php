@@ -224,6 +224,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertStringContainsString("case 'DescribeActivationPreparation':", $runtimeAdapterScript);
         self::assertStringContainsString("case 'AttemptActivation':", $runtimeAdapterScript);
         self::assertStringContainsString("case 'ExecuteActivation':", $runtimeAdapterScript);
+        self::assertStringContainsString("case 'StartNativeRuntimeService':", $runtimeAdapterScript);
         self::assertStringContainsString("case 'serve-stdio-adapter':", $runtimeAdapterScript);
         self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-activation-attempt'", $runtimeAdapterScript);
         self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-activation-result'", $runtimeAdapterScript);
@@ -339,6 +340,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame(0, $runtimeLauncherPreparationNative['exitCode'], $runtimeLauncherPreparationNative['stderr']);
         $runtimeLauncherPreparationNativePayload = $this->decodeJson($runtimeLauncherPreparationNative['stdout']);
         self::assertSame('launch-native-runtime-service', $runtimeLauncherPreparationNativePayload['next_action']);
+        self::assertSame('StartNativeRuntimeService', $runtimeLauncherPreparationNativePayload['execution_plan']['runtime_backend']['command']);
         self::assertSame('native-runtime-service-bootstrap', $runtimeLauncherPreparationNativePayload['execution_plan']['runtime_backend']['command_role']);
 
         $runtimeLauncherServeDbusMaterialized = $this->runGeneratedPhpScript([
@@ -369,8 +371,11 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame(0, $runtimeLauncherExecuteNative['exitCode'], $runtimeLauncherExecuteNative['stderr']);
         $runtimeLauncherExecuteNativePayload = $this->decodeJson($runtimeLauncherExecuteNative['stdout']);
         self::assertSame('ready-to-launch-native-runtime', $runtimeLauncherExecuteNativePayload['activation_attempt']['status']);
+        self::assertSame('StartNativeRuntimeService', $runtimeLauncherExecuteNativePayload['target_command']['command']);
         self::assertSame('native-runtime-service-bootstrap', $runtimeLauncherExecuteNativePayload['target_command']['command_role']);
-        self::assertSame('native-runtime-backend-materialized', $runtimeLauncherExecuteNativePayload['command_result']['payload']['status']);
+        self::assertSame('system-api-dbus-native-runtime-startup', $runtimeLauncherExecuteNativePayload['command_result']['payload']['kind']);
+        self::assertSame('native-runtime-service-started', $runtimeLauncherExecuteNativePayload['command_result']['payload']['status']);
+        self::assertSame('observe-native-runtime-service-state', $runtimeLauncherExecuteNativePayload['next_action']);
 
         $runtimeLauncherServeDbus = $this->runGeneratedPhpScript([
             $runtimeLauncherScriptPath,
@@ -443,6 +448,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame(0, $runtimeAdapterPreparationNative['exitCode'], $runtimeAdapterPreparationNative['stderr']);
         $runtimeAdapterPreparationNativePayload = $this->decodeJson($runtimeAdapterPreparationNative['stdout']);
         self::assertSame('launch-native-runtime-service', $runtimeAdapterPreparationNativePayload['next_action']);
+        self::assertSame('StartNativeRuntimeService', $runtimeAdapterPreparationNativePayload['execution_plan']['runtime_backend']['command']);
         self::assertSame('native-runtime-service-bootstrap', $runtimeAdapterPreparationNativePayload['execution_plan']['runtime_backend']['command_role']);
 
         $runtimeAdapterExecuteReady = $this->runGeneratedPhpScript([
@@ -500,8 +506,11 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame(0, $runtimeAdapterExecuteNative['exitCode'], $runtimeAdapterExecuteNative['stderr']);
         $runtimeAdapterExecuteNativePayload = $this->decodeJson($runtimeAdapterExecuteNative['stdout']);
         self::assertSame('ready-to-launch-native-runtime', $runtimeAdapterExecuteNativePayload['activation_attempt']['status']);
+        self::assertSame('StartNativeRuntimeService', $runtimeAdapterExecuteNativePayload['target_command']['command']);
         self::assertSame('native-runtime-service-bootstrap', $runtimeAdapterExecuteNativePayload['target_command']['command_role']);
-        self::assertSame('native-runtime-backend-materialized', $runtimeAdapterExecuteNativePayload['command_result']['payload']['status']);
+        self::assertSame('system-api-dbus-native-runtime-startup', $runtimeAdapterExecuteNativePayload['command_result']['payload']['kind']);
+        self::assertSame('native-runtime-service-started', $runtimeAdapterExecuteNativePayload['command_result']['payload']['status']);
+        self::assertSame('observe-native-runtime-service-state', $runtimeAdapterExecuteNativePayload['next_action']);
 
         $runtimeHostScriptPath = $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-runtime-host.php';
         $runtimeHostScript = file_get_contents($runtimeHostScriptPath);

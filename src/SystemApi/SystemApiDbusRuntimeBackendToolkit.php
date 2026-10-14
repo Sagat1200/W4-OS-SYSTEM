@@ -26,6 +26,92 @@ final class SystemApiDbusRuntimeBackendToolkit
     }
 
     /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, string>|null $environment
+     * @return array<string, mixed>
+     */
+    public function createNativeRuntimeServiceDefinition(array $runtimeDiagnosis, ?array $environment = null): array
+    {
+        $env = $environment ?? $this->captureEnvironment();
+        $runtimeBackend = $this->createReport($runtimeDiagnosis, $env);
+        $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null)
+            ? $runtimeBackend['selected_backend']
+            : 'contract-pending';
+        $eligible = $selectedBackend === 'native-dbus-extension' && (($runtimeBackend['materialized'] ?? false) === true);
+        $artifactsBasePath = $this->resolveNativeRuntimeArtifactsBasePath($env);
+
+        return [
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-native-runtime-service',
+            'status' => $eligible ? 'native-runtime-service-ready-to-start' : 'native-runtime-service-blocked',
+            'eligible' => $eligible,
+            'selected_backend' => $selectedBackend,
+            'bus_name' => 'org.w4.System1',
+            'object_path' => '/org/w4/System1',
+            'interface' => 'org.w4.System1.Manager',
+            'startup_command' => 'StartNativeRuntimeService',
+            'startup_mode' => 'bootstrap-contract',
+            'ownership_goal' => 'org.w4.System1',
+            'service_lifecycle' => 'request-name-register-object-wait-loop',
+            'artifacts' => [
+                'ready_marker_path' => $this->resolvePathValue(
+                    $env,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER',
+                    $artifactsBasePath . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime.ready'
+                ),
+                'status_file_path' => $this->resolvePathValue(
+                    $env,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE',
+                    $artifactsBasePath . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime-status.json'
+                ),
+                'pid_file_path' => $this->resolvePathValue(
+                    $env,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE',
+                    $artifactsBasePath . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime.pid'
+                ),
+            ],
+            'runtime_backend' => $runtimeBackend,
+            'blocking_reason' => $eligible
+                ? 'native-runtime-service-not-started'
+                : (is_string($runtimeBackend['blocking_reason'] ?? null)
+                    ? $runtimeBackend['blocking_reason']
+                    : 'native-runtime-service-unavailable'),
+            'next_action' => $eligible ? 'start-native-runtime-service' : 'complete-native-runtime-backend',
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, string>|null $environment
+     * @return array<string, mixed>
+     */
+    public function createNativeRuntimeServiceStartupReport(array $runtimeDiagnosis, ?array $environment = null): array
+    {
+        $serviceDefinition = $this->createNativeRuntimeServiceDefinition($runtimeDiagnosis, $environment);
+        $eligible = ($serviceDefinition['eligible'] ?? false) === true;
+
+        return [
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-native-runtime-startup',
+            'status' => $eligible ? 'native-runtime-service-started' : 'native-runtime-service-blocked',
+            'startup_acknowledged' => $eligible,
+            'exit_code' => $eligible ? 0 : 3,
+            'bus_name' => 'org.w4.System1',
+            'object_path' => '/org/w4/System1',
+            'interface' => 'org.w4.System1.Manager',
+            'service_definition' => $serviceDefinition,
+            'runtime_backend' => $serviceDefinition['runtime_backend'] ?? [],
+            'ownership_state' => $eligible ? 'pending-bus-name-ownership' : 'blocked-before-startup',
+            'blocking_reason' => $eligible
+                ? null
+                : (is_string($serviceDefinition['blocking_reason'] ?? null)
+                    ? $serviceDefinition['blocking_reason']
+                    : 'native-runtime-service-unavailable'),
+            'next_action' => $eligible ? 'observe-native-runtime-service-state' : 'complete-native-runtime-backend',
+        ];
+    }
+
+    /**
      * @return array<string, string>
      */
     private function captureEnvironment(): array
@@ -256,5 +342,40 @@ final class SystemApiDbusRuntimeBackendToolkit
             '0', 'false', 'no', 'off' => false,
             default => null,
         };
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolvePathValue(array $environment, string $key, string $default): string
+    {
+        $value = $environment[$key] ?? null;
+
+        return is_string($value) && trim($value) !== '' ? trim($value) : $default;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeArtifactsBasePath(array $environment): string
+    {
+        foreach (['W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR', 'TEMP', 'TMP'] as $key) {
+            $value = $environment[$key] ?? null;
+            if (is_string($value) && trim($value) !== '') {
+                return rtrim(trim($value), "\\/");
+            }
+        }
+
+        $currentDirectory = getcwd();
+        if (is_string($currentDirectory) && trim($currentDirectory) !== '') {
+            return rtrim(trim($currentDirectory), "\\/") . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'native-runtime';
+        }
+
+        $tempDirectory = sys_get_temp_dir();
+        if (is_string($tempDirectory) && trim($tempDirectory) !== '') {
+            return rtrim(trim($tempDirectory), "\\/");
+        }
+
+        return 'build' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'native-runtime';
     }
 }

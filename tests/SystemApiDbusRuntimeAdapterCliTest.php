@@ -122,8 +122,45 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertSame('native-dbus-extension', $payload['runtime_backend']['selected_backend']);
         self::assertSame('launch-native-runtime-service', $payload['next_action']);
         self::assertSame('native-dbus-extension', $payload['execution_plan']['runtime_backend']['selected_backend']);
+        self::assertSame('StartNativeRuntimeService', $payload['execution_plan']['runtime_backend']['command']);
         self::assertSame('native-runtime-service-bootstrap', $payload['execution_plan']['runtime_backend']['command_role']);
         self::assertSame('long-running-dbus-service', $payload['execution_plan']['runtime_backend']['activation_mode']);
+    }
+
+    public function testStartNativeRuntimeServicePublishesStartupReportAndArtifacts(): void
+    {
+        $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-native-runtime-' . bin2hex(random_bytes(6));
+        $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
+        $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
+        $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+
+        try {
+            $result = $this->runPhpScript([
+                $this->scriptPath(),
+                'StartNativeRuntimeService',
+            ], '', array_merge(
+                $this->readyRuntimeEnvironment(),
+                $this->nativeCompatibleBackendEnvironment(),
+                [
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+                ]
+            ));
+
+            self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+            $payload = $this->decodeJson($result['stdout']);
+            self::assertSame('system-api-dbus-native-runtime-startup', $payload['kind']);
+            self::assertSame('native-runtime-service-started', $payload['status']);
+            self::assertTrue($payload['startup_acknowledged']);
+            self::assertSame('observe-native-runtime-service-state', $payload['next_action']);
+            self::assertFileExists($readyMarkerPath);
+            self::assertFileExists($statusFilePath);
+            self::assertFileExists($pidFilePath);
+        } finally {
+            $this->cleanupDirectory($baseDirectory);
+        }
     }
 
     public function testExecuteActivationRunsTargetCommandWhenRuntimeIsReady(): void
@@ -209,10 +246,13 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertSame('native-dbus-extension', $payload['runtime_backend']['selected_backend']);
         self::assertSame('ready-to-launch-native-runtime', $payload['activation_attempt']['status']);
         self::assertSame('execute-native-runtime-service', $payload['activation_attempt']['next_action']);
+        self::assertSame('StartNativeRuntimeService', $payload['target_command']['command']);
         self::assertSame('native-runtime-service-bootstrap', $payload['target_command']['command_role']);
         self::assertSame('long-running-dbus-service', $payload['target_command']['activation_mode']);
         self::assertSame(0, $payload['command_result']['exit_code']);
-        self::assertSame('native-runtime-backend-materialized', $payload['command_result']['payload']['status']);
+        self::assertSame('system-api-dbus-native-runtime-startup', $payload['command_result']['payload']['kind']);
+        self::assertSame('native-runtime-service-started', $payload['command_result']['payload']['status']);
+        self::assertSame('observe-native-runtime-service-state', $payload['next_action']);
     }
 
     public function testCallDelegatesToSystemApiContract(): void
@@ -413,5 +453,33 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
             'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
         ];
+    }
+
+    private function cleanupDirectory(string $path): void
+    {
+        if ($path === '' || !is_dir($path)) {
+            return;
+        }
+
+        $items = scandir($path);
+        if ($items === false) {
+            return;
+        }
+
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+
+            $itemPath = $path . DIRECTORY_SEPARATOR . $item;
+            if (is_dir($itemPath)) {
+                $this->cleanupDirectory($itemPath);
+                continue;
+            }
+
+            @unlink($itemPath);
+        }
+
+        @rmdir($path);
     }
 }

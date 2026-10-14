@@ -132,6 +132,8 @@ final class SystemApiDbusBindingToolkit
                         'DescribeActivationPreparation',
                         'AttemptActivation',
                         'ExecuteActivation',
+                        'DescribeNativeRuntimeService',
+                        'StartNativeRuntimeService',
                         'DescribeRuntime',
                         'DiagnoseRuntime',
                         'GetCapabilities',
@@ -944,6 +946,16 @@ switch ($command) {
         emitJson($activationExecution);
         exit($activationExecution['exit_code']);
 
+    case 'DescribeNativeRuntimeService':
+        emitJson(createNativeRuntimeServiceDefinition(buildRuntimeDiagnosis()));
+        exit(0);
+
+    case 'StartNativeRuntimeService':
+        $nativeRuntimeStartup = createNativeRuntimeServiceStartupReport(buildRuntimeDiagnosis());
+        persistNativeRuntimeArtifacts($nativeRuntimeStartup);
+        emitJson($nativeRuntimeStartup);
+        exit($nativeRuntimeStartup['exit_code']);
+
     case 'DescribeRuntime':
         emitJson(createAdapterRuntime());
         exit(0);
@@ -1007,6 +1019,8 @@ function createAdapterRuntime(): array
             'DescribeActivationPreparation',
             'AttemptActivation',
             'ExecuteActivation',
+            'DescribeNativeRuntimeService',
+            'StartNativeRuntimeService',
             'DescribeRuntime',
             'DiagnoseRuntime',
             'GetCapabilities',
@@ -1213,6 +1227,90 @@ function createRuntimeBackend(array $runtimeDiagnosis): array
 }
 
 /**
+ * @param array<string, mixed> $runtimeDiagnosis
+ * @return array<string, mixed>
+ */
+function createNativeRuntimeServiceDefinition(array $runtimeDiagnosis): array
+{
+    $environment = captureEnvironment();
+    $runtimeBackend = createRuntimeBackend($runtimeDiagnosis);
+    $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null)
+        ? $runtimeBackend['selected_backend']
+        : 'contract-pending';
+    $eligible = $selectedBackend === 'native-dbus-extension' && (($runtimeBackend['materialized'] ?? false) === true);
+    $artifactsBasePath = resolveNativeRuntimeArtifactsBasePath($environment);
+
+    return [
+        'api_version' => '1.0',
+        'kind' => 'system-api-dbus-native-runtime-service',
+        'status' => $eligible ? 'native-runtime-service-ready-to-start' : 'native-runtime-service-blocked',
+        'eligible' => $eligible,
+        'selected_backend' => $selectedBackend,
+        'bus_name' => W4_SYSTEM_API_BUS_NAME,
+        'object_path' => W4_SYSTEM_API_OBJECT_PATH,
+        'interface' => W4_SYSTEM_API_INTERFACE,
+        'startup_command' => 'StartNativeRuntimeService',
+        'startup_mode' => 'bootstrap-contract',
+        'ownership_goal' => W4_SYSTEM_API_BUS_NAME,
+        'service_lifecycle' => 'request-name-register-object-wait-loop',
+        'artifacts' => [
+            'ready_marker_path' => resolvePathValue(
+                $environment,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER',
+                $artifactsBasePath . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime.ready'
+            ),
+            'status_file_path' => resolvePathValue(
+                $environment,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE',
+                $artifactsBasePath . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime-status.json'
+            ),
+            'pid_file_path' => resolvePathValue(
+                $environment,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE',
+                $artifactsBasePath . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime.pid'
+            ),
+        ],
+        'runtime_backend' => $runtimeBackend,
+        'blocking_reason' => $eligible
+            ? 'native-runtime-service-not-started'
+            : (is_string($runtimeBackend['blocking_reason'] ?? null)
+                ? $runtimeBackend['blocking_reason']
+                : 'native-runtime-service-unavailable'),
+        'next_action' => $eligible ? 'start-native-runtime-service' : 'complete-native-runtime-backend',
+    ];
+}
+
+/**
+ * @param array<string, mixed> $runtimeDiagnosis
+ * @return array<string, mixed>
+ */
+function createNativeRuntimeServiceStartupReport(array $runtimeDiagnosis): array
+{
+    $serviceDefinition = createNativeRuntimeServiceDefinition($runtimeDiagnosis);
+    $eligible = ($serviceDefinition['eligible'] ?? false) === true;
+
+    return [
+        'api_version' => '1.0',
+        'kind' => 'system-api-dbus-native-runtime-startup',
+        'status' => $eligible ? 'native-runtime-service-started' : 'native-runtime-service-blocked',
+        'startup_acknowledged' => $eligible,
+        'exit_code' => $eligible ? 0 : 3,
+        'bus_name' => W4_SYSTEM_API_BUS_NAME,
+        'object_path' => W4_SYSTEM_API_OBJECT_PATH,
+        'interface' => W4_SYSTEM_API_INTERFACE,
+        'service_definition' => $serviceDefinition,
+        'runtime_backend' => $serviceDefinition['runtime_backend'] ?? [],
+        'ownership_state' => $eligible ? 'pending-bus-name-ownership' : 'blocked-before-startup',
+        'blocking_reason' => $eligible
+            ? null
+            : (is_string($serviceDefinition['blocking_reason'] ?? null)
+                ? $serviceDefinition['blocking_reason']
+                : 'native-runtime-service-unavailable'),
+        'next_action' => $eligible ? 'observe-native-runtime-service-state' : 'complete-native-runtime-backend',
+    ];
+}
+
+/**
  * @param array<string, string> $environment
  */
 function resolveNativeDbusClassName(array $environment): ?string
@@ -1244,6 +1342,41 @@ function resolveNativeDbusFeatureAvailability(
     $override = resolveBoolOverride($environment, $overrideKey);
 
     return $override ?? $fallback($className);
+}
+
+/**
+ * @param array<string, string> $environment
+ */
+function resolvePathValue(array $environment, string $key, string $default): string
+{
+    $value = $environment[$key] ?? null;
+
+    return is_string($value) && trim($value) !== '' ? trim($value) : $default;
+}
+
+/**
+ * @param array<string, string> $environment
+ */
+function resolveNativeRuntimeArtifactsBasePath(array $environment): string
+{
+    foreach (['W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR', 'TEMP', 'TMP'] as $key) {
+        $value = $environment[$key] ?? null;
+        if (is_string($value) && trim($value) !== '') {
+            return rtrim(trim($value), "\\/");
+        }
+    }
+
+    $currentDirectory = getcwd();
+    if (is_string($currentDirectory) && trim($currentDirectory) !== '') {
+        return rtrim(trim($currentDirectory), "\\/") . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'native-runtime';
+    }
+
+    $tempDirectory = sys_get_temp_dir();
+    if (is_string($tempDirectory) && trim($tempDirectory) !== '') {
+        return rtrim(trim($tempDirectory), "\\/");
+    }
+
+    return 'build' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'native-runtime';
 }
 
 /**
@@ -1279,6 +1412,61 @@ function serveDbus(): array
     $report['exit_code'] = 3;
 
     return $report;
+}
+
+/**
+ * @param array<string, mixed> $report
+ */
+function persistNativeRuntimeArtifacts(array $report): void
+{
+    if (($report['startup_acknowledged'] ?? false) !== true) {
+        return;
+    }
+
+    $serviceDefinition = is_array($report['service_definition'] ?? null) ? $report['service_definition'] : [];
+    $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
+    $readyMarkerPath = optionalArtifactPath($artifacts, 'ready_marker_path');
+    $statusFilePath = optionalArtifactPath($artifacts, 'status_file_path');
+    $pidFilePath = optionalArtifactPath($artifacts, 'pid_file_path');
+
+    if ($readyMarkerPath !== null) {
+        writeArtifactFile($readyMarkerPath, "native-runtime-service-started\n");
+    }
+
+    if ($statusFilePath !== null) {
+        $statusPayload = json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($statusPayload !== false) {
+            writeArtifactFile($statusFilePath, $statusPayload . PHP_EOL);
+        }
+    }
+
+    if ($pidFilePath !== null) {
+        writeArtifactFile($pidFilePath, "0\n");
+    }
+}
+
+/**
+ * @param array<string, mixed> $artifacts
+ */
+function optionalArtifactPath(array $artifacts, string $field): ?string
+{
+    $value = $artifacts[$field] ?? null;
+
+    return is_string($value) && trim($value) !== '' ? trim($value) : null;
+}
+
+function writeArtifactFile(string $path, string $contents): void
+{
+    $directory = dirname($path);
+    if ($directory !== '' && !is_dir($directory) && !mkdir($directory, 0777, true) && !is_dir($directory)) {
+        fwrite(STDERR, sprintf("ERROR: No se pudo crear el directorio de artefacto %s\n", $directory));
+        exit(1);
+    }
+
+    if (file_put_contents($path, $contents) === false) {
+        fwrite(STDERR, sprintf("ERROR: No se pudo escribir el artefacto %s\n", $path));
+        exit(1);
+    }
 }
 
 /**
@@ -1762,6 +1950,9 @@ function executeTargetCommand(?array $targetCommand): array
 function finalizeActivationExecution(array $activationExecution, array $commandResult): array
 {
     $exitCode = is_int($commandResult['exit_code'] ?? null) ? $commandResult['exit_code'] : 1;
+    $commandRole = is_string($activationExecution['target_command']['command_role'] ?? null)
+        ? $activationExecution['target_command']['command_role']
+        : 'runtime-adapter-activation';
 
     $activationExecution['executed'] = true;
     $activationExecution['exit_code'] = $exitCode;
@@ -1772,13 +1963,19 @@ function finalizeActivationExecution(array $activationExecution, array $commandR
     };
     $activationExecution['blocking_reason'] = match ($exitCode) {
         0 => null,
-        3 => 'runtime-adapter-returned-pending',
+        3 => $commandRole === 'native-runtime-service-bootstrap'
+            ? 'native-runtime-service-returned-pending'
+            : 'runtime-adapter-returned-pending',
         default => 'runtime-adapter-command-failed',
     };
     $activationExecution['command_result'] = $commandResult;
     $activationExecution['next_action'] = match ($exitCode) {
-        0 => 'observe-runtime-adapter-state',
-        3 => 'inspect-runtime-adapter-report',
+        0 => $commandRole === 'native-runtime-service-bootstrap'
+            ? 'observe-native-runtime-service-state'
+            : 'observe-runtime-adapter-state',
+        3 => $commandRole === 'native-runtime-service-bootstrap'
+            ? 'inspect-native-runtime-service-report'
+            : 'inspect-runtime-adapter-report',
         default => 'inspect-runtime-adapter-error',
     };
 
@@ -1800,7 +1997,7 @@ function createRuntimeBackendExecutionPlan(array $runtimeBackend, array $resolve
         return [
             'selected_backend' => 'native-dbus-extension',
             'entrypoint' => $resolvedContract['runtime_adapter_entry'],
-            'command' => 'serve-dbus',
+            'command' => 'StartNativeRuntimeService',
             'command_role' => 'native-runtime-service-bootstrap',
             'activation_mode' => 'long-running-dbus-service',
             'ownership_goal' => $resolvedContract['bus_name'],
@@ -3140,7 +3337,7 @@ function createRuntimeBackendExecutionPlan(array $runtimeBackend, array $resolve
         return [
             'selected_backend' => 'native-dbus-extension',
             'entrypoint' => $resolvedContract['runtime_adapter_entry'],
-            'command' => 'serve-dbus',
+            'command' => 'StartNativeRuntimeService',
             'command_role' => 'native-runtime-service-bootstrap',
             'activation_mode' => 'long-running-dbus-service',
             'ownership_goal' => $resolvedContract['bus_name'],
@@ -3277,6 +3474,9 @@ function executeTargetCommand(?array $targetCommand): array
 function finalizeActivationExecution(array $activationExecution, array $commandResult): array
 {
     $exitCode = is_int($commandResult['exit_code'] ?? null) ? $commandResult['exit_code'] : 1;
+    $commandRole = is_string($activationExecution['target_command']['command_role'] ?? null)
+        ? $activationExecution['target_command']['command_role']
+        : 'runtime-adapter-activation';
 
     $activationExecution['executed'] = true;
     $activationExecution['exit_code'] = $exitCode;
@@ -3287,13 +3487,19 @@ function finalizeActivationExecution(array $activationExecution, array $commandR
     };
     $activationExecution['blocking_reason'] = match ($exitCode) {
         0 => null,
-        3 => 'runtime-adapter-returned-pending',
+        3 => $commandRole === 'native-runtime-service-bootstrap'
+            ? 'native-runtime-service-returned-pending'
+            : 'runtime-adapter-returned-pending',
         default => 'runtime-adapter-command-failed',
     };
     $activationExecution['command_result'] = $commandResult;
     $activationExecution['next_action'] = match ($exitCode) {
-        0 => 'observe-runtime-adapter-state',
-        3 => 'inspect-runtime-adapter-report',
+        0 => $commandRole === 'native-runtime-service-bootstrap'
+            ? 'observe-native-runtime-service-state'
+            : 'observe-runtime-adapter-state',
+        3 => $commandRole === 'native-runtime-service-bootstrap'
+            ? 'inspect-native-runtime-service-report'
+            : 'inspect-runtime-adapter-report',
         default => 'inspect-runtime-adapter-error',
     };
 

@@ -83,6 +83,7 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         $payload = $this->decodeJson($result['stdout']);
         self::assertSame('native-dbus-extension', $payload['runtime_backend']['selected_backend']);
         self::assertSame('launch-native-runtime-service', $payload['next_action']);
+        self::assertSame('StartNativeRuntimeService', $payload['execution_plan']['runtime_backend']['command']);
         self::assertSame('native-runtime-service-bootstrap', $payload['execution_plan']['runtime_backend']['command_role']);
         self::assertSame('long-running-dbus-service', $payload['execution_plan']['runtime_backend']['activation_mode']);
     }
@@ -183,9 +184,12 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertSame('execution-completed', $payload['status']);
         self::assertSame('native-dbus-extension', $payload['runtime_backend']['selected_backend']);
         self::assertSame('ready-to-launch-native-runtime', $payload['activation_attempt']['status']);
+        self::assertSame('StartNativeRuntimeService', $payload['target_command']['command']);
         self::assertSame('native-runtime-service-bootstrap', $payload['target_command']['command_role']);
         self::assertSame('long-running-dbus-service', $payload['target_command']['activation_mode']);
-        self::assertSame('native-runtime-backend-materialized', $payload['command_result']['payload']['status']);
+        self::assertSame('system-api-dbus-native-runtime-startup', $payload['command_result']['payload']['kind']);
+        self::assertSame('native-runtime-service-started', $payload['command_result']['payload']['status']);
+        self::assertSame('observe-native-runtime-service-state', $payload['next_action']);
     }
 
     public function testServeDbusReturnsActivationWithLaunchPlan(): void

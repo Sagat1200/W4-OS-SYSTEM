@@ -392,7 +392,7 @@ final class SystemApiDbusRuntimeActivationToolkit
             return [
                 'selected_backend' => 'native-dbus-extension',
                 'entrypoint' => $resolvedContract['runtime_adapter_entry'],
-                'command' => 'serve-dbus',
+                'command' => 'StartNativeRuntimeService',
                 'command_role' => 'native-runtime-service-bootstrap',
                 'activation_mode' => 'long-running-dbus-service',
                 'ownership_goal' => $resolvedContract['bus_name'],

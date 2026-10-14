@@ -458,6 +458,9 @@ final class SystemApiDbusRuntimeLauncher
     private function finalizeActivationExecution(array $report, array $commandResult): array
     {
         $exitCode = is_int($commandResult['exit_code'] ?? null) ? $commandResult['exit_code'] : 1;
+        $commandRole = is_string($report['target_command']['command_role'] ?? null)
+            ? $report['target_command']['command_role']
+            : 'runtime-adapter-activation';
 
         $report['executed'] = true;
         $report['exit_code'] = $exitCode;
@@ -468,13 +471,19 @@ final class SystemApiDbusRuntimeLauncher
         };
         $report['blocking_reason'] = match ($exitCode) {
             0 => null,
-            3 => 'runtime-adapter-returned-pending',
+            3 => $commandRole === 'native-runtime-service-bootstrap'
+                ? 'native-runtime-service-returned-pending'
+                : 'runtime-adapter-returned-pending',
             default => 'runtime-adapter-command-failed',
         };
         $report['command_result'] = $commandResult;
         $report['next_action'] = match ($exitCode) {
-            0 => 'observe-runtime-adapter-state',
-            3 => 'inspect-runtime-adapter-report',
+            0 => $commandRole === 'native-runtime-service-bootstrap'
+                ? 'observe-native-runtime-service-state'
+                : 'observe-runtime-adapter-state',
+            3 => $commandRole === 'native-runtime-service-bootstrap'
+                ? 'inspect-native-runtime-service-report'
+                : 'inspect-runtime-adapter-report',
             default => 'inspect-runtime-adapter-error',
         };
 

@@ -86,4 +86,28 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
         self::assertFalse($report['native_runtime_api']['class_available']);
         self::assertContains('dbus-service-class', $report['native_runtime_api']['missing_api']);
     }
+
+    public function testCreateNativeRuntimeServiceStartupReportAcknowledgesEligibleNativeBackend(): void
+    {
+        $toolkit = new SystemApiDbusRuntimeBackendToolkit();
+
+        $report = $toolkit->createNativeRuntimeServiceStartupReport(
+            ['ready' => true],
+            [
+                'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+            ]
+        );
+
+        self::assertSame('system-api-dbus-native-runtime-startup', $report['kind']);
+        self::assertSame('native-runtime-service-started', $report['status']);
+        self::assertTrue($report['startup_acknowledged']);
+        self::assertSame(0, $report['exit_code']);
+        self::assertSame('start-native-runtime-service', $report['service_definition']['next_action']);
+        self::assertSame('native-runtime-service-not-started', $report['service_definition']['blocking_reason']);
+    }
 }
