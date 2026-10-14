@@ -1092,6 +1092,53 @@ function createRuntimeBackend(array $runtimeDiagnosis): array
         ? trim($selectedBackend)
         : 'contract-pending';
     $ready = ($runtimeDiagnosis['ready'] ?? false) === true;
+    $nativeDbusClass = resolveNativeDbusClassName($environment);
+    $nativeDbusHasServiceClass = $nativeDbusClass !== null;
+    $nativeDbusHasBusSystemConstant = resolveNativeDbusFeatureAvailability(
+        $environment,
+        'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM',
+        static fn (?string $resolvedClassName): bool => is_string($resolvedClassName) && defined($resolvedClassName . '::BUS_SYSTEM'),
+        $nativeDbusClass
+    );
+    $nativeDbusHasRequestNameMethod = resolveNativeDbusFeatureAvailability(
+        $environment,
+        'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME',
+        static fn (?string $resolvedClassName): bool => is_string($resolvedClassName) && method_exists($resolvedClassName, 'requestName'),
+        $nativeDbusClass
+    );
+    $nativeDbusHasRegisterObjectMethod = resolveNativeDbusFeatureAvailability(
+        $environment,
+        'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT',
+        static fn (?string $resolvedClassName): bool => is_string($resolvedClassName) && method_exists($resolvedClassName, 'registerObject'),
+        $nativeDbusClass
+    );
+    $nativeDbusHasWaitLoopMethod = resolveNativeDbusFeatureAvailability(
+        $environment,
+        'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP',
+        static fn (?string $resolvedClassName): bool => is_string($resolvedClassName) && method_exists($resolvedClassName, 'waitLoop'),
+        $nativeDbusClass
+    );
+    $nativeDbusMissingApi = [];
+    if (!$nativeDbusHasServiceClass) {
+        $nativeDbusMissingApi[] = 'dbus-service-class';
+    }
+    if (!$nativeDbusHasBusSystemConstant) {
+        $nativeDbusMissingApi[] = 'Dbus::BUS_SYSTEM';
+    }
+    if (!$nativeDbusHasRequestNameMethod) {
+        $nativeDbusMissingApi[] = 'requestName';
+    }
+    if (!$nativeDbusHasRegisterObjectMethod) {
+        $nativeDbusMissingApi[] = 'registerObject';
+    }
+    if (!$nativeDbusHasWaitLoopMethod) {
+        $nativeDbusMissingApi[] = 'waitLoop';
+    }
+    $nativeDbusCompatibleForService = $nativeDbusHasServiceClass
+        && $nativeDbusHasBusSystemConstant
+        && $nativeDbusHasRequestNameMethod
+        && $nativeDbusHasRegisterObjectMethod
+        && $nativeDbusHasWaitLoopMethod;
 
     return match ($selectedBackend) {
         'experimental-embedded-runtime' => [
@@ -1107,16 +1154,40 @@ function createRuntimeBackend(array $runtimeDiagnosis): array
         'native-dbus-extension' => [
             'kind' => 'system-api-dbus-runtime-backend',
             'selected_backend' => 'native-dbus-extension',
-            'status' => ($ready && (class_exists('Dbus') || class_exists('DBus')))
+            'status' => ($ready && $nativeDbusCompatibleForService)
                 ? 'native-runtime-backend-materialized'
                 : W4_SYSTEM_API_STATUS,
-            'materialized' => $ready && (class_exists('Dbus') || class_exists('DBus')),
+            'materialized' => $ready && $nativeDbusCompatibleForService,
             'transport' => 'dbus-system-bus',
             'ownership_model' => 'native-php-dbus-extension',
             'supports_bus_ownership' => true,
+            'native_runtime_api' => [
+                'class_name' => $nativeDbusClass,
+                'class_available' => $nativeDbusHasServiceClass,
+                'has_bus_system_constant' => $nativeDbusHasBusSystemConstant,
+                'has_request_name_method' => $nativeDbusHasRequestNameMethod,
+                'has_register_object_method' => $nativeDbusHasRegisterObjectMethod,
+                'has_wait_loop_method' => $nativeDbusHasWaitLoopMethod,
+                'compatible_for_service' => $nativeDbusCompatibleForService,
+                'missing_api' => $nativeDbusMissingApi,
+                'service_contract' => [
+                    'bus_name' => W4_SYSTEM_API_BUS_NAME,
+                    'object_path' => W4_SYSTEM_API_OBJECT_PATH,
+                    'interface' => W4_SYSTEM_API_INTERFACE,
+                    'required_methods' => [
+                        'requestName',
+                        'registerObject',
+                        'waitLoop',
+                    ],
+                ],
+            ],
             'blocking_reason' => !$ready
                 ? 'missing-runtime-capabilities'
-                : ((class_exists('Dbus') || class_exists('DBus')) ? null : 'dbus-extension-service-backend-unavailable'),
+                : ($nativeDbusCompatibleForService
+                    ? null
+                    : ($nativeDbusHasServiceClass
+                        ? 'dbus-extension-api-incomplete'
+                        : 'dbus-extension-service-backend-unavailable')),
         ],
         'contract-pending' => [
             'kind' => 'system-api-dbus-runtime-backend',
@@ -1139,6 +1210,40 @@ function createRuntimeBackend(array $runtimeDiagnosis): array
             'blocking_reason' => $ready ? 'unsupported-runtime-backend' : 'missing-runtime-capabilities',
         ],
     };
+}
+
+/**
+ * @param array<string, string> $environment
+ */
+function resolveNativeDbusClassName(array $environment): ?string
+{
+    $overrideClassName = $environment['W4_SYSTEM_API_NATIVE_DBUS_CLASS'] ?? null;
+    if (is_string($overrideClassName) && trim($overrideClassName) !== '') {
+        return trim($overrideClassName);
+    }
+
+    foreach (['Dbus', 'DBus'] as $candidate) {
+        if (class_exists($candidate)) {
+            return $candidate;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * @param array<string, string> $environment
+ * @param callable(?string): bool $fallback
+ */
+function resolveNativeDbusFeatureAvailability(
+    array $environment,
+    string $overrideKey,
+    callable $fallback,
+    ?string $className
+): bool {
+    $override = resolveBoolOverride($environment, $overrideKey);
+
+    return $override ?? $fallback($className);
 }
 
 /**
@@ -1934,6 +2039,53 @@ function createRuntimeBackend(array $runtimeDiagnosis): array
         ? trim($selectedBackend)
         : 'contract-pending';
     $ready = ($runtimeDiagnosis['ready'] ?? false) === true;
+    $nativeDbusClass = resolveNativeDbusClassName($environment);
+    $nativeDbusHasServiceClass = $nativeDbusClass !== null;
+    $nativeDbusHasBusSystemConstant = resolveNativeDbusFeatureAvailability(
+        $environment,
+        'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM',
+        static fn (?string $resolvedClassName): bool => is_string($resolvedClassName) && defined($resolvedClassName . '::BUS_SYSTEM'),
+        $nativeDbusClass
+    );
+    $nativeDbusHasRequestNameMethod = resolveNativeDbusFeatureAvailability(
+        $environment,
+        'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME',
+        static fn (?string $resolvedClassName): bool => is_string($resolvedClassName) && method_exists($resolvedClassName, 'requestName'),
+        $nativeDbusClass
+    );
+    $nativeDbusHasRegisterObjectMethod = resolveNativeDbusFeatureAvailability(
+        $environment,
+        'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT',
+        static fn (?string $resolvedClassName): bool => is_string($resolvedClassName) && method_exists($resolvedClassName, 'registerObject'),
+        $nativeDbusClass
+    );
+    $nativeDbusHasWaitLoopMethod = resolveNativeDbusFeatureAvailability(
+        $environment,
+        'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP',
+        static fn (?string $resolvedClassName): bool => is_string($resolvedClassName) && method_exists($resolvedClassName, 'waitLoop'),
+        $nativeDbusClass
+    );
+    $nativeDbusMissingApi = [];
+    if (!$nativeDbusHasServiceClass) {
+        $nativeDbusMissingApi[] = 'dbus-service-class';
+    }
+    if (!$nativeDbusHasBusSystemConstant) {
+        $nativeDbusMissingApi[] = 'Dbus::BUS_SYSTEM';
+    }
+    if (!$nativeDbusHasRequestNameMethod) {
+        $nativeDbusMissingApi[] = 'requestName';
+    }
+    if (!$nativeDbusHasRegisterObjectMethod) {
+        $nativeDbusMissingApi[] = 'registerObject';
+    }
+    if (!$nativeDbusHasWaitLoopMethod) {
+        $nativeDbusMissingApi[] = 'waitLoop';
+    }
+    $nativeDbusCompatibleForService = $nativeDbusHasServiceClass
+        && $nativeDbusHasBusSystemConstant
+        && $nativeDbusHasRequestNameMethod
+        && $nativeDbusHasRegisterObjectMethod
+        && $nativeDbusHasWaitLoopMethod;
 
     return match ($selectedBackend) {
         'experimental-embedded-runtime' => [
@@ -1949,16 +2101,40 @@ function createRuntimeBackend(array $runtimeDiagnosis): array
         'native-dbus-extension' => [
             'kind' => 'system-api-dbus-runtime-backend',
             'selected_backend' => 'native-dbus-extension',
-            'status' => ($ready && (class_exists('Dbus') || class_exists('DBus')))
+            'status' => ($ready && $nativeDbusCompatibleForService)
                 ? 'native-runtime-backend-materialized'
                 : W4_SYSTEM_API_STATUS,
-            'materialized' => $ready && (class_exists('Dbus') || class_exists('DBus')),
+            'materialized' => $ready && $nativeDbusCompatibleForService,
             'transport' => 'dbus-system-bus',
             'ownership_model' => 'native-php-dbus-extension',
             'supports_bus_ownership' => true,
+            'native_runtime_api' => [
+                'class_name' => $nativeDbusClass,
+                'class_available' => $nativeDbusHasServiceClass,
+                'has_bus_system_constant' => $nativeDbusHasBusSystemConstant,
+                'has_request_name_method' => $nativeDbusHasRequestNameMethod,
+                'has_register_object_method' => $nativeDbusHasRegisterObjectMethod,
+                'has_wait_loop_method' => $nativeDbusHasWaitLoopMethod,
+                'compatible_for_service' => $nativeDbusCompatibleForService,
+                'missing_api' => $nativeDbusMissingApi,
+                'service_contract' => [
+                    'bus_name' => W4_SYSTEM_API_BUS_NAME,
+                    'object_path' => W4_SYSTEM_API_OBJECT_PATH,
+                    'interface' => W4_SYSTEM_API_INTERFACE,
+                    'required_methods' => [
+                        'requestName',
+                        'registerObject',
+                        'waitLoop',
+                    ],
+                ],
+            ],
             'blocking_reason' => !$ready
                 ? 'missing-runtime-capabilities'
-                : ((class_exists('Dbus') || class_exists('DBus')) ? null : 'dbus-extension-service-backend-unavailable'),
+                : ($nativeDbusCompatibleForService
+                    ? null
+                    : ($nativeDbusHasServiceClass
+                        ? 'dbus-extension-api-incomplete'
+                        : 'dbus-extension-service-backend-unavailable')),
         ],
         'contract-pending' => [
             'kind' => 'system-api-dbus-runtime-backend',
@@ -1981,6 +2157,40 @@ function createRuntimeBackend(array $runtimeDiagnosis): array
             'blocking_reason' => $ready ? 'unsupported-runtime-backend' : 'missing-runtime-capabilities',
         ],
     };
+}
+
+/**
+ * @param array<string, string> $environment
+ */
+function resolveNativeDbusClassName(array $environment): ?string
+{
+    $overrideClassName = $environment['W4_SYSTEM_API_NATIVE_DBUS_CLASS'] ?? null;
+    if (is_string($overrideClassName) && trim($overrideClassName) !== '') {
+        return trim($overrideClassName);
+    }
+
+    foreach (['Dbus', 'DBus'] as $candidate) {
+        if (class_exists($candidate)) {
+            return $candidate;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * @param array<string, string> $environment
+ * @param callable(?string): bool $fallback
+ */
+function resolveNativeDbusFeatureAvailability(
+    array $environment,
+    string $overrideKey,
+    callable $fallback,
+    ?string $className
+): bool {
+    $override = resolveBoolOverride($environment, $overrideKey);
+
+    return $override ?? $fallback($className);
 }
 
 /**

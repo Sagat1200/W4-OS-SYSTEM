@@ -19,7 +19,7 @@ final class SystemApiDbusRuntimeBackendToolkit
 
         return match ($selectedBackend) {
             'experimental-embedded-runtime' => $this->createExperimentalEmbeddedRuntimeReport($ready),
-            'native-dbus-extension' => $this->createNativeDbusExtensionReport($ready),
+            'native-dbus-extension' => $this->createNativeDbusExtensionReport($ready, $env),
             'contract-pending' => $this->createContractPendingReport($ready),
             default => $this->createUnsupportedBackendReport($selectedBackend, $ready),
         };
@@ -96,10 +96,57 @@ final class SystemApiDbusRuntimeBackendToolkit
     /**
      * @return array<string, mixed>
      */
-    private function createNativeDbusExtensionReport(bool $ready): array
+    private function createNativeDbusExtensionReport(bool $ready, array $environment): array
     {
-        $hasServiceClass = class_exists('Dbus') || class_exists('DBus');
-        $materialized = $ready && $hasServiceClass;
+        $className = $this->resolveNativeDbusClassName($environment);
+        $hasServiceClass = $className !== null;
+        $hasBusSystemConstant = $this->resolveNativeDbusFeatureAvailability(
+            $environment,
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM',
+            static fn (?string $resolvedClassName): bool => is_string($resolvedClassName) && defined($resolvedClassName . '::BUS_SYSTEM'),
+            $className
+        );
+        $hasRequestNameMethod = $this->resolveNativeDbusFeatureAvailability(
+            $environment,
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME',
+            static fn (?string $resolvedClassName): bool => is_string($resolvedClassName) && method_exists($resolvedClassName, 'requestName'),
+            $className
+        );
+        $hasRegisterObjectMethod = $this->resolveNativeDbusFeatureAvailability(
+            $environment,
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT',
+            static fn (?string $resolvedClassName): bool => is_string($resolvedClassName) && method_exists($resolvedClassName, 'registerObject'),
+            $className
+        );
+        $hasWaitLoopMethod = $this->resolveNativeDbusFeatureAvailability(
+            $environment,
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP',
+            static fn (?string $resolvedClassName): bool => is_string($resolvedClassName) && method_exists($resolvedClassName, 'waitLoop'),
+            $className
+        );
+        $missingApi = [];
+        if (!$hasServiceClass) {
+            $missingApi[] = 'dbus-service-class';
+        }
+        if (!$hasBusSystemConstant) {
+            $missingApi[] = 'Dbus::BUS_SYSTEM';
+        }
+        if (!$hasRequestNameMethod) {
+            $missingApi[] = 'requestName';
+        }
+        if (!$hasRegisterObjectMethod) {
+            $missingApi[] = 'registerObject';
+        }
+        if (!$hasWaitLoopMethod) {
+            $missingApi[] = 'waitLoop';
+        }
+
+        $compatibleForService = $hasServiceClass
+            && $hasBusSystemConstant
+            && $hasRequestNameMethod
+            && $hasRegisterObjectMethod
+            && $hasWaitLoopMethod;
+        $materialized = $ready && $compatibleForService;
 
         return [
             'kind' => 'system-api-dbus-runtime-backend',
@@ -111,9 +158,33 @@ final class SystemApiDbusRuntimeBackendToolkit
             'transport' => 'dbus-system-bus',
             'ownership_model' => 'native-php-dbus-extension',
             'supports_bus_ownership' => true,
+            'native_runtime_api' => [
+                'class_name' => $className,
+                'class_available' => $hasServiceClass,
+                'has_bus_system_constant' => $hasBusSystemConstant,
+                'has_request_name_method' => $hasRequestNameMethod,
+                'has_register_object_method' => $hasRegisterObjectMethod,
+                'has_wait_loop_method' => $hasWaitLoopMethod,
+                'compatible_for_service' => $compatibleForService,
+                'missing_api' => $missingApi,
+                'service_contract' => [
+                    'bus_name' => 'org.w4.System1',
+                    'object_path' => '/org/w4/System1',
+                    'interface' => 'org.w4.System1.Manager',
+                    'required_methods' => [
+                        'requestName',
+                        'registerObject',
+                        'waitLoop',
+                    ],
+                ],
+            ],
             'blocking_reason' => !$ready
                 ? 'missing-runtime-capabilities'
-                : ($hasServiceClass ? null : 'dbus-extension-service-backend-unavailable'),
+                : ($compatibleForService
+                    ? null
+                    : ($hasServiceClass
+                        ? 'dbus-extension-api-incomplete'
+                        : 'dbus-extension-service-backend-unavailable')),
         ];
     }
 
@@ -134,5 +205,56 @@ final class SystemApiDbusRuntimeBackendToolkit
                 ? 'unsupported-runtime-backend'
                 : 'missing-runtime-capabilities',
         ];
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeDbusClassName(array $environment): ?string
+    {
+        $overrideClassName = $environment['W4_SYSTEM_API_NATIVE_DBUS_CLASS'] ?? null;
+        if (is_string($overrideClassName) && trim($overrideClassName) !== '') {
+            return trim($overrideClassName);
+        }
+
+        foreach (['Dbus', 'DBus'] as $candidate) {
+            if (class_exists($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     * @param callable(?string): bool $fallback
+     */
+    private function resolveNativeDbusFeatureAvailability(
+        array $environment,
+        string $overrideKey,
+        callable $fallback,
+        ?string $className
+    ): bool {
+        $override = $this->resolveBoolOverride($environment, $overrideKey);
+
+        return $override ?? $fallback($className);
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveBoolOverride(array $environment, string $key): ?bool
+    {
+        $value = $environment[$key] ?? null;
+        if (!is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        return match (strtolower(trim($value))) {
+            '1', 'true', 'yes', 'on' => true,
+            '0', 'false', 'no', 'off' => false,
+            default => null,
+        };
     }
 }

@@ -78,6 +78,34 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertSame('system-api-dbus-runtime-activation-attempt', $payload['activation_attempt']['kind']);
     }
 
+    public function testDescribeRuntimePublishesNativeDbusCompatibilityDetails(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'DescribeRuntime',
+        ], '', array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '0',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+            ]
+        ));
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('system-api-dbus-runtime-adapter', $payload['kind']);
+        self::assertSame('native-dbus-extension', $payload['runtime_backend']['selected_backend']);
+        self::assertSame('dbus-extension-api-incomplete', $payload['runtime_backend']['blocking_reason']);
+        self::assertSame('Dbus', $payload['runtime_backend']['native_runtime_api']['class_name']);
+        self::assertContains('registerObject', $payload['runtime_backend']['native_runtime_api']['missing_api']);
+        self::assertFalse($payload['runtime_backend']['native_runtime_api']['compatible_for_service']);
+    }
+
     public function testExecuteActivationRunsTargetCommandWhenRuntimeIsReady(): void
     {
         $result = $this->runPhpScript([

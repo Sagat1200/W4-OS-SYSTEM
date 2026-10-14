@@ -378,6 +378,23 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('system-api-dbus-runtime-activation-result', $runtimeAdapterExecutionPayload['kind']);
         self::assertSame('packaged-runtime-adapter', $runtimeAdapterExecutionPayload['bridge_kind']);
 
+        $runtimeAdapterDescribeNative = $this->runGeneratedPhpScript([
+            $runtimeAdapterScriptPath,
+            'DescribeRuntime',
+        ], array_merge($this->readyRuntimeEnvironment(), [
+            'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+            'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '0',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+        ]));
+        self::assertSame(0, $runtimeAdapterDescribeNative['exitCode'], $runtimeAdapterDescribeNative['stderr']);
+        $runtimeAdapterDescribeNativePayload = $this->decodeJson($runtimeAdapterDescribeNative['stdout']);
+        self::assertSame('native-dbus-extension', $runtimeAdapterDescribeNativePayload['runtime_backend']['selected_backend']);
+        self::assertSame('dbus-extension-api-incomplete', $runtimeAdapterDescribeNativePayload['runtime_backend']['blocking_reason']);
+        self::assertContains('registerObject', $runtimeAdapterDescribeNativePayload['runtime_backend']['native_runtime_api']['missing_api']);
+
         $runtimeAdapterExecuteReady = $this->runGeneratedPhpScript([
             $runtimeAdapterScriptPath,
             'ExecuteActivation',
