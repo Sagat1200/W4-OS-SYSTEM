@@ -21,7 +21,7 @@
       <ExtraDataItem name="GUI/AutoresizeGuest" value="false"/>
       <ExtraDataItem name="GUI/LastCloseAction" value="PowerOff"/>
       <ExtraDataItem name="GUI/LastNormalWindowPosition" value="-1920,23,1920,1009,max"/>
-      <ExtraDataItem name="GUI/LastScaleWindowPosition" value="-1279,276,746,480"/>
+      <ExtraDataItem name="GUI/LastScaleWindowPosition" value="-1279,276,746,480,max"/>
       <ExtraDataItem name="GUI/Scale" value="true"/>
       <ExtraDataItem name="GUI/ScaleFactor" value="1"/>
     </ExtraData>
@@ -57,7 +57,7 @@
       <Clipboard/>
       <GuestProperties>
         <GuestProperty name="/VirtualBox/GuestAdd/GuiOnFocus" value="1" timestamp="1791999251521119700" flags="TRANSIENT, RDONLYGUEST"/>
-        <GuestProperty name="/VirtualBox/HostInfo/GUI/LanguageID" value="es_ES" timestamp="1791999316865028600" flags="RDONLYGUEST"/>
+        <GuestProperty name="/VirtualBox/HostInfo/GUI/LanguageID" value="es_ES" timestamp="1791999318913815100" flags="RDONLYGUEST"/>
         <GuestProperty name="/VirtualBox/HostInfo/VBoxRev" value="173730" timestamp="1791998475795259902" flags="TRANSIENT, RDONLYGUEST"/>
         <GuestProperty name="/VirtualBox/HostInfo/VBoxVer" value="7.2.8" timestamp="1791998475795259900" flags="TRANSIENT, RDONLYGUEST"/>
         <GuestProperty name="/VirtualBox/HostInfo/VBoxVerExt" value="7.2.8" timestamp="1791998475795259901" flags="TRANSIENT, RDONLYGUEST"/>
