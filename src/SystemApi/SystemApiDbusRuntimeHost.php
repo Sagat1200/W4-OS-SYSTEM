@@ -75,12 +75,10 @@ final class SystemApiDbusRuntimeHost
 
     public function serveDbus(): string
     {
-        return $this->encodeJson(
-            $this->activationToolkit->createPendingActivationReport(
-                $this->runtimeProbe->createReport(),
-                'local-runtime-host'
-            )
-        );
+        $report = $this->decodeResponseJson($this->runtimeAdapter->serveDbus());
+        $report['bridge_kind'] = 'local-runtime-host';
+
+        return $this->encodeJson($report);
     }
 
     public function invoke(string $method, array $arguments = []): string

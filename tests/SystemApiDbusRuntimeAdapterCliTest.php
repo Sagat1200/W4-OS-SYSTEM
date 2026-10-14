@@ -99,6 +99,50 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertSame('system-api-dbus-runtime-activation', $payload['command_result']['payload']['kind']);
     }
 
+    public function testServeDbusReturnsMaterializedBackendReportWhenConfigured(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'serve-dbus',
+        ], '', array_merge(
+            $this->readyRuntimeEnvironment(),
+            $this->materializedBackendEnvironment()
+        ));
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation', $payload['kind']);
+        self::assertSame('experimental-runtime-backend-materialized', $payload['status']);
+        self::assertTrue($payload['materialized']);
+        self::assertSame(0, $payload['exit_code']);
+        self::assertSame('experimental-embedded-runtime', $payload['runtime_backend']['selected_backend']);
+        self::assertTrue($payload['runtime_backend']['materialized']);
+        self::assertSame('observe-runtime-backend', $payload['next_action']);
+    }
+
+    public function testExecuteActivationCompletesWhenMaterializedBackendIsConfigured(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'ExecuteActivation',
+        ], '', array_merge(
+            $this->readyRuntimeEnvironment(),
+            $this->materializedBackendEnvironment()
+        ));
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation-result', $payload['kind']);
+        self::assertTrue($payload['executed']);
+        self::assertSame('execution-completed', $payload['status']);
+        self::assertNull($payload['blocking_reason']);
+        self::assertSame('observe-runtime-adapter-state', $payload['next_action']);
+        self::assertSame(0, $payload['command_result']['exit_code']);
+        self::assertSame('experimental-runtime-backend-materialized', $payload['command_result']['payload']['status']);
+    }
+
     public function testCallDelegatesToSystemApiContract(): void
     {
         $request = [
@@ -271,6 +315,16 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             'W4_SYSTEM_API_PROBE_OS_FAMILY' => 'Linux',
             'W4_SYSTEM_API_PROBE_PHP_BINARY' => '/usr/bin/php',
             'W4_SYSTEM_API_PROBE_PHP_VERSION' => '8.4.3',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function materializedBackendEnvironment(): array
+    {
+        return [
+            'W4_SYSTEM_API_RUNTIME_BACKEND' => 'experimental-embedded-runtime',
         ];
     }
 }

@@ -78,7 +78,12 @@ try {
     }
 
     if ($command === 'serve-dbus') {
-        exit(3);
+        $decodedOutput = json_decode($output, true);
+        $exitCode = is_array($decodedOutput) && is_int($decodedOutput['exit_code'] ?? null)
+            ? $decodedOutput['exit_code']
+            : 3;
+
+        exit($exitCode);
     }
 
     exit(0);

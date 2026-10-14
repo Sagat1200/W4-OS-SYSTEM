@@ -970,8 +970,9 @@ switch ($command) {
         exit(0);
 
     case 'serve-dbus':
-        emitJson(createPendingActivationReport(buildRuntimeDiagnosis(), 'packaged-runtime-adapter'));
-        exit(3);
+        $serveDbus = serveDbus();
+        emitJson($serveDbus);
+        exit($serveDbus['exit_code']);
 
     default:
         fwrite(STDERR, sprintf("ERROR: Comando no soportado: %s\n", $command));
@@ -991,10 +992,13 @@ function emitJson(array $payload): void
 
 function createAdapterRuntime(): array
 {
+    $runtimeDiagnosis = buildRuntimeDiagnosis();
+    $runtimeBackend = createRuntimeBackend($runtimeDiagnosis);
+
     return [
         'api_version' => '1.0',
         'kind' => 'system-api-dbus-runtime-adapter',
-        'status' => W4_SYSTEM_API_STATUS,
+        'status' => $runtimeBackend['status'] ?? W4_SYSTEM_API_STATUS,
         'bus_name' => W4_SYSTEM_API_BUS_NAME,
         'object_path' => W4_SYSTEM_API_OBJECT_PATH,
         'interface' => W4_SYSTEM_API_INTERFACE,
@@ -1010,6 +1014,8 @@ function createAdapterRuntime(): array
             'serve-stdio-adapter',
             'serve-dbus',
         ],
+        'runtime_diagnosis' => $runtimeDiagnosis,
+        'runtime_backend' => $runtimeBackend,
         'adapter_specification' => createAdapterSpecification(),
     ];
 }
@@ -1072,6 +1078,102 @@ function buildRuntimeDiagnosis(): array
         ],
         'missing_capabilities' => $missingCapabilities,
     ];
+}
+
+/**
+ * @param array<string, mixed> $runtimeDiagnosis
+ * @return array<string, mixed>
+ */
+function createRuntimeBackend(array $runtimeDiagnosis): array
+{
+    $environment = captureEnvironment();
+    $selectedBackend = $environment['W4_SYSTEM_API_RUNTIME_BACKEND'] ?? 'contract-pending';
+    $selectedBackend = is_string($selectedBackend) && trim($selectedBackend) !== ''
+        ? trim($selectedBackend)
+        : 'contract-pending';
+    $ready = ($runtimeDiagnosis['ready'] ?? false) === true;
+
+    return match ($selectedBackend) {
+        'experimental-embedded-runtime' => [
+            'kind' => 'system-api-dbus-runtime-backend',
+            'selected_backend' => 'experimental-embedded-runtime',
+            'status' => $ready ? 'experimental-runtime-backend-materialized' : W4_SYSTEM_API_STATUS,
+            'materialized' => $ready,
+            'transport' => 'stdio-activation-contract',
+            'ownership_model' => 'process-local-activation-contract',
+            'supports_bus_ownership' => false,
+            'blocking_reason' => $ready ? null : 'missing-runtime-capabilities',
+        ],
+        'native-dbus-extension' => [
+            'kind' => 'system-api-dbus-runtime-backend',
+            'selected_backend' => 'native-dbus-extension',
+            'status' => ($ready && (class_exists('Dbus') || class_exists('DBus')))
+                ? 'native-runtime-backend-materialized'
+                : W4_SYSTEM_API_STATUS,
+            'materialized' => $ready && (class_exists('Dbus') || class_exists('DBus')),
+            'transport' => 'dbus-system-bus',
+            'ownership_model' => 'native-php-dbus-extension',
+            'supports_bus_ownership' => true,
+            'blocking_reason' => !$ready
+                ? 'missing-runtime-capabilities'
+                : ((class_exists('Dbus') || class_exists('DBus')) ? null : 'dbus-extension-service-backend-unavailable'),
+        ],
+        'contract-pending' => [
+            'kind' => 'system-api-dbus-runtime-backend',
+            'selected_backend' => 'contract-pending',
+            'status' => W4_SYSTEM_API_STATUS,
+            'materialized' => false,
+            'transport' => 'contract-only',
+            'ownership_model' => 'not-materialized',
+            'supports_bus_ownership' => false,
+            'blocking_reason' => $ready ? 'runtime-backend-not-configured' : 'missing-runtime-capabilities',
+        ],
+        default => [
+            'kind' => 'system-api-dbus-runtime-backend',
+            'selected_backend' => $selectedBackend,
+            'status' => $ready ? 'unsupported-runtime-backend' : W4_SYSTEM_API_STATUS,
+            'materialized' => false,
+            'transport' => 'unknown',
+            'ownership_model' => 'unsupported',
+            'supports_bus_ownership' => false,
+            'blocking_reason' => $ready ? 'unsupported-runtime-backend' : 'missing-runtime-capabilities',
+        ],
+    };
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function serveDbus(): array
+{
+    $runtimeDiagnosis = buildRuntimeDiagnosis();
+    $runtimeBackend = createRuntimeBackend($runtimeDiagnosis);
+
+    if (($runtimeBackend['materialized'] ?? false) === true) {
+        return [
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-runtime-activation',
+            'status' => $runtimeBackend['status'] ?? 'runtime-backend-materialized',
+            'bridge_kind' => 'packaged-runtime-adapter',
+            'requested_command' => 'serve-dbus',
+            'bus_name' => W4_SYSTEM_API_BUS_NAME,
+            'object_path' => W4_SYSTEM_API_OBJECT_PATH,
+            'interface' => W4_SYSTEM_API_INTERFACE,
+            'materialized' => true,
+            'exit_code' => 0,
+            'adapter_specification' => createAdapterSpecification(),
+            'activation_bootstrap' => createActivationBootstrap(),
+            'runtime_diagnosis' => $runtimeDiagnosis,
+            'runtime_backend' => $runtimeBackend,
+            'next_action' => 'observe-runtime-backend',
+        ];
+    }
+
+    $report = createPendingActivationReport($runtimeDiagnosis, 'packaged-runtime-adapter');
+    $report['runtime_backend'] = $runtimeBackend;
+    $report['exit_code'] = 3;
+
+    return $report;
 }
 
 /**
@@ -1684,8 +1786,9 @@ switch ($command) {
         exit(0);
 
     case 'serve-dbus':
-        emitJson(createPendingActivationReport(buildRuntimeDiagnosis(), 'packaged-runtime-host'));
-        exit(3);
+        $serveDbus = serveDbus();
+        emitJson($serveDbus);
+        exit($serveDbus['exit_code']);
 
     default:
         fwrite(STDERR, sprintf("ERROR: Comando no soportado: %s\n", $command));
@@ -1734,10 +1837,13 @@ function createHostDescription(): array
 
 function createAdapterRuntime(): array
 {
+    $runtimeDiagnosis = buildRuntimeDiagnosis();
+    $runtimeBackend = createRuntimeBackend($runtimeDiagnosis);
+
     return [
         'api_version' => '1.0',
         'kind' => 'system-api-dbus-runtime-adapter',
-        'status' => W4_SYSTEM_API_STATUS,
+        'status' => $runtimeBackend['status'] ?? W4_SYSTEM_API_STATUS,
         'bus_name' => W4_SYSTEM_API_BUS_NAME,
         'object_path' => W4_SYSTEM_API_OBJECT_PATH,
         'interface' => W4_SYSTEM_API_INTERFACE,
@@ -1750,6 +1856,8 @@ function createAdapterRuntime(): array
             'serve-stdio-adapter',
             'serve-dbus',
         ],
+        'runtime_diagnosis' => $runtimeDiagnosis,
+        'runtime_backend' => $runtimeBackend,
         'adapter_specification' => createAdapterSpecification(),
     ];
 }
@@ -1812,6 +1920,102 @@ function buildRuntimeDiagnosis(): array
         ],
         'missing_capabilities' => $missingCapabilities,
     ];
+}
+
+/**
+ * @param array<string, mixed> $runtimeDiagnosis
+ * @return array<string, mixed>
+ */
+function createRuntimeBackend(array $runtimeDiagnosis): array
+{
+    $environment = captureEnvironment();
+    $selectedBackend = $environment['W4_SYSTEM_API_RUNTIME_BACKEND'] ?? 'contract-pending';
+    $selectedBackend = is_string($selectedBackend) && trim($selectedBackend) !== ''
+        ? trim($selectedBackend)
+        : 'contract-pending';
+    $ready = ($runtimeDiagnosis['ready'] ?? false) === true;
+
+    return match ($selectedBackend) {
+        'experimental-embedded-runtime' => [
+            'kind' => 'system-api-dbus-runtime-backend',
+            'selected_backend' => 'experimental-embedded-runtime',
+            'status' => $ready ? 'experimental-runtime-backend-materialized' : W4_SYSTEM_API_STATUS,
+            'materialized' => $ready,
+            'transport' => 'stdio-activation-contract',
+            'ownership_model' => 'process-local-activation-contract',
+            'supports_bus_ownership' => false,
+            'blocking_reason' => $ready ? null : 'missing-runtime-capabilities',
+        ],
+        'native-dbus-extension' => [
+            'kind' => 'system-api-dbus-runtime-backend',
+            'selected_backend' => 'native-dbus-extension',
+            'status' => ($ready && (class_exists('Dbus') || class_exists('DBus')))
+                ? 'native-runtime-backend-materialized'
+                : W4_SYSTEM_API_STATUS,
+            'materialized' => $ready && (class_exists('Dbus') || class_exists('DBus')),
+            'transport' => 'dbus-system-bus',
+            'ownership_model' => 'native-php-dbus-extension',
+            'supports_bus_ownership' => true,
+            'blocking_reason' => !$ready
+                ? 'missing-runtime-capabilities'
+                : ((class_exists('Dbus') || class_exists('DBus')) ? null : 'dbus-extension-service-backend-unavailable'),
+        ],
+        'contract-pending' => [
+            'kind' => 'system-api-dbus-runtime-backend',
+            'selected_backend' => 'contract-pending',
+            'status' => W4_SYSTEM_API_STATUS,
+            'materialized' => false,
+            'transport' => 'contract-only',
+            'ownership_model' => 'not-materialized',
+            'supports_bus_ownership' => false,
+            'blocking_reason' => $ready ? 'runtime-backend-not-configured' : 'missing-runtime-capabilities',
+        ],
+        default => [
+            'kind' => 'system-api-dbus-runtime-backend',
+            'selected_backend' => $selectedBackend,
+            'status' => $ready ? 'unsupported-runtime-backend' : W4_SYSTEM_API_STATUS,
+            'materialized' => false,
+            'transport' => 'unknown',
+            'ownership_model' => 'unsupported',
+            'supports_bus_ownership' => false,
+            'blocking_reason' => $ready ? 'unsupported-runtime-backend' : 'missing-runtime-capabilities',
+        ],
+    };
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function serveDbus(): array
+{
+    $runtimeDiagnosis = buildRuntimeDiagnosis();
+    $runtimeBackend = createRuntimeBackend($runtimeDiagnosis);
+
+    if (($runtimeBackend['materialized'] ?? false) === true) {
+        return [
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-runtime-activation',
+            'status' => $runtimeBackend['status'] ?? 'runtime-backend-materialized',
+            'bridge_kind' => 'packaged-runtime-host',
+            'requested_command' => 'serve-dbus',
+            'bus_name' => W4_SYSTEM_API_BUS_NAME,
+            'object_path' => W4_SYSTEM_API_OBJECT_PATH,
+            'interface' => W4_SYSTEM_API_INTERFACE,
+            'materialized' => true,
+            'exit_code' => 0,
+            'adapter_specification' => createAdapterSpecification(),
+            'activation_bootstrap' => createActivationBootstrap(),
+            'runtime_diagnosis' => $runtimeDiagnosis,
+            'runtime_backend' => $runtimeBackend,
+            'next_action' => 'observe-runtime-backend',
+        ];
+    }
+
+    $report = createPendingActivationReport($runtimeDiagnosis, 'packaged-runtime-host');
+    $report['runtime_backend'] = $runtimeBackend;
+    $report['exit_code'] = 3;
+
+    return $report;
 }
 
 /**
@@ -2174,8 +2378,9 @@ switch ($command) {
         exit(0);
 
     case 'serve-dbus':
-        emitJson(createPendingActivationReport(buildRuntimeDiagnosis(), 'packaged-runtime-launcher'));
-        exit(3);
+        $serveDbus = serveDbus();
+        emitJson($serveDbus);
+        exit($serveDbus['exit_code']);
 
     default:
         fwrite(STDERR, sprintf("ERROR: Comando no soportado: %s\n", $command));
@@ -2413,6 +2618,29 @@ function performActivationExecution(): array
         $activationExecution,
         executeTargetCommand(is_array($activationExecution['target_command'] ?? null) ? $activationExecution['target_command'] : null)
     );
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function serveDbus(): array
+{
+    $runtimeDiagnosis = buildRuntimeDiagnosis();
+
+    if (($runtimeDiagnosis['ready'] ?? false) === true) {
+        $report = performActivationExecution();
+        $report['bridge_kind'] = 'packaged-runtime-launcher';
+        $report['requested_command'] = 'serve-dbus';
+        $report['launch_plan'] = createLaunchPlan();
+
+        return $report;
+    }
+
+    $report = createPendingActivationReport($runtimeDiagnosis, 'packaged-runtime-launcher');
+    $report['launch_plan'] = createLaunchPlan();
+    $report['exit_code'] = 3;
+
+    return $report;
 }
 
 /**

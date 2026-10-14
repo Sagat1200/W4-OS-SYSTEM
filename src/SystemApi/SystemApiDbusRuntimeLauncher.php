@@ -146,10 +146,20 @@ final class SystemApiDbusRuntimeLauncher
 
     public function serveDbus(): string
     {
-        $report = $this->activationToolkit->createPendingActivationReport(
-            $this->runtimeProbe->createReport(),
-            'local-runtime-launcher'
-        );
+        $runtimeDiagnosis = $this->runtimeProbe->createReport();
+
+        if (($runtimeDiagnosis['ready'] ?? false) === true) {
+            $report = $this->decodeResponseJson($this->executeActivation());
+            $report['bridge_kind'] = 'local-runtime-launcher';
+            $report['requested_command'] = 'serve-dbus';
+        } else {
+            $report = $this->activationToolkit->createPendingActivationReport(
+                $runtimeDiagnosis,
+                'local-runtime-launcher'
+            );
+            $report['exit_code'] = 3;
+        }
+
         $report['launch_plan'] = $this->createLaunchPlan();
 
         return $this->encodeJson($report);

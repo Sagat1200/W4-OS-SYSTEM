@@ -10,12 +10,14 @@ final class SystemApiDbusRuntimeAdapter
 {
     private SystemApiDbusBridge $bridge;
     private SystemApiDbusRuntimeActivationToolkit $activationToolkit;
+    private SystemApiDbusRuntimeBackendToolkit $runtimeBackend;
     private SystemApiDbusRuntimeProbeToolkit $runtimeProbe;
 
     public function __construct(string $rootDir)
     {
         $this->bridge = new SystemApiDbusBridge($rootDir);
         $this->activationToolkit = new SystemApiDbusRuntimeActivationToolkit();
+        $this->runtimeBackend = new SystemApiDbusRuntimeBackendToolkit();
         $this->runtimeProbe = new SystemApiDbusRuntimeProbeToolkit();
     }
 
@@ -36,10 +38,13 @@ final class SystemApiDbusRuntimeAdapter
 
     public function describeRuntime(): string
     {
+        $runtimeDiagnosis = $this->runtimeProbe->createReport();
+        $runtimeBackend = $this->runtimeBackend->createReport($runtimeDiagnosis);
+
         return $this->encodeJson([
             'api_version' => '1.0',
             'kind' => 'system-api-dbus-runtime-adapter',
-            'status' => 'pending-runtime-adapter',
+            'status' => $runtimeBackend['status'] ?? 'pending-runtime-adapter',
             'bus_name' => 'org.w4.System1',
             'object_path' => '/org/w4/System1',
             'interface' => 'org.w4.System1.Manager',
@@ -55,16 +60,45 @@ final class SystemApiDbusRuntimeAdapter
                 'serve-stdio-adapter',
                 'serve-dbus',
             ],
+            'runtime_diagnosis' => $runtimeDiagnosis,
+            'runtime_backend' => $runtimeBackend,
             'adapter_specification' => $this->activationToolkit->createAdapterSpecification(),
         ]);
     }
 
     public function serveDbus(): string
     {
-        return $this->encodeJson($this->activationToolkit->createPendingActivationReport(
-            $this->runtimeProbe->createReport(),
+        $runtimeDiagnosis = $this->runtimeProbe->createReport();
+        $runtimeBackend = $this->runtimeBackend->createReport($runtimeDiagnosis);
+
+        if (($runtimeBackend['materialized'] ?? false) === true) {
+            return $this->encodeJson([
+                'api_version' => '1.0',
+                'kind' => 'system-api-dbus-runtime-activation',
+                'status' => $runtimeBackend['status'] ?? 'runtime-backend-materialized',
+                'bridge_kind' => 'local-runtime-adapter',
+                'requested_command' => 'serve-dbus',
+                'bus_name' => 'org.w4.System1',
+                'object_path' => '/org/w4/System1',
+                'interface' => 'org.w4.System1.Manager',
+                'materialized' => true,
+                'exit_code' => 0,
+                'adapter_specification' => $this->activationToolkit->createAdapterSpecification(),
+                'activation_bootstrap' => $this->activationToolkit->createActivationBootstrap(),
+                'runtime_diagnosis' => $runtimeDiagnosis,
+                'runtime_backend' => $runtimeBackend,
+                'next_action' => 'observe-runtime-backend',
+            ]);
+        }
+
+        $report = $this->activationToolkit->createPendingActivationReport(
+            $runtimeDiagnosis,
             'local-runtime-adapter'
-        ));
+        );
+        $report['runtime_backend'] = $runtimeBackend;
+        $report['exit_code'] = 3;
+
+        return $this->encodeJson($report);
     }
 
     public function describeSpecification(): string

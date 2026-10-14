@@ -228,6 +228,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-activation-attempt'", $runtimeAdapterScript);
         self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-activation-result'", $runtimeAdapterScript);
         self::assertStringContainsString("'execution-attempted-pending-runtime-adapter'", $runtimeAdapterScript);
+        self::assertStringContainsString("'experimental-runtime-backend-materialized'", $runtimeAdapterScript);
 
         $runtimeAdapterWrapper = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-runtime-adapter');
         self::assertNotFalse($runtimeAdapterWrapper);
@@ -324,6 +325,19 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame($runtimeAdapterScriptPath, $runtimeLauncherExecuteReadyPayload['command_result']['entrypoint']);
         self::assertSame('system-api-dbus-runtime-activation', $runtimeLauncherExecuteReadyPayload['command_result']['payload']['kind']);
 
+        $runtimeLauncherServeDbusMaterialized = $this->runGeneratedPhpScript([
+            $runtimeLauncherScriptPath,
+            'serve-dbus',
+        ], array_merge($this->readyRuntimeEnvironment(), [
+            'W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY' => $runtimeAdapterScriptPath,
+            'W4_SYSTEM_API_RUNTIME_BACKEND' => 'experimental-embedded-runtime',
+        ]));
+        self::assertSame(0, $runtimeLauncherServeDbusMaterialized['exitCode'], $runtimeLauncherServeDbusMaterialized['stderr']);
+        $runtimeLauncherServeDbusMaterializedPayload = $this->decodeJson($runtimeLauncherServeDbusMaterialized['stdout']);
+        self::assertSame('execution-completed', $runtimeLauncherServeDbusMaterializedPayload['status']);
+        self::assertSame('serve-dbus', $runtimeLauncherServeDbusMaterializedPayload['requested_command']);
+        self::assertSame('system-api-dbus-runtime-launch-plan', $runtimeLauncherServeDbusMaterializedPayload['launch_plan']['kind']);
+
         $runtimeLauncherServeDbus = $this->runGeneratedPhpScript([
             $runtimeLauncherScriptPath,
             'serve-dbus',
@@ -377,6 +391,32 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('runtime-adapter-returned-pending', $runtimeAdapterExecuteReadyPayload['blocking_reason']);
         self::assertSame($runtimeAdapterScriptPath, $runtimeAdapterExecuteReadyPayload['command_result']['entrypoint']);
         self::assertSame('system-api-dbus-runtime-activation', $runtimeAdapterExecuteReadyPayload['command_result']['payload']['kind']);
+
+        $runtimeAdapterServeDbusMaterialized = $this->runGeneratedPhpScript([
+            $runtimeAdapterScriptPath,
+            'serve-dbus',
+        ], array_merge($this->readyRuntimeEnvironment(), [
+            'W4_SYSTEM_API_RUNTIME_BACKEND' => 'experimental-embedded-runtime',
+        ]));
+        self::assertSame(0, $runtimeAdapterServeDbusMaterialized['exitCode'], $runtimeAdapterServeDbusMaterialized['stderr']);
+        $runtimeAdapterServeDbusMaterializedPayload = $this->decodeJson($runtimeAdapterServeDbusMaterialized['stdout']);
+        self::assertSame('experimental-runtime-backend-materialized', $runtimeAdapterServeDbusMaterializedPayload['status']);
+        self::assertTrue($runtimeAdapterServeDbusMaterializedPayload['materialized']);
+        self::assertSame(0, $runtimeAdapterServeDbusMaterializedPayload['exit_code']);
+
+        $runtimeAdapterExecuteMaterialized = $this->runGeneratedPhpScript([
+            $runtimeAdapterScriptPath,
+            'ExecuteActivation',
+        ], array_merge($this->readyRuntimeEnvironment(), [
+            'W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY' => $runtimeAdapterScriptPath,
+            'W4_SYSTEM_API_RUNTIME_BACKEND' => 'experimental-embedded-runtime',
+        ]));
+        self::assertSame(0, $runtimeAdapterExecuteMaterialized['exitCode'], $runtimeAdapterExecuteMaterialized['stderr']);
+        $runtimeAdapterExecuteMaterializedPayload = $this->decodeJson($runtimeAdapterExecuteMaterialized['stdout']);
+        self::assertTrue($runtimeAdapterExecuteMaterializedPayload['executed']);
+        self::assertSame('execution-completed', $runtimeAdapterExecuteMaterializedPayload['status']);
+        self::assertSame(0, $runtimeAdapterExecuteMaterializedPayload['command_result']['exit_code']);
+        self::assertSame('experimental-runtime-backend-materialized', $runtimeAdapterExecuteMaterializedPayload['command_result']['payload']['status']);
 
         $runtimeHostScriptPath = $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-runtime-host.php';
         $runtimeHostScript = file_get_contents($runtimeHostScriptPath);

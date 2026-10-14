@@ -126,6 +126,27 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertSame('system-api-dbus-runtime-activation', $payload['command_result']['payload']['kind']);
     }
 
+    public function testExecuteActivationCompletesWhenMaterializedBackendIsConfigured(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'ExecuteActivation',
+        ], '', array_merge(
+            $this->readyRuntimeEnvironment(),
+            $this->materializedBackendEnvironment()
+        ));
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation-result', $payload['kind']);
+        self::assertTrue($payload['executed']);
+        self::assertSame('execution-completed', $payload['status']);
+        self::assertNull($payload['blocking_reason']);
+        self::assertSame(0, $payload['command_result']['exit_code']);
+        self::assertSame('experimental-runtime-backend-materialized', $payload['command_result']['payload']['status']);
+    }
+
     public function testServeDbusReturnsActivationWithLaunchPlan(): void
     {
         $result = $this->runPhpScript([
@@ -143,6 +164,27 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertSame('system-api-dbus-runtime-activation-attempt', $payload['activation_attempt']['kind']);
         self::assertSame('system-api-dbus-runtime-activation-result', $payload['activation_execution']['kind']);
         self::assertSame('system-api-dbus-runtime-launch-plan', $payload['launch_plan']['kind']);
+    }
+
+    public function testServeDbusCompletesActivationWhenMaterializedBackendIsConfigured(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'serve-dbus',
+        ], '', array_merge(
+            $this->readyRuntimeEnvironment(),
+            $this->materializedBackendEnvironment()
+        ));
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation-result', $payload['kind']);
+        self::assertSame('execution-completed', $payload['status']);
+        self::assertSame('local-runtime-launcher', $payload['bridge_kind']);
+        self::assertSame('serve-dbus', $payload['requested_command']);
+        self::assertSame('system-api-dbus-runtime-launch-plan', $payload['launch_plan']['kind']);
+        self::assertSame(0, $payload['exit_code']);
     }
 
     public function testServeStdioLauncherDelegatesToLauncherAndHostMethods(): void
@@ -293,6 +335,16 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
             'W4_SYSTEM_API_PROBE_OS_FAMILY' => 'Linux',
             'W4_SYSTEM_API_PROBE_PHP_BINARY' => '/usr/bin/php',
             'W4_SYSTEM_API_PROBE_PHP_VERSION' => '8.4.3',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function materializedBackendEnvironment(): array
+    {
+        return [
+            'W4_SYSTEM_API_RUNTIME_BACKEND' => 'experimental-embedded-runtime',
         ];
     }
 }

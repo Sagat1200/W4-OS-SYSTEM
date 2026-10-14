@@ -104,6 +104,11 @@ final class SystemApiToolkit
                         'serve-dbus',
                     ],
                     'status' => 'spec-ready',
+                    'supported_runtime_backends' => [
+                        'contract-pending',
+                        'experimental-embedded-runtime',
+                        'native-dbus-extension',
+                    ],
                 ],
                 'local_runtime_host' => [
                     'script' => 'scripts/system_api_dbus_runtime_host.php',

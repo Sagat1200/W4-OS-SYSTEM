@@ -40,6 +40,26 @@ final class SystemApiDbusRuntimeHostCliTest extends TestCase
         self::assertSame('serve-dbus', $payload['requested_command']);
     }
 
+    public function testServeDbusReturnsMaterializedBackendReportWhenConfigured(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'serve-dbus',
+        ], '', array_merge(
+            $this->readyRuntimeEnvironment(),
+            $this->materializedBackendEnvironment()
+        ));
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation', $payload['kind']);
+        self::assertSame('local-runtime-host', $payload['bridge_kind']);
+        self::assertSame('experimental-runtime-backend-materialized', $payload['status']);
+        self::assertTrue($payload['materialized']);
+        self::assertSame(0, $payload['exit_code']);
+    }
+
     public function testServeStdioHostDelegatesToHostAndAdapterMethods(): void
     {
         $inputLines = [
@@ -86,7 +106,7 @@ final class SystemApiDbusRuntimeHostCliTest extends TestCase
      * @param list<string> $command
      * @return array{exitCode:int,stdout:string,stderr:string}
      */
-    private function runPhpScript(array $command, string $stdin = ''): array
+    private function runPhpScript(array $command, string $stdin = '', array $extraEnvironment = []): array
     {
         array_unshift($command, PHP_BINARY);
 
@@ -96,7 +116,8 @@ final class SystemApiDbusRuntimeHostCliTest extends TestCase
             2 => ['pipe', 'w'],
         ];
 
-        $process = proc_open($command, $descriptorSpec, $pipes, dirname(__DIR__));
+        $environment = array_merge($_ENV, $extraEnvironment);
+        $process = proc_open($command, $descriptorSpec, $pipes, dirname(__DIR__), $environment);
         self::assertIsResource($process, 'No se pudo ejecutar system_api_dbus_runtime_host.php');
 
         fwrite($pipes[0], $stdin);
@@ -151,5 +172,32 @@ final class SystemApiDbusRuntimeHostCliTest extends TestCase
     private function scriptPath(): string
     {
         return dirname(__DIR__) . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'system_api_dbus_runtime_host.php';
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function readyRuntimeEnvironment(): array
+    {
+        return [
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '1',
+            'W4_SYSTEM_API_PROBE_HAS_BUSCTL' => '1',
+            'W4_SYSTEM_API_PROBE_HAS_GDBUS' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON' => '1',
+            'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET' => '1',
+            'W4_SYSTEM_API_PROBE_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_PROBE_PHP_BINARY' => '/usr/bin/php',
+            'W4_SYSTEM_API_PROBE_PHP_VERSION' => '8.4.3',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function materializedBackendEnvironment(): array
+    {
+        return [
+            'W4_SYSTEM_API_RUNTIME_BACKEND' => 'experimental-embedded-runtime',
+        ];
     }
 }
