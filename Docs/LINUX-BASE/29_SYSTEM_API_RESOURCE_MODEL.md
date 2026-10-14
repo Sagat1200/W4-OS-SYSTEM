@@ -21,11 +21,15 @@ Modelo del dominio: api_version, request_id, operation_id, revision, result, err
 
 Los nombres de campos aquí definidos son requisitos del modelo lógico. El transporte y la envoltura se rigen por [27_SYSTEM_API_CONTRACT.md](27_SYSTEM_API_CONTRACT.md). Ausencia de dato se expresa como `null` acompañada de causa; no se convierte en cero, éxito ni recurso vacío. Un campo agregado opcionalmente no cambia el significado de los existentes. Los ejemplos describen la interfaz que debe implementarse.
 
+Para recursos de observación del runtime D-Bus, el modelo puede publicar artefactos intermedios de activación mientras el binding público siga incompleto. En ese caso el recurso observado conserva `kind`, `status`, `next_action`, capacidades faltantes y, cuando aplique, un resultado de ejecución con `executed`, `exit_code`, `blocking_reason` y `target_command`; esos campos describen el estado real del handoff y no se reinterpretan como éxito funcional del bus.
+
 ## 3. Flujo y dependencias
 
 Resolver identidad del emisor, validar mensaje, autorizar acción sobre recurso, despachar y observar resultado del provider.
 
 El responsable valida primero las precondiciones específicas del contrato. Las consultas etiquetan fecha y origen de la observación; las mutaciones se autorizan antes de invocar el provider. El servicio conserva la correlación entre solicitud, efecto y resultado. Cuando el backend cambia fuera de W4 se vuelve a observar su estado: el registro W4 no reemplaza la autoridad de Debian sobre sus recursos.
+
+Si el provider aún no puede materializar el runtime adapter D-Bus, el recurso observado mantiene la condición `pending-runtime-adapter` y expone la causa concreta del bloqueo. La ausencia de ownership real de `org.w4.System1` no se traduce a recurso vacío ni a disponibilidad implícita del transporte.
 
 Para artefactos de build, pruebas o documentación, este flujo representa una actividad de ingeniería y sus evidencias, no un nuevo método privilegiado del sistema. Sus cambios se revisan en el repositorio; sólo el software instalado ejecuta operaciones sobre el host.
 

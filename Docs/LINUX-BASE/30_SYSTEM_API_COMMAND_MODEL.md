@@ -21,6 +21,8 @@ Modelo del dominio: api_version, request_id, operation_id, revision, result, err
 
 Los nombres de campos aquí definidos son requisitos del modelo lógico. El transporte y la envoltura se rigen por [27_SYSTEM_API_CONTRACT.md](27_SYSTEM_API_CONTRACT.md). Ausencia de dato se expresa como `null` acompañada de causa; no se convierte en cero, éxito ni recurso vacío. Un campo agregado opcionalmente no cambia el significado de los existentes. Los ejemplos describen la interfaz que debe implementarse.
 
+Los comandos de activación del transporte local pueden representar pasos previos al ownership real del bus. Cuando una operación de ejecución intente materializar el runtime adapter, el resultado debe conservar si la acción fue realmente ejecutada, el `exit_code` observado, el `blocking_reason` y el `target_command` previsto; no se reemplaza ese estado por un éxito sintético ni por un timeout genérico.
+
 ## 3. Flujo y dependencias
 
 Resolver identidad del emisor, validar mensaje, autorizar acción sobre recurso, despachar y observar resultado del provider.
@@ -34,6 +36,8 @@ Para artefactos de build, pruebas o documentación, este flujo representa una ac
 API mayor 1; límites iniciales: 256 KiB por payload W4, 100 elementos por página y máximo 500; sin listener TCP por defecto.
 
 Una revisión de configuración se valida completa antes de activarse. Se registra su identificador sin copiar secretos a logs. Una opción desconocida se rechaza en los manifiestos W4; el adaptador conserva las opciones ajenas que no administra. Los valores predeterminados de esta edición son decisiones de diseño que deben probarse en la base Debian fijada en el manifiesto de release.
+
+Si faltan capacidades del host para completar el handoff D-Bus, el comando terminaliza en estado bloqueado y deja la siguiente acción explícita para el operador o la capa superior. Un `exit_code` distinto de cero en este contexto puede ser un resultado esperado del contrato y debe seguir siendo consultable por `request_id` u observación posterior, no sólo por stderr.
 
 ## 5. Seguridad y fallos
 

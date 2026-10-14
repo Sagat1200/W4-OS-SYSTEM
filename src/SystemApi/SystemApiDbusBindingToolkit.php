@@ -97,6 +97,7 @@ final class SystemApiDbusBindingToolkit
                         'DescribeActivationBootstrap',
                         'DescribeActivationPreparation',
                         'AttemptActivation',
+                        'ExecuteActivation',
                         'DescribeHost',
                         'DescribeSpecification',
                         'DescribeRuntime',
@@ -130,6 +131,7 @@ final class SystemApiDbusBindingToolkit
                         'DescribeSpecification',
                         'DescribeActivationPreparation',
                         'AttemptActivation',
+                        'ExecuteActivation',
                         'DescribeRuntime',
                         'DiagnoseRuntime',
                         'GetCapabilities',
@@ -891,6 +893,10 @@ switch ($command) {
         emitJson(createActivationAttempt());
         exit(0);
 
+    case 'ExecuteActivation':
+        emitJson(createActivationExecution());
+        exit(createActivationExecution()['exit_code']);
+
     case 'DescribeRuntime':
         emitJson(createAdapterRuntime());
         exit(0);
@@ -949,6 +955,7 @@ function createAdapterRuntime(): array
             'DescribeSpecification',
             'DescribeActivationPreparation',
             'AttemptActivation',
+            'ExecuteActivation',
             'DescribeRuntime',
             'DiagnoseRuntime',
             'GetCapabilities',
@@ -1127,6 +1134,7 @@ function handleAdapterEnvelope(string $line): array
         'DescribeSpecification' => createAdapterSpecification(),
         'DescribeActivationPreparation' => createActivationPreparation(),
         'AttemptActivation' => createActivationAttempt(),
+        'ExecuteActivation' => createActivationExecution(),
         'DescribeRuntime' => createAdapterRuntime(),
         'DiagnoseRuntime' => buildRuntimeDiagnosis(),
         'GetCapabilities' => createPendingResponse(
@@ -1198,6 +1206,7 @@ function createPendingActivationReport(array $runtimeDiagnosis, string $bridgeKi
         'adapter_specification' => createAdapterSpecification(),
         'activation_preparation' => createActivationPreparation(),
         'activation_attempt' => createActivationAttempt(),
+        'activation_execution' => createActivationExecution(),
         'runtime_diagnosis' => $runtimeDiagnosis,
         'missing_capabilities' => is_array($runtimeDiagnosis['missing_capabilities'] ?? null)
             ? $runtimeDiagnosis['missing_capabilities']
@@ -1331,6 +1340,38 @@ function createActivationAttempt(): array
             ? $runtimeDiagnosis['missing_capabilities']
             : [],
         'next_action' => $ready ? 'execute-runtime-adapter' : 'materialize-runtime-adapter',
+    ];
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function createActivationExecution(): array
+{
+    $runtimeDiagnosis = buildRuntimeDiagnosis();
+    $attempt = createActivationAttempt();
+    $preparation = is_array($attempt['activation_preparation'] ?? null) ? $attempt['activation_preparation'] : [];
+    $runtimeAdapterPlan = is_array($preparation['execution_plan']['runtime_adapter'] ?? null)
+        ? $preparation['execution_plan']['runtime_adapter']
+        : [];
+    $ready = ($attempt['status'] ?? null) === 'ready-to-attempt-runtime-adapter';
+
+    return [
+        'api_version' => '1.0',
+        'kind' => 'system-api-dbus-runtime-activation-result',
+        'status' => $ready ? 'execution-pending-runtime-adapter' : 'execution-blocked',
+        'executed' => false,
+        'exit_code' => 3,
+        'bridge_kind' => 'packaged-runtime-adapter',
+        'requested_command' => 'ExecuteActivation',
+        'target_command' => [
+            'entrypoint' => $runtimeAdapterPlan['entrypoint'] ?? null,
+            'command' => $runtimeAdapterPlan['command'] ?? null,
+        ],
+        'blocking_reason' => $attempt['blocking_reason'] ?? 'runtime-adapter-not-materialized',
+        'activation_attempt' => $attempt,
+        'runtime_diagnosis' => $runtimeDiagnosis,
+        'next_action' => $attempt['next_action'] ?? 'materialize-runtime-adapter',
     ];
 }
 
@@ -1845,6 +1886,10 @@ switch ($command) {
         emitJson(createActivationAttempt());
         exit(0);
 
+    case 'ExecuteActivation':
+        emitJson(createActivationExecution());
+        exit(createActivationExecution()['exit_code']);
+
     case 'DescribeHost':
         emitJson(createHostDescription());
         exit(0);
@@ -1914,6 +1959,7 @@ function createLauncherDescription(): array
             'DescribeActivationBootstrap',
             'DescribeActivationPreparation',
             'AttemptActivation',
+            'ExecuteActivation',
             'DescribeHost',
             'DescribeSpecification',
             'DescribeRuntime',
@@ -2074,6 +2120,35 @@ function createActivationAttempt(): array
             ? $runtimeDiagnosis['missing_capabilities']
             : [],
         'next_action' => $ready ? 'execute-runtime-adapter' : 'materialize-runtime-adapter',
+    ];
+}
+
+function createActivationExecution(): array
+{
+    $runtimeDiagnosis = buildRuntimeDiagnosis();
+    $attempt = createActivationAttempt();
+    $preparation = is_array($attempt['activation_preparation'] ?? null) ? $attempt['activation_preparation'] : [];
+    $runtimeAdapterPlan = is_array($preparation['execution_plan']['runtime_adapter'] ?? null)
+        ? $preparation['execution_plan']['runtime_adapter']
+        : [];
+    $ready = ($attempt['status'] ?? null) === 'ready-to-attempt-runtime-adapter';
+
+    return [
+        'api_version' => '1.0',
+        'kind' => 'system-api-dbus-runtime-activation-result',
+        'status' => $ready ? 'execution-pending-runtime-adapter' : 'execution-blocked',
+        'executed' => false,
+        'exit_code' => 3,
+        'bridge_kind' => 'packaged-runtime-launcher',
+        'requested_command' => 'ExecuteActivation',
+        'target_command' => [
+            'entrypoint' => $runtimeAdapterPlan['entrypoint'] ?? null,
+            'command' => $runtimeAdapterPlan['command'] ?? null,
+        ],
+        'blocking_reason' => $attempt['blocking_reason'] ?? 'runtime-adapter-not-materialized',
+        'activation_attempt' => $attempt,
+        'runtime_diagnosis' => $runtimeDiagnosis,
+        'next_action' => $attempt['next_action'] ?? 'materialize-runtime-adapter',
     ];
 }
 
@@ -2296,6 +2371,7 @@ function handleLauncherEnvelope(string $line): array
         'DescribeLaunchPlan' => createLaunchPlan(),
         'DescribeActivationPreparation' => createActivationPreparation(),
         'AttemptActivation' => createActivationAttempt(),
+        'ExecuteActivation' => createActivationExecution(),
         'DescribeHost' => createHostDescription(),
         'DescribeSpecification' => createAdapterSpecification(),
         'DescribeRuntime' => createAdapterRuntime(),
@@ -2371,6 +2447,7 @@ function createPendingActivationReport(array $runtimeDiagnosis, string $bridgeKi
         'activation_bootstrap' => createActivationBootstrap(),
         'activation_preparation' => createActivationPreparation(),
         'activation_attempt' => createActivationAttempt(),
+        'activation_execution' => createActivationExecution(),
         'launch_plan' => createLaunchPlan(),
         'runtime_diagnosis' => $runtimeDiagnosis,
         'missing_capabilities' => is_array($runtimeDiagnosis['missing_capabilities'] ?? null)

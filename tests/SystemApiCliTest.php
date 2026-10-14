@@ -42,7 +42,9 @@ final class SystemApiCliTest extends TestCase
         self::assertContains('DescribeActivationBootstrap', $payload['result']['data']['binding']['local_runtime_launcher']['commands']);
         self::assertContains('DescribeActivationPreparation', $payload['result']['data']['binding']['local_runtime_launcher']['commands']);
         self::assertContains('AttemptActivation', $payload['result']['data']['binding']['local_runtime_launcher']['commands']);
+        self::assertContains('ExecuteActivation', $payload['result']['data']['binding']['local_runtime_launcher']['commands']);
         self::assertContains('AttemptActivation', $payload['result']['data']['binding']['local_runtime_adapter']['commands']);
+        self::assertContains('ExecuteActivation', $payload['result']['data']['binding']['local_runtime_adapter']['commands']);
         self::assertContains('DescribeLaunchPlan', $payload['result']['data']['binding']['local_runtime_launcher']['commands']);
         self::assertContains('profiles.list', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-runtime', array_column($payload['result']['data']['methods'], 'name'));

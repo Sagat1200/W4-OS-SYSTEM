@@ -47,6 +47,7 @@ final class SystemApiDbusRuntimeAdapter
                 'DescribeSpecification',
                 'DescribeActivationPreparation',
                 'AttemptActivation',
+                'ExecuteActivation',
                 'DescribeRuntime',
                 'DiagnoseRuntime',
                 'GetCapabilities',
@@ -100,6 +101,21 @@ final class SystemApiDbusRuntimeAdapter
         ));
     }
 
+    public function executeActivation(): string
+    {
+        return $this->encodeJson($this->activationToolkit->createActivationExecution(
+            $this->runtimeProbe->createReport(),
+            'local-runtime-adapter',
+            null,
+            [
+                'runtime_launcher_entry' => 'scripts/system_api_dbus_runtime_launcher.php',
+                'runtime_host_entry' => 'scripts/system_api_dbus_runtime_host.php',
+                'runtime_adapter_entry' => 'scripts/system_api_dbus_runtime_adapter.php',
+                'runtime_bootstrap_spec' => 'embedded:DescribeActivationBootstrap',
+            ]
+        ));
+    }
+
     public function invoke(string $method, array $arguments = []): string
     {
         return match ($method) {
@@ -110,6 +126,7 @@ final class SystemApiDbusRuntimeAdapter
             'DescribeSpecification' => $this->describeSpecification(),
             'DescribeActivationPreparation' => $this->describeActivationPreparation(),
             'AttemptActivation' => $this->attemptActivation(),
+            'ExecuteActivation' => $this->executeActivation(),
             'ServeDbus' => $this->serveDbus(),
             default => throw new ValidationError(sprintf('Metodo de runtime adapter no soportado: %s', $method)),
         };

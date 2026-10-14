@@ -24,6 +24,7 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertContains('DescribeActivationBootstrap', $payload['commands']);
         self::assertContains('DescribeActivationPreparation', $payload['commands']);
         self::assertContains('AttemptActivation', $payload['commands']);
+        self::assertContains('ExecuteActivation', $payload['commands']);
         self::assertContains('DescribeLaunchPlan', $payload['commands']);
         self::assertSame('system-api-dbus-runtime-launch-plan', $payload['launch_plan']['kind']);
         self::assertSame('system-api-dbus-runtime-bootstrap', $payload['launch_plan']['activation_bootstrap']['kind']);
@@ -85,6 +86,25 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertSame('materialize-runtime-adapter', $payload['next_action']);
     }
 
+    public function testExecuteActivationReturnsStructuredBlockedExecution(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'ExecuteActivation',
+        ]);
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation-result', $payload['kind']);
+        self::assertFalse($payload['executed']);
+        self::assertSame('local-runtime-launcher', $payload['bridge_kind']);
+        self::assertSame('execution-blocked', $payload['status']);
+        self::assertSame('missing-runtime-capabilities', $payload['blocking_reason']);
+        self::assertSame('materialize-runtime-adapter', $payload['next_action']);
+        self::assertSame('system-api-dbus-runtime-activation-attempt', $payload['activation_attempt']['kind']);
+    }
+
     public function testServeDbusReturnsActivationWithLaunchPlan(): void
     {
         $result = $this->runPhpScript([
@@ -100,6 +120,7 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertSame('system-api-dbus-runtime-bootstrap', $payload['activation_bootstrap']['kind']);
         self::assertSame('system-api-dbus-runtime-activation-context', $payload['activation_preparation']['kind']);
         self::assertSame('system-api-dbus-runtime-activation-attempt', $payload['activation_attempt']['kind']);
+        self::assertSame('system-api-dbus-runtime-activation-result', $payload['activation_execution']['kind']);
         self::assertSame('system-api-dbus-runtime-launch-plan', $payload['launch_plan']['kind']);
     }
 
@@ -127,6 +148,10 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
                 'arguments' => [],
             ], JSON_THROW_ON_ERROR),
             json_encode([
+                'method' => 'ExecuteActivation',
+                'arguments' => [],
+            ], JSON_THROW_ON_ERROR),
+            json_encode([
                 'method' => 'Call',
                 'arguments' => [
                     'request' => [
@@ -150,14 +175,15 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertSame(0, $result['exitCode'], $result['stderr']);
 
         $responses = $this->decodeNdjson($result['stdout']);
-        self::assertCount(6, $responses);
+        self::assertCount(7, $responses);
         self::assertSame('system-api-dbus-runtime-launcher', $responses[0]['kind']);
         self::assertSame('system-api-dbus-runtime-launch-plan', $responses[1]['kind']);
         self::assertSame('system-api-dbus-runtime-bootstrap', $responses[2]['kind']);
         self::assertSame('system-api-dbus-runtime-activation-context', $responses[3]['kind']);
         self::assertSame('system-api-dbus-runtime-activation-attempt', $responses[4]['kind']);
-        self::assertSame('runtime-launcher-call-001', $responses[5]['request_id']);
-        self::assertSame('system.dbus-runtime', $responses[5]['result']['method']);
+        self::assertSame('system-api-dbus-runtime-activation-result', $responses[5]['kind']);
+        self::assertSame('runtime-launcher-call-001', $responses[6]['request_id']);
+        self::assertSame('system.dbus-runtime', $responses[6]['result']['method']);
     }
 
     /**

@@ -59,6 +59,25 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertSame('materialize-runtime-adapter', $payload['next_action']);
     }
 
+    public function testExecuteActivationReturnsStructuredBlockedExecution(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'ExecuteActivation',
+        ]);
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation-result', $payload['kind']);
+        self::assertFalse($payload['executed']);
+        self::assertSame('local-runtime-adapter', $payload['bridge_kind']);
+        self::assertSame('execution-blocked', $payload['status']);
+        self::assertSame('missing-runtime-capabilities', $payload['blocking_reason']);
+        self::assertSame('materialize-runtime-adapter', $payload['next_action']);
+        self::assertSame('system-api-dbus-runtime-activation-attempt', $payload['activation_attempt']['kind']);
+    }
+
     public function testCallDelegatesToSystemApiContract(): void
     {
         $request = [
@@ -99,6 +118,10 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
                 'arguments' => [],
             ], JSON_THROW_ON_ERROR),
             json_encode([
+                'method' => 'ExecuteActivation',
+                'arguments' => [],
+            ], JSON_THROW_ON_ERROR),
+            json_encode([
                 'method' => 'GetCapabilities',
                 'arguments' => [
                     'request_id' => 'adapter-cap-001',
@@ -130,14 +153,15 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertSame(0, $result['exitCode'], $result['stderr']);
 
         $responses = $this->decodeNdjson($result['stdout']);
-        self::assertCount(5, $responses);
+        self::assertCount(6, $responses);
         self::assertSame('system-api-dbus-runtime-adapter-spec', $responses[0]['kind']);
         self::assertSame('system-api-dbus-runtime-activation-context', $responses[1]['kind']);
         self::assertSame('system-api-dbus-runtime-activation-attempt', $responses[2]['kind']);
-        self::assertSame('adapter-cap-001', $responses[3]['request_id']);
-        self::assertSame('system.capabilities', $responses[3]['result']['method']);
-        self::assertSame('adapter-call-stdio-001', $responses[4]['request_id']);
-        self::assertSame('profiles.get', $responses[4]['result']['method']);
+        self::assertSame('system-api-dbus-runtime-activation-result', $responses[3]['kind']);
+        self::assertSame('adapter-cap-001', $responses[4]['request_id']);
+        self::assertSame('system.capabilities', $responses[4]['result']['method']);
+        self::assertSame('adapter-call-stdio-001', $responses[5]['request_id']);
+        self::assertSame('profiles.get', $responses[5]['result']['method']);
     }
 
     /**

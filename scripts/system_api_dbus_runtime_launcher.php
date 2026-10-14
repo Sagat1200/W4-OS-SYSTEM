@@ -60,6 +60,7 @@ try {
         'DescribeActivationBootstrap' => $launcher->describeActivationBootstrap(),
         'DescribeActivationPreparation' => $launcher->describeActivationPreparation(),
         'AttemptActivation' => $launcher->attemptActivation(),
+        'ExecuteActivation' => $launcher->executeActivation(),
         'DescribeHost' => $launcher->describeHost(),
         'DescribeSpecification' => $launcher->describeSpecification(),
         'DescribeRuntime' => $launcher->describeRuntime(),
@@ -82,8 +83,13 @@ try {
         echo $output;
     }
 
-    if ($command === 'serve-dbus') {
-        exit(3);
+    if ($command === 'serve-dbus' || $command === 'ExecuteActivation') {
+        $decodedOutput = json_decode($output, true);
+        $exitCode = is_array($decodedOutput) && is_int($decodedOutput['exit_code'] ?? null)
+            ? $decodedOutput['exit_code']
+            : 3;
+
+        exit($exitCode);
     }
 
     exit(0);

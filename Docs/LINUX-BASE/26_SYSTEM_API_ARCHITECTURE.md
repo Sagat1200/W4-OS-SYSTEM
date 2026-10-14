@@ -21,6 +21,8 @@ Modelo del dominio: api_version, request_id, operation_id, revision, result, err
 
 Los nombres de campos aquí definidos son requisitos del modelo lógico. El transporte y la envoltura se rigen por [27_SYSTEM_API_CONTRACT.md](27_SYSTEM_API_CONTRACT.md). Ausencia de dato se expresa como `null` acompañada de causa; no se convierte en cero, éxito ni recurso vacío. Un campo agregado opcionalmente no cambia el significado de los existentes. Los ejemplos describen la interfaz que debe implementarse.
 
+En la ruta local de activación D-Bus, la arquitectura puede exponer un launcher, un host de proceso largo y un runtime adapter como capas separadas mientras el ownership real de `org.w4.System1` siga pendiente. Esa fase previa no se simula como si el binding público ya estuviera operativo: el estado `pending-runtime-adapter` y los resultados estructurados de activación deben permanecer observables para GUI, CLI y Agent.
+
 ## 3. Flujo y dependencias
 
 Resolver identidad del emisor, validar mensaje, autorizar acción sobre recurso, despachar y observar resultado del provider.
@@ -34,6 +36,8 @@ Para artefactos de build, pruebas o documentación, este flujo representa una ac
 API mayor 1; límites iniciales: 256 KiB por payload W4, 100 elementos por página y máximo 500; sin listener TCP por defecto.
 
 Una revisión de configuración se valida completa antes de activarse. Se registra su identificador sin copiar secretos a logs. Una opción desconocida se rechaza en los manifiestos W4; el adaptador conserva las opciones ajenas que no administra. Los valores predeterminados de esta edición son decisiones de diseño que deben probarse en la base Debian fijada en el manifiesto de release.
+
+Cuando la activación del transporte local todavía depende de capacidades ausentes del host, la arquitectura devuelve un resultado estructurado con causa y siguiente acción en lugar de fingir un listener D-Bus ya listo. En esa condición el contrato operativo puede anunciar el comando objetivo, el `exit_code` y el motivo de bloqueo sin declarar `org.w4.System1` como nombre ya poseído.
 
 ## 5. Seguridad y fallos
 

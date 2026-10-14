@@ -65,6 +65,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertContains('DescribeActivationBootstrap', $manifest['runtime_launcher']['commands']);
         self::assertContains('DescribeActivationPreparation', $manifest['runtime_launcher']['commands']);
         self::assertContains('AttemptActivation', $manifest['runtime_launcher']['commands']);
+        self::assertContains('ExecuteActivation', $manifest['runtime_launcher']['commands']);
         self::assertContains('serve-stdio-launcher', $manifest['runtime_launcher']['commands']);
         self::assertSame('files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-host.php', $manifest['runtime_host']['entrypoint']);
         self::assertSame('files/usr/local/bin/w4-system-api-dbus-runtime-host', $manifest['runtime_host']['wrapper']);
@@ -75,6 +76,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertContains('DescribeSpecification', $manifest['runtime_adapter']['commands']);
         self::assertContains('DescribeActivationPreparation', $manifest['runtime_adapter']['commands']);
         self::assertContains('AttemptActivation', $manifest['runtime_adapter']['commands']);
+        self::assertContains('ExecuteActivation', $manifest['runtime_adapter']['commands']);
         self::assertContains('serve-stdio-adapter', $manifest['runtime_adapter']['commands']);
         self::assertSame('files/usr/local/lib/w4/system-api/w4-system-api-dbus-bridge.php', $manifest['runtime_bridge']['entrypoint']);
         self::assertSame('files/usr/local/bin/w4-system-api-dbus-bridge', $manifest['runtime_bridge']['wrapper']);
@@ -221,8 +223,10 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-adapter'", $runtimeAdapterScript);
         self::assertStringContainsString("case 'DescribeActivationPreparation':", $runtimeAdapterScript);
         self::assertStringContainsString("case 'AttemptActivation':", $runtimeAdapterScript);
+        self::assertStringContainsString("case 'ExecuteActivation':", $runtimeAdapterScript);
         self::assertStringContainsString("case 'serve-stdio-adapter':", $runtimeAdapterScript);
         self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-activation-attempt'", $runtimeAdapterScript);
+        self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-activation-result'", $runtimeAdapterScript);
 
         $runtimeAdapterWrapper = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-runtime-adapter');
         self::assertNotFalse($runtimeAdapterWrapper);
@@ -237,11 +241,13 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertStringContainsString("case 'DescribeActivationBootstrap':", $runtimeLauncherScript);
         self::assertStringContainsString("case 'DescribeActivationPreparation':", $runtimeLauncherScript);
         self::assertStringContainsString("case 'AttemptActivation':", $runtimeLauncherScript);
+        self::assertStringContainsString("case 'ExecuteActivation':", $runtimeLauncherScript);
         self::assertStringContainsString("case 'serve-stdio-launcher':", $runtimeLauncherScript);
         self::assertStringContainsString("'handoff_mode' => 'child-process-stdio-relay'", $runtimeLauncherScript);
         self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-bootstrap'", $runtimeLauncherScript);
         self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-activation-context'", $runtimeLauncherScript);
         self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-activation-attempt'", $runtimeLauncherScript);
+        self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-activation-result'", $runtimeLauncherScript);
         self::assertStringContainsString("'launcher_transport' => 'stdio-ndjson-launcher'", $runtimeLauncherScript);
 
         $runtimeLauncherWrapper = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-runtime-launcher');
@@ -291,6 +297,16 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('packaged-runtime-launcher', $runtimeLauncherAttemptPayload['bridge_kind']);
         self::assertSame('missing-runtime-capabilities', $runtimeLauncherAttemptPayload['blocking_reason']);
 
+        $runtimeLauncherExecution = $this->runGeneratedPhpScript([
+            $runtimeLauncherScriptPath,
+            'ExecuteActivation',
+        ]);
+        self::assertSame(3, $runtimeLauncherExecution['exitCode'], $runtimeLauncherExecution['stderr']);
+        $runtimeLauncherExecutionPayload = $this->decodeJson($runtimeLauncherExecution['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation-result', $runtimeLauncherExecutionPayload['kind']);
+        self::assertSame('packaged-runtime-launcher', $runtimeLauncherExecutionPayload['bridge_kind']);
+        self::assertSame('missing-runtime-capabilities', $runtimeLauncherExecutionPayload['blocking_reason']);
+
         $runtimeLauncherServeDbus = $this->runGeneratedPhpScript([
             $runtimeLauncherScriptPath,
             'serve-dbus',
@@ -301,6 +317,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('system-api-dbus-runtime-bootstrap', $runtimeLauncherServeDbusPayload['activation_bootstrap']['kind']);
         self::assertSame('system-api-dbus-runtime-activation-context', $runtimeLauncherServeDbusPayload['activation_preparation']['kind']);
         self::assertSame('system-api-dbus-runtime-activation-attempt', $runtimeLauncherServeDbusPayload['activation_attempt']['kind']);
+        self::assertSame('system-api-dbus-runtime-activation-result', $runtimeLauncherServeDbusPayload['activation_execution']['kind']);
         self::assertSame('system-api-dbus-runtime-launch-plan', $runtimeLauncherServeDbusPayload['launch_plan']['kind']);
 
         $runtimeAdapterScriptPath = $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-runtime-adapter.php';
@@ -321,6 +338,15 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         $runtimeAdapterAttemptPayload = $this->decodeJson($runtimeAdapterAttempt['stdout']);
         self::assertSame('system-api-dbus-runtime-activation-attempt', $runtimeAdapterAttemptPayload['kind']);
         self::assertSame('packaged-runtime-adapter', $runtimeAdapterAttemptPayload['bridge_kind']);
+
+        $runtimeAdapterExecution = $this->runGeneratedPhpScript([
+            $runtimeAdapterScriptPath,
+            'ExecuteActivation',
+        ]);
+        self::assertSame(3, $runtimeAdapterExecution['exitCode'], $runtimeAdapterExecution['stderr']);
+        $runtimeAdapterExecutionPayload = $this->decodeJson($runtimeAdapterExecution['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation-result', $runtimeAdapterExecutionPayload['kind']);
+        self::assertSame('packaged-runtime-adapter', $runtimeAdapterExecutionPayload['bridge_kind']);
 
         $runtimeHostScriptPath = $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-runtime-host.php';
         $runtimeHostScript = file_get_contents($runtimeHostScriptPath);

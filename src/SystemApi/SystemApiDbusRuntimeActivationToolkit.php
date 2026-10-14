@@ -162,6 +162,47 @@ final class SystemApiDbusRuntimeActivationToolkit
     }
 
     /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, string>|null $environment
+     * @param array<string, string> $entrypoints
+     * @return array<string, mixed>
+     */
+    public function createActivationExecution(
+        array $runtimeDiagnosis,
+        string $bridgeKind,
+        ?array $environment = null,
+        array $entrypoints = []
+    ): array {
+        $attempt = $this->createActivationAttempt($runtimeDiagnosis, $bridgeKind, $environment, $entrypoints);
+        /** @var array<string, mixed> $preparation */
+        $preparation = is_array($attempt['activation_preparation'] ?? null) ? $attempt['activation_preparation'] : [];
+        /** @var array<string, mixed> $runtimeAdapterPlan */
+        $runtimeAdapterPlan = is_array($preparation['execution_plan']['runtime_adapter'] ?? null)
+            ? $preparation['execution_plan']['runtime_adapter']
+            : [];
+        $ready = ($attempt['status'] ?? null) === 'ready-to-attempt-runtime-adapter';
+        $exitCode = 3;
+
+        return [
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-runtime-activation-result',
+            'status' => $ready ? 'execution-pending-runtime-adapter' : 'execution-blocked',
+            'executed' => false,
+            'exit_code' => $exitCode,
+            'bridge_kind' => $bridgeKind,
+            'requested_command' => 'ExecuteActivation',
+            'target_command' => [
+                'entrypoint' => $runtimeAdapterPlan['entrypoint'] ?? null,
+                'command' => $runtimeAdapterPlan['command'] ?? null,
+            ],
+            'blocking_reason' => $attempt['blocking_reason'] ?? 'runtime-adapter-not-materialized',
+            'activation_attempt' => $attempt,
+            'runtime_diagnosis' => $runtimeDiagnosis,
+            'next_action' => $attempt['next_action'] ?? 'materialize-runtime-adapter',
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function createAdapterSpecification(): array
@@ -225,6 +266,7 @@ final class SystemApiDbusRuntimeActivationToolkit
             'activation_bootstrap' => $this->createActivationBootstrap(),
             'activation_preparation' => $this->createActivationPreparation($runtimeDiagnosis),
             'activation_attempt' => $this->createActivationAttempt($runtimeDiagnosis, $bridgeKind),
+            'activation_execution' => $this->createActivationExecution($runtimeDiagnosis, $bridgeKind),
             'runtime_diagnosis' => $runtimeDiagnosis,
             'missing_capabilities' => $missingCapabilities,
             'next_action' => (($runtimeDiagnosis['ready'] ?? false) === true)
