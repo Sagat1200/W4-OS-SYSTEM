@@ -1016,11 +1016,20 @@ function createAdapterRuntime(): array
 
 function buildRuntimeDiagnosis(): array
 {
-    $hasDbusExtension = extension_loaded('dbus') || extension_loaded('php_dbus') || extension_loaded('php-dbus');
-    $hasBusctl = commandLooksAvailable('busctl');
-    $hasGdbus = commandLooksAvailable('gdbus');
-    $hasDbusDaemon = commandLooksAvailable('dbus-daemon');
-    $hasSystemBusSocket = file_exists('/run/dbus/system_bus_socket');
+    $environment = captureEnvironment();
+    $hasDbusExtension = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION')
+        ?? (extension_loaded('dbus') || extension_loaded('php_dbus') || extension_loaded('php-dbus'));
+    $hasBusctl = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_BUSCTL')
+        ?? commandLooksAvailable('busctl');
+    $hasGdbus = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_GDBUS')
+        ?? commandLooksAvailable('gdbus');
+    $hasDbusDaemon = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON')
+        ?? commandLooksAvailable('dbus-daemon');
+    $hasSystemBusSocket = resolveBoolOverride($environment, 'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET')
+        ?? (PHP_OS_FAMILY !== 'Windows' && file_exists($environment['W4_SYSTEM_API_PROBE_SYSTEM_BUS_SOCKET'] ?? '/run/dbus/system_bus_socket'));
+    $phpBinary = $environment['W4_SYSTEM_API_PROBE_PHP_BINARY'] ?? PHP_BINARY;
+    $phpVersion = $environment['W4_SYSTEM_API_PROBE_PHP_VERSION'] ?? PHP_VERSION;
+    $osFamily = $environment['W4_SYSTEM_API_PROBE_OS_FAMILY'] ?? PHP_OS_FAMILY;
 
     $missingCapabilities = [];
     if (!$hasDbusExtension) {
@@ -1050,9 +1059,9 @@ function buildRuntimeDiagnosis(): array
         'object_path' => W4_SYSTEM_API_OBJECT_PATH,
         'interface' => W4_SYSTEM_API_INTERFACE,
         'environment' => [
-            'os_family' => PHP_OS_FAMILY,
-            'php_binary' => PHP_BINARY,
-            'php_version' => PHP_VERSION,
+            'os_family' => $osFamily,
+            'php_binary' => $phpBinary,
+            'php_version' => $phpVersion,
         ],
         'probes' => [
             'php_dbus_extension' => $hasDbusExtension,
@@ -1584,6 +1593,43 @@ function commandLooksAvailable(string $command): bool
     }
 
     return is_string($resolved) && trim($resolved) !== '';
+}
+
+/**
+ * @return array<string, string>
+ */
+function captureEnvironment(): array
+{
+    $environment = getenv();
+    if (!is_array($environment)) {
+        return [];
+    }
+
+    $captured = [];
+    foreach ($environment as $key => $value) {
+        if (is_string($key) && is_string($value)) {
+            $captured[$key] = $value;
+        }
+    }
+
+    return $captured;
+}
+
+/**
+ * @param array<string, string> $environment
+ */
+function resolveBoolOverride(array $environment, string $key): ?bool
+{
+    $value = $environment[$key] ?? null;
+    if (!is_string($value) || trim($value) === '') {
+        return null;
+    }
+
+    return match (strtolower(trim($value))) {
+        '1', 'true', 'yes', 'on' => true,
+        '0', 'false', 'no', 'off' => false,
+        default => null,
+    };
 }
 PHP;
     }
