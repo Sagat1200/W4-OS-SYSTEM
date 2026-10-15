@@ -303,6 +303,15 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
             self::assertSame('W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver', $report['ownership_driver']['class_name']);
             self::assertSame('W4\\OS\\Tests\\Fixtures\\FakeNativeDbusService', $report['ownership_driver']['runtime_class_name']);
             self::assertSame('bus-system-constructor', $report['ownership_driver']['constructor_mode']);
+            self::assertTrue($report['ownership_driver']['register_object_signature']['compatible']);
+            self::assertSame(
+                ['object_path', 'exported_object', 'introspection_xml', 'definition'],
+                $report['ownership_driver']['register_object_signature']['resolved_channels']
+            );
+            self::assertSame(
+                ['object_path', 'introspection_xml', 'definition', 'exported_object'],
+                $report['ownership_driver']['register_object_signature']['preferred_parameter_group_match']
+            );
             self::assertNull($report['blocking_reason']);
             self::assertSame('runtime-service-active', $report['next_action']);
         } finally {

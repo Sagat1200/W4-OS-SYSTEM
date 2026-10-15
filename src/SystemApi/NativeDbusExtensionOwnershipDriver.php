@@ -71,6 +71,7 @@ final class NativeDbusExtensionOwnershipDriver
                 $this->resolveRuntimeRootDir($environment)
             );
             $registerObjectHandoff = $exportedObject->createRegisterObjectHandoffPayload();
+            $registerObjectSignature = $this->createRegisterObjectSignatureReport($connection, $registerObjectHandoff);
             $registerObjectResult = $this->invokeRegisterObject($connection, $serviceDefinition, $exportedObject, $registerObjectHandoff);
             if ($registerObjectResult === false) {
                 return [
@@ -82,12 +83,14 @@ final class NativeDbusExtensionOwnershipDriver
                     'driver' => $driver + [
                         'exported_object_class' => NativeDbusExtensionRuntimeObject::class,
                         'register_object_handoff_channels' => array_keys($registerObjectHandoff['channels'] ?? []),
+                        'register_object_signature' => $registerObjectSignature,
                         'register_object_result' => false,
                     ],
                 ];
             }
             $driver['exported_object_class'] = NativeDbusExtensionRuntimeObject::class;
             $driver['register_object_handoff_channels'] = array_keys($registerObjectHandoff['channels'] ?? []);
+            $driver['register_object_signature'] = $registerObjectSignature;
             $driver['register_object_result'] = $this->normalizeResultValue($registerObjectResult);
         } catch (Throwable $exception) {
             return [
@@ -212,6 +215,56 @@ final class NativeDbusExtensionOwnershipDriver
     }
 
     /**
+     * @param array<string, mixed> $registerObjectHandoff
+     * @return array<string, mixed>
+     */
+    private function createRegisterObjectSignatureReport(object $connection, array $registerObjectHandoff): array
+    {
+        $method = new ReflectionMethod($connection, 'registerObject');
+        $parameters = [];
+        $resolvedChannels = [];
+        $unresolvedParameters = [];
+
+        foreach ($method->getParameters() as $index => $parameter) {
+            $classification = $this->classifyRegisterObjectParameter($parameter, $index);
+            $resolvedChannel = $classification['resolved_channel'];
+            $parameters[] = [
+                'position' => $index,
+                'name' => $parameter->getName(),
+                'type' => $this->describeParameterType($parameter),
+                'allows_null' => $parameter->allowsNull(),
+                'has_default' => $parameter->isDefaultValueAvailable(),
+                'resolution_source' => $classification['resolution_source'],
+                'resolved_channel' => $resolvedChannel,
+                'compatible' => $classification['compatible'],
+            ];
+
+            if (is_string($resolvedChannel) && $resolvedChannel !== '') {
+                $resolvedChannels[] = $resolvedChannel;
+            }
+
+            if ($classification['compatible'] !== true) {
+                $unresolvedParameters[] = $parameter->getName();
+            }
+        }
+
+        $uniqueResolvedChannels = array_values(array_unique($resolvedChannels));
+
+        return [
+            'method_name' => 'registerObject',
+            'parameter_count' => $method->getNumberOfParameters(),
+            'resolved_channels' => $uniqueResolvedChannels,
+            'preferred_parameter_group_match' => $this->resolvePreferredParameterGroupMatch(
+                $uniqueResolvedChannels,
+                $registerObjectHandoff
+            ),
+            'compatible' => $unresolvedParameters === [],
+            'unresolved_parameters' => $unresolvedParameters,
+            'parameters' => $parameters,
+        ];
+    }
+
+    /**
      * @param array<string, mixed> $serviceDefinition
      */
     private function invokeRegisterObject(
@@ -256,9 +309,57 @@ final class NativeDbusExtensionOwnershipDriver
         NativeDbusExtensionRuntimeObject $exportedObject,
         array $registerObjectHandoff
     ): mixed {
+        $classification = $this->classifyRegisterObjectParameter($parameter);
+        $parameterType = $parameter->getType();
+
+        if ($classification['resolved_channel'] === 'exported_object') {
+            return $exportedObject;
+        }
+
+        if ($classification['resolved_channel'] === 'introspection_xml') {
+            return $registerObjectHandoff['channels']['introspection_xml'] ?? '';
+        }
+
+        if ($classification['resolved_channel'] === 'interface') {
+            return $registerObjectHandoff['channels']['interface']
+                ?? ($serviceDefinition['interface'] ?? 'org.w4.System1.Manager');
+        }
+
+        if ($classification['resolved_channel'] === 'definition') {
+            return $registerObjectHandoff['channels']['definition'] ?? [];
+        }
+
+        if ($classification['resolved_channel'] === 'methods') {
+            return $registerObjectHandoff['channels']['methods'] ?? [];
+        }
+
+        if ($classification['resolved_channel'] === 'properties') {
+            return $registerObjectHandoff['channels']['properties'] ?? [];
+        }
+
+        return $this->defaultValueForParameter($parameter, $exportedObject);
+    }
+
+    /**
+     * @return array{resolved_channel: string, resolution_source: string, compatible: bool}
+     */
+    private function classifyRegisterObjectParameter(ReflectionParameter $parameter, int $index = -1): array
+    {
+        if ($index === 0) {
+            return [
+                'resolved_channel' => 'object_path',
+                'resolution_source' => 'register-object-path',
+                'compatible' => true,
+            ];
+        }
+
         $parameterType = $parameter->getType();
         if ($parameterType instanceof ReflectionNamedType && !$parameterType->isBuiltin()) {
-            return $exportedObject;
+            return [
+                'resolved_channel' => 'exported_object',
+                'resolution_source' => 'object-type-handoff',
+                'compatible' => true,
+            ];
         }
 
         $parameterName = strtolower($parameter->getName());
@@ -267,12 +368,19 @@ final class NativeDbusExtensionOwnershipDriver
             || str_contains($parameterName, 'xml')
             || str_contains($parameterName, 'node')
         ) {
-            return $registerObjectHandoff['channels']['introspection_xml'] ?? '';
+            return [
+                'resolved_channel' => 'introspection_xml',
+                'resolution_source' => 'parameter-name-handoff',
+                'compatible' => true,
+            ];
         }
 
         if (str_contains($parameterName, 'interface')) {
-            return $registerObjectHandoff['channels']['interface']
-                ?? ($serviceDefinition['interface'] ?? 'org.w4.System1.Manager');
+            return [
+                'resolved_channel' => 'interface',
+                'resolution_source' => 'parameter-name-handoff',
+                'compatible' => true,
+            ];
         }
 
         if (
@@ -285,15 +393,27 @@ final class NativeDbusExtensionOwnershipDriver
                 || str_contains($parameterName, 'metadata')
                 || str_contains($parameterName, 'contract')
             ) {
-                return $registerObjectHandoff['channels']['definition'] ?? [];
+                return [
+                    'resolved_channel' => 'definition',
+                    'resolution_source' => 'parameter-name-handoff',
+                    'compatible' => true,
+                ];
             }
 
             if (str_contains($parameterName, 'methods')) {
-                return $registerObjectHandoff['channels']['methods'] ?? [];
+                return [
+                    'resolved_channel' => 'methods',
+                    'resolution_source' => 'parameter-name-handoff',
+                    'compatible' => true,
+                ];
             }
 
             if (str_contains($parameterName, 'properties')) {
-                return $registerObjectHandoff['channels']['properties'] ?? [];
+                return [
+                    'resolved_channel' => 'properties',
+                    'resolution_source' => 'parameter-name-handoff',
+                    'compatible' => true,
+                ];
             }
         }
 
@@ -303,10 +423,70 @@ final class NativeDbusExtensionOwnershipDriver
             || str_contains($parameterName, 'handler')
             || str_contains($parameterName, 'service')
         ) {
-            return $exportedObject;
+            return [
+                'resolved_channel' => 'exported_object',
+                'resolution_source' => 'parameter-name-handoff',
+                'compatible' => true,
+            ];
         }
 
-        return $this->defaultValueForParameter($parameter, $exportedObject);
+        if ($parameter->isDefaultValueAvailable()) {
+            return [
+                'resolved_channel' => 'default-value',
+                'resolution_source' => 'parameter-default',
+                'compatible' => true,
+            ];
+        }
+
+        if ($parameter->allowsNull()) {
+            return [
+                'resolved_channel' => 'null-default',
+                'resolution_source' => 'nullable-parameter',
+                'compatible' => true,
+            ];
+        }
+
+        return [
+            'resolved_channel' => 'fallback',
+            'resolution_source' => 'generic-fallback',
+            'compatible' => false,
+        ];
+    }
+
+    private function describeParameterType(ReflectionParameter $parameter): ?string
+    {
+        $parameterType = $parameter->getType();
+        if (!$parameterType instanceof ReflectionNamedType) {
+            return null;
+        }
+
+        return $parameterType->getName();
+    }
+
+    /**
+     * @param list<string> $resolvedChannels
+     * @param array<string, mixed> $registerObjectHandoff
+     * @return list<string>|null
+     */
+    private function resolvePreferredParameterGroupMatch(array $resolvedChannels, array $registerObjectHandoff): ?array
+    {
+        $normalizedResolved = $resolvedChannels;
+        sort($normalizedResolved);
+
+        foreach (($registerObjectHandoff['preferred_parameter_groups'] ?? []) as $group) {
+            if (!is_array($group)) {
+                continue;
+            }
+
+            $normalizedGroup = array_values(array_filter($group, static fn (mixed $value): bool => is_string($value)));
+            sort($normalizedGroup);
+
+            if ($normalizedGroup === $normalizedResolved) {
+                return array_values($group);
+            }
+        }
+
+        return null;
     }
 
     private function defaultValueForParameter(ReflectionParameter $parameter, mixed $fallback): mixed

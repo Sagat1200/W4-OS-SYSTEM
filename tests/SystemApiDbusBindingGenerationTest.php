@@ -648,6 +648,11 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('native-driver', $runtimeAdapterOwnNativeExtensionDriverPayload['execution_mode']);
         self::assertSame('W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver', $runtimeAdapterOwnNativeExtensionDriverPayload['ownership_driver']['class_name']);
         self::assertSame('W4\\OS\\Tests\\Fixtures\\FakeNativeDbusService', $runtimeAdapterOwnNativeExtensionDriverPayload['ownership_driver']['runtime_class_name']);
+        self::assertTrue($runtimeAdapterOwnNativeExtensionDriverPayload['ownership_driver']['register_object_signature']['compatible']);
+        self::assertSame(
+            ['object_path', 'introspection_xml', 'definition', 'exported_object'],
+            $runtimeAdapterOwnNativeExtensionDriverPayload['ownership_driver']['register_object_signature']['preferred_parameter_group_match']
+        );
         self::assertSame('bus-name-owned', $runtimeAdapterOwnNativeExtensionDriverPayload['ownership_state']);
         self::assertSame('runtime-service-active', $runtimeAdapterOwnNativeExtensionDriverPayload['next_action']);
 
