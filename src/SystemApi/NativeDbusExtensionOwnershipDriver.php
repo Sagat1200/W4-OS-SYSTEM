@@ -50,18 +50,30 @@ final class NativeDbusExtensionOwnershipDriver
         ];
 
         try {
-            $requestNameResult = $this->invokeRequestName($connection, $serviceDefinition);
+            $requestNameSignature = $this->createRequestNameSignatureReport($connection);
+            $requestNameInvocationPlan = $this->createRequestNameInvocationPlan($connection, $serviceDefinition);
+            $requestNameResult = $this->invokeRequestName($connection, $requestNameInvocationPlan['arguments']);
             if ($requestNameResult === false) {
                 return $this->failedLifecycle(
                     'native-dbus-extension-request-name-failed',
-                    $driver + ['request_name_result' => false]
+                    $driver + [
+                        'request_name_signature' => $requestNameSignature,
+                        'request_name_invocation_plan' => $requestNameInvocationPlan['report'],
+                        'request_name_result' => false,
+                    ]
                 );
             }
+            $driver['request_name_signature'] = $requestNameSignature;
+            $driver['request_name_invocation_plan'] = $requestNameInvocationPlan['report'];
             $driver['request_name_result'] = $this->normalizeResultValue($requestNameResult);
         } catch (Throwable $exception) {
             return $this->failedLifecycle(
                 'native-dbus-extension-request-name-failed',
-                $driver + ['error_message' => $exception->getMessage()]
+                $driver + [
+                    'request_name_signature' => $requestNameSignature ?? null,
+                    'request_name_invocation_plan' => $requestNameInvocationPlan['report'] ?? null,
+                    'error_message' => $exception->getMessage(),
+                ]
             );
         }
 
@@ -72,7 +84,13 @@ final class NativeDbusExtensionOwnershipDriver
             );
             $registerObjectHandoff = $exportedObject->createRegisterObjectHandoffPayload();
             $registerObjectSignature = $this->createRegisterObjectSignatureReport($connection, $registerObjectHandoff);
-            $registerObjectResult = $this->invokeRegisterObject($connection, $serviceDefinition, $exportedObject, $registerObjectHandoff);
+            $registerObjectInvocationPlan = $this->createRegisterObjectInvocationPlan(
+                $connection,
+                $serviceDefinition,
+                $exportedObject,
+                $registerObjectHandoff
+            );
+            $registerObjectResult = $this->invokeRegisterObject($connection, $registerObjectInvocationPlan['arguments']);
             if ($registerObjectResult === false) {
                 return [
                     'request_name_state' => 'owned',
@@ -84,6 +102,7 @@ final class NativeDbusExtensionOwnershipDriver
                         'exported_object_class' => NativeDbusExtensionRuntimeObject::class,
                         'register_object_handoff_channels' => array_keys($registerObjectHandoff['channels'] ?? []),
                         'register_object_signature' => $registerObjectSignature,
+                        'register_object_invocation_plan' => $registerObjectInvocationPlan['report'],
                         'register_object_result' => false,
                     ],
                 ];
@@ -91,6 +110,7 @@ final class NativeDbusExtensionOwnershipDriver
             $driver['exported_object_class'] = NativeDbusExtensionRuntimeObject::class;
             $driver['register_object_handoff_channels'] = array_keys($registerObjectHandoff['channels'] ?? []);
             $driver['register_object_signature'] = $registerObjectSignature;
+            $driver['register_object_invocation_plan'] = $registerObjectInvocationPlan['report'];
             $driver['register_object_result'] = $this->normalizeResultValue($registerObjectResult);
         } catch (Throwable $exception) {
             return [
@@ -104,7 +124,9 @@ final class NativeDbusExtensionOwnershipDriver
         }
 
         try {
-            $waitLoopResult = $this->invokeWaitLoop($connection);
+            $waitLoopSignature = $this->createWaitLoopSignatureReport($connection);
+            $waitLoopInvocationPlan = $this->createWaitLoopInvocationPlan($connection);
+            $waitLoopResult = $this->invokeWaitLoop($connection, $waitLoopInvocationPlan['arguments']);
             if ($waitLoopResult === false) {
                 return [
                     'request_name_state' => 'owned',
@@ -112,9 +134,15 @@ final class NativeDbusExtensionOwnershipDriver
                     'wait_loop_state' => 'failed',
                     'blocking_reason' => 'native-dbus-extension-wait-loop-failed',
                     'driver_status' => 'wait-loop-failed',
-                    'driver' => $driver + ['wait_loop_result' => false],
+                    'driver' => $driver + [
+                        'wait_loop_signature' => $waitLoopSignature,
+                        'wait_loop_invocation_plan' => $waitLoopInvocationPlan['report'],
+                        'wait_loop_result' => false,
+                    ],
                 ];
             }
+            $driver['wait_loop_signature'] = $waitLoopSignature;
+            $driver['wait_loop_invocation_plan'] = $waitLoopInvocationPlan['report'];
             $driver['wait_loop_result'] = $this->normalizeResultValue($waitLoopResult);
         } catch (Throwable $exception) {
             return [
@@ -123,7 +151,11 @@ final class NativeDbusExtensionOwnershipDriver
                 'wait_loop_state' => 'failed',
                 'blocking_reason' => 'native-dbus-extension-wait-loop-failed',
                 'driver_status' => 'wait-loop-failed',
-                'driver' => $driver + ['error_message' => $exception->getMessage()],
+                'driver' => $driver + [
+                    'wait_loop_signature' => $waitLoopSignature ?? null,
+                    'wait_loop_invocation_plan' => $waitLoopInvocationPlan['report'] ?? null,
+                    'error_message' => $exception->getMessage(),
+                ],
             ];
         }
 
@@ -197,21 +229,84 @@ final class NativeDbusExtensionOwnershipDriver
     /**
      * @param array<string, mixed> $serviceDefinition
      */
-    private function invokeRequestName(object $connection, array $serviceDefinition): mixed
+    private function invokeRequestName(object $connection, array $arguments): mixed
+    {
+        $method = new ReflectionMethod($connection, 'requestName');
+
+        return $method->invokeArgs($connection, $arguments);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function createRequestNameSignatureReport(object $connection): array
+    {
+        $method = new ReflectionMethod($connection, 'requestName');
+        $parameters = [];
+        $unresolvedParameters = [];
+
+        foreach ($method->getParameters() as $index => $parameter) {
+            $classification = $this->classifyRequestNameParameter($parameter, $index);
+            $parameters[] = [
+                'position' => $index,
+                'name' => $parameter->getName(),
+                'type' => $this->describeParameterType($parameter),
+                'allows_null' => $parameter->allowsNull(),
+                'has_default' => $parameter->isDefaultValueAvailable(),
+                'resolution_source' => $classification['resolution_source'],
+                'resolved_channel' => $classification['resolved_channel'],
+                'compatible' => $classification['compatible'],
+            ];
+
+            if ($classification['compatible'] !== true) {
+                $unresolvedParameters[] = $parameter->getName();
+            }
+        }
+
+        return [
+            'method_name' => 'requestName',
+            'parameter_count' => $method->getNumberOfParameters(),
+            'compatible' => $unresolvedParameters === [],
+            'unresolved_parameters' => $unresolvedParameters,
+            'parameters' => $parameters,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $serviceDefinition
+     * @return array{arguments: list<mixed>, report: array<string, mixed>}
+     */
+    private function createRequestNameInvocationPlan(object $connection, array $serviceDefinition): array
     {
         $method = new ReflectionMethod($connection, 'requestName');
         $arguments = [];
+        $parameterBindings = [];
 
         foreach ($method->getParameters() as $index => $parameter) {
-            if ($index === 0) {
-                $arguments[] = $serviceDefinition['bus_name'] ?? 'org.w4.System1';
-                continue;
-            }
-
-            $arguments[] = $this->defaultValueForParameter($parameter, 0);
+            $classification = $this->classifyRequestNameParameter($parameter, $index);
+            $value = $index === 0
+                ? ($serviceDefinition['bus_name'] ?? 'org.w4.System1')
+                : $this->defaultValueForParameter($parameter, 0);
+            $arguments[] = $value;
+            $valueSummary = $this->summarizeInvocationValue($value, $classification['resolved_channel']);
+            $parameterBindings[] = [
+                'position' => $index,
+                'name' => $parameter->getName(),
+                'resolved_channel' => $classification['resolved_channel'],
+                'resolution_source' => $classification['resolution_source'],
+                'value_kind' => $valueSummary['value_kind'],
+                'value_preview' => $valueSummary['value_preview'],
+            ];
         }
 
-        return $method->invokeArgs($connection, $arguments);
+        return [
+            'arguments' => $arguments,
+            'report' => [
+                'method_name' => 'requestName',
+                'parameter_count' => $method->getNumberOfParameters(),
+                'parameter_bindings' => $parameterBindings,
+            ],
+        ];
     }
 
     /**
@@ -266,38 +361,132 @@ final class NativeDbusExtensionOwnershipDriver
 
     /**
      * @param array<string, mixed> $serviceDefinition
+     * @param array<string, mixed> $registerObjectHandoff
+     * @return array{arguments: list<mixed>, report: array<string, mixed>}
      */
-    private function invokeRegisterObject(
+    private function createRegisterObjectInvocationPlan(
         object $connection,
         array $serviceDefinition,
         NativeDbusExtensionRuntimeObject $exportedObject,
         array $registerObjectHandoff
-    ): mixed {
+    ): array {
         $method = new ReflectionMethod($connection, 'registerObject');
         $arguments = [];
+        $parameterBindings = [];
 
         foreach ($method->getParameters() as $index => $parameter) {
             if ($index === 0) {
-                $arguments[] = $serviceDefinition['object_path'] ?? '/org/w4/System1';
+                $value = $serviceDefinition['object_path'] ?? '/org/w4/System1';
+                $arguments[] = $value;
+                $parameterBindings[] = [
+                    'position' => 0,
+                    'name' => $parameter->getName(),
+                    'resolved_channel' => 'object_path',
+                    'value_kind' => 'string',
+                    'value_preview' => $value,
+                ];
                 continue;
             }
 
-            $arguments[] = $this->resolveRegisterObjectParameterValue(
+            $classification = $this->classifyRegisterObjectParameter($parameter);
+            $value = $this->resolveRegisterObjectParameterValue(
                 $parameter,
                 $serviceDefinition,
                 $exportedObject,
                 $registerObjectHandoff
             );
+            $arguments[] = $value;
+            $valueSummary = $this->summarizeInvocationValue($value, $classification['resolved_channel']);
+            $parameterBindings[] = [
+                'position' => $index,
+                'name' => $parameter->getName(),
+                'resolved_channel' => $classification['resolved_channel'],
+                'resolution_source' => $classification['resolution_source'],
+                'value_kind' => $valueSummary['value_kind'],
+                'value_preview' => $valueSummary['value_preview'],
+            ];
         }
+
+        return [
+            'arguments' => $arguments,
+            'report' => [
+                'method_name' => 'registerObject',
+                'parameter_count' => $method->getNumberOfParameters(),
+                'parameter_bindings' => $parameterBindings,
+            ],
+        ];
+    }
+
+    /**
+     * @param list<mixed> $arguments
+     */
+    private function invokeRegisterObject(
+        object $connection,
+        array $arguments
+    ): mixed {
+        $method = new ReflectionMethod($connection, 'registerObject');
 
         return $method->invokeArgs($connection, $arguments);
     }
 
-    private function invokeWaitLoop(object $connection): mixed
+    private function invokeWaitLoop(object $connection, array $arguments = []): mixed
     {
         $method = new ReflectionMethod($connection, 'waitLoop');
 
-        return $method->invoke($connection);
+        return $method->invokeArgs($connection, $arguments);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function createWaitLoopSignatureReport(object $connection): array
+    {
+        $method = new ReflectionMethod($connection, 'waitLoop');
+        $parameters = [];
+        $unresolvedParameters = [];
+
+        foreach ($method->getParameters() as $index => $parameter) {
+            $classification = $this->classifyWaitLoopParameter($parameter);
+            $parameters[] = [
+                'position' => $index,
+                'name' => $parameter->getName(),
+                'type' => $this->describeParameterType($parameter),
+                'allows_null' => $parameter->allowsNull(),
+                'has_default' => $parameter->isDefaultValueAvailable(),
+                'resolution_source' => $classification['resolution_source'],
+                'resolved_channel' => $classification['resolved_channel'],
+                'compatible' => $classification['compatible'],
+            ];
+
+            if ($classification['compatible'] !== true) {
+                $unresolvedParameters[] = $parameter->getName();
+            }
+        }
+
+        return [
+            'method_name' => 'waitLoop',
+            'parameter_count' => $method->getNumberOfParameters(),
+            'compatible' => $unresolvedParameters === [],
+            'unresolved_parameters' => $unresolvedParameters,
+            'parameters' => $parameters,
+        ];
+    }
+
+    /**
+     * @return array{arguments: list<mixed>, report: array<string, mixed>}
+     */
+    private function createWaitLoopInvocationPlan(object $connection): array
+    {
+        $method = new ReflectionMethod($connection, 'waitLoop');
+
+        return [
+            'arguments' => [],
+            'report' => [
+                'method_name' => 'waitLoop',
+                'parameter_count' => $method->getNumberOfParameters(),
+                'parameter_bindings' => [],
+            ],
+        ];
     }
 
     /**
@@ -453,6 +642,79 @@ final class NativeDbusExtensionOwnershipDriver
         ];
     }
 
+    /**
+     * @return array{resolved_channel: string, resolution_source: string, compatible: bool}
+     */
+    private function classifyRequestNameParameter(ReflectionParameter $parameter, int $index): array
+    {
+        if ($index === 0) {
+            return [
+                'resolved_channel' => 'bus_name',
+                'resolution_source' => 'request-name-bus-name',
+                'compatible' => true,
+            ];
+        }
+
+        if ($parameter->isDefaultValueAvailable()) {
+            return [
+                'resolved_channel' => 'default-value',
+                'resolution_source' => 'parameter-default',
+                'compatible' => true,
+            ];
+        }
+
+        if ($parameter->allowsNull()) {
+            return [
+                'resolved_channel' => 'null-default',
+                'resolution_source' => 'nullable-parameter',
+                'compatible' => true,
+            ];
+        }
+
+        $parameterType = $parameter->getType();
+        if ($parameterType instanceof ReflectionNamedType && $parameterType->isBuiltin()) {
+            return [
+                'resolved_channel' => 'builtin-default',
+                'resolution_source' => 'generic-builtin-default',
+                'compatible' => true,
+            ];
+        }
+
+        return [
+            'resolved_channel' => 'fallback',
+            'resolution_source' => 'generic-fallback',
+            'compatible' => false,
+        ];
+    }
+
+    /**
+     * @return array{resolved_channel: string, resolution_source: string, compatible: bool}
+     */
+    private function classifyWaitLoopParameter(ReflectionParameter $parameter): array
+    {
+        if ($parameter->isDefaultValueAvailable()) {
+            return [
+                'resolved_channel' => 'default-value',
+                'resolution_source' => 'parameter-default',
+                'compatible' => true,
+            ];
+        }
+
+        if ($parameter->allowsNull()) {
+            return [
+                'resolved_channel' => 'null-default',
+                'resolution_source' => 'nullable-parameter',
+                'compatible' => true,
+            ];
+        }
+
+        return [
+            'resolved_channel' => 'fallback',
+            'resolution_source' => 'generic-fallback',
+            'compatible' => false,
+        ];
+    }
+
     private function describeParameterType(ReflectionParameter $parameter): ?string
     {
         $parameterType = $parameter->getType();
@@ -487,6 +749,74 @@ final class NativeDbusExtensionOwnershipDriver
         }
 
         return null;
+    }
+
+    /**
+     * @return array{value_kind: string, value_preview: mixed}
+     */
+    private function summarizeInvocationValue(mixed $value, string $resolvedChannel): array
+    {
+        if (is_object($value)) {
+            return [
+                'value_kind' => 'object',
+                'value_preview' => get_class($value),
+            ];
+        }
+
+        if (is_string($value)) {
+            if ($resolvedChannel === 'introspection_xml') {
+                return [
+                    'value_kind' => 'string',
+                    'value_preview' => [
+                        'kind' => 'dbus-introspection-xml',
+                        'length' => strlen($value),
+                    ],
+                ];
+            }
+
+            return [
+                'value_kind' => 'string',
+                'value_preview' => $value,
+            ];
+        }
+
+        if (is_array($value)) {
+            if ($resolvedChannel === 'definition') {
+                return [
+                    'value_kind' => 'array',
+                    'value_preview' => [
+                        'kind' => 'export-definition',
+                        'method_count' => count($value['methods'] ?? []),
+                        'property_count' => count($value['properties'] ?? []),
+                    ],
+                ];
+            }
+
+            if ($resolvedChannel === 'methods') {
+                return [
+                    'value_kind' => 'array',
+                    'value_preview' => [
+                        'kind' => 'methods-list',
+                        'count' => count($value),
+                    ],
+                ];
+            }
+
+            if ($resolvedChannel === 'properties') {
+                return [
+                    'value_kind' => 'array',
+                    'value_preview' => [
+                        'kind' => 'properties-list',
+                        'count' => count($value),
+                    ],
+                ];
+            }
+        }
+
+        return [
+            'value_kind' => gettype($value),
+            'value_preview' => $this->normalizeResultValue($value),
+        ];
     }
 
     private function defaultValueForParameter(ReflectionParameter $parameter, mixed $fallback): mixed

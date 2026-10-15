@@ -303,6 +303,16 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
             self::assertSame('W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver', $report['ownership_driver']['class_name']);
             self::assertSame('W4\\OS\\Tests\\Fixtures\\FakeNativeDbusService', $report['ownership_driver']['runtime_class_name']);
             self::assertSame('bus-system-constructor', $report['ownership_driver']['constructor_mode']);
+            self::assertTrue($report['ownership_driver']['request_name_signature']['compatible']);
+            self::assertSame('requestName', $report['ownership_driver']['request_name_invocation_plan']['method_name']);
+            self::assertSame(
+                'org.w4.System1',
+                $report['ownership_driver']['request_name_invocation_plan']['parameter_bindings'][0]['value_preview']
+            );
+            self::assertSame(
+                0,
+                $report['ownership_driver']['request_name_invocation_plan']['parameter_bindings'][1]['value_preview']
+            );
             self::assertTrue($report['ownership_driver']['register_object_signature']['compatible']);
             self::assertSame(
                 ['object_path', 'exported_object', 'introspection_xml', 'definition'],
@@ -312,6 +322,23 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
                 ['object_path', 'introspection_xml', 'definition', 'exported_object'],
                 $report['ownership_driver']['register_object_signature']['preferred_parameter_group_match']
             );
+            self::assertSame('registerObject', $report['ownership_driver']['register_object_invocation_plan']['method_name']);
+            self::assertSame('object', $report['ownership_driver']['register_object_invocation_plan']['parameter_bindings'][1]['value_kind']);
+            self::assertSame(
+                'W4\\OS\\SystemApi\\NativeDbusExtensionRuntimeObject',
+                $report['ownership_driver']['register_object_invocation_plan']['parameter_bindings'][1]['value_preview']
+            );
+            self::assertSame(
+                'dbus-introspection-xml',
+                $report['ownership_driver']['register_object_invocation_plan']['parameter_bindings'][2]['value_preview']['kind']
+            );
+            self::assertSame(
+                'export-definition',
+                $report['ownership_driver']['register_object_invocation_plan']['parameter_bindings'][3]['value_preview']['kind']
+            );
+            self::assertTrue($report['ownership_driver']['wait_loop_signature']['compatible']);
+            self::assertSame('waitLoop', $report['ownership_driver']['wait_loop_invocation_plan']['method_name']);
+            self::assertSame([], $report['ownership_driver']['wait_loop_invocation_plan']['parameter_bindings']);
             self::assertNull($report['blocking_reason']);
             self::assertSame('runtime-service-active', $report['next_action']);
         } finally {

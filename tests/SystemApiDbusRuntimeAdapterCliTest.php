@@ -342,11 +342,26 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             self::assertSame('W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver', $payload['ownership_driver']['class_name']);
             self::assertSame('W4\\OS\\Tests\\Fixtures\\FakeNativeDbusService', $payload['ownership_driver']['runtime_class_name']);
             self::assertSame('bus-system-constructor', $payload['ownership_driver']['constructor_mode']);
+            self::assertTrue($payload['ownership_driver']['request_name_signature']['compatible']);
+            self::assertSame(
+                'org.w4.System1',
+                $payload['ownership_driver']['request_name_invocation_plan']['parameter_bindings'][0]['value_preview']
+            );
             self::assertTrue($payload['ownership_driver']['register_object_signature']['compatible']);
             self::assertSame(
                 ['object_path', 'exported_object', 'introspection_xml', 'definition'],
                 $payload['ownership_driver']['register_object_signature']['resolved_channels']
             );
+            self::assertSame(
+                'dbus-introspection-xml',
+                $payload['ownership_driver']['register_object_invocation_plan']['parameter_bindings'][2]['value_preview']['kind']
+            );
+            self::assertSame(
+                'export-definition',
+                $payload['ownership_driver']['register_object_invocation_plan']['parameter_bindings'][3]['value_preview']['kind']
+            );
+            self::assertTrue($payload['ownership_driver']['wait_loop_signature']['compatible']);
+            self::assertSame([], $payload['ownership_driver']['wait_loop_invocation_plan']['parameter_bindings']);
             self::assertSame('bus-name-owned', $payload['ownership_state']);
             self::assertSame('runtime-service-active', $payload['next_action']);
         } finally {
