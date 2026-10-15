@@ -64,6 +64,14 @@ final class FakeNativeDbusService
             throw new RuntimeException('La definicion exportada no publica la propiedad BindingStatus');
         }
 
+        if (($definition['register_object_handoff']['strategy'] ?? null) !== 'parameter-name-driven-handoff') {
+            throw new RuntimeException('La definicion exportada no publica la estrategia de handoff esperada');
+        }
+
+        if (($definition['register_object_handoff']['interface'] ?? null) !== 'org.w4.System1.Manager') {
+            throw new RuntimeException('La definicion exportada no publica el canal interface esperado');
+        }
+
         if (!str_contains($introspectionXml, '<interface name="org.w4.System1.Manager">')) {
             throw new RuntimeException('La introspeccion exportada no publica el interface esperado');
         }

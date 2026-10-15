@@ -70,7 +70,8 @@ final class NativeDbusExtensionOwnershipDriver
                 $serviceDefinition,
                 $this->resolveRuntimeRootDir($environment)
             );
-            $registerObjectResult = $this->invokeRegisterObject($connection, $serviceDefinition, $exportedObject);
+            $registerObjectHandoff = $exportedObject->createRegisterObjectHandoffPayload();
+            $registerObjectResult = $this->invokeRegisterObject($connection, $serviceDefinition, $exportedObject, $registerObjectHandoff);
             if ($registerObjectResult === false) {
                 return [
                     'request_name_state' => 'owned',
@@ -80,11 +81,13 @@ final class NativeDbusExtensionOwnershipDriver
                     'driver_status' => 'register-object-failed',
                     'driver' => $driver + [
                         'exported_object_class' => NativeDbusExtensionRuntimeObject::class,
+                        'register_object_handoff_channels' => array_keys($registerObjectHandoff['channels'] ?? []),
                         'register_object_result' => false,
                     ],
                 ];
             }
             $driver['exported_object_class'] = NativeDbusExtensionRuntimeObject::class;
+            $driver['register_object_handoff_channels'] = array_keys($registerObjectHandoff['channels'] ?? []);
             $driver['register_object_result'] = $this->normalizeResultValue($registerObjectResult);
         } catch (Throwable $exception) {
             return [
@@ -214,7 +217,8 @@ final class NativeDbusExtensionOwnershipDriver
     private function invokeRegisterObject(
         object $connection,
         array $serviceDefinition,
-        NativeDbusExtensionRuntimeObject $exportedObject
+        NativeDbusExtensionRuntimeObject $exportedObject,
+        array $registerObjectHandoff
     ): mixed {
         $method = new ReflectionMethod($connection, 'registerObject');
         $arguments = [];
@@ -225,7 +229,12 @@ final class NativeDbusExtensionOwnershipDriver
                 continue;
             }
 
-            $arguments[] = $this->resolveRegisterObjectParameterValue($parameter, $serviceDefinition, $exportedObject);
+            $arguments[] = $this->resolveRegisterObjectParameterValue(
+                $parameter,
+                $serviceDefinition,
+                $exportedObject,
+                $registerObjectHandoff
+            );
         }
 
         return $method->invokeArgs($connection, $arguments);
@@ -244,7 +253,8 @@ final class NativeDbusExtensionOwnershipDriver
     private function resolveRegisterObjectParameterValue(
         ReflectionParameter $parameter,
         array $serviceDefinition,
-        NativeDbusExtensionRuntimeObject $exportedObject
+        NativeDbusExtensionRuntimeObject $exportedObject,
+        array $registerObjectHandoff
     ): mixed {
         $parameterType = $parameter->getType();
         if ($parameterType instanceof ReflectionNamedType && !$parameterType->isBuiltin()) {
@@ -257,11 +267,12 @@ final class NativeDbusExtensionOwnershipDriver
             || str_contains($parameterName, 'xml')
             || str_contains($parameterName, 'node')
         ) {
-            return $exportedObject->createExportDefinitionPayload()['introspection_xml'];
+            return $registerObjectHandoff['channels']['introspection_xml'] ?? '';
         }
 
         if (str_contains($parameterName, 'interface')) {
-            return $serviceDefinition['interface'] ?? 'org.w4.System1.Manager';
+            return $registerObjectHandoff['channels']['interface']
+                ?? ($serviceDefinition['interface'] ?? 'org.w4.System1.Manager');
         }
 
         if (
@@ -274,15 +285,15 @@ final class NativeDbusExtensionOwnershipDriver
                 || str_contains($parameterName, 'metadata')
                 || str_contains($parameterName, 'contract')
             ) {
-                return $exportedObject->createExportDefinitionPayload();
+                return $registerObjectHandoff['channels']['definition'] ?? [];
             }
 
             if (str_contains($parameterName, 'methods')) {
-                return $exportedObject->createExportDefinitionPayload()['methods'];
+                return $registerObjectHandoff['channels']['methods'] ?? [];
             }
 
             if (str_contains($parameterName, 'properties')) {
-                return $exportedObject->createExportDefinitionPayload()['properties'];
+                return $registerObjectHandoff['channels']['properties'] ?? [];
             }
         }
 

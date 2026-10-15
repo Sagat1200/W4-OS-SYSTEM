@@ -42,6 +42,7 @@ final class NativeDbusExtensionRuntimeObject
             'binding_status' => $this->BindingStatus,
             'supported_methods' => array_column($exportDefinition['methods'], 'name'),
             'binding_properties' => array_column($exportDefinition['properties'], 'name'),
+            'register_object_handoff_channels' => $exportDefinition['register_object_handoff']['channel_names'],
             'introspection_xml_available' => true,
             'dispatch_mode' => 'system-api-toolkit',
         ];
@@ -52,42 +53,44 @@ final class NativeDbusExtensionRuntimeObject
      */
     public function createExportDefinitionPayload(): array
     {
+        $payload = $this->buildBaseExportDefinitionPayload();
+        $payload['register_object_handoff'] = $this->buildRegisterObjectHandoffSummary($payload);
+
+        return $payload;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function createRegisterObjectHandoffPayload(?array $exportDefinition = null): array
+    {
+        $resolvedExportDefinition = $exportDefinition ?? $this->buildBaseExportDefinitionPayload();
+        $definitionWithHandoff = $resolvedExportDefinition;
+        $definitionWithHandoff['register_object_handoff'] = $this->buildRegisterObjectHandoffSummary($resolvedExportDefinition);
+
+        return [
+            'strategy' => 'parameter-name-driven-handoff',
+            'channels' => [
+                'object_path' => $resolvedExportDefinition['object_path'],
+                'interface' => $resolvedExportDefinition['interface'],
+                'introspection_xml' => $resolvedExportDefinition['introspection_xml'],
+                'definition' => $definitionWithHandoff,
+                'methods' => $resolvedExportDefinition['methods'],
+                'properties' => $resolvedExportDefinition['properties'],
+            ],
+            'preferred_parameter_groups' => $this->buildRegisterObjectHandoffSummary($resolvedExportDefinition)['preferred_parameter_groups'],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildBaseExportDefinitionPayload(): array
+    {
         $interface = $this->serviceDefinition['interface'] ?? 'org.w4.System1.Manager';
         $objectPath = $this->serviceDefinition['object_path'] ?? '/org/w4/System1';
-        $methods = [
-            [
-                'name' => 'Call',
-                'input' => [
-                    ['name' => 'request_json', 'type' => 's'],
-                ],
-                'output' => [
-                    ['name' => 'response_json', 'type' => 's'],
-                ],
-                'callable' => 'Call',
-            ],
-            [
-                'name' => 'GetCapabilities',
-                'input' => [
-                    ['name' => 'request_id', 'type' => 's'],
-                ],
-                'output' => [
-                    ['name' => 'response_json', 'type' => 's'],
-                ],
-                'callable' => 'GetCapabilities',
-            ],
-        ];
-        $properties = [
-            [
-                'name' => 'ApiVersion',
-                'type' => 's',
-                'access' => 'read',
-            ],
-            [
-                'name' => 'BindingStatus',
-                'type' => 's',
-                'access' => 'read',
-            ],
-        ];
+        $methods = $this->defaultExportMethods();
+        $properties = $this->defaultExportProperties();
 
         return [
             'interface' => $interface,
@@ -95,6 +98,33 @@ final class NativeDbusExtensionRuntimeObject
             'methods' => $methods,
             'properties' => $properties,
             'introspection_xml' => $this->createIntrospectionXml($objectPath, $interface, $methods, $properties),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $exportDefinition
+     * @return array<string, mixed>
+     */
+    private function buildRegisterObjectHandoffSummary(array $exportDefinition): array
+    {
+        return [
+            'strategy' => 'parameter-name-driven-handoff',
+            'channel_names' => [
+                'object_path',
+                'interface',
+                'introspection_xml',
+                'definition',
+                'methods',
+                'properties',
+            ],
+            'preferred_parameter_groups' => [
+                ['object_path', 'exported_object'],
+                ['object_path', 'interface', 'exported_object'],
+                ['object_path', 'introspection_xml', 'definition', 'exported_object'],
+                ['object_path', 'methods', 'properties', 'exported_object'],
+            ],
+            'interface' => $exportDefinition['interface'] ?? 'org.w4.System1.Manager',
+            'object_path' => $exportDefinition['object_path'] ?? '/org/w4/System1',
         ];
     }
 
