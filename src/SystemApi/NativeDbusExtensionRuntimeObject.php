@@ -30,6 +30,8 @@ final class NativeDbusExtensionRuntimeObject
      */
     public function createSpecificationPayload(): array
     {
+        $exportDefinition = $this->createExportDefinitionPayload();
+
         return [
             'kind' => 'system-api-dbus-native-runtime-object',
             'bus_name' => $this->serviceDefinition['bus_name'] ?? null,
@@ -38,8 +40,9 @@ final class NativeDbusExtensionRuntimeObject
             'service_lifecycle' => $this->serviceDefinition['service_lifecycle'] ?? null,
             'api_version' => $this->ApiVersion,
             'binding_status' => $this->BindingStatus,
-            'supported_methods' => array_column($this->createExportDefinitionPayload()['methods'], 'name'),
-            'binding_properties' => array_column($this->createExportDefinitionPayload()['properties'], 'name'),
+            'supported_methods' => array_column($exportDefinition['methods'], 'name'),
+            'binding_properties' => array_column($exportDefinition['properties'], 'name'),
+            'introspection_xml_available' => true,
             'dispatch_mode' => 'system-api-toolkit',
         ];
     }
@@ -49,42 +52,153 @@ final class NativeDbusExtensionRuntimeObject
      */
     public function createExportDefinitionPayload(): array
     {
-        return [
-            'interface' => $this->serviceDefinition['interface'] ?? 'org.w4.System1.Manager',
-            'object_path' => $this->serviceDefinition['object_path'] ?? '/org/w4/System1',
-            'methods' => [
-                [
-                    'name' => 'Call',
-                    'input' => [
-                        ['name' => 'request_json', 'type' => 's'],
-                    ],
-                    'output' => [
-                        ['name' => 'response_json', 'type' => 's'],
-                    ],
-                    'callable' => 'Call',
+        $interface = $this->serviceDefinition['interface'] ?? 'org.w4.System1.Manager';
+        $objectPath = $this->serviceDefinition['object_path'] ?? '/org/w4/System1';
+        $methods = [
+            [
+                'name' => 'Call',
+                'input' => [
+                    ['name' => 'request_json', 'type' => 's'],
                 ],
-                [
-                    'name' => 'GetCapabilities',
-                    'input' => [
-                        ['name' => 'request_id', 'type' => 's'],
-                    ],
-                    'output' => [
-                        ['name' => 'response_json', 'type' => 's'],
-                    ],
-                    'callable' => 'GetCapabilities',
+                'output' => [
+                    ['name' => 'response_json', 'type' => 's'],
                 ],
+                'callable' => 'Call',
             ],
-            'properties' => [
-                [
-                    'name' => 'ApiVersion',
-                    'type' => 's',
-                    'access' => 'read',
+            [
+                'name' => 'GetCapabilities',
+                'input' => [
+                    ['name' => 'request_id', 'type' => 's'],
                 ],
-                [
-                    'name' => 'BindingStatus',
-                    'type' => 's',
-                    'access' => 'read',
+                'output' => [
+                    ['name' => 'response_json', 'type' => 's'],
                 ],
+                'callable' => 'GetCapabilities',
+            ],
+        ];
+        $properties = [
+            [
+                'name' => 'ApiVersion',
+                'type' => 's',
+                'access' => 'read',
+            ],
+            [
+                'name' => 'BindingStatus',
+                'type' => 's',
+                'access' => 'read',
+            ],
+        ];
+
+        return [
+            'interface' => $interface,
+            'object_path' => $objectPath,
+            'methods' => $methods,
+            'properties' => $properties,
+            'introspection_xml' => $this->createIntrospectionXml($objectPath, $interface, $methods, $properties),
+        ];
+    }
+
+    /**
+     * @param list<array{name: string, input: list<array{name: string, type: string}>, output: list<array{name: string, type: string}>, callable: string}> $methods
+     * @param list<array{name: string, type: string, access: string}> $properties
+     */
+    public function createIntrospectionXml(
+        ?string $objectPath = null,
+        ?string $interface = null,
+        array $methods = [],
+        array $properties = []
+    ): string {
+        $resolvedObjectPath = $objectPath ?? ($this->serviceDefinition['object_path'] ?? '/org/w4/System1');
+        $resolvedInterface = $interface ?? ($this->serviceDefinition['interface'] ?? 'org.w4.System1.Manager');
+        $resolvedMethods = $methods === [] ? $this->defaultExportMethods() : $methods;
+        $resolvedProperties = $properties === [] ? $this->defaultExportProperties() : $properties;
+
+        $methodXml = '';
+        foreach ($resolvedMethods as $method) {
+            $methodXml .= sprintf("    <method name=\"%s\">\n", $method['name']);
+
+            foreach ($method['input'] as $input) {
+                $methodXml .= sprintf(
+                    "      <arg name=\"%s\" type=\"%s\" direction=\"in\"/>\n",
+                    $input['name'],
+                    $input['type']
+                );
+            }
+
+            foreach ($method['output'] as $output) {
+                $methodXml .= sprintf(
+                    "      <arg name=\"%s\" type=\"%s\" direction=\"out\"/>\n",
+                    $output['name'],
+                    $output['type']
+                );
+            }
+
+            $methodXml .= "    </method>\n";
+        }
+
+        $propertyXml = '';
+        foreach ($resolvedProperties as $property) {
+            $propertyXml .= sprintf(
+                "    <property name=\"%s\" type=\"%s\" access=\"%s\"/>\n",
+                $property['name'],
+                $property['type'],
+                $property['access']
+            );
+        }
+
+        return sprintf(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n<node name=\"%s\">\n  <interface name=\"%s\">\n    <annotation name=\"org.freedesktop.DBus.DocString\"\n     value=\"W4 System API public manager interface. The runtime adapter is still pending; this contract freezes the binding surface.\"/>\n%s%s  </interface>\n</node>\n",
+            $resolvedObjectPath,
+            $resolvedInterface,
+            $methodXml,
+            $propertyXml
+        );
+    }
+
+    /**
+     * @return list<array{name: string, input: list<array{name: string, type: string}>, output: list<array{name: string, type: string}>, callable: string}>
+     */
+    private function defaultExportMethods(): array
+    {
+        return [
+            [
+                'name' => 'Call',
+                'input' => [
+                    ['name' => 'request_json', 'type' => 's'],
+                ],
+                'output' => [
+                    ['name' => 'response_json', 'type' => 's'],
+                ],
+                'callable' => 'Call',
+            ],
+            [
+                'name' => 'GetCapabilities',
+                'input' => [
+                    ['name' => 'request_id', 'type' => 's'],
+                ],
+                'output' => [
+                    ['name' => 'response_json', 'type' => 's'],
+                ],
+                'callable' => 'GetCapabilities',
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array{name: string, type: string, access: string}>
+     */
+    private function defaultExportProperties(): array
+    {
+        return [
+            [
+                'name' => 'ApiVersion',
+                'type' => 's',
+                'access' => 'read',
+            ],
+            [
+                'name' => 'BindingStatus',
+                'type' => 's',
+                'access' => 'read',
             ],
         ];
     }

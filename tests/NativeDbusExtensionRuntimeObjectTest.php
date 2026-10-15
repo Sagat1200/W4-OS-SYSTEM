@@ -32,6 +32,7 @@ final class NativeDbusExtensionRuntimeObjectTest extends TestCase
         self::assertContains('Call', $payload['supported_methods']);
         self::assertContains('ApiVersion', $payload['binding_properties']);
         self::assertContains('BindingStatus', $payload['binding_properties']);
+        self::assertTrue($payload['introspection_xml_available']);
     }
 
     public function testGetCapabilitiesDelegatesToSystemApiToolkit(): void
@@ -116,5 +117,28 @@ final class NativeDbusExtensionRuntimeObjectTest extends TestCase
         self::assertSame('GetCapabilities', $payload['methods'][1]['name']);
         self::assertSame('ApiVersion', $payload['properties'][0]['name']);
         self::assertSame('BindingStatus', $payload['properties'][1]['name']);
+        self::assertStringContainsString('<interface name="org.w4.System1.Manager">', $payload['introspection_xml']);
+        self::assertStringContainsString('<method name="Call">', $payload['introspection_xml']);
+        self::assertStringContainsString('<property name="BindingStatus" type="s" access="read"/>', $payload['introspection_xml']);
+    }
+
+    public function testObjectCanBuildStandaloneIntrospectionXml(): void
+    {
+        $object = new NativeDbusExtensionRuntimeObject(
+            [
+                'bus_name' => 'org.w4.System1',
+                'object_path' => '/org/w4/System1',
+                'interface' => 'org.w4.System1.Manager',
+                'service_lifecycle' => 'request-name-register-object-wait-loop',
+            ],
+            dirname(__DIR__)
+        );
+
+        $payload = $object->createIntrospectionXml();
+
+        self::assertStringContainsString('<node name="/org/w4/System1">', $payload);
+        self::assertStringContainsString('<interface name="org.w4.System1.Manager">', $payload);
+        self::assertStringContainsString('<arg name="request_json" type="s" direction="in"/>', $payload);
+        self::assertStringContainsString('<property name="ApiVersion" type="s" access="read"/>', $payload);
     }
 }

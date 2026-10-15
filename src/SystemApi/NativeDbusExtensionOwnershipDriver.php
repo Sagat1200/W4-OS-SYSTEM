@@ -252,6 +252,14 @@ final class NativeDbusExtensionOwnershipDriver
         }
 
         $parameterName = strtolower($parameter->getName());
+        if (
+            str_contains($parameterName, 'introspection')
+            || str_contains($parameterName, 'xml')
+            || str_contains($parameterName, 'node')
+        ) {
+            return $exportedObject->createExportDefinitionPayload()['introspection_xml'];
+        }
+
         if (str_contains($parameterName, 'interface')) {
             return $serviceDefinition['interface'] ?? 'org.w4.System1.Manager';
         }

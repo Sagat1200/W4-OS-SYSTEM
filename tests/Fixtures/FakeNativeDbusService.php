@@ -32,7 +32,12 @@ final class FakeNativeDbusService
         return true;
     }
 
-    public function registerObject(string $objectPath, NativeDbusExtensionRuntimeObject $object, array $definition = []): bool
+    public function registerObject(
+        string $objectPath,
+        NativeDbusExtensionRuntimeObject $object,
+        string $introspectionXml = '',
+        array $definition = []
+    ): bool
     {
         if ($objectPath !== '/org/w4/System1') {
             throw new RuntimeException('El driver nativo debe registrar /org/w4/System1');
@@ -57,6 +62,18 @@ final class FakeNativeDbusService
 
         if (($definition['properties'][1]['name'] ?? null) !== 'BindingStatus') {
             throw new RuntimeException('La definicion exportada no publica la propiedad BindingStatus');
+        }
+
+        if (!str_contains($introspectionXml, '<interface name="org.w4.System1.Manager">')) {
+            throw new RuntimeException('La introspeccion exportada no publica el interface esperado');
+        }
+
+        if (!str_contains($introspectionXml, '<method name="Call">')) {
+            throw new RuntimeException('La introspeccion exportada no publica el metodo Call');
+        }
+
+        if (!str_contains($introspectionXml, '<property name="BindingStatus" type="s" access="read"/>')) {
+            throw new RuntimeException('La introspeccion exportada no publica la propiedad BindingStatus');
         }
 
         if (($object->ApiVersion ?? null) !== '1.0') {
