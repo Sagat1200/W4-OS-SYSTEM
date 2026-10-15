@@ -1687,9 +1687,13 @@ function executeNativeRuntimeOwnershipDriver(array $serviceDefinition, array $en
 
     try {
         $method = new ReflectionMethod($driverClassName, 'materializeOwnership');
+        $arguments = [$serviceDefinition];
+        if ($method->getNumberOfParameters() >= 2) {
+            $arguments[] = $environment;
+        }
         $result = $method->isStatic()
-            ? $driverClassName::materializeOwnership($serviceDefinition)
-            : (new $driverClassName())->materializeOwnership($serviceDefinition);
+            ? $method->invokeArgs(null, $arguments)
+            : $method->invokeArgs(new $driverClassName(), $arguments);
     } catch (ReflectionException) {
         return [
             'request_name_state' => 'failed',
