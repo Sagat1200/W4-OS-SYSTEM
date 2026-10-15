@@ -163,6 +163,49 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         }
     }
 
+    public function testObserveNativeRuntimeServiceStateReportsPendingOwnershipFromArtifacts(): void
+    {
+        $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-native-runtime-observe-cli-' . bin2hex(random_bytes(6));
+        $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
+        $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
+        $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+        $environment = array_merge(
+            $this->readyRuntimeEnvironment(),
+            $this->nativeCompatibleBackendEnvironment(),
+            [
+                'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+            ]
+        );
+
+        try {
+            $startup = $this->runPhpScript([
+                $this->scriptPath(),
+                'StartNativeRuntimeService',
+            ], '', $environment);
+            self::assertSame(0, $startup['exitCode'], $startup['stderr']);
+
+            $result = $this->runPhpScript([
+                $this->scriptPath(),
+                'ObserveNativeRuntimeServiceState',
+            ], '', $environment);
+
+            self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+            $payload = $this->decodeJson($result['stdout']);
+            self::assertSame('system-api-dbus-native-runtime-observation', $payload['kind']);
+            self::assertSame('native-runtime-service-observed-pending-ownership', $payload['status']);
+            self::assertTrue($payload['observed']);
+            self::assertTrue($payload['startup_acknowledged']);
+            self::assertSame('pending-bus-name-ownership', $payload['ownership_state']);
+            self::assertSame('native-runtime-bus-ownership-pending', $payload['blocking_reason']);
+            self::assertSame('materialize-native-bus-ownership', $payload['next_action']);
+        } finally {
+            $this->cleanupDirectory($baseDirectory);
+        }
+    }
+
     public function testExecuteActivationRunsTargetCommandWhenRuntimeIsReady(): void
     {
         $result = $this->runPhpScript([

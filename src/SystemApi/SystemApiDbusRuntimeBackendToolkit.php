@@ -112,6 +112,81 @@ final class SystemApiDbusRuntimeBackendToolkit
     }
 
     /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, string>|null $environment
+     * @return array<string, mixed>
+     */
+    public function createNativeRuntimeServiceObservationReport(array $runtimeDiagnosis, ?array $environment = null): array
+    {
+        $serviceDefinition = $this->createNativeRuntimeServiceDefinition($runtimeDiagnosis, $environment);
+        $eligible = ($serviceDefinition['eligible'] ?? false) === true;
+        $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
+        $readyMarker = $this->observeTextArtifact($this->optionalArtifactPath($artifacts, 'ready_marker_path'));
+        $statusFile = $this->observeJsonArtifact($this->optionalArtifactPath($artifacts, 'status_file_path'));
+        $pidFile = $this->observePidArtifact($this->optionalArtifactPath($artifacts, 'pid_file_path'));
+        $startupReport = is_array($statusFile['payload'] ?? null) ? $statusFile['payload'] : null;
+        $startupAcknowledged = ($startupReport['startup_acknowledged'] ?? false) === true;
+        $artifactsObserved = ($readyMarker['exists'] ?? false) === true
+            && ($statusFile['exists'] ?? false) === true
+            && ($pidFile['exists'] ?? false) === true;
+        $observed = $eligible && $startupAcknowledged && $artifactsObserved;
+        $ownershipState = is_string($startupReport['ownership_state'] ?? null)
+            ? $startupReport['ownership_state']
+            : ($observed ? 'pending-bus-name-ownership' : 'native-runtime-service-not-started');
+        $status = !$eligible
+            ? 'native-runtime-service-blocked'
+            : ($observed
+                ? ($ownershipState === 'bus-name-owned'
+                    ? 'native-runtime-service-observed-active'
+                    : 'native-runtime-service-observed-pending-ownership')
+                : (($readyMarker['exists'] ?? false) === true || ($statusFile['exists'] ?? false) === true || ($pidFile['exists'] ?? false) === true
+                    ? 'native-runtime-service-observation-incomplete'
+                    : 'native-runtime-service-not-observed'));
+        $blockingReason = !$eligible
+            ? (is_string($serviceDefinition['blocking_reason'] ?? null)
+                ? $serviceDefinition['blocking_reason']
+                : 'native-runtime-service-unavailable')
+            : ($status === 'native-runtime-service-not-observed'
+                ? 'native-runtime-service-not-started'
+                : ($status === 'native-runtime-service-observation-incomplete'
+                    ? 'native-runtime-service-artifacts-incomplete'
+                    : ($ownershipState === 'bus-name-owned' ? null : 'native-runtime-bus-ownership-pending')));
+        $nextAction = !$eligible
+            ? 'complete-native-runtime-backend'
+            : ($status === 'native-runtime-service-not-observed'
+                ? 'start-native-runtime-service'
+                : ($status === 'native-runtime-service-observation-incomplete'
+                    ? 'inspect-native-runtime-service-artifacts'
+                    : ($ownershipState === 'bus-name-owned'
+                        ? 'runtime-service-active'
+                        : 'materialize-native-bus-ownership')));
+
+        return [
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-native-runtime-observation',
+            'status' => $status,
+            'observed' => $observed,
+            'exit_code' => $ownershipState === 'bus-name-owned' ? 0 : 3,
+            'startup_acknowledged' => $startupAcknowledged,
+            'bus_name' => 'org.w4.System1',
+            'object_path' => '/org/w4/System1',
+            'interface' => 'org.w4.System1.Manager',
+            'service_definition' => $serviceDefinition,
+            'runtime_backend' => $serviceDefinition['runtime_backend'] ?? [],
+            'ownership_state' => $ownershipState,
+            'artifacts' => [
+                'ready_marker' => $readyMarker,
+                'status_file' => $statusFile,
+                'pid_file' => $pidFile,
+            ],
+            'startup_report' => $startupReport,
+            'pid' => $pidFile['pid'] ?? null,
+            'blocking_reason' => $blockingReason,
+            'next_action' => $nextAction,
+        ];
+    }
+
+    /**
      * @return array<string, string>
      */
     private function captureEnvironment(): array
@@ -377,5 +452,87 @@ final class SystemApiDbusRuntimeBackendToolkit
         }
 
         return 'build' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'native-runtime';
+    }
+
+    /**
+     * @param array<string, mixed> $artifacts
+     */
+    private function optionalArtifactPath(array $artifacts, string $field): ?string
+    {
+        $value = $artifacts[$field] ?? null;
+
+        return is_string($value) && trim($value) !== '' ? trim($value) : null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function observeTextArtifact(?string $path): array
+    {
+        $contents = $this->readArtifactFile($path);
+
+        return [
+            'path' => $path,
+            'exists' => $path !== null && is_file($path),
+            'contents' => $contents === null ? null : trim($contents),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function observeJsonArtifact(?string $path): array
+    {
+        $contents = $this->readArtifactFile($path);
+        $payload = null;
+        $parseError = null;
+
+        if ($contents !== null && trim($contents) !== '') {
+            try {
+                $decoded = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+                if (is_array($decoded)) {
+                    $payload = $decoded;
+                }
+            } catch (\JsonException $exception) {
+                $parseError = $exception->getMessage();
+            }
+        }
+
+        return [
+            'path' => $path,
+            'exists' => $path !== null && is_file($path),
+            'payload' => $payload,
+            'parse_error' => $parseError,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function observePidArtifact(?string $path): array
+    {
+        $contents = $this->readArtifactFile($path);
+        $trimmed = $contents === null ? null : trim($contents);
+        $pid = is_string($trimmed) && preg_match('/^-?\d+$/', $trimmed) === 1
+            ? (int) $trimmed
+            : null;
+
+        return [
+            'path' => $path,
+            'exists' => $path !== null && is_file($path),
+            'pid' => $pid,
+            'raw_value' => $trimmed,
+        ];
+    }
+
+    private function readArtifactFile(?string $path): ?string
+    {
+        if ($path === null || !is_file($path)) {
+            return null;
+        }
+
+        $contents = @file_get_contents($path);
+
+        return $contents === false ? null : $contents;
     }
 }

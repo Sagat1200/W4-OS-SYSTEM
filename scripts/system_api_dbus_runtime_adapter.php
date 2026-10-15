@@ -65,6 +65,7 @@ try {
         'ExecuteActivation' => $adapter->executeActivation(),
         'DescribeNativeRuntimeService' => $adapter->describeNativeRuntimeService(),
         'StartNativeRuntimeService' => $adapter->startNativeRuntimeService(),
+        'ObserveNativeRuntimeServiceState' => $adapter->observeNativeRuntimeServiceState(),
         'serve-dbus' => $adapter->serveDbus(),
         'serve-stdio-adapter' => serveAdapter($adapter, $outputPath),
         default => throw new ValidationError(sprintf('Comando no soportado: %s', $command)),
@@ -81,7 +82,7 @@ try {
         echo $output;
     }
 
-    if ($command === 'serve-dbus' || $command === 'ExecuteActivation' || $command === 'StartNativeRuntimeService') {
+    if ($command === 'serve-dbus' || $command === 'ExecuteActivation' || $command === 'StartNativeRuntimeService' || $command === 'ObserveNativeRuntimeServiceState') {
         $decodedOutput = json_decode($output, true);
         $exitCode = is_array($decodedOutput) && is_int($decodedOutput['exit_code'] ?? null)
             ? $decodedOutput['exit_code']

@@ -279,6 +279,9 @@ final class SystemApiDbusRuntimeActivationToolkit
             'optional_methods' => [
                 'DiagnoseRuntime',
                 'DescribeRuntime',
+                'DescribeNativeRuntimeService',
+                'StartNativeRuntimeService',
+                'ObserveNativeRuntimeServiceState',
             ],
             'protocol' => [
                 'input' => 'string-json',

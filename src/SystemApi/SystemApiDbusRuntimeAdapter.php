@@ -55,6 +55,7 @@ final class SystemApiDbusRuntimeAdapter
                 'ExecuteActivation',
                 'DescribeNativeRuntimeService',
                 'StartNativeRuntimeService',
+                'ObserveNativeRuntimeServiceState',
                 'DescribeRuntime',
                 'DiagnoseRuntime',
                 'GetCapabilities',
@@ -116,6 +117,13 @@ final class SystemApiDbusRuntimeAdapter
         $this->persistNativeRuntimeArtifacts($report);
 
         return $this->encodeJson($report);
+    }
+
+    public function observeNativeRuntimeServiceState(): string
+    {
+        return $this->encodeJson(
+            $this->runtimeBackend->createNativeRuntimeServiceObservationReport($this->runtimeProbe->createReport())
+        );
     }
 
     public function describeSpecification(): string
@@ -189,6 +197,7 @@ final class SystemApiDbusRuntimeAdapter
             'ExecuteActivation' => $this->executeActivation(),
             'DescribeNativeRuntimeService' => $this->describeNativeRuntimeService(),
             'StartNativeRuntimeService' => $this->startNativeRuntimeService(),
+            'ObserveNativeRuntimeServiceState' => $this->observeNativeRuntimeServiceState(),
             'ServeDbus' => $this->serveDbus(),
             default => throw new ValidationError(sprintf('Metodo de runtime adapter no soportado: %s', $method)),
         };
