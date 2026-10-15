@@ -66,7 +66,10 @@ final class NativeDbusExtensionOwnershipDriver
         }
 
         try {
-            $exportedObject = new NativeDbusExtensionRuntimeObject($serviceDefinition);
+            $exportedObject = new NativeDbusExtensionRuntimeObject(
+                $serviceDefinition,
+                $this->resolveRuntimeRootDir($environment)
+            );
             $registerObjectResult = $this->invokeRegisterObject($connection, $serviceDefinition, $exportedObject);
             if ($registerObjectResult === false) {
                 return [
@@ -143,6 +146,21 @@ final class NativeDbusExtensionOwnershipDriver
         $className = $nativeRuntimeApi['class_name'] ?? null;
 
         return is_string($className) && trim($className) !== '' ? trim($className) : null;
+    }
+
+    private function resolveRuntimeRootDir(array $environment): string
+    {
+        $override = $environment['W4_SYSTEM_API_ROOT_DIR'] ?? null;
+        if (is_string($override) && trim($override) !== '') {
+            return trim($override);
+        }
+
+        $currentDirectory = getcwd();
+        if (is_string($currentDirectory) && trim($currentDirectory) !== '') {
+            return trim($currentDirectory);
+        }
+
+        return dirname(__DIR__, 2);
     }
 
     /**

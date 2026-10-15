@@ -6,12 +6,16 @@ namespace W4\OS\SystemApi;
 
 final class NativeDbusExtensionRuntimeObject
 {
+    private SystemApiToolkit $toolkit;
+
     /**
      * @param array<string, mixed> $serviceDefinition
      */
     public function __construct(
-        private readonly array $serviceDefinition
+        private readonly array $serviceDefinition,
+        string $rootDir
     ) {
+        $this->toolkit = new SystemApiToolkit($rootDir);
     }
 
     /**
@@ -25,24 +29,21 @@ final class NativeDbusExtensionRuntimeObject
             'object_path' => $this->serviceDefinition['object_path'] ?? null,
             'interface' => $this->serviceDefinition['interface'] ?? null,
             'service_lifecycle' => $this->serviceDefinition['service_lifecycle'] ?? null,
-            'dispatch_mode' => 'runtime-placeholder',
+            'supported_methods' => [
+                'DescribeSpecification',
+                'GetCapabilities',
+                'Call',
+            ],
+            'dispatch_mode' => 'system-api-toolkit',
         ];
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function getCapabilities(): array
+    public function getCapabilities(?string $requestId = null): array
     {
-        return [
-            'kind' => 'system-api-dbus-native-runtime-capabilities',
-            'supported_methods' => [
-                'DescribeSpecification',
-                'GetCapabilities',
-                'Call',
-            ],
-            'dispatch_mode' => 'runtime-placeholder',
-        ];
+        return $this->toolkit->createCapabilitiesResponse($requestId);
     }
 
     /**
@@ -51,10 +52,17 @@ final class NativeDbusExtensionRuntimeObject
      */
     public function call(array $request = []): array
     {
-        return [
-            'status' => 'native-runtime-placeholder-dispatch',
-            'request' => $request,
-            'service_definition' => $this->describeSpecification(),
-        ];
+        $normalizedRequest = $request;
+        if (!isset($normalizedRequest['api_version']) || !is_string($normalizedRequest['api_version'])) {
+            $normalizedRequest['api_version'] = '1.0';
+        }
+        if (!isset($normalizedRequest['request_id']) || !is_string($normalizedRequest['request_id']) || trim($normalizedRequest['request_id']) === '') {
+            $normalizedRequest['request_id'] = 'native-runtime-call';
+        }
+        if (!isset($normalizedRequest['params']) || !is_array($normalizedRequest['params'])) {
+            $normalizedRequest['params'] = [];
+        }
+
+        return $this->toolkit->respond($normalizedRequest);
     }
 }

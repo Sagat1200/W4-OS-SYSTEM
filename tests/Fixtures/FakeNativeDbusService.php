@@ -43,6 +43,29 @@ final class FakeNativeDbusService
             throw new RuntimeException('El objeto exportado no conserva la interfaz esperada');
         }
 
+        $capabilities = $object->getCapabilities('fake-dbus-capabilities');
+        if (($capabilities['request_id'] ?? null) !== 'fake-dbus-capabilities') {
+            throw new RuntimeException('El objeto exportado no delega GetCapabilities al manager real');
+        }
+
+        if (($capabilities['result']['method'] ?? null) !== 'system.capabilities') {
+            throw new RuntimeException('GetCapabilities no devuelve el contrato real de system.capabilities');
+        }
+
+        $callResponse = $object->call([
+            'api_version' => '1.0',
+            'request_id' => 'fake-dbus-call',
+            'method' => 'system.dbus-runtime',
+            'params' => [],
+        ]);
+        if (($callResponse['request_id'] ?? null) !== 'fake-dbus-call') {
+            throw new RuntimeException('El objeto exportado no conserva el request_id de Call');
+        }
+
+        if (($callResponse['result']['method'] ?? null) !== 'system.dbus-runtime') {
+            throw new RuntimeException('Call no delega al toolkit real para system.dbus-runtime');
+        }
+
         return true;
     }
 
