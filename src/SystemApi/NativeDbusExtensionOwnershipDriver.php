@@ -257,6 +257,28 @@ final class NativeDbusExtensionOwnershipDriver
         }
 
         if (
+            $parameterType instanceof ReflectionNamedType
+            && $parameterType->getName() === 'array'
+        ) {
+            if (
+                str_contains($parameterName, 'definition')
+                || str_contains($parameterName, 'descriptor')
+                || str_contains($parameterName, 'metadata')
+                || str_contains($parameterName, 'contract')
+            ) {
+                return $exportedObject->createExportDefinitionPayload();
+            }
+
+            if (str_contains($parameterName, 'methods')) {
+                return $exportedObject->createExportDefinitionPayload()['methods'];
+            }
+
+            if (str_contains($parameterName, 'properties')) {
+                return $exportedObject->createExportDefinitionPayload()['properties'];
+            }
+        }
+
+        if (
             str_contains($parameterName, 'object')
             || str_contains($parameterName, 'export')
             || str_contains($parameterName, 'handler')

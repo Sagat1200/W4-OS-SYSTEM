@@ -38,12 +38,54 @@ final class NativeDbusExtensionRuntimeObject
             'service_lifecycle' => $this->serviceDefinition['service_lifecycle'] ?? null,
             'api_version' => $this->ApiVersion,
             'binding_status' => $this->BindingStatus,
-            'supported_methods' => [
-                'DescribeSpecification',
-                'GetCapabilities',
-                'Call',
-            ],
+            'supported_methods' => array_column($this->createExportDefinitionPayload()['methods'], 'name'),
+            'binding_properties' => array_column($this->createExportDefinitionPayload()['properties'], 'name'),
             'dispatch_mode' => 'system-api-toolkit',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function createExportDefinitionPayload(): array
+    {
+        return [
+            'interface' => $this->serviceDefinition['interface'] ?? 'org.w4.System1.Manager',
+            'object_path' => $this->serviceDefinition['object_path'] ?? '/org/w4/System1',
+            'methods' => [
+                [
+                    'name' => 'Call',
+                    'input' => [
+                        ['name' => 'request_json', 'type' => 's'],
+                    ],
+                    'output' => [
+                        ['name' => 'response_json', 'type' => 's'],
+                    ],
+                    'callable' => 'Call',
+                ],
+                [
+                    'name' => 'GetCapabilities',
+                    'input' => [
+                        ['name' => 'request_id', 'type' => 's'],
+                    ],
+                    'output' => [
+                        ['name' => 'response_json', 'type' => 's'],
+                    ],
+                    'callable' => 'GetCapabilities',
+                ],
+            ],
+            'properties' => [
+                [
+                    'name' => 'ApiVersion',
+                    'type' => 's',
+                    'access' => 'read',
+                ],
+                [
+                    'name' => 'BindingStatus',
+                    'type' => 's',
+                    'access' => 'read',
+                ],
+            ],
         ];
     }
 
