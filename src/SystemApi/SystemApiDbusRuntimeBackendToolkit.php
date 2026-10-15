@@ -187,6 +187,111 @@ final class SystemApiDbusRuntimeBackendToolkit
     }
 
     /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, string>|null $environment
+     * @return array<string, mixed>
+     */
+    public function createNativeBusOwnershipReport(array $runtimeDiagnosis, ?array $environment = null): array
+    {
+        $env = $environment ?? $this->captureEnvironment();
+        $serviceDefinition = $this->createNativeRuntimeServiceDefinition($runtimeDiagnosis, $env);
+        $observation = $this->createNativeRuntimeServiceObservationReport($runtimeDiagnosis, $env);
+        $eligible = ($serviceDefinition['eligible'] ?? false) === true;
+        $observed = ($observation['observed'] ?? false) === true;
+        $attempted = $eligible && $observed;
+        $requestNameState = $this->resolveNativeRuntimePhaseState(
+            $env,
+            'W4_SYSTEM_API_NATIVE_RUNTIME_REQUEST_NAME_STATE',
+            ['not-attempted', 'pending', 'owned', 'failed'],
+            $attempted ? 'pending' : 'not-attempted'
+        );
+        $registerObjectState = $this->resolveNativeRuntimePhaseState(
+            $env,
+            'W4_SYSTEM_API_NATIVE_RUNTIME_REGISTER_OBJECT_STATE',
+            ['not-attempted', 'pending', 'registered', 'failed', 'skipped'],
+            !$attempted ? 'not-attempted' : ($requestNameState === 'owned' ? 'pending' : 'skipped')
+        );
+        $waitLoopState = $this->resolveNativeRuntimePhaseState(
+            $env,
+            'W4_SYSTEM_API_NATIVE_RUNTIME_WAIT_LOOP_STATE',
+            ['not-attempted', 'pending', 'running', 'failed', 'skipped'],
+            !$attempted ? 'not-attempted' : ($requestNameState === 'owned' && $registerObjectState === 'registered' ? 'pending' : 'skipped')
+        );
+        $hasFailure = in_array('failed', [$requestNameState, $registerObjectState, $waitLoopState], true);
+        $busOwned = $requestNameState === 'owned'
+            && $registerObjectState === 'registered'
+            && $waitLoopState === 'running';
+        $ownershipState = !$attempted
+            ? 'blocked-before-ownership'
+            : ($hasFailure
+                ? 'native-runtime-ownership-failed'
+                : ($busOwned ? 'bus-name-owned' : 'pending-bus-name-ownership'));
+        $status = !$eligible
+            ? 'native-runtime-service-blocked'
+            : (!$observed
+                ? 'native-runtime-bus-ownership-blocked'
+                : ($hasFailure
+                    ? 'native-runtime-bus-ownership-failed'
+                    : ($busOwned
+                        ? 'native-runtime-bus-owned'
+                        : 'native-runtime-bus-ownership-pending')));
+        $blockingReason = !$eligible
+            ? (is_string($serviceDefinition['blocking_reason'] ?? null)
+                ? $serviceDefinition['blocking_reason']
+                : 'native-runtime-service-unavailable')
+            : (!$observed
+                ? 'native-runtime-service-not-observed'
+                : ($requestNameState === 'failed'
+                    ? 'native-runtime-request-name-failed'
+                    : ($registerObjectState === 'failed'
+                        ? 'native-runtime-register-object-failed'
+                        : ($waitLoopState === 'failed'
+                            ? 'native-runtime-wait-loop-failed'
+                            : ($busOwned ? null : 'native-runtime-bus-ownership-pending')))));
+        $nextAction = !$eligible
+            ? 'complete-native-runtime-backend'
+            : (!$observed
+                ? 'observe-native-runtime-service-state'
+                : ($busOwned
+                    ? 'runtime-service-active'
+                    : ($hasFailure
+                        ? 'inspect-native-runtime-ownership-report'
+                        : 'observe-native-runtime-service-state')));
+
+        return [
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-native-runtime-ownership',
+            'status' => $status,
+            'attempted' => $attempted,
+            'exit_code' => !$attempted ? 3 : ($busOwned ? 0 : ($hasFailure ? 1 : 3)),
+            'startup_acknowledged' => ($observation['startup_acknowledged'] ?? false) === true,
+            'bus_name' => 'org.w4.System1',
+            'object_path' => '/org/w4/System1',
+            'interface' => 'org.w4.System1.Manager',
+            'service_definition' => $serviceDefinition,
+            'runtime_backend' => $serviceDefinition['runtime_backend'] ?? [],
+            'service_observation' => $observation,
+            'ownership_state' => $ownershipState,
+            'service_lifecycle' => [
+                'request_name' => [
+                    'required' => true,
+                    'state' => $requestNameState,
+                ],
+                'register_object' => [
+                    'required' => true,
+                    'state' => $registerObjectState,
+                ],
+                'wait_loop' => [
+                    'required' => true,
+                    'state' => $waitLoopState,
+                ],
+            ],
+            'blocking_reason' => $blockingReason,
+            'next_action' => $nextAction,
+        ];
+    }
+
+    /**
      * @return array<string, string>
      */
     private function captureEnvironment(): array
@@ -427,6 +532,26 @@ final class SystemApiDbusRuntimeBackendToolkit
         $value = $environment[$key] ?? null;
 
         return is_string($value) && trim($value) !== '' ? trim($value) : $default;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     * @param list<string> $allowedStates
+     */
+    private function resolveNativeRuntimePhaseState(
+        array $environment,
+        string $key,
+        array $allowedStates,
+        string $default
+    ): string {
+        $value = $environment[$key] ?? null;
+        if (!is_string($value) || trim($value) === '') {
+            return $default;
+        }
+
+        $normalized = strtolower(trim($value));
+
+        return in_array($normalized, $allowedStates, true) ? $normalized : $default;
     }
 
     /**

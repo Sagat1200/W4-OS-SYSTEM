@@ -66,6 +66,7 @@ try {
         'DescribeNativeRuntimeService' => $adapter->describeNativeRuntimeService(),
         'StartNativeRuntimeService' => $adapter->startNativeRuntimeService(),
         'ObserveNativeRuntimeServiceState' => $adapter->observeNativeRuntimeServiceState(),
+        'MaterializeNativeBusOwnership' => $adapter->materializeNativeBusOwnership(),
         'serve-dbus' => $adapter->serveDbus(),
         'serve-stdio-adapter' => serveAdapter($adapter, $outputPath),
         default => throw new ValidationError(sprintf('Comando no soportado: %s', $command)),
@@ -82,7 +83,7 @@ try {
         echo $output;
     }
 
-    if ($command === 'serve-dbus' || $command === 'ExecuteActivation' || $command === 'StartNativeRuntimeService' || $command === 'ObserveNativeRuntimeServiceState') {
+    if ($command === 'serve-dbus' || $command === 'ExecuteActivation' || $command === 'StartNativeRuntimeService' || $command === 'ObserveNativeRuntimeServiceState' || $command === 'MaterializeNativeBusOwnership') {
         $decodedOutput = json_decode($output, true);
         $exitCode = is_array($decodedOutput) && is_int($decodedOutput['exit_code'] ?? null)
             ? $decodedOutput['exit_code']

@@ -78,6 +78,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertContains('AttemptActivation', $manifest['runtime_adapter']['commands']);
         self::assertContains('ExecuteActivation', $manifest['runtime_adapter']['commands']);
         self::assertContains('ObserveNativeRuntimeServiceState', $manifest['runtime_adapter']['commands']);
+        self::assertContains('MaterializeNativeBusOwnership', $manifest['runtime_adapter']['commands']);
         self::assertContains('serve-stdio-adapter', $manifest['runtime_adapter']['commands']);
         self::assertSame('files/usr/local/lib/w4/system-api/w4-system-api-dbus-bridge.php', $manifest['runtime_bridge']['entrypoint']);
         self::assertSame('files/usr/local/bin/w4-system-api-dbus-bridge', $manifest['runtime_bridge']['wrapper']);
@@ -227,6 +228,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertStringContainsString("case 'ExecuteActivation':", $runtimeAdapterScript);
         self::assertStringContainsString("case 'StartNativeRuntimeService':", $runtimeAdapterScript);
         self::assertStringContainsString("case 'ObserveNativeRuntimeServiceState':", $runtimeAdapterScript);
+        self::assertStringContainsString("case 'MaterializeNativeBusOwnership':", $runtimeAdapterScript);
         self::assertStringContainsString("case 'serve-stdio-adapter':", $runtimeAdapterScript);
         self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-activation-attempt'", $runtimeAdapterScript);
         self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-activation-result'", $runtimeAdapterScript);
@@ -548,6 +550,28 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertTrue($runtimeAdapterObserveNativePayload['observed']);
         self::assertSame('pending-bus-name-ownership', $runtimeAdapterObserveNativePayload['ownership_state']);
         self::assertSame('materialize-native-bus-ownership', $runtimeAdapterObserveNativePayload['next_action']);
+
+        $runtimeAdapterOwnNative = $this->runGeneratedPhpScript([
+            $runtimeAdapterScriptPath,
+            'MaterializeNativeBusOwnership',
+        ], array_merge($this->readyRuntimeEnvironment(), [
+            'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+            'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR' => $nativeArtifactsDir,
+            'W4_SYSTEM_API_NATIVE_RUNTIME_REQUEST_NAME_STATE' => 'owned',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_REGISTER_OBJECT_STATE' => 'registered',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_WAIT_LOOP_STATE' => 'running',
+        ]));
+        self::assertSame(0, $runtimeAdapterOwnNative['exitCode'], $runtimeAdapterOwnNative['stderr']);
+        $runtimeAdapterOwnNativePayload = $this->decodeJson($runtimeAdapterOwnNative['stdout']);
+        self::assertSame('system-api-dbus-native-runtime-ownership', $runtimeAdapterOwnNativePayload['kind']);
+        self::assertSame('native-runtime-bus-owned', $runtimeAdapterOwnNativePayload['status']);
+        self::assertSame('bus-name-owned', $runtimeAdapterOwnNativePayload['ownership_state']);
+        self::assertSame('runtime-service-active', $runtimeAdapterOwnNativePayload['next_action']);
 
         $runtimeHostScriptPath = $outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-runtime-host.php';
         $runtimeHostScript = file_get_contents($runtimeHostScriptPath);

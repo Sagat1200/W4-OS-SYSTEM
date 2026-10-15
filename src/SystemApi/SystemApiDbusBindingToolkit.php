@@ -135,6 +135,7 @@ final class SystemApiDbusBindingToolkit
                         'DescribeNativeRuntimeService',
                         'StartNativeRuntimeService',
                         'ObserveNativeRuntimeServiceState',
+                        'MaterializeNativeBusOwnership',
                         'DescribeRuntime',
                         'DiagnoseRuntime',
                         'GetCapabilities',
@@ -741,6 +742,7 @@ function createAdapterSpecification(): array
             'DescribeNativeRuntimeService',
             'StartNativeRuntimeService',
             'ObserveNativeRuntimeServiceState',
+            'MaterializeNativeBusOwnership',
         ],
         'protocol' => [
             'input' => 'string-json',
@@ -965,6 +967,12 @@ switch ($command) {
         emitJson($nativeRuntimeObservation);
         exit($nativeRuntimeObservation['exit_code']);
 
+    case 'MaterializeNativeBusOwnership':
+        $nativeBusOwnership = createNativeBusOwnershipReport(buildRuntimeDiagnosis());
+        persistNativeRuntimeOwnershipArtifacts($nativeBusOwnership);
+        emitJson($nativeBusOwnership);
+        exit($nativeBusOwnership['exit_code']);
+
     case 'DescribeRuntime':
         emitJson(createAdapterRuntime());
         exit(0);
@@ -1031,6 +1039,7 @@ function createAdapterRuntime(): array
             'DescribeNativeRuntimeService',
             'StartNativeRuntimeService',
             'ObserveNativeRuntimeServiceState',
+            'MaterializeNativeBusOwnership',
             'DescribeRuntime',
             'DiagnoseRuntime',
             'GetCapabilities',
@@ -1395,6 +1404,110 @@ function createNativeRuntimeServiceObservationReport(array $runtimeDiagnosis): a
 }
 
 /**
+ * @param array<string, mixed> $runtimeDiagnosis
+ * @return array<string, mixed>
+ */
+function createNativeBusOwnershipReport(array $runtimeDiagnosis): array
+{
+    $environment = captureEnvironment();
+    $serviceDefinition = createNativeRuntimeServiceDefinition($runtimeDiagnosis);
+    $observation = createNativeRuntimeServiceObservationReport($runtimeDiagnosis);
+    $eligible = ($serviceDefinition['eligible'] ?? false) === true;
+    $observed = ($observation['observed'] ?? false) === true;
+    $attempted = $eligible && $observed;
+    $requestNameState = resolveNativeRuntimePhaseState(
+        $environment,
+        'W4_SYSTEM_API_NATIVE_RUNTIME_REQUEST_NAME_STATE',
+        ['not-attempted', 'pending', 'owned', 'failed'],
+        $attempted ? 'pending' : 'not-attempted'
+    );
+    $registerObjectState = resolveNativeRuntimePhaseState(
+        $environment,
+        'W4_SYSTEM_API_NATIVE_RUNTIME_REGISTER_OBJECT_STATE',
+        ['not-attempted', 'pending', 'registered', 'failed', 'skipped'],
+        !$attempted ? 'not-attempted' : ($requestNameState === 'owned' ? 'pending' : 'skipped')
+    );
+    $waitLoopState = resolveNativeRuntimePhaseState(
+        $environment,
+        'W4_SYSTEM_API_NATIVE_RUNTIME_WAIT_LOOP_STATE',
+        ['not-attempted', 'pending', 'running', 'failed', 'skipped'],
+        !$attempted ? 'not-attempted' : ($requestNameState === 'owned' && $registerObjectState === 'registered' ? 'pending' : 'skipped')
+    );
+    $hasFailure = in_array('failed', [$requestNameState, $registerObjectState, $waitLoopState], true);
+    $busOwned = $requestNameState === 'owned'
+        && $registerObjectState === 'registered'
+        && $waitLoopState === 'running';
+    $ownershipState = !$attempted
+        ? 'blocked-before-ownership'
+        : ($hasFailure
+            ? 'native-runtime-ownership-failed'
+            : ($busOwned ? 'bus-name-owned' : 'pending-bus-name-ownership'));
+    $status = !$eligible
+        ? 'native-runtime-service-blocked'
+        : (!$observed
+            ? 'native-runtime-bus-ownership-blocked'
+            : ($hasFailure
+                ? 'native-runtime-bus-ownership-failed'
+                : ($busOwned
+                    ? 'native-runtime-bus-owned'
+                    : 'native-runtime-bus-ownership-pending')));
+    $blockingReason = !$eligible
+        ? (is_string($serviceDefinition['blocking_reason'] ?? null)
+            ? $serviceDefinition['blocking_reason']
+            : 'native-runtime-service-unavailable')
+        : (!$observed
+            ? 'native-runtime-service-not-observed'
+            : ($requestNameState === 'failed'
+                ? 'native-runtime-request-name-failed'
+                : ($registerObjectState === 'failed'
+                    ? 'native-runtime-register-object-failed'
+                    : ($waitLoopState === 'failed'
+                        ? 'native-runtime-wait-loop-failed'
+                        : ($busOwned ? null : 'native-runtime-bus-ownership-pending')))));
+    $nextAction = !$eligible
+        ? 'complete-native-runtime-backend'
+        : (!$observed
+            ? 'observe-native-runtime-service-state'
+            : ($busOwned
+                ? 'runtime-service-active'
+                : ($hasFailure
+                    ? 'inspect-native-runtime-ownership-report'
+                    : 'observe-native-runtime-service-state')));
+
+    return [
+        'api_version' => '1.0',
+        'kind' => 'system-api-dbus-native-runtime-ownership',
+        'status' => $status,
+        'attempted' => $attempted,
+        'exit_code' => !$attempted ? 3 : ($busOwned ? 0 : ($hasFailure ? 1 : 3)),
+        'startup_acknowledged' => ($observation['startup_acknowledged'] ?? false) === true,
+        'bus_name' => W4_SYSTEM_API_BUS_NAME,
+        'object_path' => W4_SYSTEM_API_OBJECT_PATH,
+        'interface' => W4_SYSTEM_API_INTERFACE,
+        'service_definition' => $serviceDefinition,
+        'runtime_backend' => $serviceDefinition['runtime_backend'] ?? [],
+        'service_observation' => $observation,
+        'ownership_state' => $ownershipState,
+        'service_lifecycle' => [
+            'request_name' => [
+                'required' => true,
+                'state' => $requestNameState,
+            ],
+            'register_object' => [
+                'required' => true,
+                'state' => $registerObjectState,
+            ],
+            'wait_loop' => [
+                'required' => true,
+                'state' => $waitLoopState,
+            ],
+        ],
+        'blocking_reason' => $blockingReason,
+        'next_action' => $nextAction,
+    ];
+}
+
+/**
  * @param array<string, string> $environment
  */
 function resolveNativeDbusClassName(array $environment): ?string
@@ -1436,6 +1549,22 @@ function resolvePathValue(array $environment, string $key, string $default): str
     $value = $environment[$key] ?? null;
 
     return is_string($value) && trim($value) !== '' ? trim($value) : $default;
+}
+
+/**
+ * @param array<string, string> $environment
+ * @param list<string> $allowedStates
+ */
+function resolveNativeRuntimePhaseState(array $environment, string $key, array $allowedStates, string $default): string
+{
+    $value = $environment[$key] ?? null;
+    if (!is_string($value) || trim($value) === '') {
+        return $default;
+    }
+
+    $normalized = strtolower(trim($value));
+
+    return in_array($normalized, $allowedStates, true) ? $normalized : $default;
 }
 
 /**
@@ -1525,6 +1654,40 @@ function persistNativeRuntimeArtifacts(array $report): void
     }
 
     if ($pidFilePath !== null) {
+        writeArtifactFile($pidFilePath, "0\n");
+    }
+}
+
+/**
+ * @param array<string, mixed> $report
+ */
+function persistNativeRuntimeOwnershipArtifacts(array $report): void
+{
+    if (($report['attempted'] ?? false) !== true) {
+        return;
+    }
+
+    $serviceDefinition = is_array($report['service_definition'] ?? null) ? $report['service_definition'] : [];
+    $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
+    $readyMarkerPath = optionalArtifactPath($artifacts, 'ready_marker_path');
+    $statusFilePath = optionalArtifactPath($artifacts, 'status_file_path');
+    $pidFilePath = optionalArtifactPath($artifacts, 'pid_file_path');
+
+    if ($readyMarkerPath !== null) {
+        $readyMarkerContents = ($report['ownership_state'] ?? null) === 'bus-name-owned'
+            ? "native-runtime-bus-owned\n"
+            : "native-runtime-service-started\n";
+        writeArtifactFile($readyMarkerPath, $readyMarkerContents);
+    }
+
+    if ($statusFilePath !== null) {
+        $statusPayload = json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($statusPayload !== false) {
+            writeArtifactFile($statusFilePath, $statusPayload . PHP_EOL);
+        }
+    }
+
+    if ($pidFilePath !== null && !is_file($pidFilePath)) {
         writeArtifactFile($pidFilePath, "0\n");
     }
 }
@@ -2225,6 +2388,7 @@ function createAdapterSpecification(): array
             'DescribeNativeRuntimeService',
             'StartNativeRuntimeService',
             'ObserveNativeRuntimeServiceState',
+            'MaterializeNativeBusOwnership',
         ],
         'protocol' => [
             'input' => 'string-json',
@@ -2900,6 +3064,7 @@ function createAdapterSpecification(): array
             'DescribeNativeRuntimeService',
             'StartNativeRuntimeService',
             'ObserveNativeRuntimeServiceState',
+            'MaterializeNativeBusOwnership',
         ],
         'protocol' => [
             'input' => 'string-json',
@@ -4014,6 +4179,7 @@ function createAdapterSpecification(): array
             'DescribeNativeRuntimeService',
             'StartNativeRuntimeService',
             'ObserveNativeRuntimeServiceState',
+            'MaterializeNativeBusOwnership',
         ],
         'protocol' => [
             'input' => 'string-json',

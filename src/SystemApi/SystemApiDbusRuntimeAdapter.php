@@ -56,6 +56,7 @@ final class SystemApiDbusRuntimeAdapter
                 'DescribeNativeRuntimeService',
                 'StartNativeRuntimeService',
                 'ObserveNativeRuntimeServiceState',
+                'MaterializeNativeBusOwnership',
                 'DescribeRuntime',
                 'DiagnoseRuntime',
                 'GetCapabilities',
@@ -124,6 +125,14 @@ final class SystemApiDbusRuntimeAdapter
         return $this->encodeJson(
             $this->runtimeBackend->createNativeRuntimeServiceObservationReport($this->runtimeProbe->createReport())
         );
+    }
+
+    public function materializeNativeBusOwnership(): string
+    {
+        $report = $this->runtimeBackend->createNativeBusOwnershipReport($this->runtimeProbe->createReport());
+        $this->persistNativeRuntimeOwnershipArtifacts($report);
+
+        return $this->encodeJson($report);
     }
 
     public function describeSpecification(): string
@@ -198,6 +207,7 @@ final class SystemApiDbusRuntimeAdapter
             'DescribeNativeRuntimeService' => $this->describeNativeRuntimeService(),
             'StartNativeRuntimeService' => $this->startNativeRuntimeService(),
             'ObserveNativeRuntimeServiceState' => $this->observeNativeRuntimeServiceState(),
+            'MaterializeNativeBusOwnership' => $this->materializeNativeBusOwnership(),
             'ServeDbus' => $this->serveDbus(),
             default => throw new ValidationError(sprintf('Metodo de runtime adapter no soportado: %s', $method)),
         };
@@ -536,6 +546,40 @@ final class SystemApiDbusRuntimeAdapter
         }
 
         if ($pidFilePath !== null) {
+            $this->writeArtifactFile($pidFilePath, "0\n");
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     */
+    private function persistNativeRuntimeOwnershipArtifacts(array $report): void
+    {
+        if (($report['attempted'] ?? false) !== true) {
+            return;
+        }
+
+        $serviceDefinition = is_array($report['service_definition'] ?? null) ? $report['service_definition'] : [];
+        $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
+        $readyMarkerPath = $this->optionalArtifactPath($artifacts, 'ready_marker_path');
+        $statusFilePath = $this->optionalArtifactPath($artifacts, 'status_file_path');
+        $pidFilePath = $this->optionalArtifactPath($artifacts, 'pid_file_path');
+
+        if ($readyMarkerPath !== null) {
+            $readyMarkerContents = ($report['ownership_state'] ?? null) === 'bus-name-owned'
+                ? "native-runtime-bus-owned\n"
+                : "native-runtime-service-started\n";
+            $this->writeArtifactFile($readyMarkerPath, $readyMarkerContents);
+        }
+
+        if ($statusFilePath !== null) {
+            $statusPayload = json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($statusPayload !== false) {
+                $this->writeArtifactFile($statusFilePath, $statusPayload . PHP_EOL);
+            }
+        }
+
+        if ($pidFilePath !== null && !is_file($pidFilePath)) {
             $this->writeArtifactFile($pidFilePath, "0\n");
         }
     }

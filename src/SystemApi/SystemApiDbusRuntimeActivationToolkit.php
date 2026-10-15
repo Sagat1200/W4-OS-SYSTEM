@@ -282,6 +282,7 @@ final class SystemApiDbusRuntimeActivationToolkit
                 'DescribeNativeRuntimeService',
                 'StartNativeRuntimeService',
                 'ObserveNativeRuntimeServiceState',
+                'MaterializeNativeBusOwnership',
             ],
             'protocol' => [
                 'input' => 'string-json',
