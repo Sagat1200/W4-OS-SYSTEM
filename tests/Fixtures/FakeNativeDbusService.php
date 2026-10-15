@@ -38,12 +38,20 @@ final class FakeNativeDbusService
             throw new RuntimeException('El driver nativo debe registrar /org/w4/System1');
         }
 
-        $specification = $object->describeSpecification();
+        $specification = json_decode($object->DescribeSpecification(), true, 512, JSON_THROW_ON_ERROR);
         if (($specification['interface'] ?? null) !== 'org.w4.System1.Manager') {
             throw new RuntimeException('El objeto exportado no conserva la interfaz esperada');
         }
 
-        $capabilities = $object->getCapabilities('fake-dbus-capabilities');
+        if (($object->ApiVersion ?? null) !== '1.0') {
+            throw new RuntimeException('El objeto exportado no publica ApiVersion');
+        }
+
+        if (($object->BindingStatus ?? null) !== 'native-runtime-object-exported') {
+            throw new RuntimeException('El objeto exportado no publica BindingStatus');
+        }
+
+        $capabilities = json_decode($object->GetCapabilities('fake-dbus-capabilities'), true, 512, JSON_THROW_ON_ERROR);
         if (($capabilities['request_id'] ?? null) !== 'fake-dbus-capabilities') {
             throw new RuntimeException('El objeto exportado no delega GetCapabilities al manager real');
         }
@@ -52,12 +60,12 @@ final class FakeNativeDbusService
             throw new RuntimeException('GetCapabilities no devuelve el contrato real de system.capabilities');
         }
 
-        $callResponse = $object->call([
+        $callResponse = json_decode($object->Call(json_encode([
             'api_version' => '1.0',
             'request_id' => 'fake-dbus-call',
             'method' => 'system.dbus-runtime',
             'params' => [],
-        ]);
+        ], JSON_THROW_ON_ERROR)), true, 512, JSON_THROW_ON_ERROR);
         if (($callResponse['request_id'] ?? null) !== 'fake-dbus-call') {
             throw new RuntimeException('El objeto exportado no conserva el request_id de Call');
         }

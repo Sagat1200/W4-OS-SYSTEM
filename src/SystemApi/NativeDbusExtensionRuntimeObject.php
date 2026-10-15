@@ -6,6 +6,10 @@ namespace W4\OS\SystemApi;
 
 final class NativeDbusExtensionRuntimeObject
 {
+    public readonly string $ApiVersion;
+    public readonly string $BindingStatus;
+
+    private SystemApiManager $manager;
     private SystemApiToolkit $toolkit;
 
     /**
@@ -15,13 +19,16 @@ final class NativeDbusExtensionRuntimeObject
         private readonly array $serviceDefinition,
         string $rootDir
     ) {
+        $this->ApiVersion = '1.0';
+        $this->BindingStatus = 'native-runtime-object-exported';
+        $this->manager = new SystemApiManager($rootDir);
         $this->toolkit = new SystemApiToolkit($rootDir);
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function describeSpecification(): array
+    public function createSpecificationPayload(): array
     {
         return [
             'kind' => 'system-api-dbus-native-runtime-object',
@@ -29,6 +36,8 @@ final class NativeDbusExtensionRuntimeObject
             'object_path' => $this->serviceDefinition['object_path'] ?? null,
             'interface' => $this->serviceDefinition['interface'] ?? null,
             'service_lifecycle' => $this->serviceDefinition['service_lifecycle'] ?? null,
+            'api_version' => $this->ApiVersion,
+            'binding_status' => $this->BindingStatus,
             'supported_methods' => [
                 'DescribeSpecification',
                 'GetCapabilities',
@@ -41,7 +50,7 @@ final class NativeDbusExtensionRuntimeObject
     /**
      * @return array<string, mixed>
      */
-    public function getCapabilities(?string $requestId = null): array
+    public function createCapabilitiesPayload(?string $requestId = null): array
     {
         return $this->toolkit->createCapabilitiesResponse($requestId);
     }
@@ -50,7 +59,7 @@ final class NativeDbusExtensionRuntimeObject
      * @param array<string, mixed> $request
      * @return array<string, mixed>
      */
-    public function call(array $request = []): array
+    public function dispatchCallPayload(array $request = []): array
     {
         $normalizedRequest = $request;
         if (!isset($normalizedRequest['api_version']) || !is_string($normalizedRequest['api_version'])) {
@@ -64,5 +73,35 @@ final class NativeDbusExtensionRuntimeObject
         }
 
         return $this->toolkit->respond($normalizedRequest);
+    }
+
+    public function DescribeSpecification(): string
+    {
+        return $this->encodeJson($this->createSpecificationPayload());
+    }
+
+    public function GetCapabilities(string $requestId = ''): string
+    {
+        $normalizedRequestId = trim($requestId) === '' ? null : $requestId;
+
+        return $this->manager->getCapabilities($normalizedRequestId);
+    }
+
+    public function Call(string $requestJson = '{}'): string
+    {
+        return $this->manager->call($requestJson);
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function encodeJson(array $payload): string
+    {
+        $encoded = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        if ($encoded === false) {
+            throw new \RuntimeException('No se pudo serializar la especificacion del runtime D-Bus nativo');
+        }
+
+        return $encoded . PHP_EOL;
     }
 }
