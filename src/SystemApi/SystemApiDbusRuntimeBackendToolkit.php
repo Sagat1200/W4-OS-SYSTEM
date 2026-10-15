@@ -199,28 +199,58 @@ final class SystemApiDbusRuntimeBackendToolkit
         $eligible = ($serviceDefinition['eligible'] ?? false) === true;
         $observed = ($observation['observed'] ?? false) === true;
         $attempted = $eligible && $observed;
-        $requestNameState = $this->resolveNativeRuntimePhaseState(
-            $env,
-            'W4_SYSTEM_API_NATIVE_RUNTIME_REQUEST_NAME_STATE',
-            ['not-attempted', 'pending', 'owned', 'failed'],
-            $attempted ? 'pending' : 'not-attempted'
-        );
-        $registerObjectState = $this->resolveNativeRuntimePhaseState(
-            $env,
-            'W4_SYSTEM_API_NATIVE_RUNTIME_REGISTER_OBJECT_STATE',
-            ['not-attempted', 'pending', 'registered', 'failed', 'skipped'],
-            !$attempted ? 'not-attempted' : ($requestNameState === 'owned' ? 'pending' : 'skipped')
-        );
-        $waitLoopState = $this->resolveNativeRuntimePhaseState(
-            $env,
-            'W4_SYSTEM_API_NATIVE_RUNTIME_WAIT_LOOP_STATE',
-            ['not-attempted', 'pending', 'running', 'failed', 'skipped'],
-            !$attempted ? 'not-attempted' : ($requestNameState === 'owned' && $registerObjectState === 'registered' ? 'pending' : 'skipped')
-        );
+        $phaseOverridesConfigured = $this->hasExplicitNativeRuntimePhaseOverrides($env);
+        $driverExecution = $attempted && !$phaseOverridesConfigured
+            ? $this->executeNativeRuntimeOwnershipDriver($serviceDefinition, $env)
+            : null;
+        $requestNameState = $phaseOverridesConfigured
+            ? $this->resolveNativeRuntimePhaseState(
+                $env,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_REQUEST_NAME_STATE',
+                ['not-attempted', 'pending', 'owned', 'failed'],
+                $attempted ? 'pending' : 'not-attempted'
+            )
+            : $this->resolveDriverLifecycleState(
+                $driverExecution,
+                'request_name_state',
+                ['not-attempted', 'pending', 'owned', 'failed'],
+                $attempted ? 'pending' : 'not-attempted'
+            );
+        $registerObjectState = $phaseOverridesConfigured
+            ? $this->resolveNativeRuntimePhaseState(
+                $env,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_REGISTER_OBJECT_STATE',
+                ['not-attempted', 'pending', 'registered', 'failed', 'skipped'],
+                !$attempted ? 'not-attempted' : ($requestNameState === 'owned' ? 'pending' : 'skipped')
+            )
+            : $this->resolveDriverLifecycleState(
+                $driverExecution,
+                'register_object_state',
+                ['not-attempted', 'pending', 'registered', 'failed', 'skipped'],
+                !$attempted ? 'not-attempted' : ($requestNameState === 'owned' ? 'pending' : 'skipped')
+            );
+        $waitLoopState = $phaseOverridesConfigured
+            ? $this->resolveNativeRuntimePhaseState(
+                $env,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_WAIT_LOOP_STATE',
+                ['not-attempted', 'pending', 'running', 'failed', 'skipped'],
+                !$attempted ? 'not-attempted' : ($requestNameState === 'owned' && $registerObjectState === 'registered' ? 'pending' : 'skipped')
+            )
+            : $this->resolveDriverLifecycleState(
+                $driverExecution,
+                'wait_loop_state',
+                ['not-attempted', 'pending', 'running', 'failed', 'skipped'],
+                !$attempted ? 'not-attempted' : ($requestNameState === 'owned' && $registerObjectState === 'registered' ? 'pending' : 'skipped')
+            );
         $hasFailure = in_array('failed', [$requestNameState, $registerObjectState, $waitLoopState], true);
         $busOwned = $requestNameState === 'owned'
             && $registerObjectState === 'registered'
             && $waitLoopState === 'running';
+        $executionMode = !$attempted
+            ? 'blocked-before-ownership'
+            : ($phaseOverridesConfigured
+                ? 'phase-overrides'
+                : ($driverExecution !== null ? 'native-driver' : 'contract-default'));
         $ownershipState = !$attempted
             ? 'blocked-before-ownership'
             : ($hasFailure
@@ -235,19 +265,24 @@ final class SystemApiDbusRuntimeBackendToolkit
                     : ($busOwned
                         ? 'native-runtime-bus-owned'
                         : 'native-runtime-bus-ownership-pending')));
+        $driverBlockingReason = is_string($driverExecution['blocking_reason'] ?? null)
+            && $driverExecution['blocking_reason'] !== ''
+                ? $driverExecution['blocking_reason']
+                : null;
         $blockingReason = !$eligible
             ? (is_string($serviceDefinition['blocking_reason'] ?? null)
                 ? $serviceDefinition['blocking_reason']
                 : 'native-runtime-service-unavailable')
             : (!$observed
                 ? 'native-runtime-service-not-observed'
-                : ($requestNameState === 'failed'
-                    ? 'native-runtime-request-name-failed'
-                    : ($registerObjectState === 'failed'
-                        ? 'native-runtime-register-object-failed'
-                        : ($waitLoopState === 'failed'
-                            ? 'native-runtime-wait-loop-failed'
-                            : ($busOwned ? null : 'native-runtime-bus-ownership-pending')))));
+                : ($driverBlockingReason
+                    ?? ($requestNameState === 'failed'
+                        ? 'native-runtime-request-name-failed'
+                        : ($registerObjectState === 'failed'
+                            ? 'native-runtime-register-object-failed'
+                            : ($waitLoopState === 'failed'
+                                ? 'native-runtime-wait-loop-failed'
+                                : ($busOwned ? null : 'native-runtime-bus-ownership-pending'))))));
         $nextAction = !$eligible
             ? 'complete-native-runtime-backend'
             : (!$observed
@@ -271,6 +306,8 @@ final class SystemApiDbusRuntimeBackendToolkit
             'service_definition' => $serviceDefinition,
             'runtime_backend' => $serviceDefinition['runtime_backend'] ?? [],
             'service_observation' => $observation,
+            'execution_mode' => $executionMode,
+            'ownership_driver' => is_array($driverExecution['driver'] ?? null) ? $driverExecution['driver'] : null,
             'ownership_state' => $ownershipState,
             'service_lifecycle' => [
                 'request_name' => [
@@ -536,6 +573,25 @@ final class SystemApiDbusRuntimeBackendToolkit
 
     /**
      * @param array<string, string> $environment
+     */
+    private function hasExplicitNativeRuntimePhaseOverrides(array $environment): bool
+    {
+        foreach ([
+            'W4_SYSTEM_API_NATIVE_RUNTIME_REQUEST_NAME_STATE',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_REGISTER_OBJECT_STATE',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_WAIT_LOOP_STATE',
+        ] as $key) {
+            $value = $environment[$key] ?? null;
+            if (is_string($value) && trim($value) !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array<string, string> $environment
      * @param list<string> $allowedStates
      */
     private function resolveNativeRuntimePhaseState(
@@ -552,6 +608,147 @@ final class SystemApiDbusRuntimeBackendToolkit
         $normalized = strtolower(trim($value));
 
         return in_array($normalized, $allowedStates, true) ? $normalized : $default;
+    }
+
+    /**
+     * @param array<string, mixed>|null $driverExecution
+     * @param list<string> $allowedStates
+     */
+    private function resolveDriverLifecycleState(?array $driverExecution, string $field, array $allowedStates, string $default): string
+    {
+        $value = $driverExecution[$field] ?? null;
+        if (!is_string($value) || trim($value) === '') {
+            return $default;
+        }
+
+        $normalized = strtolower(trim($value));
+
+        return in_array($normalized, $allowedStates, true) ? $normalized : $default;
+    }
+
+    /**
+     * @param array<string, mixed> $serviceDefinition
+     * @param array<string, string> $environment
+     * @return array<string, mixed>|null
+     */
+    private function executeNativeRuntimeOwnershipDriver(array $serviceDefinition, array $environment): ?array
+    {
+        $driverClassName = $this->resolveNativeRuntimeDriverClassName($environment);
+        $bootstrapPath = $this->resolveNativeRuntimeDriverBootstrapPath($environment);
+        if ($driverClassName === null && $bootstrapPath === null) {
+            return null;
+        }
+
+        if ($bootstrapPath !== null && is_file($bootstrapPath)) {
+            require_once $bootstrapPath;
+        }
+
+        if ($driverClassName === null) {
+            return [
+                'request_name_state' => 'failed',
+                'register_object_state' => 'not-attempted',
+                'wait_loop_state' => 'not-attempted',
+                'blocking_reason' => 'native-runtime-driver-class-not-configured',
+                'driver' => [
+                    'mode' => 'native-driver',
+                    'bootstrap_path' => $bootstrapPath,
+                    'class_name' => null,
+                ],
+            ];
+        }
+
+        if (!class_exists($driverClassName)) {
+            return [
+                'request_name_state' => 'failed',
+                'register_object_state' => 'not-attempted',
+                'wait_loop_state' => 'not-attempted',
+                'blocking_reason' => 'native-runtime-driver-class-unavailable',
+                'driver' => [
+                    'mode' => 'native-driver',
+                    'bootstrap_path' => $bootstrapPath,
+                    'class_name' => $driverClassName,
+                    'available' => false,
+                ],
+            ];
+        }
+
+        try {
+            $method = new \ReflectionMethod($driverClassName, 'materializeOwnership');
+            $result = $method->isStatic()
+                ? $driverClassName::materializeOwnership($serviceDefinition)
+                : (new $driverClassName())->materializeOwnership($serviceDefinition);
+        } catch (\ReflectionException) {
+            return [
+                'request_name_state' => 'failed',
+                'register_object_state' => 'not-attempted',
+                'wait_loop_state' => 'not-attempted',
+                'blocking_reason' => 'native-runtime-driver-method-unavailable',
+                'driver' => [
+                    'mode' => 'native-driver',
+                    'bootstrap_path' => $bootstrapPath,
+                    'class_name' => $driverClassName,
+                    'available' => true,
+                ],
+            ];
+        } catch (\Throwable $exception) {
+            return [
+                'request_name_state' => 'failed',
+                'register_object_state' => 'not-attempted',
+                'wait_loop_state' => 'not-attempted',
+                'blocking_reason' => 'native-runtime-driver-execution-failed',
+                'driver' => [
+                    'mode' => 'native-driver',
+                    'bootstrap_path' => $bootstrapPath,
+                    'class_name' => $driverClassName,
+                    'available' => true,
+                    'error_message' => $exception->getMessage(),
+                ],
+            ];
+        }
+
+        if (!is_array($result)) {
+            return [
+                'request_name_state' => 'failed',
+                'register_object_state' => 'not-attempted',
+                'wait_loop_state' => 'not-attempted',
+                'blocking_reason' => 'native-runtime-driver-invalid-result',
+                'driver' => [
+                    'mode' => 'native-driver',
+                    'bootstrap_path' => $bootstrapPath,
+                    'class_name' => $driverClassName,
+                    'available' => true,
+                ],
+            ];
+        }
+
+        $driver = is_array($result['driver'] ?? null) ? $result['driver'] : [];
+        $driver['mode'] = 'native-driver';
+        $driver['bootstrap_path'] = $bootstrapPath;
+        $driver['class_name'] = $driverClassName;
+        $driver['available'] = true;
+        $result['driver'] = $driver;
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeDriverClassName(array $environment): ?string
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_DRIVER_CLASS'] ?? null;
+
+        return is_string($value) && trim($value) !== '' ? trim($value) : null;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeDriverBootstrapPath(array $environment): ?string
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_DRIVER_BOOTSTRAP'] ?? null;
+
+        return is_string($value) && trim($value) !== '' ? trim($value) : null;
     }
 
     /**
