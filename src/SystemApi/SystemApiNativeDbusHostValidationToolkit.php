@@ -113,12 +113,19 @@ final class SystemApiNativeDbusHostValidationToolkit
         $environment = is_array($steps['diagnosis']['environment'] ?? null) ? $steps['diagnosis']['environment'] : [];
         $osFamily = $this->resolvePreparationTargetOsFamily($environment, $effectiveOverrides);
         $targetRepoRoot = $this->resolvePreparationTargetRepoRoot($effectiveOverrides, $osFamily);
+        $hostCompatibility = $this->evaluateHostCompatibility($steps['diagnosis'], $targetRepoRoot);
+        $hostCompatible = (($hostCompatibility['compatible'] ?? true) === true);
+        if (!$hostCompatible) {
+            $status = 'blocked';
+            $exitCode = 3;
+        }
         $preparationPlan = $this->createPreparationPlan(
             $steps['diagnosis'],
             $steps['service_definition'],
             $steps['startup'],
             $steps['coupling'],
             $steps['ownership'],
+            $hostCompatibility,
             $effectiveOverrides,
             $osFamily,
             $targetRepoRoot,
@@ -126,6 +133,35 @@ final class SystemApiNativeDbusHostValidationToolkit
             $ownershipValidated,
             $couplingReady
         );
+        $blockingReason = $hostCompatible
+            ? $this->resolvePrimaryValue(
+                $finalSnapshot,
+                $finalObservation,
+                $steps['startup'],
+                $steps['service_definition']
+            )
+            : (is_string($hostCompatibility['blocking_reason'] ?? null) ? $hostCompatibility['blocking_reason'] : null);
+        $nextAction = $hostCompatible
+            ? $this->resolvePrimaryNextAction(
+                $finalSnapshot,
+                $finalObservation,
+                $steps['startup'],
+                $steps['service_definition']
+            )
+            : (is_string($hostCompatibility['next_action'] ?? null) ? $hostCompatibility['next_action'] : null);
+        $recommendedNextActions = array_values(array_unique(array_filter(array_merge(
+            is_array($hostCompatibility['recommended_next_actions'] ?? null)
+                ? $hostCompatibility['recommended_next_actions']
+                : [],
+            $this->collectRecommendedNextActions(
+                $steps['service_definition'],
+                $steps['startup'],
+                $steps['observation_after_startup'],
+                $steps['coupling'],
+                $steps['ownership'],
+                $steps['observation_after_ownership']
+            )
+        ), static fn (mixed $value): bool => is_string($value) && trim($value) !== '')));
 
         $report = [
             'api_version' => '1.0',
@@ -152,26 +188,10 @@ final class SystemApiNativeDbusHostValidationToolkit
             'ownership_validated' => $ownershipValidated,
             'coupling_ready' => $couplingReady,
             'startup_acknowledged' => $startupReady,
-            'blocking_reason' => $this->resolvePrimaryValue(
-                $finalSnapshot,
-                $finalObservation,
-                $steps['startup'],
-                $steps['service_definition']
-            ),
-            'next_action' => $this->resolvePrimaryNextAction(
-                $finalSnapshot,
-                $finalObservation,
-                $steps['startup'],
-                $steps['service_definition']
-            ),
-            'recommended_next_actions' => $this->collectRecommendedNextActions(
-                $steps['service_definition'],
-                $steps['startup'],
-                $steps['observation_after_startup'],
-                $steps['coupling'],
-                $steps['ownership'],
-                $steps['observation_after_ownership']
-            ),
+            'blocking_reason' => $blockingReason,
+            'next_action' => $nextAction,
+            'recommended_next_actions' => $recommendedNextActions,
+            'host_compatibility' => $hostCompatibility,
             'preparation_plan' => $preparationPlan,
             'environment_overrides' => $effectiveOverrides,
             'steps' => $steps,
@@ -258,12 +278,20 @@ final class SystemApiNativeDbusHostValidationToolkit
             sprintf('- Startup acknowledged: `%s`', (($report['startup_acknowledged'] ?? false) === true) ? 'yes' : 'no'),
             sprintf('- Preparation target OS family: `%s`', (string) ($report['preparation_target_os_family'] ?? 'n/a')),
             sprintf('- Preparation target repo root: `%s`', (string) ($report['preparation_target_repo_root'] ?? 'n/a')),
+            sprintf('- Host compatibility: `%s`', (($report['host_compatibility']['compatible'] ?? true) === true) ? 'compatible' : 'blocked'),
             sprintf('- Blocking reason: `%s`', (string) ($report['blocking_reason'] ?? 'n/a')),
             sprintf('- Next action: `%s`', (string) ($report['next_action'] ?? 'n/a')),
             sprintf('- Report path: `%s`', (string) ($report['report_path'] ?? 'n/a')),
             sprintf('- Handoff path: `%s`', (string) ($report['handoff_path'] ?? 'n/a')),
             sprintf('- Preparation shell script: `%s`', (string) ($report['preparation_shell_script_path'] ?? 'n/a')),
             sprintf('- Preparation checklist: `%s`', (string) ($report['preparation_checklist_path'] ?? 'n/a')),
+            '',
+            '## Host Compatibility',
+            '',
+            sprintf('- Detected OS family: `%s`', (string) ($report['host_compatibility']['os_family'] ?? 'n/a')),
+            sprintf('- Detected PHP version: `%s`', (string) ($report['host_compatibility']['php_version'] ?? 'n/a')),
+            sprintf('- Required PHP constraint: `%s`', (string) ($report['host_compatibility']['required_php_constraint'] ?? 'n/a')),
+            sprintf('- Required PHP version: `%s`', (string) ($report['host_compatibility']['required_php_version'] ?? 'n/a')),
             '',
             '## Recommended Next Actions',
             '',
@@ -560,6 +588,7 @@ final class SystemApiNativeDbusHostValidationToolkit
      * @param array<string, mixed> $startup
      * @param array<string, mixed> $coupling
      * @param array<string, mixed>|null $ownership
+     * @param array<string, mixed> $hostCompatibility
      * @param array<string, string> $environmentOverrides
      * @return list<array<string, mixed>>
      */
@@ -569,6 +598,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         array $startup,
         array $coupling,
         ?array $ownership,
+        array $hostCompatibility,
         array $environmentOverrides,
         string $osFamily,
         string $targetRepoRoot,
@@ -577,6 +607,25 @@ final class SystemApiNativeDbusHostValidationToolkit
         bool $couplingReady
     ): array {
         $plan = [];
+        if ((($hostCompatibility['compatible'] ?? true) === false)) {
+            $compatibilitySteps = $hostCompatibility['preparation_steps'] ?? [];
+            if (is_array($compatibilitySteps)) {
+                foreach ($compatibilitySteps as $step) {
+                    if (is_array($step)) {
+                        $plan[] = $step;
+                    }
+                }
+            }
+
+            $plan[] = [
+                'action' => 'rerun-native-runtime-validation',
+                'description' => 'Reejecutar el runner despues de homologar el runtime PHP del host Linux para confirmar si el siguiente bloqueo ya es exclusivamente D-Bus.',
+                'commands' => $this->buildRerunCommands($osFamily, $targetRepoRoot),
+            ];
+
+            return $plan;
+        }
+
         $missingCapabilities = $diagnosis['missing_capabilities'] ?? [];
 
         if (is_array($missingCapabilities)) {
@@ -687,6 +736,161 @@ final class SystemApiNativeDbusHostValidationToolkit
         return [
             sprintf('Resolver manualmente la capacidad faltante `%s` para el sistema operativo `%s`.', $capability, $osFamily),
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $diagnosis
+     * @return array<string, mixed>
+     */
+    private function evaluateHostCompatibility(array $diagnosis, string $targetRepoRoot): array
+    {
+        $environment = is_array($diagnosis['environment'] ?? null) ? $diagnosis['environment'] : [];
+        $osFamily = is_string($environment['os_family'] ?? null) ? trim((string) $environment['os_family']) : 'Unknown';
+        $phpVersion = is_string($environment['php_version'] ?? null) ? trim((string) $environment['php_version']) : '';
+        $requiredPhpConstraint = $this->resolveRequiredPhpConstraint();
+        $requiredPhpVersion = $this->resolveMinimumPhpVersionFromConstraint($requiredPhpConstraint);
+        $compatible = true;
+        $blockingReason = null;
+        $nextAction = null;
+        $recommendedNextActions = [];
+        $preparationSteps = [];
+
+        if (
+            $this->normalizeOsFamily($osFamily) === 'linux'
+            && $phpVersion !== ''
+            && $requiredPhpVersion !== null
+            && version_compare($this->normalizePhpVersion($phpVersion), $requiredPhpVersion, '<')
+        ) {
+            $compatible = false;
+            $blockingReason = 'linux-php-runtime-too-old';
+            $nextAction = 'upgrade-runtime-php';
+            $recommendedNextActions = [
+                'upgrade-runtime-php',
+                'migrate-to-modern-linux-host',
+            ];
+            $preparationSteps[] = $this->createPhpRuntimeCompatibilityStep(
+                $phpVersion,
+                $requiredPhpConstraint,
+                $requiredPhpVersion,
+                $targetRepoRoot
+            );
+        }
+
+        return [
+            'compatible' => $compatible,
+            'os_family' => $osFamily,
+            'php_version' => $phpVersion,
+            'required_php_constraint' => $requiredPhpConstraint,
+            'required_php_version' => $requiredPhpVersion,
+            'blocking_reason' => $blockingReason,
+            'next_action' => $nextAction,
+            'recommended_next_actions' => $recommendedNextActions,
+            'preparation_steps' => $preparationSteps,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function createPhpRuntimeCompatibilityStep(
+        string $detectedPhpVersion,
+        ?string $requiredPhpConstraint,
+        ?string $requiredPhpVersion,
+        string $targetRepoRoot
+    ): array {
+        $requiredLabel = $requiredPhpConstraint ?? ($requiredPhpVersion ?? '8.4.0');
+
+        return [
+            'action' => 'upgrade-runtime-php',
+            'description' => sprintf(
+                'El host Linux publica PHP `%s`, pero el repo exige `%s`. Homologar un runtime PHP moderno antes de volver a intentar PECL `dbus` y el ownership real.',
+                $detectedPhpVersion !== '' ? $detectedPhpVersion : 'unknown',
+                $requiredLabel
+            ),
+            'commands' => $this->buildPhpRuntimeCompatibilityCommands($requiredPhpVersion, $targetRepoRoot),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildPhpRuntimeCompatibilityCommands(?string $requiredPhpVersion, string $targetRepoRoot): array
+    {
+        $majorMinorVersion = $requiredPhpVersion !== null
+            ? implode('.', array_slice(explode('.', $requiredPhpVersion), 0, 2))
+            : '8.4';
+        $manifestProbe = $targetRepoRoot !== ''
+            ? sprintf(
+                'cd "%s" && php -r "echo json_decode(file_get_contents(\'composer.json\'), true)[\'require\'][\'php\'], PHP_EOL;"',
+                $targetRepoRoot
+            )
+            : 'php -r "echo json_decode(file_get_contents(\'composer.json\'), true)[\'require\'][\'php\'], PHP_EOL;"';
+
+        return [
+            'php --version',
+            $manifestProbe,
+            'lsb_release -a || cat /etc/os-release',
+            sprintf('sudo apt-cache policy php%s-cli php%s-dev php%s-pear', $majorMinorVersion, $majorMinorVersion, $majorMinorVersion),
+            'sudo apt-get update',
+            sprintf('sudo apt-get install -y php%s-cli php%s-dev php%s-pear', $majorMinorVersion, $majorMinorVersion, $majorMinorVersion),
+            'php --version',
+        ];
+    }
+
+    private function resolveRequiredPhpConstraint(): ?string
+    {
+        $composerManifestPath = $this->rootDir . DIRECTORY_SEPARATOR . 'composer.json';
+        if (!is_file($composerManifestPath)) {
+            return null;
+        }
+
+        $raw = file_get_contents($composerManifestPath);
+        if (!is_string($raw) || trim($raw) === '') {
+            return null;
+        }
+
+        try {
+            /** @var array<string, mixed> $manifest */
+            $manifest = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+
+        $constraint = $manifest['require']['php'] ?? null;
+
+        return is_string($constraint) && trim($constraint) !== '' ? trim($constraint) : null;
+    }
+
+    private function resolveMinimumPhpVersionFromConstraint(?string $constraint): ?string
+    {
+        if ($constraint === null || trim($constraint) === '') {
+            return null;
+        }
+
+        if (!preg_match('/(\d+\.\d+(?:\.\d+)?)/', $constraint, $matches)) {
+            return null;
+        }
+
+        return $this->normalizePhpVersion($matches[1]);
+    }
+
+    private function normalizePhpVersion(string $version): string
+    {
+        if (!preg_match('/^\d+(?:\.\d+){0,2}/', trim($version), $matches)) {
+            return '0.0.0';
+        }
+
+        $segments = explode('.', $matches[0]);
+        while (count($segments) < 3) {
+            $segments[] = '0';
+        }
+
+        return implode('.', array_slice($segments, 0, 3));
+    }
+
+    private function normalizeOsFamily(string $osFamily): string
+    {
+        return strtolower(trim($osFamily));
     }
 
     private function renderPreparationShellCommand(string $command, string $osFamily): string

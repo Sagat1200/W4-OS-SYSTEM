@@ -90,6 +90,67 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertStringContainsString('## Re-run Commands', $handoff);
     }
 
+    public function testValidationReportsLinuxPhpCompatibilityBlockBeforeNativeCapabilities(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-php-compatibility-host';
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+            '--target-repo-root',
+            '/srv/w4/os-system',
+        ], [
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_BUSCTL' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_GDBUS' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET' => '0',
+            'W4_SYSTEM_API_PROBE_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_PROBE_PHP_VERSION' => '7.4.3',
+            'W4_SYSTEM_API_PROBE_PHP_BINARY' => '/usr/bin/php',
+        ]);
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('blocked', $payload['status']);
+        self::assertSame('linux-php-runtime-too-old', $payload['blocking_reason']);
+        self::assertSame('upgrade-runtime-php', $payload['next_action']);
+        self::assertContains('upgrade-runtime-php', $payload['recommended_next_actions']);
+        self::assertContains('migrate-to-modern-linux-host', $payload['recommended_next_actions']);
+        self::assertFalse($payload['host_compatibility']['compatible']);
+        self::assertSame('Linux', $payload['host_compatibility']['os_family']);
+        self::assertSame('7.4.3', $payload['host_compatibility']['php_version']);
+        self::assertSame('^8.4', $payload['host_compatibility']['required_php_constraint']);
+        self::assertSame('8.4.0', $payload['host_compatibility']['required_php_version']);
+
+        $preparationActions = array_map(
+            static fn (array $step): string => (string) ($step['action'] ?? ''),
+            $payload['preparation_plan']
+        );
+        self::assertSame(
+            ['upgrade-runtime-php', 'rerun-native-runtime-validation'],
+            $preparationActions
+        );
+
+        $savedSummary = file_get_contents($payload['summary_path']);
+        self::assertNotFalse($savedSummary);
+        self::assertStringContainsString('## Host Compatibility', $savedSummary);
+        self::assertStringContainsString('- Host compatibility: `blocked`', $savedSummary);
+        self::assertStringContainsString('- Detected PHP version: `7.4.3`', $savedSummary);
+        self::assertStringContainsString('- Required PHP constraint: `^8.4`', $savedSummary);
+        self::assertStringContainsString('upgrade-runtime-php', $savedSummary);
+
+        $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
+        self::assertNotFalse($preparationChecklist);
+        self::assertStringContainsString('php8.4-cli', $preparationChecklist);
+        self::assertStringContainsString('cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux', $preparationChecklist);
+        self::assertStringNotContainsString('install-native-dbus-extension', $preparationChecklist);
+    }
+
     public function testValidationCanPrepareOwnedRuntimeAgainstFakeNativeDbusService(): void
     {
         $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'fake-owned-host';
