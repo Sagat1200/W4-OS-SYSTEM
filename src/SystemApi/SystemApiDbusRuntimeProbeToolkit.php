@@ -161,7 +161,10 @@ final class SystemApiDbusRuntimeProbeToolkit
         );
         $explicitReason = $this->resolveStringOverride($environment, 'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_REASON');
         $explicitLogPath = $this->resolveStringOverride($environment, 'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_LOG_PATH');
-        $inferredEvidence = $this->inferNativeDbusExtensionInstallationFromEvidence($environment);
+        $inferredEvidence = $this->inferNativeDbusExtensionInstallationFromStructuredEvidence($environment);
+        if ($inferredEvidence === []) {
+            $inferredEvidence = $this->inferNativeDbusExtensionInstallationFromEvidence($environment);
+        }
         $state = $explicitState
             ?? (is_string($inferredEvidence['state'] ?? null) ? $inferredEvidence['state'] : null)
             ?? ($extensionLoaded ? 'installed' : 'unknown');
@@ -219,6 +222,43 @@ final class SystemApiDbusRuntimeProbeToolkit
         $value = $environment[$key] ?? null;
 
         return is_string($value) && trim($value) !== '' ? trim($value) : null;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     * @return array<string, string>
+     */
+    private function inferNativeDbusExtensionInstallationFromStructuredEvidence(array $environment): array
+    {
+        $evidencePath = $this->resolveStringOverride($environment, 'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_JSON_PATH');
+        if ($evidencePath === null || !is_file($evidencePath)) {
+            return [];
+        }
+
+        $raw = file_get_contents($evidencePath);
+        if (!is_string($raw) || trim($raw) === '') {
+            return [];
+        }
+
+        try {
+            /** @var array<string, mixed> $payload */
+            $payload = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return [];
+        }
+
+        $state = is_string($payload['state'] ?? null) ? trim((string) $payload['state']) : null;
+        if ($state === null || $state === '') {
+            return [];
+        }
+
+        return [
+            'state' => $state,
+            'reason' => is_string($payload['reason'] ?? null) ? trim((string) $payload['reason']) : '',
+            'log_path' => is_string($payload['log_path'] ?? null)
+                ? trim((string) $payload['log_path'])
+                : $evidencePath,
+        ];
     }
 
     /**

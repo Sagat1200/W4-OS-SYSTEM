@@ -35,6 +35,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         $preparationShellScriptPath = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-runtime-validation-prepare.sh';
         $preparationChecklistPath = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-runtime-validation-preparation.txt';
         $handoffPath = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-runtime-validation-handoff.md';
+        $nativeDbusBuildEvidenceArtifactPath = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-extension-build-evidence.json';
         $stepsDir = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'steps';
 
         $defaultOverrides = [
@@ -42,6 +43,14 @@ final class SystemApiNativeDbusHostValidationToolkit
             'W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR' => $artifactsDir,
         ];
         $nativeDbusBuildEvidencePath = $this->resolveNativeDbusBuildEvidencePath($normalizedEvidenceDir, $environmentOverrides);
+        $materializedNativeDbusBuildEvidenceArtifactPath = $this->materializeNativeDbusBuildEvidenceArtifact(
+            $nativeDbusBuildEvidenceArtifactPath,
+            $nativeDbusBuildEvidencePath,
+            $environmentOverrides
+        );
+        if ($materializedNativeDbusBuildEvidenceArtifactPath !== null) {
+            $defaultOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_JSON_PATH'] = $materializedNativeDbusBuildEvidenceArtifactPath;
+        }
         if ($nativeDbusBuildEvidencePath !== null) {
             $defaultOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_PATH'] = $nativeDbusBuildEvidencePath;
         }
@@ -194,6 +203,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             'preparation_shell_script_path' => $preparationShellScriptPath,
             'preparation_checklist_path' => $preparationChecklistPath,
             'handoff_path' => $handoffPath,
+            'native_dbus_extension_build_evidence_path' => $materializedNativeDbusBuildEvidenceArtifactPath,
             'artifacts_dir' => $artifactsDir,
             'runtime_backend' => $effectiveOverrides['W4_SYSTEM_API_RUNTIME_BACKEND'] ?? 'native-dbus-extension',
             'preparation_target_os_family' => $osFamily,
@@ -302,6 +312,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             sprintf('- Blocking reason: `%s`', (string) ($report['blocking_reason'] ?? 'n/a')),
             sprintf('- Next action: `%s`', (string) ($report['next_action'] ?? 'n/a')),
             sprintf('- Report path: `%s`', (string) ($report['report_path'] ?? 'n/a')),
+            sprintf('- Native D-Bus build evidence path: `%s`', (string) ($report['native_dbus_extension_build_evidence_path'] ?? 'n/a')),
             sprintf('- Handoff path: `%s`', (string) ($report['handoff_path'] ?? 'n/a')),
             sprintf('- Preparation shell script: `%s`', (string) ($report['preparation_shell_script_path'] ?? 'n/a')),
             sprintf('- Preparation checklist: `%s`', (string) ($report['preparation_checklist_path'] ?? 'n/a')),
@@ -1219,6 +1230,95 @@ final class SystemApiNativeDbusHostValidationToolkit
         $candidate = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'wsl-ubuntu-operational-attempt.md';
 
         return is_file($candidate) ? $candidate : null;
+    }
+
+    /**
+     * @param array<string, string> $environmentOverrides
+     */
+    private function materializeNativeDbusBuildEvidenceArtifact(
+        string $artifactPath,
+        ?string $sourcePath,
+        array $environmentOverrides
+    ): ?string {
+        $jsonOverride = $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_JSON_PATH'] ?? null;
+        if (is_string($jsonOverride) && trim($jsonOverride) !== '') {
+            return trim($jsonOverride);
+        }
+
+        if ($sourcePath === null || !is_file($sourcePath)) {
+            return null;
+        }
+
+        $raw = file_get_contents($sourcePath);
+        if (!is_string($raw) || trim($raw) === '') {
+            return null;
+        }
+
+        $payload = $this->buildNativeDbusBuildEvidencePayload($sourcePath, $raw);
+        $this->writeJsonFile($artifactPath, $payload);
+
+        return $artifactPath;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildNativeDbusBuildEvidencePayload(string $sourcePath, string $raw): array
+    {
+        $normalized = strtolower($raw);
+        $markers = [];
+        $state = 'unknown';
+        $reason = null;
+
+        if (str_contains($normalized, 'zend_object_store_get_object')) {
+            $markers[] = 'zend_object_store_get_object';
+            $state = 'build-failed';
+            $reason = 'zend_object_store_get_object';
+        }
+
+        if (str_contains($normalized, 'make: ***')) {
+            $markers[] = 'make: ***';
+            $state = 'build-failed';
+            if ($reason === null) {
+                $reason = 'make: *** [Makefile:192: dbus.lo] Error 1';
+            }
+        }
+
+        if (str_contains($normalized, 'compilacion sigue fallando')) {
+            $markers[] = 'compilacion-sigue-fallando';
+            $state = 'build-failed';
+            if ($reason === null) {
+                $reason = 'native-dbus-extension-build-failed';
+            }
+        }
+
+        if (str_contains($normalized, 'no compila')) {
+            $markers[] = 'no-compila';
+            $state = 'build-failed';
+            if ($reason === null) {
+                $reason = 'native-dbus-extension-build-failed';
+            }
+        }
+
+        if (
+            $state === 'unknown'
+            && (str_contains($normalized, 'unsupported stack') || str_contains($normalized, 'stack no soportado'))
+        ) {
+            $markers[] = 'unsupported-stack';
+            $state = 'unsupported-stack';
+            $reason = 'native-dbus-extension-unsupported-stack';
+        }
+
+        return [
+            'api_version' => '1.0',
+            'kind' => 'system-api-native-dbus-extension-build-evidence',
+            'generated_at' => gmdate('c'),
+            'source_path' => $sourcePath,
+            'state' => $state,
+            'reason' => $reason,
+            'log_path' => $sourcePath,
+            'markers' => $markers,
+        ];
     }
 
     /**

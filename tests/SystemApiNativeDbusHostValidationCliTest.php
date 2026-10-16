@@ -299,6 +299,14 @@ TEXT);
         self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
         self::assertSame('zend_object_store_get_object', $payload['native_dbus_extension_installability']['reason']);
         self::assertSame($evidencePath, $payload['native_dbus_extension_installability']['log_path']);
+        self::assertFileExists($payload['native_dbus_extension_build_evidence_path']);
+
+        $structuredEvidence = $this->decodeJsonFile($payload['native_dbus_extension_build_evidence_path']);
+        self::assertSame('system-api-native-dbus-extension-build-evidence', $structuredEvidence['kind']);
+        self::assertSame('build-failed', $structuredEvidence['state']);
+        self::assertSame('zend_object_store_get_object', $structuredEvidence['reason']);
+        self::assertSame($evidencePath, $structuredEvidence['source_path']);
+        self::assertSame($evidencePath, $structuredEvidence['log_path']);
 
         $preparationActions = array_map(
             static fn (array $step): string => (string) ($step['action'] ?? ''),
