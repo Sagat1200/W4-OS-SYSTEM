@@ -641,6 +641,17 @@ final class SystemApiNativeDbusHostValidationToolkit
             }
         }
 
+        $diagnosticPreparationStep = $this->createDiagnosticPreparationStep(
+            $serviceDefinition,
+            $startup,
+            $coupling,
+            $ownership,
+            $osFamily
+        );
+        if ($diagnosticPreparationStep !== null) {
+            $plan[] = $diagnosticPreparationStep;
+        }
+
         if ((($startup['startup_acknowledged'] ?? false) === true) && !$couplingReady) {
             $artifactsDir = (string) ($environmentOverrides['W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR'] ?? '');
             $statusFilePath = (string) ($serviceDefinition['artifacts']['status_file_path'] ?? '');
@@ -735,6 +746,79 @@ final class SystemApiNativeDbusHostValidationToolkit
 
         return [
             sprintf('Resolver manualmente la capacidad faltante `%s` para el sistema operativo `%s`.', $capability, $osFamily),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $serviceDefinition
+     * @param array<string, mixed> $startup
+     * @param array<string, mixed> $coupling
+     * @param array<string, mixed>|null $ownership
+     * @return array<string, mixed>|null
+     */
+    private function createDiagnosticPreparationStep(
+        array $serviceDefinition,
+        array $startup,
+        array $coupling,
+        ?array $ownership,
+        string $osFamily
+    ): ?array {
+        $nextAction = $this->resolvePrimaryNextAction(
+            is_array($ownership) ? $ownership : [],
+            $coupling,
+            $startup,
+            $serviceDefinition
+        );
+
+        return match ($nextAction) {
+            'inspect-native-dbus-extension-api' => [
+                'action' => 'inspect-native-dbus-extension-api',
+                'description' => 'Inspeccionar si la extension `dbus` expone la clase y los metodos minimos requeridos por el backend nativo (`BUS_SYSTEM`, `requestName`, `registerObject`, `waitLoop`).',
+                'commands' => $this->buildNativeDbusExtensionApiInspectionCommands($osFamily),
+            ],
+            'inspect-native-dbus-service-class' => [
+                'action' => 'inspect-native-dbus-service-class',
+                'description' => 'Verificar si la extension `dbus` realmente publica una clase de servicio utilizable (`Dbus` o `DBus`) en este runtime PHP.',
+                'commands' => $this->buildNativeDbusServiceClassInspectionCommands($osFamily),
+            ],
+            default => null,
+        };
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildNativeDbusExtensionApiInspectionCommands(string $osFamily): array
+    {
+        if ($osFamily === 'Linux') {
+            return [
+                'php --ri dbus',
+                'php -r "foreach ([\'Dbus\', \'DBus\'] as $class) { if (!class_exists($class)) { continue; } echo $class, PHP_EOL; echo \'BUS_SYSTEM:\', defined($class . \'::BUS_SYSTEM\') ? \'yes\' : \'no\', PHP_EOL; echo \'requestName:\', method_exists($class, \'requestName\') ? \'yes\' : \'no\', PHP_EOL; echo \'registerObject:\', method_exists($class, \'registerObject\') ? \'yes\' : \'no\', PHP_EOL; echo \'waitLoop:\', method_exists($class, \'waitLoop\') ? \'yes\' : \'no\', PHP_EOL; exit(0); } echo \'dbus-class-missing\', PHP_EOL;"',
+            ];
+        }
+
+        return [
+            'php --ri dbus',
+            'Inspeccionar manualmente si la extension `dbus` expone BUS_SYSTEM, requestName, registerObject y waitLoop.',
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildNativeDbusServiceClassInspectionCommands(string $osFamily): array
+    {
+        if ($osFamily === 'Linux') {
+            return [
+                'php --ri dbus',
+                'php -m | grep -i dbus || true',
+                'php -r "foreach ([\'Dbus\', \'DBus\'] as $class) { echo $class, \':\', class_exists($class) ? \'yes\' : \'no\', PHP_EOL; }"',
+            ];
+        }
+
+        return [
+            'php --ri dbus',
+            'Inspeccionar manualmente si el runtime PHP publica la clase `Dbus` o `DBus`.',
         ];
     }
 

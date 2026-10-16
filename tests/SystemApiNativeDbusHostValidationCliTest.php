@@ -151,6 +151,55 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertStringNotContainsString('install-native-dbus-extension', $preparationChecklist);
     }
 
+    public function testValidationAddsInspectionStepWhenNativeDbusApiIsIncomplete(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-native-dbus-api-incomplete-host';
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+        ], array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_NATIVE_DBUS_EXTENSION_LOADED' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '0',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '0',
+            ]
+        ));
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('blocked', $payload['status']);
+        self::assertSame('dbus-extension-api-incomplete', $payload['blocking_reason']);
+        self::assertSame('inspect-native-dbus-extension-api', $payload['next_action']);
+        self::assertContains('inspect-native-dbus-extension-api', $payload['recommended_next_actions']);
+
+        $preparationActions = array_map(
+            static fn (array $step): string => (string) ($step['action'] ?? ''),
+            $payload['preparation_plan']
+        );
+        self::assertContains('inspect-native-dbus-extension-api', $preparationActions);
+        self::assertContains('retry-native-bus-ownership', $preparationActions);
+
+        $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
+        self::assertNotFalse($preparationChecklist);
+        self::assertStringContainsString('inspect-native-dbus-extension-api', $preparationChecklist);
+        self::assertStringContainsString('php --ri dbus', $preparationChecklist);
+        self::assertStringContainsString('registerObject', $preparationChecklist);
+        self::assertStringContainsString('waitLoop', $preparationChecklist);
+
+        $savedSummary = file_get_contents($payload['summary_path']);
+        self::assertNotFalse($savedSummary);
+        self::assertStringContainsString('inspect-native-dbus-extension-api', $savedSummary);
+    }
+
     public function testValidationCanPrepareOwnedRuntimeAgainstFakeNativeDbusService(): void
     {
         $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'fake-owned-host';
