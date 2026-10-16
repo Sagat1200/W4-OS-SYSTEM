@@ -107,6 +107,7 @@ final class SystemApiToolkit
                     ],
                     'adapter_status' => 'pending-runtime-adapter',
                     'activation_command' => 'serve-dbus',
+                    'activation_method' => 'system.dbus-activation',
                     'activation_next_action' => $activationNextAction,
                     'activation_recovery_plan' => $activationRecoveryPlan,
                 ],
@@ -207,6 +208,11 @@ final class SystemApiToolkit
                     'mutates_state' => false,
                 ],
                 [
+                    'name' => 'system.dbus-activation',
+                    'resource_kind' => 'system-api-dbus-runtime-activation',
+                    'mutates_state' => false,
+                ],
+                [
                     'name' => 'profiles.get',
                     'resource_kind' => 'edition-profile',
                     'mutates_state' => false,
@@ -285,6 +291,23 @@ final class SystemApiToolkit
                 resourceId: 'org.w4.System1',
                 data: $this->createRuntimeContractPayload($runtimeDiagnosis, $activationPreparation),
                 provider: 'local-system-api-runtime-contract'
+            );
+        }
+
+        if ($method === 'system.dbus-activation') {
+            $runtimeDiagnosis = $this->dbusRuntimeProbe->createReport();
+            $activationReport = $this->dbusRuntimeActivation->createPendingActivationReport(
+                $runtimeDiagnosis,
+                'local-system-api'
+            );
+
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'system.dbus-activation',
+                resourceKind: 'system-api-dbus-runtime-activation',
+                resourceId: 'org.w4.System1',
+                data: $activationReport,
+                provider: 'local-system-api-activation-contract'
             );
         }
 

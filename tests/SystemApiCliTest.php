@@ -29,6 +29,7 @@ final class SystemApiCliTest extends TestCase
         self::assertContains('Call', $payload['result']['data']['binding']['local_dbus_bridge']['commands']);
         self::assertSame('pending-runtime-adapter', $payload['result']['data']['binding']['local_dbus_bridge']['adapter_status']);
         self::assertSame('serve-dbus', $payload['result']['data']['binding']['local_dbus_bridge']['activation_command']);
+        self::assertSame('system.dbus-activation', $payload['result']['data']['binding']['local_dbus_bridge']['activation_method']);
         self::assertSame('materialize-runtime-adapter', $payload['result']['data']['binding']['local_dbus_bridge']['activation_next_action']);
         self::assertSame(['materialize-runtime-adapter'], $payload['result']['data']['binding']['local_dbus_bridge']['activation_recovery_plan']);
         self::assertSame('scripts/system_api_dbus_runtime_adapter.php', $payload['result']['data']['binding']['local_runtime_adapter']['script']);
@@ -65,6 +66,7 @@ final class SystemApiCliTest extends TestCase
         self::assertContains('ExecuteActivation', $payload['result']['data']['binding']['local_runtime_adapter']['commands']);
         self::assertContains('DescribeLaunchPlan', $payload['result']['data']['binding']['local_runtime_launcher']['commands']);
         self::assertContains('profiles.list', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('system.dbus-activation', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-runtime', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('updates.plan', array_column($payload['result']['data']['methods'], 'name'));
     }
@@ -97,6 +99,73 @@ final class SystemApiCliTest extends TestCase
         self::assertSame('materialize-runtime-adapter', $payload['result']['data']['next_action']);
         self::assertSame(['materialize-runtime-adapter'], $payload['result']['data']['recovery_plan']);
         self::assertSame('system-api-dbus-runtime-activation-context', $payload['result']['data']['activation_preparation']['kind']);
+    }
+
+    public function testDbusActivationMethodReturnsTopLevelActivationReport(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-dbus-activation-001',
+            'method' => 'system.dbus-activation',
+            'params' => [],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('system.dbus-activation', $payload['result']['method']);
+        self::assertSame('system-api-dbus-runtime-activation', $payload['result']['resource']['kind']);
+        self::assertSame('org.w4.System1', $payload['result']['resource']['id']);
+        self::assertSame('local-system-api-activation-contract', $payload['result']['resource']['provider']);
+        self::assertSame('system-api-dbus-runtime-activation', $payload['result']['data']['kind']);
+        self::assertSame('local-system-api', $payload['result']['data']['bridge_kind']);
+        self::assertSame('materialize-runtime-adapter', $payload['result']['data']['next_action']);
+        self::assertSame(['materialize-runtime-adapter'], $payload['result']['data']['recovery_plan']);
+        self::assertSame('system-api-dbus-runtime-activation-context', $payload['result']['data']['activation_preparation']['kind']);
+        self::assertSame('system-api-dbus-runtime-activation-attempt', $payload['result']['data']['activation_attempt']['kind']);
+        self::assertSame('system-api-dbus-runtime-activation-result', $payload['result']['data']['activation_execution']['kind']);
+    }
+
+    public function testDbusActivationMethodPublishesTwoStepRecoveryPlanWhenNativeApiIsIncomplete(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-dbus-activation-002',
+            'method' => 'system.dbus-activation',
+            'params' => [],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+            'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '0',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('system.dbus-activation', $payload['result']['method']);
+        self::assertSame('materialize-runtime-adapter', $payload['result']['data']['next_action']);
+        self::assertSame(
+            ['materialize-runtime-adapter', 'inspect-native-dbus-extension-api'],
+            $payload['result']['data']['recovery_plan']
+        );
+        self::assertSame('native-dbus-extension', $payload['result']['data']['activation_preparation']['runtime_backend']['selected_backend']);
     }
 
     public function testProfilesGetReusesW4ctlContract(): void
@@ -199,7 +268,7 @@ final class SystemApiCliTest extends TestCase
      * @param list<string> $command
      * @return array{exitCode:int,stdout:string,stderr:string}
      */
-    private function runPhpScript(array $command): array
+    private function runPhpScript(array $command, array $environment = []): array
     {
         array_unshift($command, PHP_BINARY);
 
@@ -209,7 +278,8 @@ final class SystemApiCliTest extends TestCase
             2 => ['pipe', 'w'],
         ];
 
-        $process = proc_open($command, $descriptorSpec, $pipes, dirname(__DIR__));
+        $processEnvironment = array_merge($_ENV, $environment);
+        $process = proc_open($command, $descriptorSpec, $pipes, dirname(__DIR__), $processEnvironment);
         self::assertIsResource($process, 'No se pudo ejecutar read_system_api.php');
 
         fclose($pipes[0]);
