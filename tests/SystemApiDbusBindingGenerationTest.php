@@ -363,6 +363,45 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('materialize-runtime-adapter', $runtimeLauncherServeDbusPendingPayload['next_action']);
         self::assertSame(['materialize-runtime-adapter'], $runtimeLauncherServeDbusPendingPayload['recovery_plan']);
 
+        $runtimeLauncherDescribeNativeService = $this->runGeneratedPhpScript([
+            $runtimeLauncherScriptPath,
+            'DescribeNativeRuntimeService',
+        ]);
+        self::assertSame(0, $runtimeLauncherDescribeNativeService['exitCode'], $runtimeLauncherDescribeNativeService['stderr']);
+        $runtimeLauncherDescribeNativeServicePayload = $this->decodeJson($runtimeLauncherDescribeNativeService['stdout']);
+        self::assertNull($runtimeLauncherDescribeNativeServicePayload['result']);
+        self::assertSame('BINDING_PENDING', $runtimeLauncherDescribeNativeServicePayload['error']['code']);
+        self::assertSame(
+            'system-api-dbus-native-runtime-service',
+            $runtimeLauncherDescribeNativeServicePayload['error']['resource']['kind']
+        );
+
+        $runtimeLauncherStartNativeService = $this->runGeneratedPhpScript([
+            $runtimeLauncherScriptPath,
+            'StartNativeRuntimeService',
+        ]);
+        self::assertSame(3, $runtimeLauncherStartNativeService['exitCode'], $runtimeLauncherStartNativeService['stderr']);
+        $runtimeLauncherStartNativeServicePayload = $this->decodeJson($runtimeLauncherStartNativeService['stdout']);
+        self::assertNull($runtimeLauncherStartNativeServicePayload['result']);
+        self::assertSame('BINDING_PENDING', $runtimeLauncherStartNativeServicePayload['error']['code']);
+        self::assertSame(
+            'system-api-dbus-native-runtime-startup',
+            $runtimeLauncherStartNativeServicePayload['error']['resource']['kind']
+        );
+
+        $runtimeLauncherOwnNativeBus = $this->runGeneratedPhpScript([
+            $runtimeLauncherScriptPath,
+            'MaterializeNativeBusOwnership',
+        ]);
+        self::assertSame(3, $runtimeLauncherOwnNativeBus['exitCode'], $runtimeLauncherOwnNativeBus['stderr']);
+        $runtimeLauncherOwnNativeBusPayload = $this->decodeJson($runtimeLauncherOwnNativeBus['stdout']);
+        self::assertNull($runtimeLauncherOwnNativeBusPayload['result']);
+        self::assertSame('BINDING_PENDING', $runtimeLauncherOwnNativeBusPayload['error']['code']);
+        self::assertSame(
+            'system-api-dbus-native-runtime-ownership',
+            $runtimeLauncherOwnNativeBusPayload['error']['resource']['kind']
+        );
+
         $runtimeLauncherServeDbusPendingNativeMissing = $this->runGeneratedPhpScript([
             $runtimeLauncherScriptPath,
             'serve-dbus',
@@ -986,6 +1025,45 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         $runtimeHostDescribePayload = $this->decodeJson($runtimeHostDescribe['stdout']);
         self::assertSame('system-api-dbus-runtime-host', $runtimeHostDescribePayload['kind']);
         self::assertSame('stdio-ndjson-host', $runtimeHostDescribePayload['transport']);
+
+        $runtimeHostDescribeNativeService = $this->runGeneratedPhpScript([
+            $runtimeHostScriptPath,
+            'DescribeNativeRuntimeService',
+        ]);
+        self::assertSame(0, $runtimeHostDescribeNativeService['exitCode'], $runtimeHostDescribeNativeService['stderr']);
+        $runtimeHostDescribeNativeServicePayload = $this->decodeJson($runtimeHostDescribeNativeService['stdout']);
+        self::assertNull($runtimeHostDescribeNativeServicePayload['result']);
+        self::assertSame('BINDING_PENDING', $runtimeHostDescribeNativeServicePayload['error']['code']);
+        self::assertSame(
+            'system-api-dbus-native-runtime-service',
+            $runtimeHostDescribeNativeServicePayload['error']['resource']['kind']
+        );
+
+        $runtimeHostObserveNativeService = $this->runGeneratedPhpScript([
+            $runtimeHostScriptPath,
+            'ObserveNativeRuntimeServiceState',
+        ]);
+        self::assertSame(3, $runtimeHostObserveNativeService['exitCode'], $runtimeHostObserveNativeService['stderr']);
+        $runtimeHostObserveNativeServicePayload = $this->decodeJson($runtimeHostObserveNativeService['stdout']);
+        self::assertNull($runtimeHostObserveNativeServicePayload['result']);
+        self::assertSame('BINDING_PENDING', $runtimeHostObserveNativeServicePayload['error']['code']);
+        self::assertSame(
+            'system-api-dbus-native-runtime-observation',
+            $runtimeHostObserveNativeServicePayload['error']['resource']['kind']
+        );
+
+        $runtimeHostOwnNativeBus = $this->runGeneratedPhpScript([
+            $runtimeHostScriptPath,
+            'MaterializeNativeBusOwnership',
+        ]);
+        self::assertSame(3, $runtimeHostOwnNativeBus['exitCode'], $runtimeHostOwnNativeBus['stderr']);
+        $runtimeHostOwnNativeBusPayload = $this->decodeJson($runtimeHostOwnNativeBus['stdout']);
+        self::assertNull($runtimeHostOwnNativeBusPayload['result']);
+        self::assertSame('BINDING_PENDING', $runtimeHostOwnNativeBusPayload['error']['code']);
+        self::assertSame(
+            'system-api-dbus-native-runtime-ownership',
+            $runtimeHostOwnNativeBusPayload['error']['resource']['kind']
+        );
 
         $runtimeHostServeDbus = $this->runGeneratedPhpScript([
             $runtimeHostScriptPath,
