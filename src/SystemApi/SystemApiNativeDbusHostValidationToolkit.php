@@ -34,6 +34,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         $summaryPath = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-runtime-validation-summary.md';
         $preparationShellScriptPath = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-runtime-validation-prepare.sh';
         $preparationChecklistPath = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-runtime-validation-preparation.txt';
+        $handoffPath = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-runtime-validation-handoff.md';
         $stepsDir = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'steps';
 
         $defaultOverrides = [
@@ -111,6 +112,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             : ($hasFailure ? 1 : 3);
         $environment = is_array($steps['diagnosis']['environment'] ?? null) ? $steps['diagnosis']['environment'] : [];
         $osFamily = $this->resolvePreparationTargetOsFamily($environment, $effectiveOverrides);
+        $targetRepoRoot = $this->resolvePreparationTargetRepoRoot($effectiveOverrides, $osFamily);
         $preparationPlan = $this->createPreparationPlan(
             $steps['diagnosis'],
             $steps['service_definition'],
@@ -119,6 +121,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             $steps['ownership'],
             $effectiveOverrides,
             $osFamily,
+            $targetRepoRoot,
             $attemptOwnership,
             $ownershipValidated,
             $couplingReady
@@ -136,9 +139,11 @@ final class SystemApiNativeDbusHostValidationToolkit
             'summary_path' => $summaryPath,
             'preparation_shell_script_path' => $preparationShellScriptPath,
             'preparation_checklist_path' => $preparationChecklistPath,
+            'handoff_path' => $handoffPath,
             'artifacts_dir' => $artifactsDir,
             'runtime_backend' => $effectiveOverrides['W4_SYSTEM_API_RUNTIME_BACKEND'] ?? 'native-dbus-extension',
             'preparation_target_os_family' => $osFamily,
+            'preparation_target_repo_root' => $targetRepoRoot,
             'bus_name' => 'org.w4.System1',
             'object_path' => '/org/w4/System1',
             'interface' => 'org.w4.System1.Manager',
@@ -193,6 +198,10 @@ final class SystemApiNativeDbusHostValidationToolkit
             $preparationPlan,
             $osFamily
         );
+        $this->writeTextFile(
+            $handoffPath,
+            $this->renderHandoffInstructions($report)
+        );
 
         return $report;
     }
@@ -229,6 +238,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         $lines[] = sprintf('summary_path: %s', (string) ($report['summary_path'] ?? 'n/a'));
         $lines[] = sprintf('preparation_shell_script_path: %s', (string) ($report['preparation_shell_script_path'] ?? 'n/a'));
         $lines[] = sprintf('preparation_checklist_path: %s', (string) ($report['preparation_checklist_path'] ?? 'n/a'));
+        $lines[] = sprintf('handoff_path: %s', (string) ($report['handoff_path'] ?? 'n/a'));
 
         return implode(PHP_EOL, $lines) . PHP_EOL;
     }
@@ -247,9 +257,11 @@ final class SystemApiNativeDbusHostValidationToolkit
             sprintf('- Coupling ready: `%s`', (($report['coupling_ready'] ?? false) === true) ? 'yes' : 'no'),
             sprintf('- Startup acknowledged: `%s`', (($report['startup_acknowledged'] ?? false) === true) ? 'yes' : 'no'),
             sprintf('- Preparation target OS family: `%s`', (string) ($report['preparation_target_os_family'] ?? 'n/a')),
+            sprintf('- Preparation target repo root: `%s`', (string) ($report['preparation_target_repo_root'] ?? 'n/a')),
             sprintf('- Blocking reason: `%s`', (string) ($report['blocking_reason'] ?? 'n/a')),
             sprintf('- Next action: `%s`', (string) ($report['next_action'] ?? 'n/a')),
             sprintf('- Report path: `%s`', (string) ($report['report_path'] ?? 'n/a')),
+            sprintf('- Handoff path: `%s`', (string) ($report['handoff_path'] ?? 'n/a')),
             sprintf('- Preparation shell script: `%s`', (string) ($report['preparation_shell_script_path'] ?? 'n/a')),
             sprintf('- Preparation checklist: `%s`', (string) ($report['preparation_checklist_path'] ?? 'n/a')),
             '',
@@ -301,6 +313,56 @@ final class SystemApiNativeDbusHostValidationToolkit
         } else {
             $lines[] = '1. `validation-complete` - No additional preparation steps are currently required.';
         }
+
+        return implode(PHP_EOL, $lines) . PHP_EOL;
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     */
+    public function renderHandoffInstructions(array $report): string
+    {
+        $targetOsFamily = (string) ($report['preparation_target_os_family'] ?? 'Unknown');
+        $targetRepoRoot = (string) ($report['preparation_target_repo_root'] ?? '');
+        $rerunCommands = $this->buildRerunCommands($targetOsFamily, $targetRepoRoot);
+        $verificationCommands = $this->buildVerificationCommands($targetOsFamily);
+        $lines = [
+            '# Native D-Bus Runtime Handoff',
+            '',
+            sprintf('- Target OS family: `%s`', $targetOsFamily),
+            sprintf('- Target repo root: `%s`', $targetRepoRoot !== '' ? $targetRepoRoot : 'set-this-before-running'),
+            sprintf('- Current status: `%s`', (string) ($report['status'] ?? 'unknown')),
+            sprintf('- Blocking reason: `%s`', (string) ($report['blocking_reason'] ?? 'n/a')),
+            sprintf('- Preparation script: `%s`', (string) ($report['preparation_shell_script_path'] ?? 'n/a')),
+            sprintf('- Preparation checklist: `%s`', (string) ($report['preparation_checklist_path'] ?? 'n/a')),
+            '',
+            '## Target Host Workflow',
+            '',
+            '1. Prepare the target host with the generated checklist or shell script.',
+            '2. Re-run the native validation commands from the repository root on the target host.',
+            '3. Verify that `org.w4.System1` is visible on the system bus after ownership succeeds.',
+            '',
+            '## Re-run Commands',
+            '',
+            '```bash',
+        ];
+
+        foreach ($rerunCommands as $command) {
+            $lines[] = $command;
+        }
+
+        $lines[] = '```';
+        $lines[] = '';
+        $lines[] = '## Post-Install Verification';
+        $lines[] = '';
+        $lines[] = '```bash';
+
+        foreach ($verificationCommands as $command) {
+            $lines[] = $command;
+        }
+
+        $lines[] = '```';
+        $lines[] = '';
 
         return implode(PHP_EOL, $lines) . PHP_EOL;
     }
@@ -509,6 +571,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         ?array $ownership,
         array $environmentOverrides,
         string $osFamily,
+        string $targetRepoRoot,
         bool $attemptOwnership,
         bool $ownershipValidated,
         bool $couplingReady
@@ -530,13 +593,12 @@ final class SystemApiNativeDbusHostValidationToolkit
         }
 
         if ((($startup['startup_acknowledged'] ?? false) === true) && !$couplingReady) {
+            $artifactsDir = (string) ($environmentOverrides['W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR'] ?? '');
+            $statusFilePath = (string) ($serviceDefinition['artifacts']['status_file_path'] ?? '');
             $plan[] = [
                 'action' => 'inspect-native-runtime-artifacts',
                 'description' => 'Revisar los artefactos del runtime nativo y confirmar que startup, status y pid quedaron materializados antes del ownership.',
-                'commands' => [
-                    sprintf('Get-ChildItem -Force "%s"', $environmentOverrides['W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR'] ?? ''),
-                    sprintf('Get-Content "%s"', $serviceDefinition['artifacts']['status_file_path'] ?? ''),
-                ],
+                'commands' => $this->buildArtifactInspectionCommands($artifactsDir, $statusFilePath, $osFamily),
             ];
         }
 
@@ -544,9 +606,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             $plan[] = [
                 'action' => 'retry-native-bus-ownership',
                 'description' => 'Reintentar el ownership real del bus solo cuando el host confirme extension PECL dbus, daemon, socket y tooling del sistema disponibles.',
-                'commands' => [
-                    'php scripts/run_native_dbus_real_host_validation.php --format text',
-                ],
+                'commands' => $this->buildRerunCommands($osFamily, $targetRepoRoot),
             ];
         }
 
@@ -555,7 +615,7 @@ final class SystemApiNativeDbusHostValidationToolkit
                 'action' => 'capture-release-evidence',
                 'description' => 'Conservar el reporte y los artefactos como evidencia para el cierre de la validacion V1 del runtime D-Bus nativo.',
                 'commands' => [
-                    'php scripts/run_native_dbus_real_host_validation.php --format markdown',
+                    $this->buildValidationCommand('markdown', $osFamily, $targetRepoRoot),
                 ],
             ];
         }
@@ -655,5 +715,94 @@ final class SystemApiNativeDbusHostValidationToolkit
         }
 
         return 'Unknown';
+    }
+
+    /**
+     * @param array<string, string> $environmentOverrides
+     */
+    private function resolvePreparationTargetRepoRoot(array $environmentOverrides, string $osFamily): string
+    {
+        $override = $environmentOverrides['W4_SYSTEM_API_PREPARATION_TARGET_REPO_ROOT'] ?? null;
+        if (is_string($override) && trim($override) !== '') {
+            return trim($override);
+        }
+
+        if ($osFamily === 'Linux') {
+            return '/opt/w4/w4-os-system';
+        }
+
+        return $this->rootDir;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildArtifactInspectionCommands(string $artifactsDir, string $statusFilePath, string $osFamily): array
+    {
+        if ($osFamily === 'Linux') {
+            return [
+                sprintf('ls -la "%s"', $artifactsDir),
+                sprintf('cat "%s"', $statusFilePath),
+            ];
+        }
+
+        return [
+            sprintf('Get-ChildItem -Force "%s"', $artifactsDir),
+            sprintf('Get-Content "%s"', $statusFilePath),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildRerunCommands(string $osFamily, string $targetRepoRoot): array
+    {
+        return [
+            $this->buildValidationCommand('text', $osFamily, $targetRepoRoot),
+            $this->buildValidationCommand('markdown', $osFamily, $targetRepoRoot),
+            $this->buildValidationCommand('json', $osFamily, $targetRepoRoot),
+        ];
+    }
+
+    private function buildValidationCommand(string $format, string $osFamily, string $targetRepoRoot): string
+    {
+        $command = sprintf(
+            'php scripts/run_native_dbus_real_host_validation.php --format %s --target-os-family %s',
+            $format,
+            $osFamily
+        );
+
+        if ($targetRepoRoot === '') {
+            return $command;
+        }
+
+        if ($osFamily === 'Linux') {
+            return sprintf('cd "%s" && %s', $targetRepoRoot, $command);
+        }
+
+        return sprintf(
+            'Set-Location "%s"; %s',
+            $targetRepoRoot,
+            $command
+        );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildVerificationCommands(string $osFamily): array
+    {
+        if ($osFamily === 'Linux') {
+            return [
+                'php --ri dbus',
+                'busctl --system list | grep org.w4.System1 || true',
+                'busctl --system introspect org.w4.System1 /org/w4/System1 org.w4.System1.Manager',
+            ];
+        }
+
+        return [
+            'php --ri dbus',
+            'Revisar manualmente la visibilidad de org.w4.System1 en el system bus del host objetivo.',
+        ];
     }
 }

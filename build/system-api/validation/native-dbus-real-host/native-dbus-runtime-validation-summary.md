@@ -6,9 +6,11 @@
 - Coupling ready: `no`
 - Startup acknowledged: `no`
 - Preparation target OS family: `Linux`
+- Preparation target repo root: `/srv/w4/os-system`
 - Blocking reason: `missing-runtime-capabilities`
 - Next action: `install-native-dbus-extension`
 - Report path: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-runtime-validation-report.json`
+- Handoff path: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-runtime-validation-handoff.md`
 - Preparation shell script: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-runtime-validation-prepare.sh`
 - Preparation checklist: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-runtime-validation-preparation.txt`
 
@@ -53,6 +55,8 @@ busctl --version || gdbus --version
 1. `retry-native-bus-ownership` - Reintentar el ownership real del bus solo cuando el host confirme extension PECL dbus, daemon, socket y tooling del sistema disponibles.
 
 ```bash
-php scripts/run_native_dbus_real_host_validation.php --format text
+cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format text --target-os-family Linux
+cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format markdown --target-os-family Linux
+cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux
 ```
 

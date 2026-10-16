@@ -30,5 +30,7 @@ busctl --version || gdbus --version
 
 # Step 5: retry-native-bus-ownership
 # Reintentar el ownership real del bus solo cuando el host confirme extension PECL dbus, daemon, socket y tooling del sistema disponibles.
-php scripts/run_native_dbus_real_host_validation.php --format text
+cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format text --target-os-family Linux
+cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format markdown --target-os-family Linux
+cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux
 

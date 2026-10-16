@@ -50,6 +50,10 @@ try {
                 $environmentOverrides['W4_SYSTEM_API_PREPARATION_TARGET_OS_FAMILY'] = $value;
                 break;
 
+            case '--target-repo-root':
+                $environmentOverrides['W4_SYSTEM_API_PREPARATION_TARGET_REPO_ROOT'] = $value;
+                break;
+
             default:
                 throw new ValidationError(sprintf('Argumento no soportado: %s', $argument));
         }

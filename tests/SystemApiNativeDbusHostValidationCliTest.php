@@ -56,6 +56,7 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertFileExists($payload['summary_path']);
         self::assertFileExists($payload['preparation_shell_script_path']);
         self::assertFileExists($payload['preparation_checklist_path']);
+        self::assertFileExists($payload['handoff_path']);
         self::assertFileExists($payload['step_files']['diagnosis']);
         self::assertFileExists($payload['step_files']['service_definition']);
         self::assertFileExists($payload['step_files']['startup']);
@@ -84,6 +85,9 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         $preparationShellScript = file_get_contents($payload['preparation_shell_script_path']);
         self::assertNotFalse($preparationShellScript);
         self::assertStringContainsString('echo', $preparationShellScript);
+        $handoff = file_get_contents($payload['handoff_path']);
+        self::assertNotFalse($handoff);
+        self::assertStringContainsString('## Re-run Commands', $handoff);
     }
 
     public function testValidationCanPrepareOwnedRuntimeAgainstFakeNativeDbusService(): void
@@ -122,6 +126,7 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertFileExists($payload['summary_path']);
         self::assertFileExists($payload['preparation_shell_script_path']);
         self::assertFileExists($payload['preparation_checklist_path']);
+        self::assertFileExists($payload['handoff_path']);
         self::assertDirectoryExists($payload['artifacts_dir']);
         self::assertFileExists($payload['artifacts_dir'] . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime.ready');
         self::assertFileExists($payload['artifacts_dir'] . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime-status.json');
@@ -139,7 +144,7 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertSame('W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver', $savedReport['steps']['ownership']['ownership_driver']['class_name']);
         $preparationShellScript = file_get_contents($payload['preparation_shell_script_path']);
         self::assertNotFalse($preparationShellScript);
-        self::assertStringContainsString('php scripts/run_native_dbus_real_host_validation.php --format markdown', $preparationShellScript);
+        self::assertStringContainsString('php scripts/run_native_dbus_real_host_validation.php --format markdown --target-os-family Linux', $preparationShellScript);
     }
 
     public function testValidationCanRenderMarkdownSummaryDirectlyFromRunner(): void
@@ -166,6 +171,8 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertStringContainsString('# Native D-Bus Runtime Validation', $result['stdout']);
         self::assertStringContainsString('## Preparation Plan', $result['stdout']);
         self::assertStringContainsString('install-native-dbus-extension', $result['stdout']);
+        self::assertStringContainsString('- Handoff path: `', $result['stdout']);
+        self::assertSame(1, substr_count($result['stdout'], '- Report path: `'));
     }
 
     public function testValidationCanPrepareLinuxArtifactsFromNonLinuxHost(): void
@@ -199,11 +206,57 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
         self::assertNotFalse($preparationChecklist);
         self::assertStringContainsString('sudo apt-get install -y php-pear php-dev libdbus-1-dev pkg-config', $preparationChecklist);
+        self::assertStringContainsString('php scripts/run_native_dbus_real_host_validation.php --format text --target-os-family Linux', $preparationChecklist);
 
         $preparationShellScript = file_get_contents($payload['preparation_shell_script_path']);
         self::assertNotFalse($preparationShellScript);
         self::assertStringContainsString('sudo apt-get install -y php-pear php-dev libdbus-1-dev pkg-config', $preparationShellScript);
         self::assertStringNotContainsString('echo "Resolver manualmente', $preparationShellScript);
+
+        $handoff = file_get_contents($payload['handoff_path']);
+        self::assertNotFalse($handoff);
+        self::assertStringContainsString('busctl --system introspect org.w4.System1 /org/w4/System1 org.w4.System1.Manager', $handoff);
+        self::assertStringContainsString('cd "/opt/w4/w4-os-system" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux', $handoff);
+    }
+
+    public function testValidationCanOverrideTargetRepoRootForLinuxHandoff(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-target-custom-root-host';
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+            '--target-repo-root',
+            '/srv/w4/os-system',
+        ], [
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_BUSCTL' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_GDBUS' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET' => '0',
+            'W4_SYSTEM_API_PROBE_OS_FAMILY' => 'Windows',
+        ]);
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('/srv/w4/os-system', $payload['preparation_target_repo_root']);
+
+        $savedSummary = file_get_contents($payload['summary_path']);
+        self::assertNotFalse($savedSummary);
+        self::assertStringContainsString('- Preparation target repo root: `/srv/w4/os-system`', $savedSummary);
+
+        $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
+        self::assertNotFalse($preparationChecklist);
+        self::assertStringContainsString('cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format text --target-os-family Linux', $preparationChecklist);
+
+        $handoff = file_get_contents($payload['handoff_path']);
+        self::assertNotFalse($handoff);
+        self::assertStringContainsString('- Target repo root: `/srv/w4/os-system`', $handoff);
+        self::assertStringContainsString('cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format markdown --target-os-family Linux', $handoff);
     }
 
     private function scriptPath(): string
