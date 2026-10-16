@@ -698,6 +698,8 @@ function createProtocolError(string $message): array
  */
 function createPendingActivationReport(array $runtimeDiagnosis): array
 {
+    $nextAction = 'materialize-runtime-adapter';
+
     return [
         'api_version' => '1.0',
         'kind' => 'system-api-dbus-runtime-activation',
@@ -712,7 +714,8 @@ function createPendingActivationReport(array $runtimeDiagnosis): array
         'missing_capabilities' => is_array($runtimeDiagnosis['missing_capabilities'] ?? null)
             ? $runtimeDiagnosis['missing_capabilities']
             : [],
-        'next_action' => 'materialize-runtime-adapter',
+        'next_action' => $nextAction,
+        'recovery_plan' => [$nextAction],
     ];
 }
 
@@ -2418,6 +2421,18 @@ function createProtocolError(string $message): array
  */
 function createPendingActivationReport(array $runtimeDiagnosis, string $bridgeKind): array
 {
+    $activationPreparation = createActivationPreparation();
+    $activationAttempt = createActivationAttempt();
+    $activationExecution = createActivationExecution();
+    $nextAction = is_string($activationPreparation['next_action'] ?? null)
+        ? $activationPreparation['next_action']
+        : ((($runtimeDiagnosis['ready'] ?? false) === true)
+            ? 'attempt-runtime-adapter'
+            : 'materialize-runtime-adapter');
+    $recoveryPlan = is_array($activationPreparation['recovery_plan'] ?? null)
+        ? $activationPreparation['recovery_plan']
+        : createRecoveryPlan($nextAction);
+
     return [
         'api_version' => '1.0',
         'kind' => 'system-api-dbus-runtime-activation',
@@ -2428,14 +2443,15 @@ function createPendingActivationReport(array $runtimeDiagnosis, string $bridgeKi
         'object_path' => W4_SYSTEM_API_OBJECT_PATH,
         'interface' => W4_SYSTEM_API_INTERFACE,
         'adapter_specification' => createAdapterSpecification(),
-        'activation_preparation' => createActivationPreparation(),
-        'activation_attempt' => createActivationAttempt(),
-        'activation_execution' => createActivationExecution(),
+        'activation_preparation' => $activationPreparation,
+        'activation_attempt' => $activationAttempt,
+        'activation_execution' => $activationExecution,
         'runtime_diagnosis' => $runtimeDiagnosis,
         'missing_capabilities' => is_array($runtimeDiagnosis['missing_capabilities'] ?? null)
             ? $runtimeDiagnosis['missing_capabilities']
             : [],
-        'next_action' => 'materialize-runtime-adapter',
+        'next_action' => $nextAction,
+        'recovery_plan' => $recoveryPlan,
     ];
 }
 
@@ -3617,6 +3633,8 @@ function createProtocolError(string $message): array
  */
 function createPendingActivationReport(array $runtimeDiagnosis, string $bridgeKind): array
 {
+    $nextAction = 'materialize-runtime-adapter';
+
     return [
         'api_version' => '1.0',
         'kind' => 'system-api-dbus-runtime-activation',
@@ -3631,7 +3649,8 @@ function createPendingActivationReport(array $runtimeDiagnosis, string $bridgeKi
         'missing_capabilities' => is_array($runtimeDiagnosis['missing_capabilities'] ?? null)
             ? $runtimeDiagnosis['missing_capabilities']
             : [],
-        'next_action' => 'materialize-runtime-adapter',
+        'next_action' => $nextAction,
+        'recovery_plan' => [$nextAction],
     ];
 }
 
@@ -4876,6 +4895,18 @@ function createProtocolError(string $message): array
  */
 function createPendingActivationReport(array $runtimeDiagnosis, string $bridgeKind): array
 {
+    $activationPreparation = createActivationPreparation();
+    $activationAttempt = createActivationAttempt();
+    $activationExecution = createActivationExecution();
+    $nextAction = is_string($activationPreparation['next_action'] ?? null)
+        ? $activationPreparation['next_action']
+        : ((($runtimeDiagnosis['ready'] ?? false) === true)
+            ? 'attempt-runtime-adapter'
+            : 'materialize-runtime-adapter');
+    $recoveryPlan = is_array($activationPreparation['recovery_plan'] ?? null)
+        ? $activationPreparation['recovery_plan']
+        : createRecoveryPlan($nextAction);
+
     return [
         'api_version' => '1.0',
         'kind' => 'system-api-dbus-runtime-activation',
@@ -4887,15 +4918,16 @@ function createPendingActivationReport(array $runtimeDiagnosis, string $bridgeKi
         'interface' => W4_SYSTEM_API_INTERFACE,
         'adapter_specification' => createAdapterSpecification(),
         'activation_bootstrap' => createActivationBootstrap(),
-        'activation_preparation' => createActivationPreparation(),
-        'activation_attempt' => createActivationAttempt(),
-        'activation_execution' => createActivationExecution(),
+        'activation_preparation' => $activationPreparation,
+        'activation_attempt' => $activationAttempt,
+        'activation_execution' => $activationExecution,
         'launch_plan' => createLaunchPlan(),
         'runtime_diagnosis' => $runtimeDiagnosis,
         'missing_capabilities' => is_array($runtimeDiagnosis['missing_capabilities'] ?? null)
             ? $runtimeDiagnosis['missing_capabilities']
             : [],
-        'next_action' => 'materialize-runtime-adapter',
+        'next_action' => $nextAction,
+        'recovery_plan' => $recoveryPlan,
     ];
 }
 

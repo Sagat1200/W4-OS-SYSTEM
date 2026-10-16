@@ -322,6 +322,17 @@ final class SystemApiDbusRuntimeActivationToolkit
     public function createPendingActivationReport(array $runtimeDiagnosis, string $bridgeKind): array
     {
         $missingCapabilities = $this->normalizeMissingCapabilities($runtimeDiagnosis);
+        $activationPreparation = $this->createActivationPreparation($runtimeDiagnosis);
+        $activationAttempt = $this->createActivationAttempt($runtimeDiagnosis, $bridgeKind);
+        $activationExecution = $this->createActivationExecution($runtimeDiagnosis, $bridgeKind);
+        $nextAction = is_string($activationPreparation['next_action'] ?? null)
+            ? $activationPreparation['next_action']
+            : ((($runtimeDiagnosis['ready'] ?? false) === true)
+                ? 'attempt-runtime-adapter'
+                : 'materialize-runtime-adapter');
+        $recoveryPlan = is_array($activationPreparation['recovery_plan'] ?? null)
+            ? $activationPreparation['recovery_plan']
+            : $this->createRecoveryPlan($nextAction);
 
         return [
             'api_version' => '1.0',
@@ -334,14 +345,13 @@ final class SystemApiDbusRuntimeActivationToolkit
             'interface' => 'org.w4.System1.Manager',
             'adapter_specification' => $this->createAdapterSpecification(),
             'activation_bootstrap' => $this->createActivationBootstrap(),
-            'activation_preparation' => $this->createActivationPreparation($runtimeDiagnosis),
-            'activation_attempt' => $this->createActivationAttempt($runtimeDiagnosis, $bridgeKind),
-            'activation_execution' => $this->createActivationExecution($runtimeDiagnosis, $bridgeKind),
+            'activation_preparation' => $activationPreparation,
+            'activation_attempt' => $activationAttempt,
+            'activation_execution' => $activationExecution,
             'runtime_diagnosis' => $runtimeDiagnosis,
             'missing_capabilities' => $missingCapabilities,
-            'next_action' => (($runtimeDiagnosis['ready'] ?? false) === true)
-                ? 'attempt-runtime-adapter'
-                : 'materialize-runtime-adapter',
+            'next_action' => $nextAction,
+            'recovery_plan' => $recoveryPlan,
         ];
     }
 

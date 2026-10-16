@@ -649,6 +649,48 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertSame('observe-runtime-backend', $payload['next_action']);
     }
 
+    public function testServeDbusReturnsPendingActivationRecoveryPlan(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'serve-dbus',
+        ]);
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation', $payload['kind']);
+        self::assertSame('local-runtime-adapter', $payload['bridge_kind']);
+        self::assertSame('materialize-runtime-adapter', $payload['next_action']);
+        self::assertSame(['materialize-runtime-adapter'], $payload['recovery_plan']);
+        self::assertSame('system-api-dbus-runtime-activation-context', $payload['activation_preparation']['kind']);
+    }
+
+    public function testServeDbusPublishesTwoStepRecoveryPlanWhenRuntimeIsMissingAndNativeApiIsIncomplete(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'serve-dbus',
+        ], '', [
+            'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+            'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '0',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+        ]);
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation', $payload['kind']);
+        self::assertSame('materialize-runtime-adapter', $payload['next_action']);
+        self::assertSame(
+            ['materialize-runtime-adapter', 'inspect-native-dbus-extension-api'],
+            $payload['recovery_plan']
+        );
+    }
+
     public function testExecuteActivationCompletesWhenMaterializedBackendIsConfigured(): void
     {
         $result = $this->runPhpScript([

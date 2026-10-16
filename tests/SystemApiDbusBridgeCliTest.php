@@ -131,6 +131,8 @@ final class SystemApiDbusBridgeCliTest extends TestCase
         self::assertSame('system-api-dbus-runtime-adapter-spec', $payload['adapter_specification']['kind']);
         self::assertArrayHasKey('runtime_diagnosis', $payload);
         self::assertArrayHasKey('missing_capabilities', $payload);
+        self::assertSame('materialize-runtime-adapter', $payload['next_action']);
+        self::assertSame(['materialize-runtime-adapter'], $payload['recovery_plan']);
     }
 
     /**
