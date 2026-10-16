@@ -110,6 +110,7 @@ final class SystemApiToolkit
                     'adapter_status' => 'pending-runtime-adapter',
                     'activation_command' => 'serve-dbus',
                     'activation_method' => 'system.dbus-activation',
+                    'native_observation_method' => 'system.dbus-native-observation',
                     'native_coupling_method' => 'system.dbus-native-coupling',
                     'native_ownership_method' => 'system.dbus-native-ownership',
                     'activation_next_action' => $activationNextAction,
@@ -214,6 +215,11 @@ final class SystemApiToolkit
                 [
                     'name' => 'system.dbus-activation',
                     'resource_kind' => 'system-api-dbus-runtime-activation',
+                    'mutates_state' => false,
+                ],
+                [
+                    'name' => 'system.dbus-native-observation',
+                    'resource_kind' => 'system-api-dbus-native-runtime-observation',
                     'mutates_state' => false,
                 ],
                 [
@@ -322,6 +328,20 @@ final class SystemApiToolkit
                 resourceId: 'org.w4.System1',
                 data: $activationReport,
                 provider: 'local-system-api-activation-contract'
+            );
+        }
+
+        if ($method === 'system.dbus-native-observation') {
+            $runtimeDiagnosis = $this->dbusRuntimeProbe->createReport();
+            $observationReport = $this->dbusRuntimeBackend->createNativeRuntimeServiceObservationReport($runtimeDiagnosis);
+
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'system.dbus-native-observation',
+                resourceKind: 'system-api-dbus-native-runtime-observation',
+                resourceId: 'org.w4.System1',
+                data: $this->createNativeObservationContractPayload($runtimeDiagnosis, $observationReport),
+                provider: 'local-system-api-native-observation-contract'
             );
         }
 
@@ -610,6 +630,19 @@ final class SystemApiToolkit
     private function createNativeCouplingContractPayload(array $runtimeDiagnosis, array $couplingReport): array
     {
         $payload = $couplingReport;
+        $payload['runtime_diagnosis'] = $runtimeDiagnosis;
+
+        return $payload;
+    }
+
+    /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, mixed> $observationReport
+     * @return array<string, mixed>
+     */
+    private function createNativeObservationContractPayload(array $runtimeDiagnosis, array $observationReport): array
+    {
+        $payload = $observationReport;
         $payload['runtime_diagnosis'] = $runtimeDiagnosis;
 
         return $payload;
