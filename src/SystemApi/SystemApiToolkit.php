@@ -17,12 +17,14 @@ final class SystemApiToolkit
     private W4ctlApplication $w4ctl;
     private SystemApiDbusRuntimeProbeToolkit $dbusRuntimeProbe;
     private SystemApiDbusRuntimeActivationToolkit $dbusRuntimeActivation;
+    private SystemApiDbusRuntimeBackendToolkit $dbusRuntimeBackend;
 
     public function __construct(string $rootDir)
     {
         $this->w4ctl = new W4ctlApplication($rootDir);
         $this->dbusRuntimeProbe = new SystemApiDbusRuntimeProbeToolkit();
         $this->dbusRuntimeActivation = new SystemApiDbusRuntimeActivationToolkit();
+        $this->dbusRuntimeBackend = new SystemApiDbusRuntimeBackendToolkit();
     }
 
     /**
@@ -108,6 +110,8 @@ final class SystemApiToolkit
                     'adapter_status' => 'pending-runtime-adapter',
                     'activation_command' => 'serve-dbus',
                     'activation_method' => 'system.dbus-activation',
+                    'native_coupling_method' => 'system.dbus-native-coupling',
+                    'native_ownership_method' => 'system.dbus-native-ownership',
                     'activation_next_action' => $activationNextAction,
                     'activation_recovery_plan' => $activationRecoveryPlan,
                 ],
@@ -213,6 +217,16 @@ final class SystemApiToolkit
                     'mutates_state' => false,
                 ],
                 [
+                    'name' => 'system.dbus-native-coupling',
+                    'resource_kind' => 'system-api-dbus-native-runtime-coupling',
+                    'mutates_state' => false,
+                ],
+                [
+                    'name' => 'system.dbus-native-ownership',
+                    'resource_kind' => 'system-api-dbus-native-runtime-ownership',
+                    'mutates_state' => false,
+                ],
+                [
                     'name' => 'profiles.get',
                     'resource_kind' => 'edition-profile',
                     'mutates_state' => false,
@@ -308,6 +322,34 @@ final class SystemApiToolkit
                 resourceId: 'org.w4.System1',
                 data: $activationReport,
                 provider: 'local-system-api-activation-contract'
+            );
+        }
+
+        if ($method === 'system.dbus-native-coupling') {
+            $runtimeDiagnosis = $this->dbusRuntimeProbe->createReport();
+            $couplingReport = $this->dbusRuntimeBackend->createNativeRuntimeCouplingReport($runtimeDiagnosis);
+
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'system.dbus-native-coupling',
+                resourceKind: 'system-api-dbus-native-runtime-coupling',
+                resourceId: 'org.w4.System1',
+                data: $this->createNativeCouplingContractPayload($runtimeDiagnosis, $couplingReport),
+                provider: 'local-system-api-native-coupling-contract'
+            );
+        }
+
+        if ($method === 'system.dbus-native-ownership') {
+            $runtimeDiagnosis = $this->dbusRuntimeProbe->createReport();
+            $ownershipReport = $this->dbusRuntimeBackend->createNativeBusOwnershipReport($runtimeDiagnosis);
+
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'system.dbus-native-ownership',
+                resourceKind: 'system-api-dbus-native-runtime-ownership',
+                resourceId: 'org.w4.System1',
+                data: $this->createNativeOwnershipContractPayload($runtimeDiagnosis, $ownershipReport),
+                provider: 'local-system-api-native-ownership-contract'
             );
         }
 
@@ -556,6 +598,32 @@ final class SystemApiToolkit
             ? $activationPreparation['native_runtime_service']
             : null;
         $payload['activation_preparation'] = $activationPreparation;
+
+        return $payload;
+    }
+
+    /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, mixed> $couplingReport
+     * @return array<string, mixed>
+     */
+    private function createNativeCouplingContractPayload(array $runtimeDiagnosis, array $couplingReport): array
+    {
+        $payload = $couplingReport;
+        $payload['runtime_diagnosis'] = $runtimeDiagnosis;
+
+        return $payload;
+    }
+
+    /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, mixed> $ownershipReport
+     * @return array<string, mixed>
+     */
+    private function createNativeOwnershipContractPayload(array $runtimeDiagnosis, array $ownershipReport): array
+    {
+        $payload = $ownershipReport;
+        $payload['runtime_diagnosis'] = $runtimeDiagnosis;
 
         return $payload;
     }

@@ -30,6 +30,8 @@ final class SystemApiCliTest extends TestCase
         self::assertSame('pending-runtime-adapter', $payload['result']['data']['binding']['local_dbus_bridge']['adapter_status']);
         self::assertSame('serve-dbus', $payload['result']['data']['binding']['local_dbus_bridge']['activation_command']);
         self::assertSame('system.dbus-activation', $payload['result']['data']['binding']['local_dbus_bridge']['activation_method']);
+        self::assertSame('system.dbus-native-coupling', $payload['result']['data']['binding']['local_dbus_bridge']['native_coupling_method']);
+        self::assertSame('system.dbus-native-ownership', $payload['result']['data']['binding']['local_dbus_bridge']['native_ownership_method']);
         self::assertSame('materialize-runtime-adapter', $payload['result']['data']['binding']['local_dbus_bridge']['activation_next_action']);
         self::assertSame(['materialize-runtime-adapter'], $payload['result']['data']['binding']['local_dbus_bridge']['activation_recovery_plan']);
         self::assertSame('scripts/system_api_dbus_runtime_adapter.php', $payload['result']['data']['binding']['local_runtime_adapter']['script']);
@@ -67,6 +69,8 @@ final class SystemApiCliTest extends TestCase
         self::assertContains('DescribeLaunchPlan', $payload['result']['data']['binding']['local_runtime_launcher']['commands']);
         self::assertContains('profiles.list', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-activation', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('system.dbus-native-coupling', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('system.dbus-native-ownership', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-runtime', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('updates.plan', array_column($payload['result']['data']['methods'], 'name'));
     }
@@ -166,6 +170,189 @@ final class SystemApiCliTest extends TestCase
             $payload['result']['data']['recovery_plan']
         );
         self::assertSame('native-dbus-extension', $payload['result']['data']['activation_preparation']['runtime_backend']['selected_backend']);
+    }
+
+    public function testDbusNativeCouplingMethodReturnsBlockedPublicCouplingReport(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-dbus-native-coupling-001',
+            'method' => 'system.dbus-native-coupling',
+            'params' => [],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('system.dbus-native-coupling', $payload['result']['method']);
+        self::assertSame('system-api-dbus-native-runtime-coupling', $payload['result']['resource']['kind']);
+        self::assertSame('org.w4.System1', $payload['result']['resource']['id']);
+        self::assertSame('local-system-api-native-coupling-contract', $payload['result']['resource']['provider']);
+        self::assertSame('system-api-dbus-native-runtime-coupling', $payload['result']['data']['kind']);
+        self::assertSame('native-runtime-coupling-blocked', $payload['result']['data']['status']);
+        self::assertSame('install-native-dbus-extension', $payload['result']['data']['next_action']);
+        self::assertSame('system-api-dbus-runtime-diagnosis', $payload['result']['data']['runtime_diagnosis']['kind']);
+    }
+
+    public function testDbusNativeCouplingMethodReturnsReadyPublicCouplingReportAgainstFakeRuntime(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-dbus-native-coupling-002',
+            'method' => 'system.dbus-native-coupling',
+            'params' => [],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '1',
+            'W4_SYSTEM_API_PROBE_HAS_BUSCTL' => '1',
+            'W4_SYSTEM_API_PROBE_HAS_GDBUS' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON' => '1',
+            'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET' => '1',
+            'W4_SYSTEM_API_PROBE_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_PROBE_PHP_BINARY' => '/usr/bin/php',
+            'W4_SYSTEM_API_PROBE_PHP_VERSION' => '8.4.3',
+            'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+            'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusService',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_DRIVER_BOOTSTRAP' => dirname(__DIR__) . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR . 'Fixtures' . DIRECTORY_SEPARATOR . 'NativeDbusExtensionDriverBootstrap.php',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_DRIVER_CLASS' => 'W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver',
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('system.dbus-native-coupling', $payload['result']['method']);
+        self::assertSame('native-runtime-coupling-ready', $payload['result']['data']['status']);
+        self::assertTrue($payload['result']['data']['compatible']);
+        self::assertSame('materialize-native-bus-ownership', $payload['result']['data']['next_action']);
+        self::assertSame(
+            'W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver',
+            $payload['result']['data']['coupling_driver']['class_name']
+        );
+        self::assertSame(
+            'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusService',
+            $payload['result']['data']['coupling_driver']['runtime_class_name']
+        );
+    }
+
+    public function testDbusNativeOwnershipMethodReturnsBlockedPublicOwnershipReport(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-dbus-native-ownership-001',
+            'method' => 'system.dbus-native-ownership',
+            'params' => [],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('system.dbus-native-ownership', $payload['result']['method']);
+        self::assertSame('system-api-dbus-native-runtime-ownership', $payload['result']['resource']['kind']);
+        self::assertSame('org.w4.System1', $payload['result']['resource']['id']);
+        self::assertSame('local-system-api-native-ownership-contract', $payload['result']['resource']['provider']);
+        self::assertSame('system-api-dbus-native-runtime-ownership', $payload['result']['data']['kind']);
+        self::assertSame('native-runtime-service-blocked', $payload['result']['data']['status']);
+        self::assertFalse($payload['result']['data']['attempted']);
+        self::assertSame('install-native-dbus-extension', $payload['result']['data']['next_action']);
+        self::assertSame('system-api-dbus-runtime-diagnosis', $payload['result']['data']['runtime_diagnosis']['kind']);
+    }
+
+    public function testDbusNativeOwnershipMethodReturnsOwnedPublicOwnershipReportAgainstFakeRuntime(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-dbus-native-ownership-002',
+            'method' => 'system.dbus-native-ownership',
+            'params' => [],
+        ];
+        $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-system-api-public-ownership-' . bin2hex(random_bytes(6));
+        $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
+        $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
+        $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+
+        try {
+            self::assertTrue(mkdir($baseDirectory, 0777, true) || is_dir($baseDirectory));
+            file_put_contents($readyMarkerPath, "native-runtime-service-started\n");
+            file_put_contents($statusFilePath, json_encode([
+                'startup_acknowledged' => true,
+                'ownership_state' => 'pending-bus-name-ownership',
+            ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+            file_put_contents($pidFilePath, "0\n");
+
+            $result = $this->runPhpScript([
+                $this->scriptPath(),
+                '--request-json',
+                json_encode($request, JSON_THROW_ON_ERROR),
+            ], [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '1',
+                'W4_SYSTEM_API_PROBE_HAS_BUSCTL' => '1',
+                'W4_SYSTEM_API_PROBE_HAS_GDBUS' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON' => '1',
+                'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET' => '1',
+                'W4_SYSTEM_API_PROBE_OS_FAMILY' => 'Linux',
+                'W4_SYSTEM_API_PROBE_PHP_BINARY' => '/usr/bin/php',
+                'W4_SYSTEM_API_PROBE_PHP_VERSION' => '8.4.3',
+                'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusService',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_DRIVER_BOOTSTRAP' => dirname(__DIR__) . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR . 'Fixtures' . DIRECTORY_SEPARATOR . 'NativeDbusExtensionDriverBootstrap.php',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_DRIVER_CLASS' => 'W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver',
+            ]);
+
+            self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+            $payload = $this->decodeJson($result['stdout']);
+            self::assertNull($payload['error']);
+            self::assertSame('system.dbus-native-ownership', $payload['result']['method']);
+            self::assertSame('native-runtime-bus-owned', $payload['result']['data']['status']);
+            self::assertTrue($payload['result']['data']['attempted']);
+            self::assertSame('native-driver', $payload['result']['data']['execution_mode']);
+            self::assertSame('bus-name-owned', $payload['result']['data']['ownership_state']);
+            self::assertSame('runtime-service-active', $payload['result']['data']['next_action']);
+            self::assertSame(
+                'W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver',
+                $payload['result']['data']['ownership_driver']['class_name']
+            );
+            self::assertSame(
+                'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusService',
+                $payload['result']['data']['ownership_driver']['runtime_class_name']
+            );
+        } finally {
+            @unlink($readyMarkerPath);
+            @unlink($statusFilePath);
+            @unlink($pidFilePath);
+            @rmdir($baseDirectory);
+        }
     }
 
     public function testProfilesGetReusesW4ctlContract(): void
