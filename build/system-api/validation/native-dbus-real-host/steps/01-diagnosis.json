@@ -13,10 +13,20 @@
     },
     "probes": {
         "php_dbus_extension": false,
+        "pecl": false,
         "busctl": false,
         "gdbus": false,
         "dbus_daemon": false,
         "system_bus_socket": false
+    },
+    "native_dbus_extension_installation": {
+        "state": "build-failed",
+        "pecl_available": true,
+        "extension_loaded": false,
+        "blocking_reason": "native-dbus-extension-build-failed",
+        "next_action": "inspect-native-dbus-build-stack",
+        "reason": "zend_object_store_get_object",
+        "log_path": "c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md"
     },
     "missing_capabilities": [
         "php-dbus-runtime-adapter",

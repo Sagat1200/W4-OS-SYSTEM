@@ -186,10 +186,12 @@ final class SystemApiDbusRuntimeProbeToolkit
             'installed' => 'observe-runtime-backend',
             default => $extensionLoaded ? 'observe-runtime-backend' : 'install-native-dbus-extension',
         };
+        $peclAvailableForInstallation = $hasPecl
+            || in_array($state, ['buildable', 'build-failed', 'unsupported-stack'], true);
 
         return [
             'state' => $state,
-            'pecl_available' => $hasPecl,
+            'pecl_available' => $peclAvailableForInstallation,
             'extension_loaded' => $extensionLoaded,
             'blocking_reason' => $blockingReason,
             'next_action' => $nextAction,

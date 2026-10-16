@@ -1,23 +1,17 @@
 Native D-Bus Runtime Preparation Checklist
 OS family: Linux
 
-1. install-native-dbus-extension - Instalar y habilitar la extension PECL `dbus` para que PHP pueda pedir el bus name y exportar el objeto D-Bus.
-   - sudo apt-get update
-   - sudo apt-get install -y php-pear php-dev libdbus-1-dev pkg-config
-   - sudo pecl install dbus
-   - php --ri dbus
-2. install-dbus-daemon - Asegurar que `dbus-daemon` este instalado y disponible en el host.
-   - sudo apt-get update
-   - sudo apt-get install -y dbus
-   - dbus-daemon --version
-3. materialize-system-bus-socket - Confirmar que el socket del system bus exista y que el servicio D-Bus del sistema este activo.
-   - sudo systemctl status dbus
-   - test -S /run/dbus/system_bus_socket && echo system-bus-socket-ready
-4. install-dbus-client-tooling - Instalar al menos una herramienta de cliente D-Bus (`busctl` o `gdbus`) para contrastar el runtime desde el host.
-   - sudo apt-get update
-   - sudo apt-get install -y systemd dbus
-   - busctl --version || gdbus --version
-5. retry-native-bus-ownership - Reintentar el ownership real del bus solo cuando el host confirme extension PECL dbus, daemon, socket y tooling del sistema disponibles.
+1. inspect-native-dbus-build-stack - La extension `dbus` ya fue intentada pero la compilacion o instalacion fallo. Conviene inspeccionar el stack y la evidencia del build antes de seguir insistiendo con PECL.
+   - php --version
+   - phpize --version || true
+   - lsb_release -a || cat /etc/os-release
+   - pecl version
+   - pecl remote-info channel://pecl.php.net/dbus-0.1.1
+   - printf '%s
+' "Ultimo motivo reportado: zend_object_store_get_object"
+   - test -f "c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md" && tail -n 80 "c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md" || echo "Build log no disponible: c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md"
+   - cd "/srv/w4/os-system" && php -r "echo json_decode(file_get_contents('composer.json'), true)['require']['php'], PHP_EOL;"
+2. rerun-native-runtime-validation - Reejecutar el runner despues de corregir la instalacion o compilacion de la extension `dbus` para confirmar si el ownership ya puede progresar.
    - cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format text --target-os-family Linux
    - cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format markdown --target-os-family Linux
    - cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux

@@ -129,7 +129,7 @@ TEXT);
                 $this->scriptPath(),
             ], [
                 'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
-                'W4_SYSTEM_API_PROBE_HAS_PECL' => '1',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '0',
                 'W4_SYSTEM_API_PROBE_HAS_BUSCTL' => '1',
                 'W4_SYSTEM_API_PROBE_HAS_GDBUS' => '0',
                 'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON' => '1',
@@ -144,6 +144,7 @@ TEXT);
 
             $payload = $this->decodeJson($result['stdout']);
             self::assertSame('build-failed', $payload['native_dbus_extension_installation']['state']);
+            self::assertTrue($payload['native_dbus_extension_installation']['pecl_available']);
             self::assertSame('native-dbus-extension-build-failed', $payload['native_dbus_extension_installation']['blocking_reason']);
             self::assertSame('inspect-native-dbus-build-stack', $payload['native_dbus_extension_installation']['next_action']);
             self::assertSame('zend_object_store_get_object', $payload['native_dbus_extension_installation']['reason']);
@@ -186,6 +187,7 @@ TEXT);
 
             $payload = $this->decodeJson($result['stdout']);
             self::assertSame('build-failed', $payload['native_dbus_extension_installation']['state']);
+            self::assertTrue($payload['native_dbus_extension_installation']['pecl_available']);
             self::assertSame('zend_object_store_get_object', $payload['native_dbus_extension_installation']['reason']);
             self::assertSame('/tmp/native-dbus-build.log', $payload['native_dbus_extension_installation']['log_path']);
         } finally {

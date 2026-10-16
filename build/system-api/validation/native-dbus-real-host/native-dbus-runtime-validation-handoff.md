@@ -3,7 +3,7 @@
 - Target OS family: `Linux`
 - Target repo root: `/srv/w4/os-system`
 - Current status: `blocked`
-- Blocking reason: `missing-runtime-capabilities`
+- Blocking reason: `native-dbus-extension-build-failed`
 - Preparation script: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-runtime-validation-prepare.sh`
 - Preparation checklist: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-runtime-validation-preparation.txt`
 

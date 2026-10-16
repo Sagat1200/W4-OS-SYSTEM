@@ -11,6 +11,7 @@
     "preparation_shell_script_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\native-dbus-runtime-validation-prepare.sh",
     "preparation_checklist_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\native-dbus-runtime-validation-preparation.txt",
     "handoff_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\native-dbus-runtime-validation-handoff.md",
+    "native_dbus_extension_build_evidence_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\native-dbus-extension-build-evidence.json",
     "artifacts_dir": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\runtime-artifacts",
     "runtime_backend": "native-dbus-extension",
     "preparation_target_os_family": "Linux",
@@ -18,56 +19,76 @@
     "bus_name": "org.w4.System1",
     "object_path": "/org/w4/System1",
     "interface": "org.w4.System1.Manager",
-    "started_at": "2026-10-16T12:01:20+00:00",
-    "completed_at": "2026-10-16T12:01:24+00:00",
+    "started_at": "2026-10-16T21:43:34+00:00",
+    "completed_at": "2026-10-16T21:43:41+00:00",
     "ownership_validated": false,
     "coupling_ready": false,
     "startup_acknowledged": false,
-    "blocking_reason": "missing-runtime-capabilities",
-    "next_action": "install-native-dbus-extension",
+    "blocking_reason": "native-dbus-extension-build-failed",
+    "next_action": "inspect-native-dbus-build-stack",
     "recommended_next_actions": [
+        "inspect-native-dbus-build-stack",
+        "migrate-to-modern-linux-host",
         "install-native-dbus-extension"
     ],
+    "host_compatibility": {
+        "compatible": true,
+        "os_family": "Windows",
+        "php_version": "8.4.3",
+        "required_php_constraint": "^8.4",
+        "required_php_version": "8.4.0",
+        "blocking_reason": null,
+        "next_action": null,
+        "recommended_next_actions": [],
+        "preparation_steps": []
+    },
+    "native_dbus_extension_installability": {
+        "blocked": true,
+        "state": "build-failed",
+        "blocking_reason": "native-dbus-extension-build-failed",
+        "next_action": "inspect-native-dbus-build-stack",
+        "reason": "zend_object_store_get_object",
+        "log_path": "c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md",
+        "pecl_available": true,
+        "recommended_next_actions": [
+            "inspect-native-dbus-build-stack",
+            "migrate-to-modern-linux-host"
+        ],
+        "preparation_steps": [
+            {
+                "action": "inspect-native-dbus-build-stack",
+                "description": "La extension `dbus` ya fue intentada pero la compilacion o instalacion fallo. Conviene inspeccionar el stack y la evidencia del build antes de seguir insistiendo con PECL.",
+                "commands": [
+                    "php --version",
+                    "phpize --version || true",
+                    "lsb_release -a || cat /etc/os-release",
+                    "pecl version",
+                    "pecl remote-info channel://pecl.php.net/dbus-0.1.1",
+                    "printf '%s\n' \"Ultimo motivo reportado: zend_object_store_get_object\"",
+                    "test -f \"c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md\" && tail -n 80 \"c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md\" || echo \"Build log no disponible: c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md\"",
+                    "cd \"/srv/w4/os-system\" && php -r \"echo json_decode(file_get_contents('composer.json'), true)['require']['php'], PHP_EOL;\""
+                ]
+            }
+        ]
+    },
     "preparation_plan": [
         {
-            "action": "install-native-dbus-extension",
-            "description": "Instalar y habilitar la extension PECL `dbus` para que PHP pueda pedir el bus name y exportar el objeto D-Bus.",
+            "action": "inspect-native-dbus-build-stack",
+            "description": "La extension `dbus` ya fue intentada pero la compilacion o instalacion fallo. Conviene inspeccionar el stack y la evidencia del build antes de seguir insistiendo con PECL.",
             "commands": [
-                "sudo apt-get update",
-                "sudo apt-get install -y php-pear php-dev libdbus-1-dev pkg-config",
-                "sudo pecl install dbus",
-                "php --ri dbus"
+                "php --version",
+                "phpize --version || true",
+                "lsb_release -a || cat /etc/os-release",
+                "pecl version",
+                "pecl remote-info channel://pecl.php.net/dbus-0.1.1",
+                "printf '%s\n' \"Ultimo motivo reportado: zend_object_store_get_object\"",
+                "test -f \"c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md\" && tail -n 80 \"c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md\" || echo \"Build log no disponible: c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md\"",
+                "cd \"/srv/w4/os-system\" && php -r \"echo json_decode(file_get_contents('composer.json'), true)['require']['php'], PHP_EOL;\""
             ]
         },
         {
-            "action": "install-dbus-daemon",
-            "description": "Asegurar que `dbus-daemon` este instalado y disponible en el host.",
-            "commands": [
-                "sudo apt-get update",
-                "sudo apt-get install -y dbus",
-                "dbus-daemon --version"
-            ]
-        },
-        {
-            "action": "materialize-system-bus-socket",
-            "description": "Confirmar que el socket del system bus exista y que el servicio D-Bus del sistema este activo.",
-            "commands": [
-                "sudo systemctl status dbus",
-                "test -S /run/dbus/system_bus_socket && echo system-bus-socket-ready"
-            ]
-        },
-        {
-            "action": "install-dbus-client-tooling",
-            "description": "Instalar al menos una herramienta de cliente D-Bus (`busctl` o `gdbus`) para contrastar el runtime desde el host.",
-            "commands": [
-                "sudo apt-get update",
-                "sudo apt-get install -y systemd dbus",
-                "busctl --version || gdbus --version"
-            ]
-        },
-        {
-            "action": "retry-native-bus-ownership",
-            "description": "Reintentar el ownership real del bus solo cuando el host confirme extension PECL dbus, daemon, socket y tooling del sistema disponibles.",
+            "action": "rerun-native-runtime-validation",
+            "description": "Reejecutar el runner despues de corregir la instalacion o compilacion de la extension `dbus` para confirmar si el ownership ya puede progresar.",
             "commands": [
                 "cd \"/srv/w4/os-system\" && php scripts/run_native_dbus_real_host_validation.php --format text --target-os-family Linux",
                 "cd \"/srv/w4/os-system\" && php scripts/run_native_dbus_real_host_validation.php --format markdown --target-os-family Linux",
@@ -78,8 +99,12 @@
     "environment_overrides": {
         "W4_SYSTEM_API_RUNTIME_BACKEND": "native-dbus-extension",
         "W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\runtime-artifacts",
+        "W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_JSON_PATH": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\native-dbus-extension-build-evidence.json",
+        "W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_PATH": "c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md",
         "W4_SYSTEM_API_PREPARATION_TARGET_OS_FAMILY": "Linux",
-        "W4_SYSTEM_API_PREPARATION_TARGET_REPO_ROOT": "/srv/w4/os-system"
+        "W4_SYSTEM_API_PREPARATION_TARGET_REPO_ROOT": "/srv/w4/os-system",
+        "W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_STATE": "build-failed",
+        "W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_REASON": "zend_object_store_get_object"
     },
     "steps": {
         "diagnosis": {
@@ -97,10 +122,20 @@
             },
             "probes": {
                 "php_dbus_extension": false,
+                "pecl": false,
                 "busctl": false,
                 "gdbus": false,
                 "dbus_daemon": false,
                 "system_bus_socket": false
+            },
+            "native_dbus_extension_installation": {
+                "state": "build-failed",
+                "pecl_available": true,
+                "extension_loaded": false,
+                "blocking_reason": "native-dbus-extension-build-failed",
+                "next_action": "inspect-native-dbus-build-stack",
+                "reason": "zend_object_store_get_object",
+                "log_path": "c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md"
             },
             "missing_capabilities": [
                 "php-dbus-runtime-adapter",
