@@ -24,7 +24,8 @@
         "pecl_available": true,
         "extension_loaded": false,
         "blocking_reason": "native-dbus-extension-build-failed",
-        "next_action": "inspect-native-dbus-build-stack",
+        "next_action": "inspect-native-dbus-build-make",
+        "build_phase": "make",
         "reason": "zend_object_store_get_object",
         "log_path": "c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md"
     },

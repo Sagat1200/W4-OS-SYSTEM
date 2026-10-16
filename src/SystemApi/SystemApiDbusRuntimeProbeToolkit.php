@@ -159,6 +159,11 @@ final class SystemApiDbusRuntimeProbeToolkit
             'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_STATE',
             ['unknown', 'not-attempted', 'buildable', 'build-failed', 'unsupported-stack', 'installed']
         );
+        $explicitBuildPhase = $this->resolveOptionalEnumOverride(
+            $environment,
+            'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_PHASE',
+            ['unknown', 'pecl-download', 'phpize', 'configure', 'make']
+        );
         $explicitReason = $this->resolveStringOverride($environment, 'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_REASON');
         $explicitLogPath = $this->resolveStringOverride($environment, 'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_LOG_PATH');
         $inferredEvidence = $this->inferNativeDbusExtensionInstallationFromStructuredEvidence($environment);
@@ -172,6 +177,14 @@ final class SystemApiDbusRuntimeProbeToolkit
             ?? (is_string($inferredEvidence['reason'] ?? null) ? $inferredEvidence['reason'] : null);
         $logPath = $explicitLogPath
             ?? (is_string($inferredEvidence['log_path'] ?? null) ? $inferredEvidence['log_path'] : null);
+        $inferredBuildPhase = is_string($inferredEvidence['build_phase'] ?? null)
+            && trim((string) $inferredEvidence['build_phase']) !== ''
+            ? trim((string) $inferredEvidence['build_phase'])
+            : null;
+        $buildPhase = $explicitBuildPhase
+            ?? $inferredBuildPhase
+            ?? $this->inferNativeDbusBuildPhaseFromReason($reason, $state)
+            ?? 'unknown';
 
         $blockingReason = match ($state) {
             'build-failed' => 'native-dbus-extension-build-failed',
@@ -180,7 +193,7 @@ final class SystemApiDbusRuntimeProbeToolkit
         };
 
         $nextAction = match ($state) {
-            'build-failed' => 'inspect-native-dbus-build-stack',
+            'build-failed' => $this->resolveNativeDbusBuildFailureAction($buildPhase),
             'unsupported-stack' => 'migrate-to-modern-linux-host',
             'buildable', 'not-attempted', 'unknown' => $extensionLoaded ? 'observe-runtime-backend' : 'install-native-dbus-extension',
             'installed' => 'observe-runtime-backend',
@@ -195,6 +208,7 @@ final class SystemApiDbusRuntimeProbeToolkit
             'extension_loaded' => $extensionLoaded,
             'blocking_reason' => $blockingReason,
             'next_action' => $nextAction,
+            'build_phase' => $buildPhase,
             'reason' => $reason,
             'log_path' => $logPath,
         ];
@@ -256,6 +270,9 @@ final class SystemApiDbusRuntimeProbeToolkit
 
         return [
             'state' => $state,
+            'build_phase' => is_string($payload['build_phase'] ?? null) && trim((string) $payload['build_phase']) !== ''
+                ? trim((string) $payload['build_phase'])
+                : '',
             'reason' => is_string($payload['reason'] ?? null) ? trim((string) $payload['reason']) : '',
             'log_path' => is_string($payload['log_path'] ?? null)
                 ? trim((string) $payload['log_path'])
@@ -282,14 +299,39 @@ final class SystemApiDbusRuntimeProbeToolkit
         $normalized = strtolower($raw);
         $reason = null;
         $state = null;
+        $buildPhase = 'unknown';
 
         if (
+            str_contains($normalized, 'failed to download pecl/dbus')
+            || str_contains($normalized, 'latest release is beta')
+            || str_contains($normalized, 'no releases available for package')
+        ) {
+            $state = 'build-failed';
+            $buildPhase = 'pecl-download';
+            $reason = str_contains($normalized, 'latest release is beta')
+                ? 'pecl-release-is-beta'
+                : 'native-dbus-extension-download-failed';
+        } elseif (
+            str_contains($normalized, 'configure: error')
+            || str_contains($normalized, 'cannot find xml2-config')
+            || str_contains($normalized, 'libxml-2.0')
+            || str_contains($normalized, 'phpize failed')
+        ) {
+            $state = 'build-failed';
+            $buildPhase = str_contains($normalized, 'phpize failed') ? 'phpize' : 'configure';
+            $reason = str_contains($normalized, 'libxml-2.0')
+                ? 'libxml-2.0'
+                : (str_contains($normalized, 'cannot find xml2-config')
+                    ? 'xml2-config-missing'
+                    : 'native-dbus-extension-configure-failed');
+        } elseif (
             str_contains($normalized, 'zend_object_store_get_object')
             || str_contains($normalized, 'make: ***')
             || str_contains($normalized, 'compilacion sigue fallando')
             || str_contains($normalized, 'no compila')
         ) {
             $state = 'build-failed';
+            $buildPhase = 'make';
             $reason = str_contains($normalized, 'zend_object_store_get_object')
                 ? 'zend_object_store_get_object'
                 : (str_contains($normalized, 'make: *** [makefile:192: dbus.lo] error 1')
@@ -309,8 +351,60 @@ final class SystemApiDbusRuntimeProbeToolkit
 
         return [
             'state' => $state,
+            'build_phase' => $buildPhase,
             'reason' => $reason ?? '',
             'log_path' => $evidencePath,
         ];
+    }
+
+    private function inferNativeDbusBuildPhaseFromReason(?string $reason, string $state): ?string
+    {
+        if ($state !== 'build-failed' || $reason === null || trim($reason) === '') {
+            return null;
+        }
+
+        $normalized = strtolower(trim($reason));
+
+        if (
+            str_contains($normalized, 'pecl-release-is-beta')
+            || str_contains($normalized, 'download')
+        ) {
+            return 'pecl-download';
+        }
+
+        if (
+            str_contains($normalized, 'libxml-2.0')
+            || str_contains($normalized, 'xml2-config')
+            || str_contains($normalized, 'configure')
+        ) {
+            return 'configure';
+        }
+
+        if (
+            str_contains($normalized, 'phpize')
+        ) {
+            return 'phpize';
+        }
+
+        if (
+            str_contains($normalized, 'zend_object_store_get_object')
+            || str_contains($normalized, 'make:')
+            || str_contains($normalized, 'dbus.lo')
+            || str_contains($normalized, 'build-failed')
+        ) {
+            return 'make';
+        }
+
+        return null;
+    }
+
+    private function resolveNativeDbusBuildFailureAction(string $buildPhase): string
+    {
+        return match ($buildPhase) {
+            'pecl-download' => 'inspect-native-dbus-pecl-download',
+            'phpize', 'configure' => 'inspect-native-dbus-build-configure',
+            'make' => 'inspect-native-dbus-build-make',
+            default => 'inspect-native-dbus-build-stack',
+        };
     }
 }

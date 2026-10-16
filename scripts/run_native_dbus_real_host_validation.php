@@ -62,6 +62,10 @@ try {
                 $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_STATE'] = $value;
                 break;
 
+            case '--native-dbus-build-phase':
+                $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_PHASE'] = $value;
+                break;
+
             case '--native-dbus-build-reason':
                 $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_REASON'] = $value;
                 break;

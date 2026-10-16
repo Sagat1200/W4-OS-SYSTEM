@@ -328,6 +328,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             '',
             sprintf('- Installation state: `%s`', (string) ($report['native_dbus_extension_installability']['state'] ?? 'unknown')),
             sprintf('- PECL available: `%s`', (($report['native_dbus_extension_installability']['pecl_available'] ?? false) === true) ? 'yes' : 'no'),
+            sprintf('- Installation build phase: `%s`', (string) ($report['native_dbus_extension_installability']['build_phase'] ?? 'unknown')),
             sprintf('- Installation blocking reason: `%s`', (string) ($report['native_dbus_extension_installability']['blocking_reason'] ?? 'n/a')),
             sprintf('- Installation next action: `%s`', (string) ($report['native_dbus_extension_installability']['next_action'] ?? 'n/a')),
             sprintf('- Installation reason: `%s`', (string) ($report['native_dbus_extension_installability']['reason'] ?? 'n/a')),
@@ -951,6 +952,9 @@ final class SystemApiNativeDbusHostValidationToolkit
         $nextAction = is_string($installation['next_action'] ?? null)
             ? trim((string) $installation['next_action'])
             : null;
+        $buildPhase = is_string($installation['build_phase'] ?? null)
+            ? trim((string) $installation['build_phase'])
+            : 'unknown';
         $reason = is_string($installation['reason'] ?? null) ? trim((string) $installation['reason']) : null;
         $logPath = is_string($installation['log_path'] ?? null) ? trim((string) $installation['log_path']) : null;
         $peclAvailable = (($installation['pecl_available'] ?? false) === true);
@@ -964,6 +968,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             ], static fn (mixed $value): bool => is_string($value) && trim($value) !== '')));
             $preparationSteps[] = $this->createNativeDbusExtensionInstallabilityStep(
                 $state,
+                $buildPhase,
                 $reason,
                 $logPath,
                 $targetRepoRoot,
@@ -976,6 +981,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             'state' => $state,
             'blocking_reason' => $blockingReason,
             'next_action' => $nextAction,
+            'build_phase' => $buildPhase,
             'reason' => $reason,
             'log_path' => $logPath,
             'pecl_available' => $peclAvailable,
@@ -989,6 +995,7 @@ final class SystemApiNativeDbusHostValidationToolkit
      */
     private function createNativeDbusExtensionInstallabilityStep(
         string $state,
+        string $buildPhase,
         ?string $reason,
         ?string $logPath,
         string $targetRepoRoot,
@@ -996,15 +1003,16 @@ final class SystemApiNativeDbusHostValidationToolkit
     ): array {
         $description = $state === 'unsupported-stack'
             ? 'El stack actual no parece compatible con la extension `dbus`. Conviene inspeccionar el entorno y mover el contraste a un Linux moderno homologado para este runtime.'
-            : 'La extension `dbus` ya fue intentada pero la compilacion o instalacion fallo. Conviene inspeccionar el stack y la evidencia del build antes de seguir insistiendo con PECL.';
+            : $this->describeNativeDbusBuildFailurePhase($buildPhase);
 
         return [
             'action' => $state === 'unsupported-stack'
                 ? 'migrate-to-modern-linux-host'
-                : 'inspect-native-dbus-build-stack',
+                : $this->resolveNativeDbusBuildFailureAction($buildPhase),
             'description' => $description,
             'commands' => $this->buildNativeDbusExtensionInstallabilityCommands(
                 $state,
+                $buildPhase,
                 $reason,
                 $logPath,
                 $targetRepoRoot,
@@ -1018,6 +1026,7 @@ final class SystemApiNativeDbusHostValidationToolkit
      */
     private function buildNativeDbusExtensionInstallabilityCommands(
         string $state,
+        string $buildPhase,
         ?string $reason,
         ?string $logPath,
         string $targetRepoRoot,
@@ -1034,6 +1043,18 @@ final class SystemApiNativeDbusHostValidationToolkit
             $commands[] = 'pecl remote-info channel://pecl.php.net/dbus-0.1.1';
         } else {
             $commands[] = 'echo "PECL no esta disponible en este host."';
+        }
+
+        if ($buildPhase === 'configure' || $buildPhase === 'phpize') {
+            $commands[] = 'pkg-config --modversion dbus-1 || true';
+            $commands[] = 'pkg-config --modversion libxml-2.0 || true';
+            $commands[] = 'which phpize || true';
+            $commands[] = 'which xml2-config || true';
+        }
+
+        if ($buildPhase === 'make') {
+            $commands[] = 'make --version || true';
+            $commands[] = 'gcc --version || true';
         }
 
         if ($reason !== null && $reason !== '') {
@@ -1061,6 +1082,26 @@ final class SystemApiNativeDbusHostValidationToolkit
             : 'php -r "echo json_decode(file_get_contents(\'composer.json\'), true)[\'require\'][\'php\'], PHP_EOL;"';
 
         return $commands;
+    }
+
+    private function resolveNativeDbusBuildFailureAction(string $buildPhase): string
+    {
+        return match ($buildPhase) {
+            'pecl-download' => 'inspect-native-dbus-pecl-download',
+            'phpize', 'configure' => 'inspect-native-dbus-build-configure',
+            'make' => 'inspect-native-dbus-build-make',
+            default => 'inspect-native-dbus-build-stack',
+        };
+    }
+
+    private function describeNativeDbusBuildFailurePhase(string $buildPhase): string
+    {
+        return match ($buildPhase) {
+            'pecl-download' => 'La extension `dbus` fallo antes de descargar o resolver correctamente la release PECL. Conviene inspeccionar el canal, la release objetivo y la disponibilidad real del paquete antes de repetir la instalacion.',
+            'phpize', 'configure' => 'La extension `dbus` fallo durante la preparacion de toolchain o `configure`. Conviene inspeccionar `phpize`, `pkg-config`, `xml2-config` y dependencias de desarrollo antes de volver a compilar.',
+            'make' => 'La extension `dbus` ya avanzo hasta `make`, pero la compilacion fallo. Conviene inspeccionar el toolchain C y la evidencia del error de compilacion antes de seguir insistiendo con PECL.',
+            default => 'La extension `dbus` ya fue intentada pero la compilacion o instalacion fallo. Conviene inspeccionar el stack y la evidencia del build antes de seguir insistiendo con PECL.',
+        };
     }
 
     /**
@@ -1276,35 +1317,54 @@ final class SystemApiNativeDbusHostValidationToolkit
         $markers = [];
         $state = 'unknown';
         $reason = null;
+        $buildPhase = 'unknown';
 
-        if (str_contains($normalized, 'zend_object_store_get_object')) {
-            $markers[] = 'zend_object_store_get_object';
+        if (
+            str_contains($normalized, 'failed to download pecl/dbus')
+            || str_contains($normalized, 'latest release is beta')
+            || str_contains($normalized, 'no releases available for package')
+        ) {
+            $markers[] = 'pecl-download';
             $state = 'build-failed';
-            $reason = 'zend_object_store_get_object';
+            $buildPhase = 'pecl-download';
+            $reason = str_contains($normalized, 'latest release is beta')
+                ? 'pecl-release-is-beta'
+                : 'native-dbus-extension-download-failed';
         }
 
-        if (str_contains($normalized, 'make: ***')) {
-            $markers[] = 'make: ***';
+        if (
+            $state === 'unknown'
+            && (
+                str_contains($normalized, 'configure: error')
+                || str_contains($normalized, 'cannot find xml2-config')
+                || str_contains($normalized, 'libxml-2.0')
+                || str_contains($normalized, 'phpize failed')
+            )
+        ) {
+            $markers[] = 'configure';
             $state = 'build-failed';
-            if ($reason === null) {
-                $reason = 'make: *** [Makefile:192: dbus.lo] Error 1';
-            }
+            $buildPhase = str_contains($normalized, 'phpize failed') ? 'phpize' : 'configure';
+            $reason = str_contains($normalized, 'libxml-2.0')
+                ? 'libxml-2.0'
+                : (str_contains($normalized, 'cannot find xml2-config')
+                    ? 'xml2-config-missing'
+                    : 'native-dbus-extension-configure-failed');
         }
 
-        if (str_contains($normalized, 'compilacion sigue fallando')) {
-            $markers[] = 'compilacion-sigue-fallando';
+        if (
+            str_contains($normalized, 'zend_object_store_get_object')
+            || str_contains($normalized, 'make: ***')
+            || str_contains($normalized, 'compilacion sigue fallando')
+            || str_contains($normalized, 'no compila')
+        ) {
+            $markers[] = 'make';
             $state = 'build-failed';
-            if ($reason === null) {
-                $reason = 'native-dbus-extension-build-failed';
-            }
-        }
-
-        if (str_contains($normalized, 'no compila')) {
-            $markers[] = 'no-compila';
-            $state = 'build-failed';
-            if ($reason === null) {
-                $reason = 'native-dbus-extension-build-failed';
-            }
+            $buildPhase = 'make';
+            $reason = str_contains($normalized, 'zend_object_store_get_object')
+                ? 'zend_object_store_get_object'
+                : (str_contains($normalized, 'make: *** [makefile:192: dbus.lo] error 1')
+                    ? 'make: *** [Makefile:192: dbus.lo] Error 1'
+                    : 'native-dbus-extension-build-failed');
         }
 
         if (
@@ -1322,6 +1382,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             'generated_at' => gmdate('c'),
             'source_path' => $sourcePath,
             'state' => $state,
+            'build_phase' => $buildPhase,
             'reason' => $reason,
             'log_path' => $sourcePath,
             'markers' => $markers,
@@ -1335,6 +1396,7 @@ final class SystemApiNativeDbusHostValidationToolkit
     private function buildNativeDbusBuildEvidencePayloadFromOverrides(array $environmentOverrides): ?array
     {
         $state = $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_STATE'] ?? null;
+        $buildPhase = $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_PHASE'] ?? null;
         $reason = $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_REASON'] ?? null;
         $logPath = $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_LOG_PATH']
             ?? $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_PATH']
@@ -1347,10 +1409,17 @@ final class SystemApiNativeDbusHostValidationToolkit
         $normalizedState = strtolower(trim($state));
         $normalizedReason = is_string($reason) && trim($reason) !== '' ? trim($reason) : null;
         $normalizedLogPath = is_string($logPath) && trim($logPath) !== '' ? trim($logPath) : null;
+        $normalizedBuildPhase = is_string($buildPhase) && trim($buildPhase) !== ''
+            ? strtolower(trim($buildPhase))
+            : $this->inferNativeDbusBuildPhaseFromReason($normalizedReason, $normalizedState);
         $markers = [];
 
         if ($normalizedReason !== null) {
             $markers[] = $normalizedReason;
+        }
+
+        if ($normalizedBuildPhase !== 'unknown') {
+            $markers[] = $normalizedBuildPhase;
         }
 
         return [
@@ -1359,10 +1428,50 @@ final class SystemApiNativeDbusHostValidationToolkit
             'generated_at' => gmdate('c'),
             'source_path' => $normalizedLogPath,
             'state' => $normalizedState,
+            'build_phase' => $normalizedBuildPhase,
             'reason' => $normalizedReason,
             'log_path' => $normalizedLogPath,
             'markers' => $markers,
         ];
+    }
+
+    private function inferNativeDbusBuildPhaseFromReason(?string $reason, string $state): string
+    {
+        if ($state !== 'build-failed' || $reason === null || trim($reason) === '') {
+            return 'unknown';
+        }
+
+        $normalized = strtolower(trim($reason));
+
+        if (
+            str_contains($normalized, 'pecl-release-is-beta')
+            || str_contains($normalized, 'download')
+        ) {
+            return 'pecl-download';
+        }
+
+        if (
+            str_contains($normalized, 'libxml-2.0')
+            || str_contains($normalized, 'xml2-config')
+            || str_contains($normalized, 'configure')
+        ) {
+            return 'configure';
+        }
+
+        if (str_contains($normalized, 'phpize')) {
+            return 'phpize';
+        }
+
+        if (
+            str_contains($normalized, 'zend_object_store_get_object')
+            || str_contains($normalized, 'make:')
+            || str_contains($normalized, 'dbus.lo')
+            || str_contains($normalized, 'build-failed')
+        ) {
+            return 'make';
+        }
+
+        return 'unknown';
     }
 
     /**

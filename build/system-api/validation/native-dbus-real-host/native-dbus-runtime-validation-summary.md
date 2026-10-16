@@ -10,7 +10,7 @@
 - Host compatibility: `compatible`
 - Native D-Bus extension installation: `build-failed`
 - Blocking reason: `native-dbus-extension-build-failed`
-- Next action: `inspect-native-dbus-build-stack`
+- Next action: `inspect-native-dbus-build-make`
 - Report path: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-runtime-validation-report.json`
 - Native D-Bus build evidence path: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-extension-build-evidence.json`
 - Handoff path: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-runtime-validation-handoff.md`
@@ -28,20 +28,21 @@
 
 - Installation state: `build-failed`
 - PECL available: `yes`
+- Installation build phase: `make`
 - Installation blocking reason: `native-dbus-extension-build-failed`
-- Installation next action: `inspect-native-dbus-build-stack`
+- Installation next action: `inspect-native-dbus-build-make`
 - Installation reason: `zend_object_store_get_object`
 - Installation log path: `c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md`
 
 ## Recommended Next Actions
 
-- `inspect-native-dbus-build-stack`
+- `inspect-native-dbus-build-make`
 - `migrate-to-modern-linux-host`
 - `install-native-dbus-extension`
 
 ## Preparation Plan
 
-1. `inspect-native-dbus-build-stack` - La extension `dbus` ya fue intentada pero la compilacion o instalacion fallo. Conviene inspeccionar el stack y la evidencia del build antes de seguir insistiendo con PECL.
+1. `inspect-native-dbus-build-make` - La extension `dbus` ya avanzo hasta `make`, pero la compilacion fallo. Conviene inspeccionar el toolchain C y la evidencia del error de compilacion antes de seguir insistiendo con PECL.
 
 ```bash
 php --version
@@ -49,6 +50,8 @@ phpize --version || true
 lsb_release -a || cat /etc/os-release
 pecl version
 pecl remote-info channel://pecl.php.net/dbus-0.1.1
+make --version || true
+gcc --version || true
 printf '%s
 ' "Ultimo motivo reportado: zend_object_store_get_object"
 test -f "c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md" && tail -n 80 "c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md" || echo "Build log no disponible: c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md"

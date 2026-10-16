@@ -106,8 +106,9 @@ final class SystemApiDbusRuntimeProbeCliTest extends TestCase
         self::assertFalse($payload['ready']);
         self::assertSame('build-failed', $payload['native_dbus_extension_installation']['state']);
         self::assertTrue($payload['native_dbus_extension_installation']['pecl_available']);
+        self::assertSame('make', $payload['native_dbus_extension_installation']['build_phase']);
         self::assertSame('native-dbus-extension-build-failed', $payload['native_dbus_extension_installation']['blocking_reason']);
-        self::assertSame('inspect-native-dbus-build-stack', $payload['native_dbus_extension_installation']['next_action']);
+        self::assertSame('inspect-native-dbus-build-make', $payload['native_dbus_extension_installation']['next_action']);
         self::assertSame('zend_object_store_get_object', $payload['native_dbus_extension_installation']['reason']);
         self::assertSame('/tmp/pecl-dbus.log', $payload['native_dbus_extension_installation']['log_path']);
     }
@@ -145,8 +146,9 @@ TEXT);
             $payload = $this->decodeJson($result['stdout']);
             self::assertSame('build-failed', $payload['native_dbus_extension_installation']['state']);
             self::assertTrue($payload['native_dbus_extension_installation']['pecl_available']);
+            self::assertSame('make', $payload['native_dbus_extension_installation']['build_phase']);
             self::assertSame('native-dbus-extension-build-failed', $payload['native_dbus_extension_installation']['blocking_reason']);
-            self::assertSame('inspect-native-dbus-build-stack', $payload['native_dbus_extension_installation']['next_action']);
+            self::assertSame('inspect-native-dbus-build-make', $payload['native_dbus_extension_installation']['next_action']);
             self::assertSame('zend_object_store_get_object', $payload['native_dbus_extension_installation']['reason']);
             self::assertSame($evidencePath, $payload['native_dbus_extension_installation']['log_path']);
         } finally {
@@ -188,8 +190,48 @@ TEXT);
             $payload = $this->decodeJson($result['stdout']);
             self::assertSame('build-failed', $payload['native_dbus_extension_installation']['state']);
             self::assertTrue($payload['native_dbus_extension_installation']['pecl_available']);
+            self::assertSame('make', $payload['native_dbus_extension_installation']['build_phase']);
             self::assertSame('zend_object_store_get_object', $payload['native_dbus_extension_installation']['reason']);
             self::assertSame('/tmp/native-dbus-build.log', $payload['native_dbus_extension_installation']['log_path']);
+        } finally {
+            @unlink($evidencePath);
+        }
+    }
+
+    public function testProbeCanInferPeclDownloadFailurePhaseFromEvidenceFile(): void
+    {
+        $evidencePath = tempnam(sys_get_temp_dir(), 'w4-dbus-build-evidence-download-');
+        self::assertNotFalse($evidencePath);
+
+        try {
+            file_put_contents($evidencePath, <<<TEXT
+Failed to download pecl/dbus within preferred state "stable", latest release is beta
+pecl install dbus
+TEXT);
+
+            $result = $this->runPhpScript([
+                $this->scriptPath(),
+            ], [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_BUSCTL' => '1',
+                'W4_SYSTEM_API_PROBE_HAS_GDBUS' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON' => '1',
+                'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET' => '1',
+                'W4_SYSTEM_API_PROBE_OS_FAMILY' => 'Linux',
+                'W4_SYSTEM_API_PROBE_PHP_BINARY' => '/usr/bin/php',
+                'W4_SYSTEM_API_PROBE_PHP_VERSION' => '8.4.3',
+                'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_PATH' => $evidencePath,
+            ]);
+
+            self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+            $payload = $this->decodeJson($result['stdout']);
+            self::assertSame('build-failed', $payload['native_dbus_extension_installation']['state']);
+            self::assertSame('pecl-download', $payload['native_dbus_extension_installation']['build_phase']);
+            self::assertSame('pecl-release-is-beta', $payload['native_dbus_extension_installation']['reason']);
+            self::assertSame('inspect-native-dbus-pecl-download', $payload['native_dbus_extension_installation']['next_action']);
+            self::assertTrue($payload['native_dbus_extension_installation']['pecl_available']);
         } finally {
             @unlink($evidencePath);
         }

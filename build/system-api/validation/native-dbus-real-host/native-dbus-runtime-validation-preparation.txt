@@ -1,12 +1,14 @@
 Native D-Bus Runtime Preparation Checklist
 OS family: Linux
 
-1. inspect-native-dbus-build-stack - La extension `dbus` ya fue intentada pero la compilacion o instalacion fallo. Conviene inspeccionar el stack y la evidencia del build antes de seguir insistiendo con PECL.
+1. inspect-native-dbus-build-make - La extension `dbus` ya avanzo hasta `make`, pero la compilacion fallo. Conviene inspeccionar el toolchain C y la evidencia del error de compilacion antes de seguir insistiendo con PECL.
    - php --version
    - phpize --version || true
    - lsb_release -a || cat /etc/os-release
    - pecl version
    - pecl remote-info channel://pecl.php.net/dbus-0.1.1
+   - make --version || true
+   - gcc --version || true
    - printf '%s
 ' "Ultimo motivo reportado: zend_object_store_get_object"
    - test -f "c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md" && tail -n 80 "c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md" || echo "Build log no disponible: c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md"

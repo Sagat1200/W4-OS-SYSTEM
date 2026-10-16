@@ -228,12 +228,13 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         $payload = $this->decodeJson($result['stdout']);
         self::assertSame('blocked', $payload['status']);
         self::assertSame('native-dbus-extension-build-failed', $payload['blocking_reason']);
-        self::assertSame('inspect-native-dbus-build-stack', $payload['next_action']);
-        self::assertContains('inspect-native-dbus-build-stack', $payload['recommended_next_actions']);
+        self::assertSame('inspect-native-dbus-build-make', $payload['next_action']);
+        self::assertContains('inspect-native-dbus-build-make', $payload['recommended_next_actions']);
         self::assertContains('migrate-to-modern-linux-host', $payload['recommended_next_actions']);
         self::assertTrue($payload['host_compatibility']['compatible']);
         self::assertTrue($payload['native_dbus_extension_installability']['blocked']);
         self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
+        self::assertSame('make', $payload['native_dbus_extension_installability']['build_phase']);
         self::assertSame('/tmp/pecl-dbus.log', $payload['native_dbus_extension_installability']['log_path']);
 
         $preparationActions = array_map(
@@ -241,13 +242,13 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
             $payload['preparation_plan']
         );
         self::assertSame(
-            ['inspect-native-dbus-build-stack', 'rerun-native-runtime-validation'],
+            ['inspect-native-dbus-build-make', 'rerun-native-runtime-validation'],
             $preparationActions
         );
 
         $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
         self::assertNotFalse($preparationChecklist);
-        self::assertStringContainsString('inspect-native-dbus-build-stack', $preparationChecklist);
+        self::assertStringContainsString('inspect-native-dbus-build-make', $preparationChecklist);
         self::assertStringContainsString('pecl remote-info channel://pecl.php.net/dbus-0.1.1', $preparationChecklist);
         self::assertStringContainsString('/tmp/pecl-dbus.log', $preparationChecklist);
         self::assertStringContainsString('cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux', $preparationChecklist);
@@ -295,8 +296,9 @@ TEXT);
         $payload = $this->decodeJson($result['stdout']);
         self::assertSame('blocked', $payload['status']);
         self::assertSame('native-dbus-extension-build-failed', $payload['blocking_reason']);
-        self::assertSame('inspect-native-dbus-build-stack', $payload['next_action']);
+        self::assertSame('inspect-native-dbus-build-make', $payload['next_action']);
         self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
+        self::assertSame('make', $payload['native_dbus_extension_installability']['build_phase']);
         self::assertSame('zend_object_store_get_object', $payload['native_dbus_extension_installability']['reason']);
         self::assertSame($evidencePath, $payload['native_dbus_extension_installability']['log_path']);
         self::assertFileExists($payload['native_dbus_extension_build_evidence_path']);
@@ -304,6 +306,7 @@ TEXT);
         $structuredEvidence = $this->decodeJsonFile($payload['native_dbus_extension_build_evidence_path']);
         self::assertSame('system-api-native-dbus-extension-build-evidence', $structuredEvidence['kind']);
         self::assertSame('build-failed', $structuredEvidence['state']);
+        self::assertSame('make', $structuredEvidence['build_phase']);
         self::assertSame('zend_object_store_get_object', $structuredEvidence['reason']);
         self::assertSame($evidencePath, $structuredEvidence['source_path']);
         self::assertSame($evidencePath, $structuredEvidence['log_path']);
@@ -313,7 +316,7 @@ TEXT);
             $payload['preparation_plan']
         );
         self::assertSame(
-            ['inspect-native-dbus-build-stack', 'rerun-native-runtime-validation'],
+            ['inspect-native-dbus-build-make', 'rerun-native-runtime-validation'],
             $preparationActions
         );
     }
@@ -351,16 +354,60 @@ TEXT);
         $payload = $this->decodeJson($result['stdout']);
         self::assertSame('blocked', $payload['status']);
         self::assertSame('native-dbus-extension-build-failed', $payload['blocking_reason']);
-        self::assertSame('inspect-native-dbus-build-stack', $payload['next_action']);
+        self::assertSame('inspect-native-dbus-build-make', $payload['next_action']);
         self::assertFileExists($payload['native_dbus_extension_build_evidence_path']);
 
         $structuredEvidence = $this->decodeJsonFile($payload['native_dbus_extension_build_evidence_path']);
         self::assertSame('system-api-native-dbus-extension-build-evidence', $structuredEvidence['kind']);
         self::assertSame('build-failed', $structuredEvidence['state']);
+        self::assertSame('make', $structuredEvidence['build_phase']);
         self::assertSame('zend_object_store_get_object', $structuredEvidence['reason']);
         self::assertSame($buildLogPath, $structuredEvidence['source_path']);
         self::assertSame($buildLogPath, $structuredEvidence['log_path']);
-        self::assertSame(['zend_object_store_get_object'], $structuredEvidence['markers']);
+        self::assertSame(['zend_object_store_get_object', 'make'], $structuredEvidence['markers']);
+    }
+
+    public function testValidationTranslatesPeclDownloadFailureIntoSpecificPreparationStep(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-native-dbus-download-failed-host';
+        self::assertTrue(mkdir($evidenceDir, 0777, true) || is_dir($evidenceDir));
+        $evidencePath = $evidenceDir . DIRECTORY_SEPARATOR . 'wsl-ubuntu-operational-attempt.md';
+        file_put_contents($evidencePath, <<<TEXT
+Failed to download pecl/dbus within preferred state "stable", latest release is beta
+pecl install dbus
+TEXT);
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+            '--target-repo-root',
+            '/srv/w4/os-system',
+        ], array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '0',
+            ]
+        ));
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
+        self::assertSame('pecl-download', $payload['native_dbus_extension_installability']['build_phase']);
+        self::assertSame('inspect-native-dbus-pecl-download', $payload['preparation_plan'][0]['action']);
+
+        $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
+        self::assertNotFalse($preparationChecklist);
+        self::assertStringContainsString('inspect-native-dbus-pecl-download', $preparationChecklist);
+        self::assertStringContainsString('pecl remote-info channel://pecl.php.net/dbus-0.1.1', $preparationChecklist);
+
+        $savedSummary = file_get_contents($payload['summary_path']);
+        self::assertNotFalse($savedSummary);
+        self::assertStringContainsString('- Installation build phase: `pecl-download`', $savedSummary);
     }
 
     public function testValidationCanPrepareOwnedRuntimeAgainstFakeNativeDbusService(): void
