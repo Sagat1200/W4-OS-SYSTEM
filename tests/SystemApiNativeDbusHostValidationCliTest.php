@@ -468,6 +468,69 @@ TEXT);
         self::assertStringContainsString('- Installation failure signature: `configure: error: Package requirements (libxml-2.0) were not met`', $savedSummary);
     }
 
+    public function testValidationCanInferPhpizeFailureFromRawBuildLogPathWithoutExplicitState(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-native-dbus-phpize-failed-host';
+        $buildLogPath = $this->tempDir . DIRECTORY_SEPARATOR . 'native-dbus-phpize.log';
+        file_put_contents($buildLogPath, <<<TEXT
+Cannot find autoconf. Please check your autoconf installation and the \$PHP_AUTOCONF environment variable.
+phpize failed
+TEXT);
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+            '--target-repo-root',
+            '/srv/w4/os-system',
+            '--native-dbus-build-log-path',
+            $buildLogPath,
+        ], array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '1',
+            ]
+        ));
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
+        self::assertSame('phpize', $payload['native_dbus_extension_installability']['build_phase']);
+        self::assertSame('inspect-native-dbus-build-phpize', $payload['next_action']);
+        self::assertSame('autoconf-missing', $payload['native_dbus_extension_installability']['reason']);
+        self::assertSame(
+            'Cannot find autoconf. Please check your autoconf installation and the $PHP_AUTOCONF environment variable.',
+            $payload['native_dbus_extension_installability']['failure_signature']
+        );
+
+        $structuredEvidence = $this->decodeJsonFile($payload['native_dbus_extension_build_evidence_path']);
+        self::assertSame('phpize', $structuredEvidence['build_phase']);
+        self::assertSame(
+            'Cannot find autoconf. Please check your autoconf installation and the $PHP_AUTOCONF environment variable.',
+            $structuredEvidence['failure_signature']
+        );
+        self::assertSame(['autoconf-missing', 'phpize'], $structuredEvidence['markers']);
+
+        $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
+        self::assertNotFalse($preparationChecklist);
+        self::assertStringContainsString('inspect-native-dbus-build-phpize', $preparationChecklist);
+        self::assertStringContainsString('autoconf --version || true', $preparationChecklist);
+        self::assertStringContainsString('autoheader --version || true', $preparationChecklist);
+        self::assertStringContainsString('aclocal --version || true', $preparationChecklist);
+
+        $savedSummary = file_get_contents($payload['summary_path']);
+        self::assertNotFalse($savedSummary);
+        self::assertStringContainsString('- Installation build phase: `phpize`', $savedSummary);
+        self::assertStringContainsString(
+            '- Installation failure signature: `Cannot find autoconf. Please check your autoconf installation and the $PHP_AUTOCONF environment variable.`',
+            $savedSummary
+        );
+    }
+
     public function testValidationCanPrepareOwnedRuntimeAgainstFakeNativeDbusService(): void
     {
         $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'fake-owned-host';

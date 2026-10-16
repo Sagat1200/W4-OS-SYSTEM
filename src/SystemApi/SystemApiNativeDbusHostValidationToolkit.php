@@ -1054,7 +1054,14 @@ final class SystemApiNativeDbusHostValidationToolkit
             $commands[] = 'echo "PECL no esta disponible en este host."';
         }
 
-        if ($buildPhase === 'configure' || $buildPhase === 'phpize') {
+        if ($buildPhase === 'phpize') {
+            $commands[] = 'which phpize || true';
+            $commands[] = 'autoconf --version || true';
+            $commands[] = 'autoheader --version || true';
+            $commands[] = 'aclocal --version || true';
+        }
+
+        if ($buildPhase === 'configure') {
             $commands[] = 'pkg-config --modversion dbus-1 || true';
             $commands[] = 'pkg-config --modversion libxml-2.0 || true';
             $commands[] = 'which phpize || true';
@@ -1104,7 +1111,8 @@ final class SystemApiNativeDbusHostValidationToolkit
     {
         return match ($buildPhase) {
             'pecl-download' => 'inspect-native-dbus-pecl-download',
-            'phpize', 'configure' => 'inspect-native-dbus-build-configure',
+            'phpize' => 'inspect-native-dbus-build-phpize',
+            'configure' => 'inspect-native-dbus-build-configure',
             'make' => 'inspect-native-dbus-build-make',
             default => 'inspect-native-dbus-build-stack',
         };
@@ -1114,7 +1122,8 @@ final class SystemApiNativeDbusHostValidationToolkit
     {
         return match ($buildPhase) {
             'pecl-download' => 'La extension `dbus` fallo antes de descargar o resolver correctamente la release PECL. Conviene inspeccionar el canal, la release objetivo y la disponibilidad real del paquete antes de repetir la instalacion.',
-            'phpize', 'configure' => 'La extension `dbus` fallo durante la preparacion de toolchain o `configure`. Conviene inspeccionar `phpize`, `pkg-config`, `xml2-config` y dependencias de desarrollo antes de volver a compilar.',
+            'phpize' => 'La extension `dbus` fallo durante `phpize` o en la disponibilidad de la toolchain autotools. Conviene inspeccionar `phpize`, `autoconf`, `autoheader` y `aclocal` antes de pasar a `configure`.',
+            'configure' => 'La extension `dbus` fallo durante `configure`. Conviene inspeccionar `pkg-config`, `xml2-config` y las dependencias de desarrollo requeridas antes de volver a compilar.',
             'make' => 'La extension `dbus` ya avanzo hasta `make`, pero la compilacion fallo. Conviene inspeccionar el toolchain C y la evidencia del error de compilacion antes de seguir insistiendo con PECL.',
             default => 'La extension `dbus` ya fue intentada pero la compilacion o instalacion fallo. Conviene inspeccionar el stack y la evidencia del build antes de seguir insistiendo con PECL.',
         };
@@ -1355,16 +1364,26 @@ final class SystemApiNativeDbusHostValidationToolkit
                 || str_contains($normalized, 'cannot find xml2-config')
                 || str_contains($normalized, 'libxml-2.0')
                 || str_contains($normalized, 'phpize failed')
+                || str_contains($normalized, 'cannot find autoconf')
+                || str_contains($normalized, '$php_autoconf')
             )
         ) {
-            $markers[] = 'configure';
             $state = 'build-failed';
-            $buildPhase = str_contains($normalized, 'phpize failed') ? 'phpize' : 'configure';
-            $reason = str_contains($normalized, 'libxml-2.0')
-                ? 'libxml-2.0'
-                : (str_contains($normalized, 'cannot find xml2-config')
-                    ? 'xml2-config-missing'
-                    : 'native-dbus-extension-configure-failed');
+            $buildPhase = (
+                str_contains($normalized, 'phpize failed')
+                || str_contains($normalized, 'cannot find autoconf')
+                || str_contains($normalized, '$php_autoconf')
+            ) ? 'phpize' : 'configure';
+            $markers[] = $buildPhase;
+            $reason = str_contains($normalized, 'cannot find autoconf')
+                ? 'autoconf-missing'
+                : (str_contains($normalized, '$php_autoconf')
+                    ? 'phpize-toolchain-misconfigured'
+                    : (str_contains($normalized, 'libxml-2.0')
+                        ? 'libxml-2.0'
+                        : (str_contains($normalized, 'cannot find xml2-config')
+                            ? 'xml2-config-missing'
+                            : 'native-dbus-extension-configure-failed')));
         }
 
         if (
@@ -1390,6 +1409,10 @@ final class SystemApiNativeDbusHostValidationToolkit
             $markers[] = 'unsupported-stack';
             $state = 'unsupported-stack';
             $reason = 'native-dbus-extension-unsupported-stack';
+        }
+
+        if ($reason !== null && $reason !== '' && !in_array($reason, $markers, true)) {
+            array_unshift($markers, $reason);
         }
 
         return [
@@ -1486,7 +1509,11 @@ final class SystemApiNativeDbusHostValidationToolkit
             return 'configure';
         }
 
-        if (str_contains($normalized, 'phpize')) {
+        if (
+            str_contains($normalized, 'phpize')
+            || str_contains($normalized, 'autoconf')
+            || str_contains($normalized, '$php_autoconf')
+        ) {
             return 'phpize';
         }
 
@@ -1521,6 +1548,8 @@ final class SystemApiNativeDbusHostValidationToolkit
                 '/no releases available for package/i',
             ],
             'phpize' => [
+                '/cannot find autoconf/i',
+                '/\$php_autoconf/i',
                 '/phpize failed/i',
             ],
             'configure' => [

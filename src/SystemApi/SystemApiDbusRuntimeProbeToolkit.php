@@ -322,14 +322,24 @@ final class SystemApiDbusRuntimeProbeToolkit
             || str_contains($normalized, 'cannot find xml2-config')
             || str_contains($normalized, 'libxml-2.0')
             || str_contains($normalized, 'phpize failed')
+            || str_contains($normalized, 'cannot find autoconf')
+            || str_contains($normalized, '$php_autoconf')
         ) {
             $state = 'build-failed';
-            $buildPhase = str_contains($normalized, 'phpize failed') ? 'phpize' : 'configure';
-            $reason = str_contains($normalized, 'libxml-2.0')
-                ? 'libxml-2.0'
-                : (str_contains($normalized, 'cannot find xml2-config')
-                    ? 'xml2-config-missing'
-                    : 'native-dbus-extension-configure-failed');
+            $buildPhase = (
+                str_contains($normalized, 'phpize failed')
+                || str_contains($normalized, 'cannot find autoconf')
+                || str_contains($normalized, '$php_autoconf')
+            ) ? 'phpize' : 'configure';
+            $reason = str_contains($normalized, 'cannot find autoconf')
+                ? 'autoconf-missing'
+                : (str_contains($normalized, '$php_autoconf')
+                    ? 'phpize-toolchain-misconfigured'
+                    : (str_contains($normalized, 'libxml-2.0')
+                        ? 'libxml-2.0'
+                        : (str_contains($normalized, 'cannot find xml2-config')
+                            ? 'xml2-config-missing'
+                            : 'native-dbus-extension-configure-failed')));
         } elseif (
             str_contains($normalized, 'zend_object_store_get_object')
             || str_contains($normalized, 'make: ***')
@@ -389,6 +399,8 @@ final class SystemApiDbusRuntimeProbeToolkit
 
         if (
             str_contains($normalized, 'phpize')
+            || str_contains($normalized, 'autoconf')
+            || str_contains($normalized, '$php_autoconf')
         ) {
             return 'phpize';
         }
@@ -409,7 +421,8 @@ final class SystemApiDbusRuntimeProbeToolkit
     {
         return match ($buildPhase) {
             'pecl-download' => 'inspect-native-dbus-pecl-download',
-            'phpize', 'configure' => 'inspect-native-dbus-build-configure',
+            'phpize' => 'inspect-native-dbus-build-phpize',
+            'configure' => 'inspect-native-dbus-build-configure',
             'make' => 'inspect-native-dbus-build-make',
             default => 'inspect-native-dbus-build-stack',
         };
@@ -434,6 +447,8 @@ final class SystemApiDbusRuntimeProbeToolkit
                 '/no releases available for package/i',
             ],
             'phpize' => [
+                '/cannot find autoconf/i',
+                '/\$php_autoconf/i',
                 '/phpize failed/i',
             ],
             'configure' => [

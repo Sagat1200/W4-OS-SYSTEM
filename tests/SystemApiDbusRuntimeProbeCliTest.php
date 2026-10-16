@@ -277,6 +277,48 @@ TEXT);
         }
     }
 
+    public function testProbeCanInferPhpizeFailureFromEvidenceFile(): void
+    {
+        $evidencePath = tempnam(sys_get_temp_dir(), 'w4-dbus-build-evidence-phpize-');
+        self::assertNotFalse($evidencePath);
+
+        try {
+            file_put_contents($evidencePath, <<<TEXT
+Cannot find autoconf. Please check your autoconf installation and the \$PHP_AUTOCONF environment variable.
+phpize failed
+TEXT);
+
+            $result = $this->runPhpScript([
+                $this->scriptPath(),
+            ], [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '1',
+                'W4_SYSTEM_API_PROBE_HAS_BUSCTL' => '1',
+                'W4_SYSTEM_API_PROBE_HAS_GDBUS' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON' => '1',
+                'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET' => '1',
+                'W4_SYSTEM_API_PROBE_OS_FAMILY' => 'Linux',
+                'W4_SYSTEM_API_PROBE_PHP_BINARY' => '/usr/bin/php',
+                'W4_SYSTEM_API_PROBE_PHP_VERSION' => '8.4.3',
+                'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_PATH' => $evidencePath,
+            ]);
+
+            self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+            $payload = $this->decodeJson($result['stdout']);
+            self::assertSame('build-failed', $payload['native_dbus_extension_installation']['state']);
+            self::assertSame('phpize', $payload['native_dbus_extension_installation']['build_phase']);
+            self::assertSame('inspect-native-dbus-build-phpize', $payload['native_dbus_extension_installation']['next_action']);
+            self::assertSame('autoconf-missing', $payload['native_dbus_extension_installation']['reason']);
+            self::assertSame(
+                'Cannot find autoconf. Please check your autoconf installation and the $PHP_AUTOCONF environment variable.',
+                $payload['native_dbus_extension_installation']['failure_signature']
+            );
+        } finally {
+            @unlink($evidencePath);
+        }
+    }
+
     /**
      * @param list<string> $command
      * @param array<string, string> $extraEnvironment
