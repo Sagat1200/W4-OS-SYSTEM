@@ -1245,6 +1245,13 @@ final class SystemApiNativeDbusHostValidationToolkit
             return trim($jsonOverride);
         }
 
+        $explicitPayload = $this->buildNativeDbusBuildEvidencePayloadFromOverrides($environmentOverrides);
+        if ($explicitPayload !== null) {
+            $this->writeJsonFile($artifactPath, $explicitPayload);
+
+            return $artifactPath;
+        }
+
         if ($sourcePath === null || !is_file($sourcePath)) {
             return null;
         }
@@ -1317,6 +1324,43 @@ final class SystemApiNativeDbusHostValidationToolkit
             'state' => $state,
             'reason' => $reason,
             'log_path' => $sourcePath,
+            'markers' => $markers,
+        ];
+    }
+
+    /**
+     * @param array<string, string> $environmentOverrides
+     * @return array<string, mixed>|null
+     */
+    private function buildNativeDbusBuildEvidencePayloadFromOverrides(array $environmentOverrides): ?array
+    {
+        $state = $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_STATE'] ?? null;
+        $reason = $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_REASON'] ?? null;
+        $logPath = $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_LOG_PATH']
+            ?? $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_PATH']
+            ?? null;
+
+        if (!is_string($state) || trim($state) === '') {
+            return null;
+        }
+
+        $normalizedState = strtolower(trim($state));
+        $normalizedReason = is_string($reason) && trim($reason) !== '' ? trim($reason) : null;
+        $normalizedLogPath = is_string($logPath) && trim($logPath) !== '' ? trim($logPath) : null;
+        $markers = [];
+
+        if ($normalizedReason !== null) {
+            $markers[] = $normalizedReason;
+        }
+
+        return [
+            'api_version' => '1.0',
+            'kind' => 'system-api-native-dbus-extension-build-evidence',
+            'generated_at' => gmdate('c'),
+            'source_path' => $normalizedLogPath,
+            'state' => $normalizedState,
+            'reason' => $normalizedReason,
+            'log_path' => $normalizedLogPath,
             'markers' => $markers,
         ];
     }

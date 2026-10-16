@@ -54,6 +54,18 @@ try {
                 $environmentOverrides['W4_SYSTEM_API_PREPARATION_TARGET_REPO_ROOT'] = $value;
                 break;
 
+            case '--native-dbus-build-log-path':
+                $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_PATH'] = $value;
+                break;
+
+            case '--native-dbus-build-state':
+                $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_STATE'] = $value;
+                break;
+
+            case '--native-dbus-build-reason':
+                $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_REASON'] = $value;
+                break;
+
             default:
                 throw new ValidationError(sprintf('Argumento no soportado: %s', $argument));
         }

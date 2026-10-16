@@ -318,6 +318,51 @@ TEXT);
         );
     }
 
+    public function testValidationCanMaterializeStructuredBuildEvidenceFromExplicitRunnerArguments(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-native-dbus-build-failed-from-explicit-runner-args';
+        $buildLogPath = $this->tempDir . DIRECTORY_SEPARATOR . 'native-dbus-build.log';
+        file_put_contents($buildLogPath, "make: *** [Makefile:192: dbus.lo] Error 1\n");
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+            '--target-repo-root',
+            '/srv/w4/os-system',
+            '--native-dbus-build-log-path',
+            $buildLogPath,
+            '--native-dbus-build-state',
+            'build-failed',
+            '--native-dbus-build-reason',
+            'zend_object_store_get_object',
+        ], array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '1',
+            ]
+        ));
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('blocked', $payload['status']);
+        self::assertSame('native-dbus-extension-build-failed', $payload['blocking_reason']);
+        self::assertSame('inspect-native-dbus-build-stack', $payload['next_action']);
+        self::assertFileExists($payload['native_dbus_extension_build_evidence_path']);
+
+        $structuredEvidence = $this->decodeJsonFile($payload['native_dbus_extension_build_evidence_path']);
+        self::assertSame('system-api-native-dbus-extension-build-evidence', $structuredEvidence['kind']);
+        self::assertSame('build-failed', $structuredEvidence['state']);
+        self::assertSame('zend_object_store_get_object', $structuredEvidence['reason']);
+        self::assertSame($buildLogPath, $structuredEvidence['source_path']);
+        self::assertSame($buildLogPath, $structuredEvidence['log_path']);
+        self::assertSame(['zend_object_store_get_object'], $structuredEvidence['markers']);
+    }
+
     public function testValidationCanPrepareOwnedRuntimeAgainstFakeNativeDbusService(): void
     {
         $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'fake-owned-host';
