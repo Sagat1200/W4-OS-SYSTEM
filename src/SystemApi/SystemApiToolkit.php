@@ -54,6 +54,21 @@ final class SystemApiToolkit
             : 'system-api-capabilities';
         $runtimeDiagnosis = $this->dbusRuntimeProbe->createReport();
         $activationPreparation = $this->dbusRuntimeActivation->createActivationPreparation($runtimeDiagnosis);
+        $runtimeBackend = is_array($activationPreparation['runtime_backend'] ?? null)
+            ? $activationPreparation['runtime_backend']
+            : [];
+        $executionPlan = is_array($activationPreparation['execution_plan'] ?? null)
+            ? $activationPreparation['execution_plan']
+            : [];
+        $runtimeBackendPlan = is_array($executionPlan['runtime_backend'] ?? null)
+            ? $executionPlan['runtime_backend']
+            : [];
+        $activationNextAction = $activationPreparation['next_action'] ?? 'materialize-runtime-adapter';
+        $activationRecoveryPlan = is_array($activationPreparation['recovery_plan'] ?? null)
+            ? $activationPreparation['recovery_plan']
+            : ['materialize-runtime-adapter'];
+        $selectedRuntimeBackend = $runtimeBackend['selected_backend'] ?? 'contract-pending';
+        $runtimeBackendStatus = $runtimeBackend['status'] ?? 'pending-runtime-adapter';
 
         $payload = [
             'kind' => 'system-api-capabilities',
@@ -92,10 +107,8 @@ final class SystemApiToolkit
                     ],
                     'adapter_status' => 'pending-runtime-adapter',
                     'activation_command' => 'serve-dbus',
-                    'activation_next_action' => $activationPreparation['next_action'] ?? 'materialize-runtime-adapter',
-                    'activation_recovery_plan' => is_array($activationPreparation['recovery_plan'] ?? null)
-                        ? $activationPreparation['recovery_plan']
-                        : ['materialize-runtime-adapter'],
+                    'activation_next_action' => $activationNextAction,
+                    'activation_recovery_plan' => $activationRecoveryPlan,
                 ],
                 'local_runtime_adapter' => [
                     'script' => 'scripts/system_api_dbus_runtime_adapter.php',
@@ -117,6 +130,11 @@ final class SystemApiToolkit
                         'experimental-embedded-runtime',
                         'native-dbus-extension',
                     ],
+                    'runtime_status' => $activationPreparation['status'] ?? 'pending-runtime-adapter',
+                    'selected_runtime_backend' => $selectedRuntimeBackend,
+                    'runtime_backend_status' => $runtimeBackendStatus,
+                    'activation_next_action' => $activationNextAction,
+                    'activation_recovery_plan' => $activationRecoveryPlan,
                 ],
                 'local_runtime_host' => [
                     'script' => 'scripts/system_api_dbus_runtime_host.php',
@@ -132,6 +150,9 @@ final class SystemApiToolkit
                     ],
                     'status' => 'host-ready',
                     'transport' => 'stdio-ndjson-host',
+                    'runtime_status' => $runtimeDiagnosis['status'] ?? 'pending-runtime-adapter',
+                    'runtime_next_action' => $activationNextAction,
+                    'runtime_recovery_plan' => $activationRecoveryPlan,
                 ],
                 'local_runtime_launcher' => [
                     'script' => 'scripts/system_api_dbus_runtime_launcher.php',
@@ -154,6 +175,12 @@ final class SystemApiToolkit
                     'status' => 'launcher-ready',
                     'transport' => 'stdio-ndjson-launcher',
                     'handoff_mode' => 'child-process-stdio-relay',
+                    'selected_runtime_backend' => $selectedRuntimeBackend,
+                    'runtime_backend_status' => $runtimeBackendStatus,
+                    'activation_next_action' => $activationNextAction,
+                    'activation_recovery_plan' => $activationRecoveryPlan,
+                    'runtime_backend_command' => $runtimeBackendPlan['command'] ?? 'serve-dbus',
+                    'runtime_backend_command_role' => $runtimeBackendPlan['command_role'] ?? 'runtime-adapter-activation',
                 ],
                 'local_daemon' => [
                     'script' => 'scripts/system_api_daemon.php',
