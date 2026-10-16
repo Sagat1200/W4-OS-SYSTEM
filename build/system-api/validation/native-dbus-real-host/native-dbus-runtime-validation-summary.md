@@ -8,6 +8,8 @@
 - Blocking reason: `missing-runtime-capabilities`
 - Next action: `install-native-dbus-extension`
 - Report path: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-runtime-validation-report.json`
+- Preparation shell script: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-runtime-validation-prepare.sh`
+- Preparation checklist: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-runtime-validation-preparation.txt`
 
 ## Recommended Next Actions
 

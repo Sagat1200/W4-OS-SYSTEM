@@ -54,6 +54,8 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertContains('install-native-dbus-extension', $payload['recommended_next_actions']);
         self::assertFileExists($payload['report_path']);
         self::assertFileExists($payload['summary_path']);
+        self::assertFileExists($payload['preparation_shell_script_path']);
+        self::assertFileExists($payload['preparation_checklist_path']);
         self::assertFileExists($payload['step_files']['diagnosis']);
         self::assertFileExists($payload['step_files']['service_definition']);
         self::assertFileExists($payload['step_files']['startup']);
@@ -76,6 +78,12 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertNotFalse($savedSummary);
         self::assertStringContainsString('## Preparation Plan', $savedSummary);
         self::assertStringContainsString('install-native-dbus-extension', $savedSummary);
+        $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
+        self::assertNotFalse($preparationChecklist);
+        self::assertStringContainsString('install-native-dbus-extension', $preparationChecklist);
+        $preparationShellScript = file_get_contents($payload['preparation_shell_script_path']);
+        self::assertNotFalse($preparationShellScript);
+        self::assertStringContainsString('echo', $preparationShellScript);
     }
 
     public function testValidationCanPrepareOwnedRuntimeAgainstFakeNativeDbusService(): void
@@ -112,6 +120,8 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertSame('native-runtime-service-observed-active', $payload['steps']['observation_after_ownership']['status']);
         self::assertFileExists($payload['report_path']);
         self::assertFileExists($payload['summary_path']);
+        self::assertFileExists($payload['preparation_shell_script_path']);
+        self::assertFileExists($payload['preparation_checklist_path']);
         self::assertDirectoryExists($payload['artifacts_dir']);
         self::assertFileExists($payload['artifacts_dir'] . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime.ready');
         self::assertFileExists($payload['artifacts_dir'] . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime-status.json');
@@ -127,6 +137,9 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         $savedReport = $this->decodeJsonFile($payload['report_path']);
         self::assertSame('ownership-validated', $savedReport['status']);
         self::assertSame('W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver', $savedReport['steps']['ownership']['ownership_driver']['class_name']);
+        $preparationShellScript = file_get_contents($payload['preparation_shell_script_path']);
+        self::assertNotFalse($preparationShellScript);
+        self::assertStringContainsString('php scripts/run_native_dbus_real_host_validation.php --format markdown', $preparationShellScript);
     }
 
     public function testValidationCanRenderMarkdownSummaryDirectlyFromRunner(): void

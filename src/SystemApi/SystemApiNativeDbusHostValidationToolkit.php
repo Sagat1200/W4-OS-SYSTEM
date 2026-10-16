@@ -32,6 +32,8 @@ final class SystemApiNativeDbusHostValidationToolkit
         );
         $reportPath = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-runtime-validation-report.json';
         $summaryPath = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-runtime-validation-summary.md';
+        $preparationShellScriptPath = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-runtime-validation-prepare.sh';
+        $preparationChecklistPath = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-runtime-validation-preparation.txt';
         $stepsDir = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'steps';
 
         $defaultOverrides = [
@@ -107,6 +109,8 @@ final class SystemApiNativeDbusHostValidationToolkit
         $exitCode = $ownershipValidated || (!$attemptOwnership && $couplingReady)
             ? 0
             : ($hasFailure ? 1 : 3);
+        $environment = is_array($steps['diagnosis']['environment'] ?? null) ? $steps['diagnosis']['environment'] : [];
+        $osFamily = is_string($environment['os_family'] ?? null) ? $environment['os_family'] : 'Unknown';
         $preparationPlan = $this->createPreparationPlan(
             $steps['diagnosis'],
             $steps['service_definition'],
@@ -129,6 +133,8 @@ final class SystemApiNativeDbusHostValidationToolkit
             'evidence_dir' => $normalizedEvidenceDir,
             'report_path' => $reportPath,
             'summary_path' => $summaryPath,
+            'preparation_shell_script_path' => $preparationShellScriptPath,
+            'preparation_checklist_path' => $preparationChecklistPath,
             'artifacts_dir' => $artifactsDir,
             'runtime_backend' => $effectiveOverrides['W4_SYSTEM_API_RUNTIME_BACKEND'] ?? 'native-dbus-extension',
             'bus_name' => 'org.w4.System1',
@@ -179,6 +185,12 @@ final class SystemApiNativeDbusHostValidationToolkit
 
         $this->writeJsonFile($reportPath, $report);
         $this->writeTextFile($summaryPath, $this->renderMarkdownSummary($report));
+        $this->writePreparationArtifacts(
+            $preparationShellScriptPath,
+            $preparationChecklistPath,
+            $preparationPlan,
+            $osFamily
+        );
 
         return $report;
     }
@@ -213,6 +225,8 @@ final class SystemApiNativeDbusHostValidationToolkit
         }
 
         $lines[] = sprintf('summary_path: %s', (string) ($report['summary_path'] ?? 'n/a'));
+        $lines[] = sprintf('preparation_shell_script_path: %s', (string) ($report['preparation_shell_script_path'] ?? 'n/a'));
+        $lines[] = sprintf('preparation_checklist_path: %s', (string) ($report['preparation_checklist_path'] ?? 'n/a'));
 
         return implode(PHP_EOL, $lines) . PHP_EOL;
     }
@@ -233,6 +247,8 @@ final class SystemApiNativeDbusHostValidationToolkit
             sprintf('- Blocking reason: `%s`', (string) ($report['blocking_reason'] ?? 'n/a')),
             sprintf('- Next action: `%s`', (string) ($report['next_action'] ?? 'n/a')),
             sprintf('- Report path: `%s`', (string) ($report['report_path'] ?? 'n/a')),
+            sprintf('- Preparation shell script: `%s`', (string) ($report['preparation_shell_script_path'] ?? 'n/a')),
+            sprintf('- Preparation checklist: `%s`', (string) ($report['preparation_checklist_path'] ?? 'n/a')),
             '',
             '## Recommended Next Actions',
             '',
@@ -359,6 +375,67 @@ final class SystemApiNativeDbusHostValidationToolkit
         if (file_put_contents($path, $content) === false) {
             throw new ValidationError(sprintf('No se pudo escribir %s', $path));
         }
+    }
+
+    /**
+     * @param list<array<string, mixed>> $preparationPlan
+     */
+    private function writePreparationArtifacts(
+        string $shellScriptPath,
+        string $checklistPath,
+        array $preparationPlan,
+        string $osFamily
+    ): void {
+        $checklistLines = [
+            'Native D-Bus Runtime Preparation Checklist',
+            sprintf('OS family: %s', $osFamily),
+            '',
+        ];
+        $shellLines = [
+            '#!/usr/bin/env bash',
+            'set -euo pipefail',
+            '',
+            sprintf('# Native D-Bus runtime preparation helper for %s', $osFamily),
+            '# Review each step before executing it on the target host.',
+            '',
+        ];
+
+        if ($preparationPlan === []) {
+            $checklistLines[] = '1. validation-complete - No additional preparation steps are currently required.';
+            $shellLines[] = '# No preparation steps are currently required.';
+        }
+
+        foreach ($preparationPlan as $index => $step) {
+            $action = is_string($step['action'] ?? null) ? $step['action'] : 'unknown';
+            $description = is_string($step['description'] ?? null) ? $step['description'] : 'Sin descripcion';
+            $commands = is_array($step['commands'] ?? null) ? $step['commands'] : [];
+
+            $checklistLines[] = sprintf('%d. %s - %s', $index + 1, $action, $description);
+            $shellLines[] = sprintf('# Step %d: %s', $index + 1, $action);
+            $shellLines[] = sprintf('# %s', $description);
+
+            if ($commands === []) {
+                $checklistLines[] = '   - No commands provided.';
+                $shellLines[] = '# No commands provided for this step.';
+                $shellLines[] = '';
+                continue;
+            }
+
+            foreach ($commands as $command) {
+                if (!is_string($command) || trim($command) === '') {
+                    continue;
+                }
+
+                $trimmedCommand = trim($command);
+                $checklistLines[] = sprintf('   - %s', $trimmedCommand);
+                $shellLines[] = $this->renderPreparationShellCommand($trimmedCommand, $osFamily);
+            }
+
+            $shellLines[] = '';
+        }
+
+        $this->writeTextFile($checklistPath, implode(PHP_EOL, $checklistLines) . PHP_EOL);
+        $this->writeTextFile($shellScriptPath, implode(PHP_EOL, $shellLines) . PHP_EOL);
     }
 
     /**
@@ -548,5 +625,14 @@ final class SystemApiNativeDbusHostValidationToolkit
         return [
             sprintf('Resolver manualmente la capacidad faltante `%s` para el sistema operativo `%s`.', $capability, $osFamily),
         ];
+    }
+
+    private function renderPreparationShellCommand(string $command, string $osFamily): string
+    {
+        if ($osFamily === 'Linux') {
+            return $command;
+        }
+
+        return sprintf('echo %s', escapeshellarg($command));
     }
 }
