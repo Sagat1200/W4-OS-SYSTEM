@@ -110,6 +110,8 @@ final class SystemApiToolkit
                     'adapter_status' => 'pending-runtime-adapter',
                     'activation_command' => 'serve-dbus',
                     'activation_method' => 'system.dbus-activation',
+                    'native_service_method' => 'system.dbus-native-service',
+                    'native_startup_method' => 'system.dbus-native-startup',
                     'native_observation_method' => 'system.dbus-native-observation',
                     'native_coupling_method' => 'system.dbus-native-coupling',
                     'native_ownership_method' => 'system.dbus-native-ownership',
@@ -215,6 +217,16 @@ final class SystemApiToolkit
                 [
                     'name' => 'system.dbus-activation',
                     'resource_kind' => 'system-api-dbus-runtime-activation',
+                    'mutates_state' => false,
+                ],
+                [
+                    'name' => 'system.dbus-native-service',
+                    'resource_kind' => 'system-api-dbus-native-runtime-service',
+                    'mutates_state' => false,
+                ],
+                [
+                    'name' => 'system.dbus-native-startup',
+                    'resource_kind' => 'system-api-dbus-native-runtime-startup',
                     'mutates_state' => false,
                 ],
                 [
@@ -328,6 +340,34 @@ final class SystemApiToolkit
                 resourceId: 'org.w4.System1',
                 data: $activationReport,
                 provider: 'local-system-api-activation-contract'
+            );
+        }
+
+        if ($method === 'system.dbus-native-service') {
+            $runtimeDiagnosis = $this->dbusRuntimeProbe->createReport();
+            $serviceDefinition = $this->dbusRuntimeBackend->createNativeRuntimeServiceDefinition($runtimeDiagnosis);
+
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'system.dbus-native-service',
+                resourceKind: 'system-api-dbus-native-runtime-service',
+                resourceId: 'org.w4.System1',
+                data: $this->createNativeServiceContractPayload($runtimeDiagnosis, $serviceDefinition),
+                provider: 'local-system-api-native-service-contract'
+            );
+        }
+
+        if ($method === 'system.dbus-native-startup') {
+            $runtimeDiagnosis = $this->dbusRuntimeProbe->createReport();
+            $startupReport = $this->dbusRuntimeBackend->createNativeRuntimeServiceStartupReport($runtimeDiagnosis);
+
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'system.dbus-native-startup',
+                resourceKind: 'system-api-dbus-native-runtime-startup',
+                resourceId: 'org.w4.System1',
+                data: $this->createNativeStartupContractPayload($runtimeDiagnosis, $startupReport),
+                provider: 'local-system-api-native-startup-contract'
             );
         }
 
@@ -630,6 +670,32 @@ final class SystemApiToolkit
     private function createNativeCouplingContractPayload(array $runtimeDiagnosis, array $couplingReport): array
     {
         $payload = $couplingReport;
+        $payload['runtime_diagnosis'] = $runtimeDiagnosis;
+
+        return $payload;
+    }
+
+    /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, mixed> $serviceDefinition
+     * @return array<string, mixed>
+     */
+    private function createNativeServiceContractPayload(array $runtimeDiagnosis, array $serviceDefinition): array
+    {
+        $payload = $serviceDefinition;
+        $payload['runtime_diagnosis'] = $runtimeDiagnosis;
+
+        return $payload;
+    }
+
+    /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, mixed> $startupReport
+     * @return array<string, mixed>
+     */
+    private function createNativeStartupContractPayload(array $runtimeDiagnosis, array $startupReport): array
+    {
+        $payload = $startupReport;
         $payload['runtime_diagnosis'] = $runtimeDiagnosis;
 
         return $payload;

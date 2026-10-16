@@ -30,6 +30,8 @@ final class SystemApiCliTest extends TestCase
         self::assertSame('pending-runtime-adapter', $payload['result']['data']['binding']['local_dbus_bridge']['adapter_status']);
         self::assertSame('serve-dbus', $payload['result']['data']['binding']['local_dbus_bridge']['activation_command']);
         self::assertSame('system.dbus-activation', $payload['result']['data']['binding']['local_dbus_bridge']['activation_method']);
+        self::assertSame('system.dbus-native-service', $payload['result']['data']['binding']['local_dbus_bridge']['native_service_method']);
+        self::assertSame('system.dbus-native-startup', $payload['result']['data']['binding']['local_dbus_bridge']['native_startup_method']);
         self::assertSame('system.dbus-native-observation', $payload['result']['data']['binding']['local_dbus_bridge']['native_observation_method']);
         self::assertSame('system.dbus-native-coupling', $payload['result']['data']['binding']['local_dbus_bridge']['native_coupling_method']);
         self::assertSame('system.dbus-native-ownership', $payload['result']['data']['binding']['local_dbus_bridge']['native_ownership_method']);
@@ -70,6 +72,8 @@ final class SystemApiCliTest extends TestCase
         self::assertContains('DescribeLaunchPlan', $payload['result']['data']['binding']['local_runtime_launcher']['commands']);
         self::assertContains('profiles.list', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-activation', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('system.dbus-native-service', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('system.dbus-native-startup', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-native-observation', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-native-coupling', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-native-ownership', array_column($payload['result']['data']['methods'], 'name'));
@@ -172,6 +176,152 @@ final class SystemApiCliTest extends TestCase
             $payload['result']['data']['recovery_plan']
         );
         self::assertSame('native-dbus-extension', $payload['result']['data']['activation_preparation']['runtime_backend']['selected_backend']);
+    }
+
+    public function testDbusNativeServiceMethodReturnsBlockedPublicServiceDefinition(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-dbus-native-service-001',
+            'method' => 'system.dbus-native-service',
+            'params' => [],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('system.dbus-native-service', $payload['result']['method']);
+        self::assertSame('system-api-dbus-native-runtime-service', $payload['result']['resource']['kind']);
+        self::assertSame('org.w4.System1', $payload['result']['resource']['id']);
+        self::assertSame('local-system-api-native-service-contract', $payload['result']['resource']['provider']);
+        self::assertSame('system-api-dbus-native-runtime-service', $payload['result']['data']['kind']);
+        self::assertSame('native-runtime-service-blocked', $payload['result']['data']['status']);
+        self::assertFalse($payload['result']['data']['eligible']);
+        self::assertSame('install-native-dbus-extension', $payload['result']['data']['next_action']);
+        self::assertSame('system-api-dbus-runtime-diagnosis', $payload['result']['data']['runtime_diagnosis']['kind']);
+    }
+
+    public function testDbusNativeServiceMethodReturnsReadyPublicServiceDefinition(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-dbus-native-service-002',
+            'method' => 'system.dbus-native-service',
+            'params' => [],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '1',
+            'W4_SYSTEM_API_PROBE_HAS_BUSCTL' => '1',
+            'W4_SYSTEM_API_PROBE_HAS_GDBUS' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON' => '1',
+            'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET' => '1',
+            'W4_SYSTEM_API_PROBE_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_PROBE_PHP_BINARY' => '/usr/bin/php',
+            'W4_SYSTEM_API_PROBE_PHP_VERSION' => '8.4.3',
+            'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+            'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('system.dbus-native-service', $payload['result']['method']);
+        self::assertSame('native-runtime-service-ready-to-start', $payload['result']['data']['status']);
+        self::assertTrue($payload['result']['data']['eligible']);
+        self::assertSame('native-dbus-extension', $payload['result']['data']['selected_backend']);
+        self::assertSame('start-native-runtime-service', $payload['result']['data']['next_action']);
+    }
+
+    public function testDbusNativeStartupMethodReturnsBlockedPublicStartupReport(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-dbus-native-startup-001',
+            'method' => 'system.dbus-native-startup',
+            'params' => [],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('system.dbus-native-startup', $payload['result']['method']);
+        self::assertSame('system-api-dbus-native-runtime-startup', $payload['result']['resource']['kind']);
+        self::assertSame('org.w4.System1', $payload['result']['resource']['id']);
+        self::assertSame('local-system-api-native-startup-contract', $payload['result']['resource']['provider']);
+        self::assertSame('system-api-dbus-native-runtime-startup', $payload['result']['data']['kind']);
+        self::assertSame('native-runtime-service-blocked', $payload['result']['data']['status']);
+        self::assertFalse($payload['result']['data']['startup_acknowledged']);
+        self::assertSame('install-native-dbus-extension', $payload['result']['data']['next_action']);
+        self::assertSame('system-api-dbus-runtime-diagnosis', $payload['result']['data']['runtime_diagnosis']['kind']);
+    }
+
+    public function testDbusNativeStartupMethodReturnsStartedPublicStartupReport(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-dbus-native-startup-002',
+            'method' => 'system.dbus-native-startup',
+            'params' => [],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '1',
+            'W4_SYSTEM_API_PROBE_HAS_BUSCTL' => '1',
+            'W4_SYSTEM_API_PROBE_HAS_GDBUS' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON' => '1',
+            'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET' => '1',
+            'W4_SYSTEM_API_PROBE_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_PROBE_PHP_BINARY' => '/usr/bin/php',
+            'W4_SYSTEM_API_PROBE_PHP_VERSION' => '8.4.3',
+            'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+            'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('system.dbus-native-startup', $payload['result']['method']);
+        self::assertSame('native-runtime-service-started', $payload['result']['data']['status']);
+        self::assertTrue($payload['result']['data']['startup_acknowledged']);
+        self::assertSame('pending-bus-name-ownership', $payload['result']['data']['ownership_state']);
+        self::assertSame('observe-native-runtime-service-state', $payload['result']['data']['next_action']);
+        self::assertSame(
+            'native-runtime-service-ready-to-start',
+            $payload['result']['data']['service_definition']['status']
+        );
     }
 
     public function testDbusNativeObservationMethodReturnsBlockedPublicObservationReport(): void
