@@ -168,6 +168,44 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertStringContainsString('install-native-dbus-extension', $result['stdout']);
     }
 
+    public function testValidationCanPrepareLinuxArtifactsFromNonLinuxHost(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-target-host';
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+        ], [
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_BUSCTL' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_GDBUS' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET' => '0',
+            'W4_SYSTEM_API_PROBE_OS_FAMILY' => 'Windows',
+        ]);
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('Linux', $payload['preparation_target_os_family']);
+
+        $savedSummary = file_get_contents($payload['summary_path']);
+        self::assertNotFalse($savedSummary);
+        self::assertStringContainsString('- Preparation target OS family: `Linux`', $savedSummary);
+
+        $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
+        self::assertNotFalse($preparationChecklist);
+        self::assertStringContainsString('sudo apt-get install -y php-pear php-dev libdbus-1-dev pkg-config', $preparationChecklist);
+
+        $preparationShellScript = file_get_contents($payload['preparation_shell_script_path']);
+        self::assertNotFalse($preparationShellScript);
+        self::assertStringContainsString('sudo apt-get install -y php-pear php-dev libdbus-1-dev pkg-config', $preparationShellScript);
+        self::assertStringNotContainsString('echo "Resolver manualmente', $preparationShellScript);
+    }
+
     private function scriptPath(): string
     {
         return $this->repoRoot . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'run_native_dbus_real_host_validation.php';

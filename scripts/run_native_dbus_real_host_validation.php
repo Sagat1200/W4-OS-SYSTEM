@@ -11,6 +11,7 @@ $rootDir = dirname(__DIR__);
 $evidenceDir = $rootDir . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'validation' . DIRECTORY_SEPARATOR . 'native-dbus-real-host';
 $format = 'json';
 $attemptOwnership = true;
+$environmentOverrides = [];
 
 try {
     $arguments = $argv ?? [];
@@ -45,6 +46,10 @@ try {
                 };
                 break;
 
+            case '--target-os-family':
+                $environmentOverrides['W4_SYSTEM_API_PREPARATION_TARGET_OS_FAMILY'] = $value;
+                break;
+
             default:
                 throw new ValidationError(sprintf('Argumento no soportado: %s', $argument));
         }
@@ -55,7 +60,7 @@ try {
     }
 
     $toolkit = new SystemApiNativeDbusHostValidationToolkit($rootDir);
-    $report = $toolkit->runValidation($evidenceDir, $attemptOwnership);
+    $report = $toolkit->runValidation($evidenceDir, $attemptOwnership, $environmentOverrides);
 
     if ($format === 'text') {
         fwrite(STDOUT, $toolkit->renderSummaryText($report));

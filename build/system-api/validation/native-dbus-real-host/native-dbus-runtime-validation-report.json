@@ -12,11 +12,12 @@
     "preparation_checklist_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\native-dbus-runtime-validation-preparation.txt",
     "artifacts_dir": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\runtime-artifacts",
     "runtime_backend": "native-dbus-extension",
+    "preparation_target_os_family": "Linux",
     "bus_name": "org.w4.System1",
     "object_path": "/org/w4/System1",
     "interface": "org.w4.System1.Manager",
-    "started_at": "2026-10-16T11:41:42+00:00",
-    "completed_at": "2026-10-16T11:41:47+00:00",
+    "started_at": "2026-10-16T11:49:19+00:00",
+    "completed_at": "2026-10-16T11:49:23+00:00",
     "ownership_validated": false,
     "coupling_ready": false,
     "startup_acknowledged": false,
@@ -30,28 +31,36 @@
             "action": "install-native-dbus-extension",
             "description": "Instalar y habilitar la extension PECL `dbus` para que PHP pueda pedir el bus name y exportar el objeto D-Bus.",
             "commands": [
-                "Resolver manualmente la capacidad faltante `php-dbus-runtime-adapter` para el sistema operativo `Windows`."
+                "sudo apt-get update",
+                "sudo apt-get install -y php-pear php-dev libdbus-1-dev pkg-config",
+                "sudo pecl install dbus",
+                "php --ri dbus"
             ]
         },
         {
             "action": "install-dbus-daemon",
             "description": "Asegurar que `dbus-daemon` este instalado y disponible en el host.",
             "commands": [
-                "Resolver manualmente la capacidad faltante `dbus-daemon` para el sistema operativo `Windows`."
+                "sudo apt-get update",
+                "sudo apt-get install -y dbus",
+                "dbus-daemon --version"
             ]
         },
         {
             "action": "materialize-system-bus-socket",
             "description": "Confirmar que el socket del system bus exista y que el servicio D-Bus del sistema este activo.",
             "commands": [
-                "Resolver manualmente la capacidad faltante `system-bus-socket` para el sistema operativo `Windows`."
+                "sudo systemctl status dbus",
+                "test -S /run/dbus/system_bus_socket && echo system-bus-socket-ready"
             ]
         },
         {
             "action": "install-dbus-client-tooling",
             "description": "Instalar al menos una herramienta de cliente D-Bus (`busctl` o `gdbus`) para contrastar el runtime desde el host.",
             "commands": [
-                "Resolver manualmente la capacidad faltante `dbus-client-tooling` para el sistema operativo `Windows`."
+                "sudo apt-get update",
+                "sudo apt-get install -y systemd dbus",
+                "busctl --version || gdbus --version"
             ]
         },
         {
@@ -64,7 +73,8 @@
     ],
     "environment_overrides": {
         "W4_SYSTEM_API_RUNTIME_BACKEND": "native-dbus-extension",
-        "W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\runtime-artifacts"
+        "W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\runtime-artifacts",
+        "W4_SYSTEM_API_PREPARATION_TARGET_OS_FAMILY": "Linux"
     },
     "steps": {
         "diagnosis": {

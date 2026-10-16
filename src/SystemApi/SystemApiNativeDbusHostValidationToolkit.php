@@ -110,7 +110,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             ? 0
             : ($hasFailure ? 1 : 3);
         $environment = is_array($steps['diagnosis']['environment'] ?? null) ? $steps['diagnosis']['environment'] : [];
-        $osFamily = is_string($environment['os_family'] ?? null) ? $environment['os_family'] : 'Unknown';
+        $osFamily = $this->resolvePreparationTargetOsFamily($environment, $effectiveOverrides);
         $preparationPlan = $this->createPreparationPlan(
             $steps['diagnosis'],
             $steps['service_definition'],
@@ -118,6 +118,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             $steps['coupling'],
             $steps['ownership'],
             $effectiveOverrides,
+            $osFamily,
             $attemptOwnership,
             $ownershipValidated,
             $couplingReady
@@ -137,6 +138,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             'preparation_checklist_path' => $preparationChecklistPath,
             'artifacts_dir' => $artifactsDir,
             'runtime_backend' => $effectiveOverrides['W4_SYSTEM_API_RUNTIME_BACKEND'] ?? 'native-dbus-extension',
+            'preparation_target_os_family' => $osFamily,
             'bus_name' => 'org.w4.System1',
             'object_path' => '/org/w4/System1',
             'interface' => 'org.w4.System1.Manager',
@@ -244,6 +246,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             sprintf('- Ownership validated: `%s`', (($report['ownership_validated'] ?? false) === true) ? 'yes' : 'no'),
             sprintf('- Coupling ready: `%s`', (($report['coupling_ready'] ?? false) === true) ? 'yes' : 'no'),
             sprintf('- Startup acknowledged: `%s`', (($report['startup_acknowledged'] ?? false) === true) ? 'yes' : 'no'),
+            sprintf('- Preparation target OS family: `%s`', (string) ($report['preparation_target_os_family'] ?? 'n/a')),
             sprintf('- Blocking reason: `%s`', (string) ($report['blocking_reason'] ?? 'n/a')),
             sprintf('- Next action: `%s`', (string) ($report['next_action'] ?? 'n/a')),
             sprintf('- Report path: `%s`', (string) ($report['report_path'] ?? 'n/a')),
@@ -505,13 +508,12 @@ final class SystemApiNativeDbusHostValidationToolkit
         array $coupling,
         ?array $ownership,
         array $environmentOverrides,
+        string $osFamily,
         bool $attemptOwnership,
         bool $ownershipValidated,
         bool $couplingReady
     ): array {
         $plan = [];
-        $environment = is_array($diagnosis['environment'] ?? null) ? $diagnosis['environment'] : [];
-        $osFamily = is_string($environment['os_family'] ?? null) ? $environment['os_family'] : 'Unknown';
         $missingCapabilities = $diagnosis['missing_capabilities'] ?? [];
 
         if (is_array($missingCapabilities)) {
@@ -634,5 +636,24 @@ final class SystemApiNativeDbusHostValidationToolkit
         }
 
         return sprintf('echo %s', escapeshellarg($command));
+    }
+
+    /**
+     * @param array<string, mixed> $environment
+     * @param array<string, string> $environmentOverrides
+     */
+    private function resolvePreparationTargetOsFamily(array $environment, array $environmentOverrides): string
+    {
+        $override = $environmentOverrides['W4_SYSTEM_API_PREPARATION_TARGET_OS_FAMILY'] ?? null;
+        if (is_string($override) && trim($override) !== '') {
+            return trim($override);
+        }
+
+        $osFamily = $environment['os_family'] ?? null;
+        if (is_string($osFamily) && trim($osFamily) !== '') {
+            return trim($osFamily);
+        }
+
+        return 'Unknown';
     }
 }
