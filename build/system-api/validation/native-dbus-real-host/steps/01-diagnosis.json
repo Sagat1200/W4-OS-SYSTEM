@@ -27,6 +27,7 @@
         "next_action": "inspect-native-dbus-build-make",
         "build_phase": "make",
         "reason": "zend_object_store_get_object",
+        "failure_signature": "- fallo final: `make: *** [Makefile:192: dbus.lo] Error 1`",
         "log_path": "c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md"
     },
     "missing_capabilities": [

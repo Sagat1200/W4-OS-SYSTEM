@@ -150,6 +150,7 @@ TEXT);
             self::assertSame('native-dbus-extension-build-failed', $payload['native_dbus_extension_installation']['blocking_reason']);
             self::assertSame('inspect-native-dbus-build-make', $payload['native_dbus_extension_installation']['next_action']);
             self::assertSame('zend_object_store_get_object', $payload['native_dbus_extension_installation']['reason']);
+            self::assertSame('make: *** [Makefile:192: dbus.lo] Error 1', $payload['native_dbus_extension_installation']['failure_signature']);
             self::assertSame($evidencePath, $payload['native_dbus_extension_installation']['log_path']);
         } finally {
             @unlink($evidencePath);
@@ -232,6 +233,45 @@ TEXT);
             self::assertSame('pecl-release-is-beta', $payload['native_dbus_extension_installation']['reason']);
             self::assertSame('inspect-native-dbus-pecl-download', $payload['native_dbus_extension_installation']['next_action']);
             self::assertTrue($payload['native_dbus_extension_installation']['pecl_available']);
+        } finally {
+            @unlink($evidencePath);
+        }
+    }
+
+    public function testProbeCanInferConfigureFailureSignatureFromEvidenceFile(): void
+    {
+        $evidencePath = tempnam(sys_get_temp_dir(), 'w4-dbus-build-evidence-configure-');
+        self::assertNotFalse($evidencePath);
+
+        try {
+            file_put_contents($evidencePath, <<<TEXT
+checking for xml2-config path... not found
+configure: error: Package requirements (libxml-2.0) were not met
+TEXT);
+
+            $result = $this->runPhpScript([
+                $this->scriptPath(),
+            ], [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '1',
+                'W4_SYSTEM_API_PROBE_HAS_BUSCTL' => '1',
+                'W4_SYSTEM_API_PROBE_HAS_GDBUS' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON' => '1',
+                'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET' => '1',
+                'W4_SYSTEM_API_PROBE_OS_FAMILY' => 'Linux',
+                'W4_SYSTEM_API_PROBE_PHP_BINARY' => '/usr/bin/php',
+                'W4_SYSTEM_API_PROBE_PHP_VERSION' => '8.4.3',
+                'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_PATH' => $evidencePath,
+            ]);
+
+            self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+            $payload = $this->decodeJson($result['stdout']);
+            self::assertSame('build-failed', $payload['native_dbus_extension_installation']['state']);
+            self::assertSame('configure', $payload['native_dbus_extension_installation']['build_phase']);
+            self::assertSame('inspect-native-dbus-build-configure', $payload['native_dbus_extension_installation']['next_action']);
+            self::assertSame('libxml-2.0', $payload['native_dbus_extension_installation']['reason']);
+            self::assertSame('configure: error: Package requirements (libxml-2.0) were not met', $payload['native_dbus_extension_installation']['failure_signature']);
         } finally {
             @unlink($evidencePath);
         }

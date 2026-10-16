@@ -165,6 +165,7 @@ final class SystemApiDbusRuntimeProbeToolkit
             ['unknown', 'pecl-download', 'phpize', 'configure', 'make']
         );
         $explicitReason = $this->resolveStringOverride($environment, 'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_REASON');
+        $explicitFailureSignature = $this->resolveStringOverride($environment, 'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_FAILURE_SIGNATURE');
         $explicitLogPath = $this->resolveStringOverride($environment, 'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_LOG_PATH');
         $inferredEvidence = $this->inferNativeDbusExtensionInstallationFromStructuredEvidence($environment);
         if ($inferredEvidence === []) {
@@ -175,6 +176,9 @@ final class SystemApiDbusRuntimeProbeToolkit
             ?? ($extensionLoaded ? 'installed' : 'unknown');
         $reason = $explicitReason
             ?? (is_string($inferredEvidence['reason'] ?? null) ? $inferredEvidence['reason'] : null);
+        $failureSignature = $explicitFailureSignature
+            ?? (is_string($inferredEvidence['failure_signature'] ?? null) ? $inferredEvidence['failure_signature'] : null)
+            ?? $this->inferNativeDbusFailureSignatureFromReason($reason, $state);
         $logPath = $explicitLogPath
             ?? (is_string($inferredEvidence['log_path'] ?? null) ? $inferredEvidence['log_path'] : null);
         $inferredBuildPhase = is_string($inferredEvidence['build_phase'] ?? null)
@@ -210,6 +214,7 @@ final class SystemApiDbusRuntimeProbeToolkit
             'next_action' => $nextAction,
             'build_phase' => $buildPhase,
             'reason' => $reason,
+            'failure_signature' => $failureSignature,
             'log_path' => $logPath,
         ];
     }
@@ -274,6 +279,7 @@ final class SystemApiDbusRuntimeProbeToolkit
                 ? trim((string) $payload['build_phase'])
                 : '',
             'reason' => is_string($payload['reason'] ?? null) ? trim((string) $payload['reason']) : '',
+            'failure_signature' => is_string($payload['failure_signature'] ?? null) ? trim((string) $payload['failure_signature']) : '',
             'log_path' => is_string($payload['log_path'] ?? null)
                 ? trim((string) $payload['log_path'])
                 : $evidencePath,
@@ -353,6 +359,7 @@ final class SystemApiDbusRuntimeProbeToolkit
             'state' => $state,
             'build_phase' => $buildPhase,
             'reason' => $reason ?? '',
+            'failure_signature' => $this->resolveNativeDbusFailureSignature($raw, $buildPhase, $reason),
             'log_path' => $evidencePath,
         ];
     }
@@ -406,5 +413,64 @@ final class SystemApiDbusRuntimeProbeToolkit
             'make' => 'inspect-native-dbus-build-make',
             default => 'inspect-native-dbus-build-stack',
         };
+    }
+
+    private function inferNativeDbusFailureSignatureFromReason(?string $reason, string $state): ?string
+    {
+        if ($state !== 'build-failed' || $reason === null || trim($reason) === '') {
+            return null;
+        }
+
+        return trim($reason);
+    }
+
+    private function resolveNativeDbusFailureSignature(string $raw, string $buildPhase, ?string $reason): ?string
+    {
+        $lines = preg_split('/\R/', $raw) ?: [];
+        $patterns = match ($buildPhase) {
+            'pecl-download' => [
+                '/failed to download pecl\/dbus/i',
+                '/latest release is beta/i',
+                '/no releases available for package/i',
+            ],
+            'phpize' => [
+                '/phpize failed/i',
+            ],
+            'configure' => [
+                '/configure:\s*error/i',
+                '/cannot find xml2-config/i',
+                '/libxml-2\.0/i',
+            ],
+            'make' => [
+                '/make:\s*\*\*\*/i',
+                '/zend_object_store_get_object/i',
+                '/dbus\.lo/i',
+            ],
+            default => [],
+        };
+
+        foreach ($patterns as $pattern) {
+            foreach ($lines as $line) {
+                if (is_string($line) && preg_match($pattern, $line) === 1) {
+                    return $this->normalizeNativeDbusFailureSignatureLine($line);
+                }
+            }
+        }
+
+        return $this->inferNativeDbusFailureSignatureFromReason($reason, 'build-failed');
+    }
+
+    private function normalizeNativeDbusFailureSignatureLine(string $line): string
+    {
+        $normalized = trim($line);
+        $normalized = preg_replace('/^-\s*fallo final:\s*/i', '', $normalized) ?? $normalized;
+        $normalized = preg_replace('/^-\s*/', '', $normalized) ?? $normalized;
+        $normalized = trim($normalized);
+
+        if (str_starts_with($normalized, '`') && str_ends_with($normalized, '`')) {
+            $normalized = trim($normalized, '`');
+        }
+
+        return trim($normalized);
     }
 }

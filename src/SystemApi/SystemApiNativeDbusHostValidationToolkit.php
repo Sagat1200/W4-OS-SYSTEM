@@ -332,6 +332,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             sprintf('- Installation blocking reason: `%s`', (string) ($report['native_dbus_extension_installability']['blocking_reason'] ?? 'n/a')),
             sprintf('- Installation next action: `%s`', (string) ($report['native_dbus_extension_installability']['next_action'] ?? 'n/a')),
             sprintf('- Installation reason: `%s`', (string) ($report['native_dbus_extension_installability']['reason'] ?? 'n/a')),
+            sprintf('- Installation failure signature: `%s`', (string) ($report['native_dbus_extension_installability']['failure_signature'] ?? 'n/a')),
             sprintf('- Installation log path: `%s`', (string) ($report['native_dbus_extension_installability']['log_path'] ?? 'n/a')),
             '',
             '## Recommended Next Actions',
@@ -956,6 +957,9 @@ final class SystemApiNativeDbusHostValidationToolkit
             ? trim((string) $installation['build_phase'])
             : 'unknown';
         $reason = is_string($installation['reason'] ?? null) ? trim((string) $installation['reason']) : null;
+        $failureSignature = is_string($installation['failure_signature'] ?? null)
+            ? trim((string) $installation['failure_signature'])
+            : null;
         $logPath = is_string($installation['log_path'] ?? null) ? trim((string) $installation['log_path']) : null;
         $peclAvailable = (($installation['pecl_available'] ?? false) === true);
         $recommendedNextActions = [];
@@ -970,6 +974,7 @@ final class SystemApiNativeDbusHostValidationToolkit
                 $state,
                 $buildPhase,
                 $reason,
+                $failureSignature,
                 $logPath,
                 $targetRepoRoot,
                 $peclAvailable
@@ -983,6 +988,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             'next_action' => $nextAction,
             'build_phase' => $buildPhase,
             'reason' => $reason,
+            'failure_signature' => $failureSignature,
             'log_path' => $logPath,
             'pecl_available' => $peclAvailable,
             'recommended_next_actions' => $recommendedNextActions,
@@ -997,6 +1003,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         string $state,
         string $buildPhase,
         ?string $reason,
+        ?string $failureSignature,
         ?string $logPath,
         string $targetRepoRoot,
         bool $peclAvailable
@@ -1014,6 +1021,7 @@ final class SystemApiNativeDbusHostValidationToolkit
                 $state,
                 $buildPhase,
                 $reason,
+                $failureSignature,
                 $logPath,
                 $targetRepoRoot,
                 $peclAvailable
@@ -1028,6 +1036,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         string $state,
         string $buildPhase,
         ?string $reason,
+        ?string $failureSignature,
         ?string $logPath,
         string $targetRepoRoot,
         bool $peclAvailable
@@ -1061,6 +1070,13 @@ final class SystemApiNativeDbusHostValidationToolkit
             $commands[] = sprintf(
                 "printf '%%s\n' %s",
                 escapeshellarg('Ultimo motivo reportado: ' . $reason)
+            );
+        }
+
+        if ($failureSignature !== null && $failureSignature !== '') {
+            $commands[] = sprintf(
+                "printf '%%s\n' %s",
+                escapeshellarg('Firma detectada del fallo: ' . $failureSignature)
             );
         }
 
@@ -1384,6 +1400,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             'state' => $state,
             'build_phase' => $buildPhase,
             'reason' => $reason,
+            'failure_signature' => $this->resolveNativeDbusFailureSignature($raw, $buildPhase, $reason),
             'log_path' => $sourcePath,
             'markers' => $markers,
         ];
@@ -1412,6 +1429,16 @@ final class SystemApiNativeDbusHostValidationToolkit
         $normalizedBuildPhase = is_string($buildPhase) && trim($buildPhase) !== ''
             ? strtolower(trim($buildPhase))
             : $this->inferNativeDbusBuildPhaseFromReason($normalizedReason, $normalizedState);
+        $failureSignature = $this->inferNativeDbusFailureSignatureFromReason($normalizedReason, $normalizedState);
+        if ($normalizedLogPath !== null && is_file($normalizedLogPath)) {
+            $rawLog = file_get_contents($normalizedLogPath);
+            if (is_string($rawLog) && $rawLog !== '') {
+                $resolvedFailureSignature = $this->resolveNativeDbusFailureSignature($rawLog, $normalizedBuildPhase, $normalizedReason);
+                if ($resolvedFailureSignature !== null && $resolvedFailureSignature !== '') {
+                    $failureSignature = $resolvedFailureSignature;
+                }
+            }
+        }
         $markers = [];
 
         if ($normalizedReason !== null) {
@@ -1430,6 +1457,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             'state' => $normalizedState,
             'build_phase' => $normalizedBuildPhase,
             'reason' => $normalizedReason,
+            'failure_signature' => $failureSignature,
             'log_path' => $normalizedLogPath,
             'markers' => $markers,
         ];
@@ -1472,6 +1500,65 @@ final class SystemApiNativeDbusHostValidationToolkit
         }
 
         return 'unknown';
+    }
+
+    private function inferNativeDbusFailureSignatureFromReason(?string $reason, string $state): ?string
+    {
+        if ($state !== 'build-failed' || $reason === null || trim($reason) === '') {
+            return null;
+        }
+
+        return trim($reason);
+    }
+
+    private function resolveNativeDbusFailureSignature(string $raw, string $buildPhase, ?string $reason): ?string
+    {
+        $lines = preg_split('/\R/', $raw) ?: [];
+        $patterns = match ($buildPhase) {
+            'pecl-download' => [
+                '/failed to download pecl\/dbus/i',
+                '/latest release is beta/i',
+                '/no releases available for package/i',
+            ],
+            'phpize' => [
+                '/phpize failed/i',
+            ],
+            'configure' => [
+                '/configure:\s*error/i',
+                '/cannot find xml2-config/i',
+                '/libxml-2\.0/i',
+            ],
+            'make' => [
+                '/make:\s*\*\*\*/i',
+                '/zend_object_store_get_object/i',
+                '/dbus\.lo/i',
+            ],
+            default => [],
+        };
+
+        foreach ($patterns as $pattern) {
+            foreach ($lines as $line) {
+                if (is_string($line) && preg_match($pattern, $line) === 1) {
+                    return $this->normalizeNativeDbusFailureSignatureLine($line);
+                }
+            }
+        }
+
+        return $this->inferNativeDbusFailureSignatureFromReason($reason, 'build-failed');
+    }
+
+    private function normalizeNativeDbusFailureSignatureLine(string $line): string
+    {
+        $normalized = trim($line);
+        $normalized = preg_replace('/^-\s*fallo final:\s*/i', '', $normalized) ?? $normalized;
+        $normalized = preg_replace('/^-\s*/', '', $normalized) ?? $normalized;
+        $normalized = trim($normalized);
+
+        if (str_starts_with($normalized, '`') && str_ends_with($normalized, '`')) {
+            $normalized = trim($normalized, '`');
+        }
+
+        return trim($normalized);
     }
 
     /**

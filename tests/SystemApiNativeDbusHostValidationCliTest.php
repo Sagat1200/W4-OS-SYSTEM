@@ -300,6 +300,7 @@ TEXT);
         self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
         self::assertSame('make', $payload['native_dbus_extension_installability']['build_phase']);
         self::assertSame('zend_object_store_get_object', $payload['native_dbus_extension_installability']['reason']);
+        self::assertSame('make: *** [Makefile:192: dbus.lo] Error 1', $payload['native_dbus_extension_installability']['failure_signature']);
         self::assertSame($evidencePath, $payload['native_dbus_extension_installability']['log_path']);
         self::assertFileExists($payload['native_dbus_extension_build_evidence_path']);
 
@@ -308,6 +309,7 @@ TEXT);
         self::assertSame('build-failed', $structuredEvidence['state']);
         self::assertSame('make', $structuredEvidence['build_phase']);
         self::assertSame('zend_object_store_get_object', $structuredEvidence['reason']);
+        self::assertSame('make: *** [Makefile:192: dbus.lo] Error 1', $structuredEvidence['failure_signature']);
         self::assertSame($evidencePath, $structuredEvidence['source_path']);
         self::assertSame($evidencePath, $structuredEvidence['log_path']);
 
@@ -362,6 +364,7 @@ TEXT);
         self::assertSame('build-failed', $structuredEvidence['state']);
         self::assertSame('make', $structuredEvidence['build_phase']);
         self::assertSame('zend_object_store_get_object', $structuredEvidence['reason']);
+        self::assertSame('make: *** [Makefile:192: dbus.lo] Error 1', $structuredEvidence['failure_signature']);
         self::assertSame($buildLogPath, $structuredEvidence['source_path']);
         self::assertSame($buildLogPath, $structuredEvidence['log_path']);
         self::assertSame(['zend_object_store_get_object', 'make'], $structuredEvidence['markers']);
@@ -408,6 +411,61 @@ TEXT);
         $savedSummary = file_get_contents($payload['summary_path']);
         self::assertNotFalse($savedSummary);
         self::assertStringContainsString('- Installation build phase: `pecl-download`', $savedSummary);
+    }
+
+    public function testValidationCanInferConfigureFailureFromRawBuildLogPathWithoutExplicitState(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-native-dbus-configure-failed-host';
+        $buildLogPath = $this->tempDir . DIRECTORY_SEPARATOR . 'native-dbus-configure.log';
+        file_put_contents($buildLogPath, <<<TEXT
+checking for xml2-config path... not found
+configure: error: Package requirements (libxml-2.0) were not met
+TEXT);
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+            '--target-repo-root',
+            '/srv/w4/os-system',
+            '--native-dbus-build-log-path',
+            $buildLogPath,
+        ], array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '1',
+            ]
+        ));
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
+        self::assertSame('configure', $payload['native_dbus_extension_installability']['build_phase']);
+        self::assertSame('inspect-native-dbus-build-configure', $payload['next_action']);
+        self::assertSame('libxml-2.0', $payload['native_dbus_extension_installability']['reason']);
+        self::assertSame(
+            'configure: error: Package requirements (libxml-2.0) were not met',
+            $payload['native_dbus_extension_installability']['failure_signature']
+        );
+
+        $structuredEvidence = $this->decodeJsonFile($payload['native_dbus_extension_build_evidence_path']);
+        self::assertSame('configure', $structuredEvidence['build_phase']);
+        self::assertSame('configure: error: Package requirements (libxml-2.0) were not met', $structuredEvidence['failure_signature']);
+
+        $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
+        self::assertNotFalse($preparationChecklist);
+        self::assertStringContainsString('inspect-native-dbus-build-configure', $preparationChecklist);
+        self::assertStringContainsString('pkg-config --modversion libxml-2.0 || true', $preparationChecklist);
+        self::assertStringContainsString('Firma detectada del fallo: configure: error: Package requirements (libxml-2.0) were not met', $preparationChecklist);
+
+        $savedSummary = file_get_contents($payload['summary_path']);
+        self::assertNotFalse($savedSummary);
+        self::assertStringContainsString('- Installation build phase: `configure`', $savedSummary);
+        self::assertStringContainsString('- Installation failure signature: `configure: error: Package requirements (libxml-2.0) were not met`', $savedSummary);
     }
 
     public function testValidationCanPrepareOwnedRuntimeAgainstFakeNativeDbusService(): void
