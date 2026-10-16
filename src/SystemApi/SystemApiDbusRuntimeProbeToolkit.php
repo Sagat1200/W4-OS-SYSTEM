@@ -154,14 +154,21 @@ final class SystemApiDbusRuntimeProbeToolkit
         bool $hasPecl,
         bool $extensionLoaded
     ): array {
-        $state = $this->resolveEnumOverride(
+        $explicitState = $this->resolveOptionalEnumOverride(
             $environment,
             'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_STATE',
-            ['unknown', 'not-attempted', 'buildable', 'build-failed', 'unsupported-stack', 'installed'],
-            $extensionLoaded ? 'installed' : 'unknown'
+            ['unknown', 'not-attempted', 'buildable', 'build-failed', 'unsupported-stack', 'installed']
         );
-        $reason = $this->resolveStringOverride($environment, 'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_REASON');
-        $logPath = $this->resolveStringOverride($environment, 'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_LOG_PATH');
+        $explicitReason = $this->resolveStringOverride($environment, 'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_REASON');
+        $explicitLogPath = $this->resolveStringOverride($environment, 'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_LOG_PATH');
+        $inferredEvidence = $this->inferNativeDbusExtensionInstallationFromEvidence($environment);
+        $state = $explicitState
+            ?? (is_string($inferredEvidence['state'] ?? null) ? $inferredEvidence['state'] : null)
+            ?? ($extensionLoaded ? 'installed' : 'unknown');
+        $reason = $explicitReason
+            ?? (is_string($inferredEvidence['reason'] ?? null) ? $inferredEvidence['reason'] : null);
+        $logPath = $explicitLogPath
+            ?? (is_string($inferredEvidence['log_path'] ?? null) ? $inferredEvidence['log_path'] : null);
 
         $blockingReason = match ($state) {
             'build-failed' => 'native-dbus-extension-build-failed',
@@ -192,16 +199,16 @@ final class SystemApiDbusRuntimeProbeToolkit
      * @param array<string, string> $environment
      * @param list<string> $allowedValues
      */
-    private function resolveEnumOverride(array $environment, string $key, array $allowedValues, string $default): string
+    private function resolveOptionalEnumOverride(array $environment, string $key, array $allowedValues): ?string
     {
         $value = $environment[$key] ?? null;
         if (!is_string($value) || trim($value) === '') {
-            return $default;
+            return null;
         }
 
         $normalized = strtolower(trim($value));
 
-        return in_array($normalized, $allowedValues, true) ? $normalized : $default;
+        return in_array($normalized, $allowedValues, true) ? $normalized : null;
     }
 
     /**
@@ -212,5 +219,56 @@ final class SystemApiDbusRuntimeProbeToolkit
         $value = $environment[$key] ?? null;
 
         return is_string($value) && trim($value) !== '' ? trim($value) : null;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     * @return array<string, string>
+     */
+    private function inferNativeDbusExtensionInstallationFromEvidence(array $environment): array
+    {
+        $evidencePath = $this->resolveStringOverride($environment, 'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_PATH');
+        if ($evidencePath === null || !is_file($evidencePath)) {
+            return [];
+        }
+
+        $raw = file_get_contents($evidencePath);
+        if (!is_string($raw) || trim($raw) === '') {
+            return [];
+        }
+
+        $normalized = strtolower($raw);
+        $reason = null;
+        $state = null;
+
+        if (
+            str_contains($normalized, 'zend_object_store_get_object')
+            || str_contains($normalized, 'make: ***')
+            || str_contains($normalized, 'compilacion sigue fallando')
+            || str_contains($normalized, 'no compila')
+        ) {
+            $state = 'build-failed';
+            $reason = str_contains($normalized, 'zend_object_store_get_object')
+                ? 'zend_object_store_get_object'
+                : (str_contains($normalized, 'make: *** [makefile:192: dbus.lo] error 1')
+                    ? 'make: *** [Makefile:192: dbus.lo] Error 1'
+                    : 'native-dbus-extension-build-failed');
+        } elseif (
+            str_contains($normalized, 'unsupported stack')
+            || str_contains($normalized, 'stack no soportado')
+        ) {
+            $state = 'unsupported-stack';
+            $reason = 'native-dbus-extension-unsupported-stack';
+        }
+
+        if ($state === null) {
+            return [];
+        }
+
+        return [
+            'state' => $state,
+            'reason' => $reason ?? '',
+            'log_path' => $evidencePath,
+        ];
     }
 }

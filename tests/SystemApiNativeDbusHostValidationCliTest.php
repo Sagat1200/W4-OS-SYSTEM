@@ -260,6 +260,56 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertStringContainsString('- Installation reason: `zend_object_store_get_object`', $savedSummary);
     }
 
+    public function testValidationCanInferExtensionBuildFailureFromPersistedLinuxEvidence(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-native-dbus-build-failed-from-evidence-host';
+        self::assertTrue(mkdir($evidenceDir, 0777, true) || is_dir($evidenceDir));
+        $evidencePath = $evidenceDir . DIRECTORY_SEPARATOR . 'wsl-ubuntu-operational-attempt.md';
+        file_put_contents($evidencePath, <<<TEXT
+# Contraste real WSL Ubuntu 20.04
+
+Se intento pecl install channel://pecl.php.net/dbus-0.1.1
+La compilacion sigue fallando en make.
+referencias a zend_object_store_get_object(...)
+make: *** [Makefile:192: dbus.lo] Error 1
+TEXT);
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+            '--target-repo-root',
+            '/srv/w4/os-system',
+        ], array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '1',
+            ]
+        ));
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('blocked', $payload['status']);
+        self::assertSame('native-dbus-extension-build-failed', $payload['blocking_reason']);
+        self::assertSame('inspect-native-dbus-build-stack', $payload['next_action']);
+        self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
+        self::assertSame('zend_object_store_get_object', $payload['native_dbus_extension_installability']['reason']);
+        self::assertSame($evidencePath, $payload['native_dbus_extension_installability']['log_path']);
+
+        $preparationActions = array_map(
+            static fn (array $step): string => (string) ($step['action'] ?? ''),
+            $payload['preparation_plan']
+        );
+        self::assertSame(
+            ['inspect-native-dbus-build-stack', 'rerun-native-runtime-validation'],
+            $preparationActions
+        );
+    }
+
     public function testValidationCanPrepareOwnedRuntimeAgainstFakeNativeDbusService(): void
     {
         $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'fake-owned-host';

@@ -41,6 +41,10 @@ final class SystemApiNativeDbusHostValidationToolkit
             'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
             'W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR' => $artifactsDir,
         ];
+        $nativeDbusBuildEvidencePath = $this->resolveNativeDbusBuildEvidencePath($normalizedEvidenceDir, $environmentOverrides);
+        if ($nativeDbusBuildEvidencePath !== null) {
+            $defaultOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_PATH'] = $nativeDbusBuildEvidencePath;
+        }
         $effectiveOverrides = array_merge($defaultOverrides, $environmentOverrides);
 
         $startedAt = gmdate('c');
@@ -1195,6 +1199,26 @@ final class SystemApiNativeDbusHostValidationToolkit
         }
 
         return $this->rootDir;
+    }
+
+    /**
+     * @param array<string, string> $environmentOverrides
+     */
+    private function resolveNativeDbusBuildEvidencePath(string $normalizedEvidenceDir, array $environmentOverrides): ?string
+    {
+        $override = $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_PATH'] ?? null;
+        if (is_string($override) && trim($override) !== '') {
+            return trim($override);
+        }
+
+        $targetOsFamily = $environmentOverrides['W4_SYSTEM_API_PREPARATION_TARGET_OS_FAMILY'] ?? null;
+        if (!is_string($targetOsFamily) || trim($targetOsFamily) !== 'Linux') {
+            return null;
+        }
+
+        $candidate = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'wsl-ubuntu-operational-attempt.md';
+
+        return is_file($candidate) ? $candidate : null;
     }
 
     /**
