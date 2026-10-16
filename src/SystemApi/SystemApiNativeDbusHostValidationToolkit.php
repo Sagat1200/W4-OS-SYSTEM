@@ -115,7 +115,13 @@ final class SystemApiNativeDbusHostValidationToolkit
         $targetRepoRoot = $this->resolvePreparationTargetRepoRoot($effectiveOverrides, $osFamily);
         $hostCompatibility = $this->evaluateHostCompatibility($steps['diagnosis'], $targetRepoRoot);
         $hostCompatible = (($hostCompatibility['compatible'] ?? true) === true);
+        $nativeDbusExtensionInstallability = $this->evaluateNativeDbusExtensionInstallability($steps['diagnosis'], $targetRepoRoot);
+        $nativeDbusExtensionBlocked = (($nativeDbusExtensionInstallability['blocked'] ?? false) === true);
         if (!$hostCompatible) {
+            $status = 'blocked';
+            $exitCode = 3;
+        }
+        if ($hostCompatible && $nativeDbusExtensionBlocked) {
             $status = 'blocked';
             $exitCode = 3;
         }
@@ -126,6 +132,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             $steps['coupling'],
             $steps['ownership'],
             $hostCompatibility,
+            $nativeDbusExtensionInstallability,
             $effectiveOverrides,
             $osFamily,
             $targetRepoRoot,
@@ -133,25 +140,32 @@ final class SystemApiNativeDbusHostValidationToolkit
             $ownershipValidated,
             $couplingReady
         );
-        $blockingReason = $hostCompatible
-            ? $this->resolvePrimaryValue(
+        $blockingReason = !$hostCompatible
+            ? (is_string($hostCompatibility['blocking_reason'] ?? null) ? $hostCompatibility['blocking_reason'] : null)
+            : ($nativeDbusExtensionBlocked
+                ? (is_string($nativeDbusExtensionInstallability['blocking_reason'] ?? null) ? $nativeDbusExtensionInstallability['blocking_reason'] : null)
+                : $this->resolvePrimaryValue(
                 $finalSnapshot,
                 $finalObservation,
                 $steps['startup'],
                 $steps['service_definition']
-            )
-            : (is_string($hostCompatibility['blocking_reason'] ?? null) ? $hostCompatibility['blocking_reason'] : null);
-        $nextAction = $hostCompatible
-            ? $this->resolvePrimaryNextAction(
+            ));
+        $nextAction = !$hostCompatible
+            ? (is_string($hostCompatibility['next_action'] ?? null) ? $hostCompatibility['next_action'] : null)
+            : ($nativeDbusExtensionBlocked
+                ? (is_string($nativeDbusExtensionInstallability['next_action'] ?? null) ? $nativeDbusExtensionInstallability['next_action'] : null)
+                : $this->resolvePrimaryNextAction(
                 $finalSnapshot,
                 $finalObservation,
                 $steps['startup'],
                 $steps['service_definition']
-            )
-            : (is_string($hostCompatibility['next_action'] ?? null) ? $hostCompatibility['next_action'] : null);
+            ));
         $recommendedNextActions = array_values(array_unique(array_filter(array_merge(
             is_array($hostCompatibility['recommended_next_actions'] ?? null)
                 ? $hostCompatibility['recommended_next_actions']
+                : [],
+            is_array($nativeDbusExtensionInstallability['recommended_next_actions'] ?? null)
+                ? $nativeDbusExtensionInstallability['recommended_next_actions']
                 : [],
             $this->collectRecommendedNextActions(
                 $steps['service_definition'],
@@ -192,6 +206,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             'next_action' => $nextAction,
             'recommended_next_actions' => $recommendedNextActions,
             'host_compatibility' => $hostCompatibility,
+            'native_dbus_extension_installability' => $nativeDbusExtensionInstallability,
             'preparation_plan' => $preparationPlan,
             'environment_overrides' => $effectiveOverrides,
             'steps' => $steps,
@@ -279,6 +294,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             sprintf('- Preparation target OS family: `%s`', (string) ($report['preparation_target_os_family'] ?? 'n/a')),
             sprintf('- Preparation target repo root: `%s`', (string) ($report['preparation_target_repo_root'] ?? 'n/a')),
             sprintf('- Host compatibility: `%s`', (($report['host_compatibility']['compatible'] ?? true) === true) ? 'compatible' : 'blocked'),
+            sprintf('- Native D-Bus extension installation: `%s`', (string) ($report['native_dbus_extension_installability']['state'] ?? 'unknown')),
             sprintf('- Blocking reason: `%s`', (string) ($report['blocking_reason'] ?? 'n/a')),
             sprintf('- Next action: `%s`', (string) ($report['next_action'] ?? 'n/a')),
             sprintf('- Report path: `%s`', (string) ($report['report_path'] ?? 'n/a')),
@@ -292,6 +308,15 @@ final class SystemApiNativeDbusHostValidationToolkit
             sprintf('- Detected PHP version: `%s`', (string) ($report['host_compatibility']['php_version'] ?? 'n/a')),
             sprintf('- Required PHP constraint: `%s`', (string) ($report['host_compatibility']['required_php_constraint'] ?? 'n/a')),
             sprintf('- Required PHP version: `%s`', (string) ($report['host_compatibility']['required_php_version'] ?? 'n/a')),
+            '',
+            '## Native D-Bus Extension Installation',
+            '',
+            sprintf('- Installation state: `%s`', (string) ($report['native_dbus_extension_installability']['state'] ?? 'unknown')),
+            sprintf('- PECL available: `%s`', (($report['native_dbus_extension_installability']['pecl_available'] ?? false) === true) ? 'yes' : 'no'),
+            sprintf('- Installation blocking reason: `%s`', (string) ($report['native_dbus_extension_installability']['blocking_reason'] ?? 'n/a')),
+            sprintf('- Installation next action: `%s`', (string) ($report['native_dbus_extension_installability']['next_action'] ?? 'n/a')),
+            sprintf('- Installation reason: `%s`', (string) ($report['native_dbus_extension_installability']['reason'] ?? 'n/a')),
+            sprintf('- Installation log path: `%s`', (string) ($report['native_dbus_extension_installability']['log_path'] ?? 'n/a')),
             '',
             '## Recommended Next Actions',
             '',
@@ -589,6 +614,7 @@ final class SystemApiNativeDbusHostValidationToolkit
      * @param array<string, mixed> $coupling
      * @param array<string, mixed>|null $ownership
      * @param array<string, mixed> $hostCompatibility
+     * @param array<string, mixed> $nativeDbusExtensionInstallability
      * @param array<string, string> $environmentOverrides
      * @return list<array<string, mixed>>
      */
@@ -599,6 +625,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         array $coupling,
         ?array $ownership,
         array $hostCompatibility,
+        array $nativeDbusExtensionInstallability,
         array $environmentOverrides,
         string $osFamily,
         string $targetRepoRoot,
@@ -620,6 +647,25 @@ final class SystemApiNativeDbusHostValidationToolkit
             $plan[] = [
                 'action' => 'rerun-native-runtime-validation',
                 'description' => 'Reejecutar el runner despues de homologar el runtime PHP del host Linux para confirmar si el siguiente bloqueo ya es exclusivamente D-Bus.',
+                'commands' => $this->buildRerunCommands($osFamily, $targetRepoRoot),
+            ];
+
+            return $plan;
+        }
+
+        if ((($nativeDbusExtensionInstallability['blocked'] ?? false) === true)) {
+            $installabilitySteps = $nativeDbusExtensionInstallability['preparation_steps'] ?? [];
+            if (is_array($installabilitySteps)) {
+                foreach ($installabilitySteps as $step) {
+                    if (is_array($step)) {
+                        $plan[] = $step;
+                    }
+                }
+            }
+
+            $plan[] = [
+                'action' => 'rerun-native-runtime-validation',
+                'description' => 'Reejecutar el runner despues de corregir la instalacion o compilacion de la extension `dbus` para confirmar si el ownership ya puede progresar.',
                 'commands' => $this->buildRerunCommands($osFamily, $targetRepoRoot),
             ];
 
@@ -871,6 +917,135 @@ final class SystemApiNativeDbusHostValidationToolkit
             'recommended_next_actions' => $recommendedNextActions,
             'preparation_steps' => $preparationSteps,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $diagnosis
+     * @return array<string, mixed>
+     */
+    private function evaluateNativeDbusExtensionInstallability(array $diagnosis, string $targetRepoRoot): array
+    {
+        $installation = is_array($diagnosis['native_dbus_extension_installation'] ?? null)
+            ? $diagnosis['native_dbus_extension_installation']
+            : [];
+        $state = is_string($installation['state'] ?? null) ? trim((string) $installation['state']) : 'unknown';
+        $blocked = in_array($state, ['build-failed', 'unsupported-stack'], true);
+        $blockingReason = is_string($installation['blocking_reason'] ?? null)
+            ? trim((string) $installation['blocking_reason'])
+            : null;
+        $nextAction = is_string($installation['next_action'] ?? null)
+            ? trim((string) $installation['next_action'])
+            : null;
+        $reason = is_string($installation['reason'] ?? null) ? trim((string) $installation['reason']) : null;
+        $logPath = is_string($installation['log_path'] ?? null) ? trim((string) $installation['log_path']) : null;
+        $peclAvailable = (($installation['pecl_available'] ?? false) === true);
+        $recommendedNextActions = [];
+        $preparationSteps = [];
+
+        if ($blocked) {
+            $recommendedNextActions = array_values(array_unique(array_filter([
+                $nextAction,
+                'migrate-to-modern-linux-host',
+            ], static fn (mixed $value): bool => is_string($value) && trim($value) !== '')));
+            $preparationSteps[] = $this->createNativeDbusExtensionInstallabilityStep(
+                $state,
+                $reason,
+                $logPath,
+                $targetRepoRoot,
+                $peclAvailable
+            );
+        }
+
+        return [
+            'blocked' => $blocked,
+            'state' => $state,
+            'blocking_reason' => $blockingReason,
+            'next_action' => $nextAction,
+            'reason' => $reason,
+            'log_path' => $logPath,
+            'pecl_available' => $peclAvailable,
+            'recommended_next_actions' => $recommendedNextActions,
+            'preparation_steps' => $preparationSteps,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function createNativeDbusExtensionInstallabilityStep(
+        string $state,
+        ?string $reason,
+        ?string $logPath,
+        string $targetRepoRoot,
+        bool $peclAvailable
+    ): array {
+        $description = $state === 'unsupported-stack'
+            ? 'El stack actual no parece compatible con la extension `dbus`. Conviene inspeccionar el entorno y mover el contraste a un Linux moderno homologado para este runtime.'
+            : 'La extension `dbus` ya fue intentada pero la compilacion o instalacion fallo. Conviene inspeccionar el stack y la evidencia del build antes de seguir insistiendo con PECL.';
+
+        return [
+            'action' => $state === 'unsupported-stack'
+                ? 'migrate-to-modern-linux-host'
+                : 'inspect-native-dbus-build-stack',
+            'description' => $description,
+            'commands' => $this->buildNativeDbusExtensionInstallabilityCommands(
+                $state,
+                $reason,
+                $logPath,
+                $targetRepoRoot,
+                $peclAvailable
+            ),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildNativeDbusExtensionInstallabilityCommands(
+        string $state,
+        ?string $reason,
+        ?string $logPath,
+        string $targetRepoRoot,
+        bool $peclAvailable
+    ): array {
+        $commands = [
+            'php --version',
+            'phpize --version || true',
+            'lsb_release -a || cat /etc/os-release',
+        ];
+
+        if ($peclAvailable) {
+            $commands[] = 'pecl version';
+            $commands[] = 'pecl remote-info channel://pecl.php.net/dbus-0.1.1';
+        } else {
+            $commands[] = 'echo "PECL no esta disponible en este host."';
+        }
+
+        if ($reason !== null && $reason !== '') {
+            $commands[] = sprintf(
+                "printf '%%s\n' %s",
+                escapeshellarg('Ultimo motivo reportado: ' . $reason)
+            );
+        }
+
+        if ($logPath !== null && $logPath !== '') {
+            $commands[] = sprintf(
+                'test -f "%s" && tail -n 80 "%s" || echo "Build log no disponible: %s"',
+                $logPath,
+                $logPath,
+                $logPath
+            );
+        }
+
+        if ($state === 'unsupported-stack') {
+            $commands[] = 'echo "Recomendar un host Linux moderno con PHP compatible y toolchain homologada para PECL dbus."';
+        }
+
+        $commands[] = $targetRepoRoot !== ''
+            ? sprintf('cd "%s" && php -r "echo json_decode(file_get_contents(\'composer.json\'), true)[\'require\'][\'php\'], PHP_EOL;"', $targetRepoRoot)
+            : 'php -r "echo json_decode(file_get_contents(\'composer.json\'), true)[\'require\'][\'php\'], PHP_EOL;"';
+
+        return $commands;
     }
 
     /**

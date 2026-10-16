@@ -200,6 +200,66 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertStringContainsString('inspect-native-dbus-extension-api', $savedSummary);
     }
 
+    public function testValidationReportsExtensionBuildFailureAsExplicitHostBlock(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-native-dbus-build-failed-host';
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+            '--target-repo-root',
+            '/srv/w4/os-system',
+        ], array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '1',
+                'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_STATE' => 'build-failed',
+                'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_REASON' => 'zend_object_store_get_object',
+                'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_LOG_PATH' => '/tmp/pecl-dbus.log',
+            ]
+        ));
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('blocked', $payload['status']);
+        self::assertSame('native-dbus-extension-build-failed', $payload['blocking_reason']);
+        self::assertSame('inspect-native-dbus-build-stack', $payload['next_action']);
+        self::assertContains('inspect-native-dbus-build-stack', $payload['recommended_next_actions']);
+        self::assertContains('migrate-to-modern-linux-host', $payload['recommended_next_actions']);
+        self::assertTrue($payload['host_compatibility']['compatible']);
+        self::assertTrue($payload['native_dbus_extension_installability']['blocked']);
+        self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
+        self::assertSame('/tmp/pecl-dbus.log', $payload['native_dbus_extension_installability']['log_path']);
+
+        $preparationActions = array_map(
+            static fn (array $step): string => (string) ($step['action'] ?? ''),
+            $payload['preparation_plan']
+        );
+        self::assertSame(
+            ['inspect-native-dbus-build-stack', 'rerun-native-runtime-validation'],
+            $preparationActions
+        );
+
+        $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
+        self::assertNotFalse($preparationChecklist);
+        self::assertStringContainsString('inspect-native-dbus-build-stack', $preparationChecklist);
+        self::assertStringContainsString('pecl remote-info channel://pecl.php.net/dbus-0.1.1', $preparationChecklist);
+        self::assertStringContainsString('/tmp/pecl-dbus.log', $preparationChecklist);
+        self::assertStringContainsString('cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux', $preparationChecklist);
+        self::assertStringNotContainsString('install-native-dbus-extension', $preparationChecklist);
+
+        $savedSummary = file_get_contents($payload['summary_path']);
+        self::assertNotFalse($savedSummary);
+        self::assertStringContainsString('## Native D-Bus Extension Installation', $savedSummary);
+        self::assertStringContainsString('- Installation state: `build-failed`', $savedSummary);
+        self::assertStringContainsString('- Installation reason: `zend_object_store_get_object`', $savedSummary);
+    }
+
     public function testValidationCanPrepareOwnedRuntimeAgainstFakeNativeDbusService(): void
     {
         $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'fake-owned-host';
