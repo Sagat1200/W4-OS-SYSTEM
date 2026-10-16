@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace W4\OS\SystemApi;
 
+use W4\OS\Support\ValidationError;
+
 final class SystemApiDbusRuntimeBackendToolkit
 {
     /**
@@ -398,6 +400,71 @@ final class SystemApiDbusRuntimeBackendToolkit
             'blocking_reason' => $blockingReason,
             'next_action' => $nextAction,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     */
+    public function persistNativeRuntimeStartupArtifacts(array $report): void
+    {
+        if (($report['startup_acknowledged'] ?? false) !== true) {
+            return;
+        }
+
+        $serviceDefinition = is_array($report['service_definition'] ?? null) ? $report['service_definition'] : [];
+        $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
+        $readyMarkerPath = $this->optionalArtifactPath($artifacts, 'ready_marker_path');
+        $statusFilePath = $this->optionalArtifactPath($artifacts, 'status_file_path');
+        $pidFilePath = $this->optionalArtifactPath($artifacts, 'pid_file_path');
+
+        if ($readyMarkerPath !== null) {
+            $this->writeArtifactFile($readyMarkerPath, "native-runtime-service-started\n");
+        }
+
+        if ($statusFilePath !== null) {
+            $statusPayload = json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($statusPayload !== false) {
+                $this->writeArtifactFile($statusFilePath, $statusPayload . PHP_EOL);
+            }
+        }
+
+        if ($pidFilePath !== null) {
+            $this->writeArtifactFile($pidFilePath, "0\n");
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     */
+    public function persistNativeRuntimeOwnershipArtifacts(array $report): void
+    {
+        if (($report['attempted'] ?? false) !== true) {
+            return;
+        }
+
+        $serviceDefinition = is_array($report['service_definition'] ?? null) ? $report['service_definition'] : [];
+        $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
+        $readyMarkerPath = $this->optionalArtifactPath($artifacts, 'ready_marker_path');
+        $statusFilePath = $this->optionalArtifactPath($artifacts, 'status_file_path');
+        $pidFilePath = $this->optionalArtifactPath($artifacts, 'pid_file_path');
+
+        if ($readyMarkerPath !== null) {
+            $readyMarkerContents = ($report['ownership_state'] ?? null) === 'bus-name-owned'
+                ? "native-runtime-bus-owned\n"
+                : "native-runtime-service-started\n";
+            $this->writeArtifactFile($readyMarkerPath, $readyMarkerContents);
+        }
+
+        if ($statusFilePath !== null) {
+            $statusPayload = json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($statusPayload !== false) {
+                $this->writeArtifactFile($statusFilePath, $statusPayload . PHP_EOL);
+            }
+        }
+
+        if ($pidFilePath !== null && !is_file($pidFilePath)) {
+            $this->writeArtifactFile($pidFilePath, "0\n");
+        }
     }
 
     /**
@@ -1104,5 +1171,17 @@ final class SystemApiDbusRuntimeBackendToolkit
         $contents = @file_get_contents($path);
 
         return $contents === false ? null : $contents;
+    }
+
+    private function writeArtifactFile(string $path, string $contents): void
+    {
+        $directory = dirname($path);
+        if ($directory !== '' && !is_dir($directory) && !mkdir($directory, 0777, true) && !is_dir($directory)) {
+            throw new ValidationError(sprintf('No se pudo crear el directorio de artefacto %s', $directory));
+        }
+
+        if (file_put_contents($path, $contents) === false) {
+            throw new ValidationError(sprintf('No se pudo escribir el artefacto %s', $path));
+        }
     }
 }

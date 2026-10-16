@@ -26,6 +26,11 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertContains('AttemptActivation', $payload['commands']);
         self::assertContains('ExecuteActivation', $payload['commands']);
         self::assertContains('DescribeLaunchPlan', $payload['commands']);
+        self::assertContains('DescribeNativeRuntimeService', $payload['commands']);
+        self::assertContains('StartNativeRuntimeService', $payload['commands']);
+        self::assertContains('DescribeNativeRuntimeCoupling', $payload['commands']);
+        self::assertContains('ObserveNativeRuntimeServiceState', $payload['commands']);
+        self::assertContains('MaterializeNativeBusOwnership', $payload['commands']);
         self::assertSame('system-api-dbus-runtime-launch-plan', $payload['launch_plan']['kind']);
         self::assertSame('system-api-dbus-runtime-bootstrap', $payload['launch_plan']['activation_bootstrap']['kind']);
         self::assertSame('child-process-stdio-relay', $payload['launch_plan']['handoff']['mode']);
@@ -430,6 +435,88 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertSame('system.dbus-runtime', $responses[6]['result']['method']);
     }
 
+    public function testStartNativeRuntimeServiceCanBeInvokedDirectlyThroughLauncherScript(): void
+    {
+        $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-runtime-launcher-start-' . bin2hex(random_bytes(6));
+        $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
+        $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
+        $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+
+        try {
+            $result = $this->runPhpScript([
+                $this->scriptPath(),
+                'StartNativeRuntimeService',
+            ], '', array_merge(
+                $this->readyRuntimeEnvironment(),
+                $this->nativeCompatibleBackendEnvironment(),
+                [
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+                ]
+            ));
+
+            self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+            $payload = $this->decodeJson($result['stdout']);
+            self::assertSame('system-api-dbus-native-runtime-startup', $payload['kind']);
+            self::assertSame('native-runtime-service-started', $payload['status']);
+            self::assertFileExists($readyMarkerPath);
+            self::assertFileExists($statusFilePath);
+            self::assertFileExists($pidFilePath);
+        } finally {
+            $this->cleanupDirectory($baseDirectory);
+        }
+    }
+
+    public function testServeStdioLauncherRelaysNativeRuntimeCommandsToHost(): void
+    {
+        $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-runtime-launcher-relay-' . bin2hex(random_bytes(6));
+        $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
+        $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
+        $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+        $inputLines = [
+            json_encode([
+                'method' => 'DescribeNativeRuntimeService',
+                'arguments' => [],
+            ], JSON_THROW_ON_ERROR),
+            json_encode([
+                'method' => 'StartNativeRuntimeService',
+                'arguments' => [],
+            ], JSON_THROW_ON_ERROR),
+        ];
+
+        try {
+            $result = $this->runPhpScript(
+                [
+                    $this->scriptPath(),
+                    'serve-stdio-launcher',
+                ],
+                implode(PHP_EOL, $inputLines) . PHP_EOL,
+                array_merge(
+                    $this->readyRuntimeEnvironment(),
+                    $this->nativeCompatibleBackendEnvironment(),
+                    [
+                        'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
+                        'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
+                        'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+                    ]
+                )
+            );
+
+            self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+            $responses = $this->decodeNdjson($result['stdout']);
+            self::assertCount(2, $responses);
+            self::assertSame('system-api-dbus-native-runtime-service', $responses[0]['kind']);
+            self::assertSame('system-api-dbus-native-runtime-startup', $responses[1]['kind']);
+            self::assertSame('native-runtime-service-started', $responses[1]['status']);
+            self::assertFileExists($readyMarkerPath);
+        } finally {
+            $this->cleanupDirectory($baseDirectory);
+        }
+    }
+
     /**
      * @param list<string> $command
      * @return array{exitCode:int,stdout:string,stderr:string}
@@ -542,5 +629,33 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
             'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
             'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
         ];
+    }
+
+    private function cleanupDirectory(string $path): void
+    {
+        if ($path === '' || !is_dir($path)) {
+            return;
+        }
+
+        $items = scandir($path);
+        if ($items === false) {
+            return;
+        }
+
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+
+            $itemPath = $path . DIRECTORY_SEPARATOR . $item;
+            if (is_dir($itemPath)) {
+                $this->cleanupDirectory($itemPath);
+                continue;
+            }
+
+            @unlink($itemPath);
+        }
+
+        @rmdir($path);
     }
 }

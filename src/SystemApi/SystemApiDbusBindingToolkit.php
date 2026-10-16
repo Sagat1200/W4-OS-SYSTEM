@@ -102,6 +102,11 @@ final class SystemApiDbusBindingToolkit
                         'DescribeSpecification',
                         'DescribeRuntime',
                         'DiagnoseRuntime',
+                        'DescribeNativeRuntimeService',
+                        'StartNativeRuntimeService',
+                        'DescribeNativeRuntimeCoupling',
+                        'ObserveNativeRuntimeServiceState',
+                        'MaterializeNativeBusOwnership',
                         'GetCapabilities',
                         'Call',
                         'serve-stdio-launcher',
@@ -117,6 +122,11 @@ final class SystemApiDbusBindingToolkit
                         'DescribeSpecification',
                         'DescribeRuntime',
                         'DiagnoseRuntime',
+                        'DescribeNativeRuntimeService',
+                        'StartNativeRuntimeService',
+                        'DescribeNativeRuntimeCoupling',
+                        'ObserveNativeRuntimeServiceState',
+                        'MaterializeNativeBusOwnership',
                         'GetCapabilities',
                         'Call',
                         'serve-stdio-host',
@@ -995,6 +1005,51 @@ switch ($command) {
     case 'DiagnoseRuntime':
         emitJson(buildRuntimeDiagnosis());
         exit(buildRuntimeDiagnosis()['ready'] === true ? 0 : 2);
+
+    case 'DescribeNativeRuntimeService':
+        emitJson(createPendingResponse(
+            requestId: 'pending-native-runtime-service',
+            method: 'system.dbus-native-service',
+            resourceKind: 'system-api-dbus-native-runtime-service',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ));
+        exit(0);
+
+    case 'StartNativeRuntimeService':
+        emitJson(createPendingResponse(
+            requestId: 'pending-native-runtime-startup',
+            method: 'system.dbus-native-startup',
+            resourceKind: 'system-api-dbus-native-runtime-startup',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ));
+        exit(3);
+
+    case 'DescribeNativeRuntimeCoupling':
+        emitJson(createPendingResponse(
+            requestId: 'pending-native-runtime-coupling',
+            method: 'system.dbus-native-coupling',
+            resourceKind: 'system-api-dbus-native-runtime-coupling',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ));
+        exit(3);
+
+    case 'ObserveNativeRuntimeServiceState':
+        emitJson(createPendingResponse(
+            requestId: 'pending-native-runtime-observation',
+            method: 'system.dbus-native-observation',
+            resourceKind: 'system-api-dbus-native-runtime-observation',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ));
+        exit(3);
+
+    case 'MaterializeNativeBusOwnership':
+        emitJson(createPendingResponse(
+            requestId: 'pending-native-runtime-ownership',
+            method: 'system.dbus-native-ownership',
+            resourceKind: 'system-api-dbus-native-runtime-ownership',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ));
+        exit(3);
 
     case 'GetCapabilities':
         emitJson(createPendingResponse(
@@ -3060,6 +3115,51 @@ switch ($command) {
         emitJson(buildRuntimeDiagnosis());
         exit(buildRuntimeDiagnosis()['ready'] === true ? 0 : 2);
 
+    case 'DescribeNativeRuntimeService':
+        emitJson(createPendingResponse(
+            requestId: 'pending-native-runtime-service',
+            method: 'system.dbus-native-service',
+            resourceKind: 'system-api-dbus-native-runtime-service',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ));
+        exit(0);
+
+    case 'StartNativeRuntimeService':
+        emitJson(createPendingResponse(
+            requestId: 'pending-native-runtime-startup',
+            method: 'system.dbus-native-startup',
+            resourceKind: 'system-api-dbus-native-runtime-startup',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ));
+        exit(3);
+
+    case 'DescribeNativeRuntimeCoupling':
+        emitJson(createPendingResponse(
+            requestId: 'pending-native-runtime-coupling',
+            method: 'system.dbus-native-coupling',
+            resourceKind: 'system-api-dbus-native-runtime-coupling',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ));
+        exit(3);
+
+    case 'ObserveNativeRuntimeServiceState':
+        emitJson(createPendingResponse(
+            requestId: 'pending-native-runtime-observation',
+            method: 'system.dbus-native-observation',
+            resourceKind: 'system-api-dbus-native-runtime-observation',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ));
+        exit(3);
+
+    case 'MaterializeNativeBusOwnership':
+        emitJson(createPendingResponse(
+            requestId: 'pending-native-runtime-ownership',
+            method: 'system.dbus-native-ownership',
+            resourceKind: 'system-api-dbus-native-runtime-ownership',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ));
+        exit(3);
+
     case 'GetCapabilities':
         emitJson(createPendingResponse(
             requestId: $argv[2] ?? 'pending-get-capabilities',
@@ -3113,6 +3213,11 @@ function createHostDescription(): array
             'DescribeSpecification',
             'DescribeRuntime',
             'DiagnoseRuntime',
+            'DescribeNativeRuntimeService',
+            'StartNativeRuntimeService',
+            'DescribeNativeRuntimeCoupling',
+            'ObserveNativeRuntimeServiceState',
+            'MaterializeNativeBusOwnership',
             'GetCapabilities',
             'Call',
             'serve-stdio-host',
@@ -3122,6 +3227,11 @@ function createHostDescription(): array
             'runtime_adapter' => '/usr/local/bin/w4-system-api-dbus-runtime-adapter',
             'call' => 'packaged-runtime-adapter',
             'get_capabilities' => 'packaged-runtime-adapter',
+            'describe_native_runtime_service' => 'packaged-runtime-adapter',
+            'start_native_runtime_service' => 'packaged-runtime-adapter',
+            'describe_native_runtime_coupling' => 'packaged-runtime-adapter',
+            'observe_native_runtime_service_state' => 'packaged-runtime-adapter',
+            'materialize_native_bus_ownership' => 'packaged-runtime-adapter',
         ],
         'adapter_specification' => createAdapterSpecification(),
     ];
@@ -3576,6 +3686,36 @@ function handleHostEnvelope(string $line): array
         'DescribeSpecification' => createAdapterSpecification(),
         'DescribeRuntime' => createAdapterRuntime(),
         'DiagnoseRuntime' => buildRuntimeDiagnosis(),
+        'DescribeNativeRuntimeService' => createPendingResponse(
+            requestId: is_string($decoded['request_id'] ?? null) ? $decoded['request_id'] : 'pending-native-runtime-service',
+            method: 'system.dbus-native-service',
+            resourceKind: 'system-api-dbus-native-runtime-service',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ),
+        'StartNativeRuntimeService' => createPendingResponse(
+            requestId: is_string($decoded['request_id'] ?? null) ? $decoded['request_id'] : 'pending-native-runtime-startup',
+            method: 'system.dbus-native-startup',
+            resourceKind: 'system-api-dbus-native-runtime-startup',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ),
+        'DescribeNativeRuntimeCoupling' => createPendingResponse(
+            requestId: is_string($decoded['request_id'] ?? null) ? $decoded['request_id'] : 'pending-native-runtime-coupling',
+            method: 'system.dbus-native-coupling',
+            resourceKind: 'system-api-dbus-native-runtime-coupling',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ),
+        'ObserveNativeRuntimeServiceState' => createPendingResponse(
+            requestId: is_string($decoded['request_id'] ?? null) ? $decoded['request_id'] : 'pending-native-runtime-observation',
+            method: 'system.dbus-native-observation',
+            resourceKind: 'system-api-dbus-native-runtime-observation',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ),
+        'MaterializeNativeBusOwnership' => createPendingResponse(
+            requestId: is_string($decoded['request_id'] ?? null) ? $decoded['request_id'] : 'pending-native-runtime-ownership',
+            method: 'system.dbus-native-ownership',
+            resourceKind: 'system-api-dbus-native-runtime-ownership',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ),
         'GetCapabilities' => createPendingResponse(
             requestId: is_string($decoded['request_id'] ?? null) ? $decoded['request_id'] : 'pending-get-capabilities',
             method: 'system.capabilities',
@@ -3809,6 +3949,51 @@ switch ($command) {
         emitJson(buildRuntimeDiagnosis());
         exit(buildRuntimeDiagnosis()['ready'] === true ? 0 : 2);
 
+    case 'DescribeNativeRuntimeService':
+        emitJson(createPendingResponse(
+            requestId: 'pending-native-runtime-service',
+            method: 'system.dbus-native-service',
+            resourceKind: 'system-api-dbus-native-runtime-service',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ));
+        exit(0);
+
+    case 'StartNativeRuntimeService':
+        emitJson(createPendingResponse(
+            requestId: 'pending-native-runtime-startup',
+            method: 'system.dbus-native-startup',
+            resourceKind: 'system-api-dbus-native-runtime-startup',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ));
+        exit(3);
+
+    case 'DescribeNativeRuntimeCoupling':
+        emitJson(createPendingResponse(
+            requestId: 'pending-native-runtime-coupling',
+            method: 'system.dbus-native-coupling',
+            resourceKind: 'system-api-dbus-native-runtime-coupling',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ));
+        exit(3);
+
+    case 'ObserveNativeRuntimeServiceState':
+        emitJson(createPendingResponse(
+            requestId: 'pending-native-runtime-observation',
+            method: 'system.dbus-native-observation',
+            resourceKind: 'system-api-dbus-native-runtime-observation',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ));
+        exit(3);
+
+    case 'MaterializeNativeBusOwnership':
+        emitJson(createPendingResponse(
+            requestId: 'pending-native-runtime-ownership',
+            method: 'system.dbus-native-ownership',
+            resourceKind: 'system-api-dbus-native-runtime-ownership',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ));
+        exit(3);
+
     case 'GetCapabilities':
         emitJson(createPendingResponse(
             requestId: $argv[2] ?? 'pending-get-capabilities',
@@ -3868,6 +4053,11 @@ function createLauncherDescription(): array
             'DescribeSpecification',
             'DescribeRuntime',
             'DiagnoseRuntime',
+            'DescribeNativeRuntimeService',
+            'StartNativeRuntimeService',
+            'DescribeNativeRuntimeCoupling',
+            'ObserveNativeRuntimeServiceState',
+            'MaterializeNativeBusOwnership',
             'GetCapabilities',
             'Call',
             'serve-stdio-launcher',
@@ -3878,6 +4068,11 @@ function createLauncherDescription(): array
             'runtime_host' => '/usr/local/bin/w4-system-api-dbus-runtime-host',
             'call' => 'packaged-runtime-host',
             'get_capabilities' => 'packaged-runtime-host',
+            'describe_native_runtime_service' => 'packaged-runtime-host',
+            'start_native_runtime_service' => 'packaged-runtime-host',
+            'describe_native_runtime_coupling' => 'packaged-runtime-host',
+            'observe_native_runtime_service_state' => 'packaged-runtime-host',
+            'materialize_native_bus_ownership' => 'packaged-runtime-host',
         ],
         'launch_plan' => createLaunchPlan(),
     ];
@@ -4837,6 +5032,36 @@ function handleLauncherEnvelope(string $line): array
         'DescribeSpecification' => createAdapterSpecification(),
         'DescribeRuntime' => createAdapterRuntime(),
         'DiagnoseRuntime' => buildRuntimeDiagnosis(),
+        'DescribeNativeRuntimeService' => createPendingResponse(
+            requestId: is_string($decoded['request_id'] ?? null) ? $decoded['request_id'] : 'pending-native-runtime-service',
+            method: 'system.dbus-native-service',
+            resourceKind: 'system-api-dbus-native-runtime-service',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ),
+        'StartNativeRuntimeService' => createPendingResponse(
+            requestId: is_string($decoded['request_id'] ?? null) ? $decoded['request_id'] : 'pending-native-runtime-startup',
+            method: 'system.dbus-native-startup',
+            resourceKind: 'system-api-dbus-native-runtime-startup',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ),
+        'DescribeNativeRuntimeCoupling' => createPendingResponse(
+            requestId: is_string($decoded['request_id'] ?? null) ? $decoded['request_id'] : 'pending-native-runtime-coupling',
+            method: 'system.dbus-native-coupling',
+            resourceKind: 'system-api-dbus-native-runtime-coupling',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ),
+        'ObserveNativeRuntimeServiceState' => createPendingResponse(
+            requestId: is_string($decoded['request_id'] ?? null) ? $decoded['request_id'] : 'pending-native-runtime-observation',
+            method: 'system.dbus-native-observation',
+            resourceKind: 'system-api-dbus-native-runtime-observation',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ),
+        'MaterializeNativeBusOwnership' => createPendingResponse(
+            requestId: is_string($decoded['request_id'] ?? null) ? $decoded['request_id'] : 'pending-native-runtime-ownership',
+            method: 'system.dbus-native-ownership',
+            resourceKind: 'system-api-dbus-native-runtime-ownership',
+            resourceId: W4_SYSTEM_API_BUS_NAME
+        ),
         'GetCapabilities' => createPendingResponse(
             requestId: is_string($decoded['request_id'] ?? null) ? $decoded['request_id'] : 'pending-get-capabilities',
             method: 'system.capabilities',

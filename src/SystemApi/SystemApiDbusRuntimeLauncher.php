@@ -41,6 +41,11 @@ final class SystemApiDbusRuntimeLauncher
                 'DescribeSpecification',
                 'DescribeRuntime',
                 'DiagnoseRuntime',
+                'DescribeNativeRuntimeService',
+                'StartNativeRuntimeService',
+                'DescribeNativeRuntimeCoupling',
+                'ObserveNativeRuntimeServiceState',
+                'MaterializeNativeBusOwnership',
                 'GetCapabilities',
                 'Call',
                 'serve-stdio-launcher',
@@ -132,6 +137,31 @@ final class SystemApiDbusRuntimeLauncher
     public function diagnoseRuntime(): string
     {
         return $this->runtimeHost->diagnoseRuntime();
+    }
+
+    public function describeNativeRuntimeService(): string
+    {
+        return $this->runtimeHost->describeNativeRuntimeService();
+    }
+
+    public function startNativeRuntimeService(): string
+    {
+        return $this->runtimeHost->startNativeRuntimeService();
+    }
+
+    public function describeNativeRuntimeCoupling(): string
+    {
+        return $this->runtimeHost->describeNativeRuntimeCoupling();
+    }
+
+    public function observeNativeRuntimeServiceState(): string
+    {
+        return $this->runtimeHost->observeNativeRuntimeServiceState();
+    }
+
+    public function materializeNativeBusOwnership(): string
+    {
+        return $this->runtimeHost->materializeNativeBusOwnership();
     }
 
     public function getCapabilities(?string $requestId = null): string

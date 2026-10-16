@@ -227,7 +227,7 @@ final class SystemApiToolkit
                 [
                     'name' => 'system.dbus-native-startup',
                     'resource_kind' => 'system-api-dbus-native-runtime-startup',
-                    'mutates_state' => false,
+                    'mutates_state' => true,
                 ],
                 [
                     'name' => 'system.dbus-native-observation',
@@ -242,7 +242,7 @@ final class SystemApiToolkit
                 [
                     'name' => 'system.dbus-native-ownership',
                     'resource_kind' => 'system-api-dbus-native-runtime-ownership',
-                    'mutates_state' => false,
+                    'mutates_state' => true,
                 ],
                 [
                     'name' => 'profiles.get',
@@ -360,6 +360,7 @@ final class SystemApiToolkit
         if ($method === 'system.dbus-native-startup') {
             $runtimeDiagnosis = $this->dbusRuntimeProbe->createReport();
             $startupReport = $this->dbusRuntimeBackend->createNativeRuntimeServiceStartupReport($runtimeDiagnosis);
+            $this->dbusRuntimeBackend->persistNativeRuntimeStartupArtifacts($startupReport);
 
             return $this->createSuccessResponse(
                 requestId: $requestId,
@@ -402,6 +403,7 @@ final class SystemApiToolkit
         if ($method === 'system.dbus-native-ownership') {
             $runtimeDiagnosis = $this->dbusRuntimeProbe->createReport();
             $ownershipReport = $this->dbusRuntimeBackend->createNativeBusOwnershipReport($runtimeDiagnosis);
+            $this->dbusRuntimeBackend->persistNativeRuntimeOwnershipArtifacts($ownershipReport);
 
             return $this->createSuccessResponse(
                 requestId: $requestId,

@@ -66,10 +66,20 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertContains('DescribeActivationPreparation', $manifest['runtime_launcher']['commands']);
         self::assertContains('AttemptActivation', $manifest['runtime_launcher']['commands']);
         self::assertContains('ExecuteActivation', $manifest['runtime_launcher']['commands']);
+        self::assertContains('DescribeNativeRuntimeService', $manifest['runtime_launcher']['commands']);
+        self::assertContains('StartNativeRuntimeService', $manifest['runtime_launcher']['commands']);
+        self::assertContains('DescribeNativeRuntimeCoupling', $manifest['runtime_launcher']['commands']);
+        self::assertContains('ObserveNativeRuntimeServiceState', $manifest['runtime_launcher']['commands']);
+        self::assertContains('MaterializeNativeBusOwnership', $manifest['runtime_launcher']['commands']);
         self::assertContains('serve-stdio-launcher', $manifest['runtime_launcher']['commands']);
         self::assertSame('files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-host.php', $manifest['runtime_host']['entrypoint']);
         self::assertSame('files/usr/local/bin/w4-system-api-dbus-runtime-host', $manifest['runtime_host']['wrapper']);
         self::assertContains('DescribeHost', $manifest['runtime_host']['commands']);
+        self::assertContains('DescribeNativeRuntimeService', $manifest['runtime_host']['commands']);
+        self::assertContains('StartNativeRuntimeService', $manifest['runtime_host']['commands']);
+        self::assertContains('DescribeNativeRuntimeCoupling', $manifest['runtime_host']['commands']);
+        self::assertContains('ObserveNativeRuntimeServiceState', $manifest['runtime_host']['commands']);
+        self::assertContains('MaterializeNativeBusOwnership', $manifest['runtime_host']['commands']);
         self::assertContains('serve-stdio-host', $manifest['runtime_host']['commands']);
         self::assertSame('files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-adapter.php', $manifest['runtime_adapter']['entrypoint']);
         self::assertSame('files/usr/local/bin/w4-system-api-dbus-runtime-adapter', $manifest['runtime_adapter']['wrapper']);
@@ -224,6 +234,19 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('materialize-runtime-adapter', $bridgeServeDbusPayload['next_action']);
         self::assertSame(['materialize-runtime-adapter'], $bridgeServeDbusPayload['recovery_plan']);
 
+        $runtimeHostScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-runtime-host.php');
+        self::assertNotFalse($runtimeHostScript);
+        self::assertStringContainsString("'DescribeNativeRuntimeService'", $runtimeHostScript);
+        self::assertStringContainsString("'StartNativeRuntimeService'", $runtimeHostScript);
+        self::assertStringContainsString("'DescribeNativeRuntimeCoupling'", $runtimeHostScript);
+        self::assertStringContainsString("'ObserveNativeRuntimeServiceState'", $runtimeHostScript);
+        self::assertStringContainsString("'MaterializeNativeBusOwnership'", $runtimeHostScript);
+        self::assertStringContainsString("case 'DescribeNativeRuntimeService':", $runtimeHostScript);
+        self::assertStringContainsString("case 'StartNativeRuntimeService':", $runtimeHostScript);
+        self::assertStringContainsString("case 'DescribeNativeRuntimeCoupling':", $runtimeHostScript);
+        self::assertStringContainsString("case 'ObserveNativeRuntimeServiceState':", $runtimeHostScript);
+        self::assertStringContainsString("case 'MaterializeNativeBusOwnership':", $runtimeHostScript);
+
         $runtimeAdapterScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'usr' . DIRECTORY_SEPARATOR . 'local' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'w4' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'w4-system-api-dbus-runtime-adapter.php');
         self::assertNotFalse($runtimeAdapterScript);
         self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-adapter'", $runtimeAdapterScript);
@@ -255,6 +278,11 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertStringContainsString("case 'DescribeActivationPreparation':", $runtimeLauncherScript);
         self::assertStringContainsString("case 'AttemptActivation':", $runtimeLauncherScript);
         self::assertStringContainsString("case 'ExecuteActivation':", $runtimeLauncherScript);
+        self::assertStringContainsString("case 'DescribeNativeRuntimeService':", $runtimeLauncherScript);
+        self::assertStringContainsString("case 'StartNativeRuntimeService':", $runtimeLauncherScript);
+        self::assertStringContainsString("case 'DescribeNativeRuntimeCoupling':", $runtimeLauncherScript);
+        self::assertStringContainsString("case 'ObserveNativeRuntimeServiceState':", $runtimeLauncherScript);
+        self::assertStringContainsString("case 'MaterializeNativeBusOwnership':", $runtimeLauncherScript);
         self::assertStringContainsString("case 'serve-stdio-launcher':", $runtimeLauncherScript);
         self::assertStringContainsString("'handoff_mode' => 'child-process-stdio-relay'", $runtimeLauncherScript);
         self::assertStringContainsString("'kind' => 'system-api-dbus-runtime-bootstrap'", $runtimeLauncherScript);

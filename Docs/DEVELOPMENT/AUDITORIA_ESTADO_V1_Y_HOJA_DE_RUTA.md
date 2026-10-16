@@ -13,6 +13,7 @@ Documento de lectura ejecutiva y tecnica para responder tres preguntas sobre el 
 - `DEVELOPMENT_VERSIONS.md`: trazabilidad de hitos tecnicos y documentales.
 - `EDITION_IMPLEMENTATION_STATUS_MATRIX.md`: comparativa ejecutiva por edicion.
 - `W4_LINUX_BASE_GAP_MATRIX.md`: brechas entre la arquitectura objetivo y el estado validado.
+- `MATRIZ_CRITERIOS_V1_TRAZABILIDAD_Y_VALIDACION.md`: lectura operativa de `V1-01` a `V1-20` con estado, evidencia y comando de validacion.
 - `Docs/LINUX-BASE/536_V1_RELEASE_CRITERIA.md`: criterios de cierre de V1.
 
 ## 1. Resumen ejecutivo

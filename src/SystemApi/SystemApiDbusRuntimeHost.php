@@ -34,6 +34,11 @@ final class SystemApiDbusRuntimeHost
                 'DescribeSpecification',
                 'DescribeRuntime',
                 'DiagnoseRuntime',
+                'DescribeNativeRuntimeService',
+                'StartNativeRuntimeService',
+                'DescribeNativeRuntimeCoupling',
+                'ObserveNativeRuntimeServiceState',
+                'MaterializeNativeBusOwnership',
                 'GetCapabilities',
                 'Call',
                 'serve-stdio-host',
@@ -43,6 +48,11 @@ final class SystemApiDbusRuntimeHost
                 'runtime_adapter' => 'scripts/system_api_dbus_runtime_adapter.php',
                 'call' => 'SystemApiDbusRuntimeAdapter::call',
                 'get_capabilities' => 'SystemApiDbusRuntimeAdapter::getCapabilities',
+                'describe_native_runtime_service' => 'SystemApiDbusRuntimeAdapter::describeNativeRuntimeService',
+                'start_native_runtime_service' => 'SystemApiDbusRuntimeAdapter::startNativeRuntimeService',
+                'describe_native_runtime_coupling' => 'SystemApiDbusRuntimeAdapter::describeNativeRuntimeCoupling',
+                'observe_native_runtime_service_state' => 'SystemApiDbusRuntimeAdapter::observeNativeRuntimeServiceState',
+                'materialize_native_bus_ownership' => 'SystemApiDbusRuntimeAdapter::materializeNativeBusOwnership',
             ],
             'adapter_specification' => $this->activationToolkit->createAdapterSpecification(),
         ]);
@@ -61,6 +71,31 @@ final class SystemApiDbusRuntimeHost
     public function diagnoseRuntime(): string
     {
         return $this->runtimeAdapter->diagnoseRuntime();
+    }
+
+    public function describeNativeRuntimeService(): string
+    {
+        return $this->runtimeAdapter->describeNativeRuntimeService();
+    }
+
+    public function startNativeRuntimeService(): string
+    {
+        return $this->runtimeAdapter->startNativeRuntimeService();
+    }
+
+    public function describeNativeRuntimeCoupling(): string
+    {
+        return $this->runtimeAdapter->describeNativeRuntimeCoupling();
+    }
+
+    public function observeNativeRuntimeServiceState(): string
+    {
+        return $this->runtimeAdapter->observeNativeRuntimeServiceState();
+    }
+
+    public function materializeNativeBusOwnership(): string
+    {
+        return $this->runtimeAdapter->materializeNativeBusOwnership();
     }
 
     public function getCapabilities(?string $requestId = null): string
@@ -88,6 +123,11 @@ final class SystemApiDbusRuntimeHost
             'DescribeSpecification' => $this->describeSpecification(),
             'DescribeRuntime' => $this->describeRuntime(),
             'DiagnoseRuntime' => $this->diagnoseRuntime(),
+            'DescribeNativeRuntimeService' => $this->describeNativeRuntimeService(),
+            'StartNativeRuntimeService' => $this->startNativeRuntimeService(),
+            'DescribeNativeRuntimeCoupling' => $this->describeNativeRuntimeCoupling(),
+            'ObserveNativeRuntimeServiceState' => $this->observeNativeRuntimeServiceState(),
+            'MaterializeNativeBusOwnership' => $this->materializeNativeBusOwnership(),
             'GetCapabilities' => $this->getCapabilities($this->optionalStringArgument($arguments, 'request_id')),
             'Call' => $this->call($this->resolveRequestJson($arguments)),
             'ServeDbus' => $this->serveDbus(),

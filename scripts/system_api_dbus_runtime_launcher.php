@@ -65,6 +65,11 @@ try {
         'DescribeSpecification' => $launcher->describeSpecification(),
         'DescribeRuntime' => $launcher->describeRuntime(),
         'DiagnoseRuntime' => $launcher->diagnoseRuntime(),
+        'DescribeNativeRuntimeService' => $launcher->describeNativeRuntimeService(),
+        'StartNativeRuntimeService' => $launcher->startNativeRuntimeService(),
+        'DescribeNativeRuntimeCoupling' => $launcher->describeNativeRuntimeCoupling(),
+        'ObserveNativeRuntimeServiceState' => $launcher->observeNativeRuntimeServiceState(),
+        'MaterializeNativeBusOwnership' => $launcher->materializeNativeBusOwnership(),
         'GetCapabilities' => $launcher->getCapabilities($requestId),
         'Call' => $launcher->call(resolveRequestJson($requestFile, $requestJson)),
         'serve-dbus' => $launcher->serveDbus(),
@@ -83,7 +88,14 @@ try {
         echo $output;
     }
 
-    if ($command === 'serve-dbus' || $command === 'ExecuteActivation') {
+    if (
+        $command === 'serve-dbus'
+        || $command === 'ExecuteActivation'
+        || $command === 'StartNativeRuntimeService'
+        || $command === 'DescribeNativeRuntimeCoupling'
+        || $command === 'ObserveNativeRuntimeServiceState'
+        || $command === 'MaterializeNativeBusOwnership'
+    ) {
         $decodedOutput = json_decode($output, true);
         $exitCode = is_array($decodedOutput) && is_int($decodedOutput['exit_code'] ?? null)
             ? $decodedOutput['exit_code']
