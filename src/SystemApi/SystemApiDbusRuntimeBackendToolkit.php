@@ -191,6 +191,71 @@ final class SystemApiDbusRuntimeBackendToolkit
      * @param array<string, string>|null $environment
      * @return array<string, mixed>
      */
+    public function createNativeRuntimeCouplingReport(array $runtimeDiagnosis, ?array $environment = null): array
+    {
+        $env = $environment ?? $this->captureEnvironment();
+        $ready = ($runtimeDiagnosis['ready'] ?? false) === true;
+        $serviceDefinition = $this->createNativeRuntimeServiceDefinition($runtimeDiagnosis, $env);
+        $selectedBackend = is_string($serviceDefinition['selected_backend'] ?? null)
+            ? $serviceDefinition['selected_backend']
+            : 'contract-pending';
+        $nativeBackendCandidate = $this->createNativeDbusExtensionReport($ready, $env);
+        $nativeBackendCandidateCompatible = (($nativeBackendCandidate['native_runtime_api']['compatible_for_service'] ?? false) === true);
+        $eligible = ($serviceDefinition['eligible'] ?? false) === true;
+        $driverExecution = $eligible ? $this->executeNativeRuntimeCouplingDriver($serviceDefinition, $env) : null;
+        $described = is_array($driverExecution);
+        $compatible = ($driverExecution['compatible'] ?? false) === true;
+        $driverBlockingReason = is_string($driverExecution['blocking_reason'] ?? null)
+            && $driverExecution['blocking_reason'] !== ''
+                ? $driverExecution['blocking_reason']
+                : null;
+        $status = !$eligible
+            ? 'native-runtime-coupling-blocked'
+            : ($compatible
+                ? 'native-runtime-coupling-ready'
+                : ($described
+                    ? 'native-runtime-coupling-incompatible'
+                    : 'native-runtime-coupling-failed'));
+        $blockingReason = !$eligible
+            ? (is_string($serviceDefinition['blocking_reason'] ?? null)
+                ? $serviceDefinition['blocking_reason']
+                : 'native-runtime-service-unavailable')
+            : ($compatible ? null : ($driverBlockingReason ?? 'native-runtime-coupling-not-described'));
+        $nextAction = !$eligible
+            ? ($selectedBackend !== 'native-dbus-extension' && $nativeBackendCandidateCompatible
+                ? 'select-native-dbus-extension-backend'
+                : (is_string($nativeBackendCandidate['native_runtime_api']['diagnostic_next_action'] ?? null)
+                    ? $nativeBackendCandidate['native_runtime_api']['diagnostic_next_action']
+                    : 'complete-native-runtime-backend'))
+            : ($compatible ? 'materialize-native-bus-ownership' : 'inspect-native-runtime-coupling');
+
+        return [
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-native-runtime-coupling',
+            'status' => $status,
+            'described' => $described,
+            'compatible' => $compatible,
+            'exit_code' => !$eligible ? 3 : ($compatible ? 0 : 1),
+            'bus_name' => 'org.w4.System1',
+            'object_path' => '/org/w4/System1',
+            'interface' => 'org.w4.System1.Manager',
+            'service_definition' => $serviceDefinition,
+            'runtime_backend' => $serviceDefinition['runtime_backend'] ?? [],
+            'native_backend_candidate' => $nativeBackendCandidate,
+            'coupling_driver' => is_array($driverExecution['driver'] ?? null) ? $driverExecution['driver'] : null,
+            'service_lifecycle' => is_array($driverExecution['service_lifecycle'] ?? null)
+                ? $driverExecution['service_lifecycle']
+                : [],
+            'blocking_reason' => $blockingReason,
+            'next_action' => $nextAction,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, string>|null $environment
+     * @return array<string, mixed>
+     */
     public function createNativeBusOwnershipReport(array $runtimeDiagnosis, ?array $environment = null): array
     {
         $env = $environment ?? $this->captureEnvironment();
@@ -402,6 +467,8 @@ final class SystemApiDbusRuntimeBackendToolkit
     private function createNativeDbusExtensionReport(bool $ready, array $environment): array
     {
         $className = $this->resolveNativeDbusClassName($environment);
+        $classResolutionSource = $this->resolveNativeDbusClassResolutionSource($environment, $className);
+        $extensionLoaded = $this->resolveNativeDbusExtensionLoaded($environment);
         $hasServiceClass = $className !== null;
         $hasBusSystemConstant = $this->resolveNativeDbusFeatureAvailability(
             $environment,
@@ -450,6 +517,16 @@ final class SystemApiDbusRuntimeBackendToolkit
             && $hasRegisterObjectMethod
             && $hasWaitLoopMethod;
         $materialized = $ready && $compatibleForService;
+        $diagnosticBlockingReason = $compatibleForService
+            ? null
+            : ($hasServiceClass
+                ? 'dbus-extension-api-incomplete'
+                : 'dbus-extension-service-backend-unavailable');
+        $diagnosticNextAction = $compatibleForService
+            ? 'start-native-runtime-service'
+            : ($hasServiceClass
+                ? 'inspect-native-dbus-extension-api'
+                : ($extensionLoaded ? 'inspect-native-dbus-service-class' : 'install-native-dbus-extension'));
 
         return [
             'kind' => 'system-api-dbus-runtime-backend',
@@ -462,7 +539,11 @@ final class SystemApiDbusRuntimeBackendToolkit
             'ownership_model' => 'native-php-dbus-extension',
             'supports_bus_ownership' => true,
             'native_runtime_api' => [
+                'extension_name' => 'dbus',
+                'extension_loaded' => $extensionLoaded,
                 'class_name' => $className,
+                'class_candidates' => ['Dbus', 'DBus'],
+                'class_resolution_source' => $classResolutionSource,
                 'class_available' => $hasServiceClass,
                 'has_bus_system_constant' => $hasBusSystemConstant,
                 'has_request_name_method' => $hasRequestNameMethod,
@@ -470,6 +551,8 @@ final class SystemApiDbusRuntimeBackendToolkit
                 'has_wait_loop_method' => $hasWaitLoopMethod,
                 'compatible_for_service' => $compatibleForService,
                 'missing_api' => $missingApi,
+                'diagnostic_blocking_reason' => $diagnosticBlockingReason,
+                'diagnostic_next_action' => $diagnosticNextAction,
                 'service_contract' => [
                     'bus_name' => 'org.w4.System1',
                     'object_path' => '/org/w4/System1',
@@ -527,6 +610,32 @@ final class SystemApiDbusRuntimeBackendToolkit
         }
 
         return null;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeDbusClassResolutionSource(array $environment, ?string $className): string
+    {
+        $overrideClassName = $environment['W4_SYSTEM_API_NATIVE_DBUS_CLASS'] ?? null;
+        if (is_string($overrideClassName) && trim($overrideClassName) !== '') {
+            return 'env-override';
+        }
+
+        return $className !== null ? 'runtime-detection' : 'unresolved';
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeDbusExtensionLoaded(array $environment): bool
+    {
+        $override = $this->resolveBoolOverride($environment, 'W4_SYSTEM_API_NATIVE_DBUS_EXTENSION_LOADED');
+        if ($override !== null) {
+            return $override;
+        }
+
+        return extension_loaded('dbus');
     }
 
     /**
@@ -716,6 +825,95 @@ final class SystemApiDbusRuntimeBackendToolkit
                 'register_object_state' => 'not-attempted',
                 'wait_loop_state' => 'not-attempted',
                 'blocking_reason' => 'native-runtime-driver-invalid-result',
+                'driver' => [
+                    'mode' => 'native-driver',
+                    'bootstrap_path' => $bootstrapPath,
+                    'class_name' => $driverClassName,
+                    'available' => true,
+                ],
+            ];
+        }
+
+        $driver = is_array($result['driver'] ?? null) ? $result['driver'] : [];
+        $driver['mode'] = 'native-driver';
+        $driver['bootstrap_path'] = $bootstrapPath;
+        $driver['class_name'] = $driverClassName;
+        $driver['available'] = true;
+        $result['driver'] = $driver;
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $serviceDefinition
+     * @param array<string, string> $environment
+     * @return array<string, mixed>|null
+     */
+    private function executeNativeRuntimeCouplingDriver(array $serviceDefinition, array $environment): ?array
+    {
+        $driverClassName = $this->resolveNativeRuntimeDriverClassName($environment)
+            ?? NativeDbusExtensionOwnershipDriver::class;
+        $bootstrapPath = $this->resolveNativeRuntimeDriverBootstrapPath($environment);
+
+        if ($bootstrapPath !== null && is_file($bootstrapPath)) {
+            require_once $bootstrapPath;
+        }
+
+        if (!class_exists($driverClassName)) {
+            return [
+                'compatible' => false,
+                'blocking_reason' => 'native-runtime-driver-class-unavailable',
+                'service_lifecycle' => [],
+                'driver' => [
+                    'mode' => 'native-driver',
+                    'bootstrap_path' => $bootstrapPath,
+                    'class_name' => $driverClassName,
+                    'available' => false,
+                ],
+            ];
+        }
+
+        try {
+            $method = new \ReflectionMethod($driverClassName, 'describeCoupling');
+            $arguments = [$serviceDefinition];
+            if ($method->getNumberOfParameters() >= 2) {
+                $arguments[] = $environment;
+            }
+            $result = $method->isStatic()
+                ? $method->invokeArgs(null, $arguments)
+                : $method->invokeArgs(new $driverClassName(), $arguments);
+        } catch (\ReflectionException) {
+            return [
+                'compatible' => false,
+                'blocking_reason' => 'native-runtime-driver-method-unavailable',
+                'service_lifecycle' => [],
+                'driver' => [
+                    'mode' => 'native-driver',
+                    'bootstrap_path' => $bootstrapPath,
+                    'class_name' => $driverClassName,
+                    'available' => true,
+                ],
+            ];
+        } catch (\Throwable $exception) {
+            return [
+                'compatible' => false,
+                'blocking_reason' => 'native-runtime-driver-execution-failed',
+                'service_lifecycle' => [],
+                'driver' => [
+                    'mode' => 'native-driver',
+                    'bootstrap_path' => $bootstrapPath,
+                    'class_name' => $driverClassName,
+                    'available' => true,
+                    'error_message' => $exception->getMessage(),
+                ],
+            ];
+        }
+
+        if (!is_array($result)) {
+            return [
+                'compatible' => false,
+                'blocking_reason' => 'native-runtime-driver-invalid-result',
+                'service_lifecycle' => [],
                 'driver' => [
                     'mode' => 'native-driver',
                     'bootstrap_path' => $bootstrapPath,

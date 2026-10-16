@@ -34,7 +34,14 @@
             "ownership_model": "native-php-dbus-extension",
             "supports_bus_ownership": true,
             "native_runtime_api": {
+                "extension_name": "dbus",
+                "extension_loaded": false,
                 "class_name": "Dbus",
+                "class_candidates": [
+                    "Dbus",
+                    "DBus"
+                ],
+                "class_resolution_source": "env-override",
                 "class_available": true,
                 "has_bus_system_constant": true,
                 "has_request_name_method": true,
@@ -42,6 +49,8 @@
                 "has_wait_loop_method": true,
                 "compatible_for_service": true,
                 "missing_api": [],
+                "diagnostic_blocking_reason": null,
+                "diagnostic_next_action": "start-native-runtime-service",
                 "service_contract": {
                     "bus_name": "org.w4.System1",
                     "object_path": "/org/w4/System1",
@@ -67,7 +76,14 @@
         "ownership_model": "native-php-dbus-extension",
         "supports_bus_ownership": true,
         "native_runtime_api": {
+            "extension_name": "dbus",
+            "extension_loaded": false,
             "class_name": "Dbus",
+            "class_candidates": [
+                "Dbus",
+                "DBus"
+            ],
+            "class_resolution_source": "env-override",
             "class_available": true,
             "has_bus_system_constant": true,
             "has_request_name_method": true,
@@ -75,6 +91,8 @@
             "has_wait_loop_method": true,
             "compatible_for_service": true,
             "missing_api": [],
+            "diagnostic_blocking_reason": null,
+            "diagnostic_next_action": "start-native-runtime-service",
             "service_contract": {
                 "bus_name": "org.w4.System1",
                 "object_path": "/org/w4/System1",

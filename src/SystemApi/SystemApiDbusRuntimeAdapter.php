@@ -55,6 +55,7 @@ final class SystemApiDbusRuntimeAdapter
                 'ExecuteActivation',
                 'DescribeNativeRuntimeService',
                 'StartNativeRuntimeService',
+                'DescribeNativeRuntimeCoupling',
                 'ObserveNativeRuntimeServiceState',
                 'MaterializeNativeBusOwnership',
                 'DescribeRuntime',
@@ -118,6 +119,13 @@ final class SystemApiDbusRuntimeAdapter
         $this->persistNativeRuntimeArtifacts($report);
 
         return $this->encodeJson($report);
+    }
+
+    public function describeNativeRuntimeCoupling(): string
+    {
+        return $this->encodeJson(
+            $this->runtimeBackend->createNativeRuntimeCouplingReport($this->runtimeProbe->createReport())
+        );
     }
 
     public function observeNativeRuntimeServiceState(): string
@@ -206,6 +214,7 @@ final class SystemApiDbusRuntimeAdapter
             'ExecuteActivation' => $this->executeActivation(),
             'DescribeNativeRuntimeService' => $this->describeNativeRuntimeService(),
             'StartNativeRuntimeService' => $this->startNativeRuntimeService(),
+            'DescribeNativeRuntimeCoupling' => $this->describeNativeRuntimeCoupling(),
             'ObserveNativeRuntimeServiceState' => $this->observeNativeRuntimeServiceState(),
             'MaterializeNativeBusOwnership' => $this->materializeNativeBusOwnership(),
             'ServeDbus' => $this->serveDbus(),

@@ -18,6 +18,109 @@ final class NativeDbusExtensionOwnershipDriver
      * @param array<string, string> $environment
      * @return array<string, mixed>
      */
+    public function describeCoupling(array $serviceDefinition, array $environment = []): array
+    {
+        $runtimeClassName = $this->resolveRuntimeClassName($serviceDefinition, $environment);
+        if ($runtimeClassName === null || !class_exists($runtimeClassName)) {
+            return $this->failedCoupling(
+                'native-dbus-extension-class-unavailable',
+                [
+                    'runtime_class_name' => $runtimeClassName,
+                ]
+            );
+        }
+
+        try {
+            [$connection, $constructorMode] = $this->instantiateConnection($runtimeClassName);
+        } catch (Throwable $exception) {
+            return $this->failedCoupling(
+                'native-dbus-extension-constructor-failed',
+                [
+                    'runtime_class_name' => $runtimeClassName,
+                    'error_message' => $exception->getMessage(),
+                ]
+            );
+        }
+
+        $driver = [
+            'mode' => 'native-dbus-extension-driver',
+            'driver_class' => self::class,
+            'runtime_class_name' => $runtimeClassName,
+            'constructor_mode' => $constructorMode,
+        ];
+
+        try {
+            $exportedObject = new NativeDbusExtensionRuntimeObject(
+                $serviceDefinition,
+                $this->resolveRuntimeRootDir($environment)
+            );
+            $registerObjectHandoff = $exportedObject->createRegisterObjectHandoffPayload();
+            $requestNameSignature = $this->createRequestNameSignatureReport($connection);
+            $requestNameInvocationPlan = $this->createRequestNameInvocationPlan($connection, $serviceDefinition);
+            $registerObjectSignature = $this->createRegisterObjectSignatureReport($connection, $registerObjectHandoff);
+            $registerObjectInvocationPlan = $this->createRegisterObjectInvocationPlan(
+                $connection,
+                $serviceDefinition,
+                $exportedObject,
+                $registerObjectHandoff
+            );
+            $waitLoopSignature = $this->createWaitLoopSignatureReport($connection);
+            $waitLoopInvocationPlan = $this->createWaitLoopInvocationPlan($connection);
+        } catch (Throwable $exception) {
+            return $this->failedCoupling(
+                'native-dbus-extension-coupling-report-failed',
+                $driver + ['error_message' => $exception->getMessage()]
+            );
+        }
+
+        $driver['exported_object_class'] = NativeDbusExtensionRuntimeObject::class;
+        $driver['register_object_handoff_channels'] = array_keys($registerObjectHandoff['channels'] ?? []);
+        $driver['request_name_signature'] = $requestNameSignature;
+        $driver['request_name_invocation_plan'] = $requestNameInvocationPlan['report'];
+        $driver['register_object_signature'] = $registerObjectSignature;
+        $driver['register_object_invocation_plan'] = $registerObjectInvocationPlan['report'];
+        $driver['wait_loop_signature'] = $waitLoopSignature;
+        $driver['wait_loop_invocation_plan'] = $waitLoopInvocationPlan['report'];
+
+        $compatible = $requestNameSignature['compatible'] === true
+            && $registerObjectSignature['compatible'] === true
+            && $waitLoopSignature['compatible'] === true;
+
+        return [
+            'compatible' => $compatible,
+            'blocking_reason' => $compatible ? null : 'native-dbus-extension-runtime-coupling-incompatible',
+            'driver_status' => $compatible ? 'coupling-described' : 'coupling-incompatible',
+            'service_lifecycle' => [
+                'constructor' => [
+                    'required' => true,
+                    'state' => 'compatible',
+                    'mode' => $constructorMode,
+                ],
+                'request_name' => [
+                    'required' => true,
+                    'compatible' => $requestNameSignature['compatible'],
+                    'method_name' => 'requestName',
+                ],
+                'register_object' => [
+                    'required' => true,
+                    'compatible' => $registerObjectSignature['compatible'],
+                    'method_name' => 'registerObject',
+                ],
+                'wait_loop' => [
+                    'required' => true,
+                    'compatible' => $waitLoopSignature['compatible'],
+                    'method_name' => 'waitLoop',
+                ],
+            ],
+            'driver' => $driver,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $serviceDefinition
+     * @param array<string, string> $environment
+     * @return array<string, mixed>
+     */
     public function materializeOwnership(array $serviceDefinition, array $environment = []): array
     {
         $runtimeClassName = $this->resolveRuntimeClassName($serviceDefinition, $environment);
@@ -856,6 +959,44 @@ final class NativeDbusExtensionOwnershipDriver
             'wait_loop_state' => 'not-attempted',
             'blocking_reason' => $blockingReason,
             'driver_status' => 'ownership-failed',
+            'driver' => $driver + [
+                'mode' => 'native-dbus-extension-driver',
+                'driver_class' => self::class,
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $driver
+     * @return array<string, mixed>
+     */
+    private function failedCoupling(string $blockingReason, array $driver): array
+    {
+        return [
+            'compatible' => false,
+            'blocking_reason' => $blockingReason,
+            'driver_status' => 'coupling-failed',
+            'service_lifecycle' => [
+                'constructor' => [
+                    'required' => true,
+                    'state' => 'failed',
+                ],
+                'request_name' => [
+                    'required' => true,
+                    'compatible' => false,
+                    'method_name' => 'requestName',
+                ],
+                'register_object' => [
+                    'required' => true,
+                    'compatible' => false,
+                    'method_name' => 'registerObject',
+                ],
+                'wait_loop' => [
+                    'required' => true,
+                    'compatible' => false,
+                    'method_name' => 'waitLoop',
+                ],
+            ],
             'driver' => $driver + [
                 'mode' => 'native-dbus-extension-driver',
                 'driver_class' => self::class,

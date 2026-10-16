@@ -29,6 +29,8 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
         self::assertSame('native-runtime-backend-materialized', $report['status']);
         self::assertTrue($report['materialized']);
         self::assertSame('Dbus', $report['native_runtime_api']['class_name']);
+        self::assertSame('env-override', $report['native_runtime_api']['class_resolution_source']);
+        self::assertSame(['Dbus', 'DBus'], $report['native_runtime_api']['class_candidates']);
         self::assertTrue($report['native_runtime_api']['class_available']);
         self::assertTrue($report['native_runtime_api']['has_bus_system_constant']);
         self::assertTrue($report['native_runtime_api']['has_request_name_method']);
@@ -36,6 +38,8 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
         self::assertTrue($report['native_runtime_api']['has_wait_loop_method']);
         self::assertTrue($report['native_runtime_api']['compatible_for_service']);
         self::assertSame([], $report['native_runtime_api']['missing_api']);
+        self::assertNull($report['native_runtime_api']['diagnostic_blocking_reason']);
+        self::assertSame('start-native-runtime-service', $report['native_runtime_api']['diagnostic_next_action']);
         self::assertNull($report['blocking_reason']);
     }
 
@@ -62,6 +66,8 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
         self::assertContains('registerObject', $report['native_runtime_api']['missing_api']);
         self::assertFalse($report['native_runtime_api']['has_register_object_method']);
         self::assertFalse($report['native_runtime_api']['compatible_for_service']);
+        self::assertSame('dbus-extension-api-incomplete', $report['native_runtime_api']['diagnostic_blocking_reason']);
+        self::assertSame('inspect-native-dbus-extension-api', $report['native_runtime_api']['diagnostic_next_action']);
     }
 
     public function testCreateReportDetectsMissingNativeDbusServiceClass(): void
@@ -85,6 +91,38 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
         self::assertSame('dbus-extension-service-backend-unavailable', $report['blocking_reason']);
         self::assertFalse($report['native_runtime_api']['class_available']);
         self::assertContains('dbus-service-class', $report['native_runtime_api']['missing_api']);
+        self::assertFalse($report['native_runtime_api']['extension_loaded']);
+        self::assertSame('unresolved', $report['native_runtime_api']['class_resolution_source']);
+        self::assertSame('dbus-extension-service-backend-unavailable', $report['native_runtime_api']['diagnostic_blocking_reason']);
+        self::assertSame('install-native-dbus-extension', $report['native_runtime_api']['diagnostic_next_action']);
+    }
+
+    public function testCreateNativeRuntimeCouplingReportPublishesNativeBackendCandidateWhenBackendIsNotSelected(): void
+    {
+        $toolkit = new SystemApiDbusRuntimeBackendToolkit();
+
+        $report = $toolkit->createNativeRuntimeCouplingReport(
+            ['ready' => true],
+            [
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+            ]
+        );
+
+        self::assertSame('system-api-dbus-native-runtime-coupling', $report['kind']);
+        self::assertSame('native-runtime-coupling-blocked', $report['status']);
+        self::assertFalse($report['described']);
+        self::assertFalse($report['compatible']);
+        self::assertSame(3, $report['exit_code']);
+        self::assertSame('runtime-backend-not-configured', $report['blocking_reason']);
+        self::assertSame('select-native-dbus-extension-backend', $report['next_action']);
+        self::assertSame('native-dbus-extension', $report['native_backend_candidate']['selected_backend']);
+        self::assertTrue($report['native_backend_candidate']['native_runtime_api']['compatible_for_service']);
+        self::assertSame('env-override', $report['native_backend_candidate']['native_runtime_api']['class_resolution_source']);
+        self::assertSame('start-native-runtime-service', $report['native_backend_candidate']['native_runtime_api']['diagnostic_next_action']);
     }
 
     public function testCreateNativeRuntimeServiceStartupReportAcknowledgesEligibleNativeBackend(): void
@@ -347,5 +385,40 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
             @unlink($pidFilePath);
             @rmdir($baseDirectory);
         }
+    }
+
+    public function testCreateNativeRuntimeCouplingReportDescribesFakeNativeDriverLifecycle(): void
+    {
+        $toolkit = new SystemApiDbusRuntimeBackendToolkit();
+
+        $report = $toolkit->createNativeRuntimeCouplingReport(
+            ['ready' => true],
+            [
+                'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusService',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_DRIVER_BOOTSTRAP' => dirname(__DIR__) . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR . 'Fixtures' . DIRECTORY_SEPARATOR . 'NativeDbusExtensionDriverBootstrap.php',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_DRIVER_CLASS' => 'W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver',
+            ]
+        );
+
+        self::assertSame('system-api-dbus-native-runtime-coupling', $report['kind']);
+        self::assertSame('native-runtime-coupling-ready', $report['status']);
+        self::assertTrue($report['described']);
+        self::assertTrue($report['compatible']);
+        self::assertSame(0, $report['exit_code']);
+        self::assertSame('W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver', $report['coupling_driver']['class_name']);
+        self::assertSame('W4\\OS\\Tests\\Fixtures\\FakeNativeDbusService', $report['coupling_driver']['runtime_class_name']);
+        self::assertSame('org.w4.System1', $report['coupling_driver']['request_name_invocation_plan']['parameter_bindings'][0]['value_preview']);
+        self::assertSame('registerObject', $report['coupling_driver']['register_object_invocation_plan']['method_name']);
+        self::assertSame('waitLoop', $report['coupling_driver']['wait_loop_invocation_plan']['method_name']);
+        self::assertTrue($report['service_lifecycle']['request_name']['compatible']);
+        self::assertTrue($report['service_lifecycle']['register_object']['compatible']);
+        self::assertTrue($report['service_lifecycle']['wait_loop']['compatible']);
+        self::assertNull($report['blocking_reason']);
+        self::assertSame('materialize-native-bus-ownership', $report['next_action']);
     }
 }

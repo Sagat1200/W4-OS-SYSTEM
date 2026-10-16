@@ -281,6 +281,7 @@ final class SystemApiDbusRuntimeActivationToolkit
                 'DescribeRuntime',
                 'DescribeNativeRuntimeService',
                 'StartNativeRuntimeService',
+                'DescribeNativeRuntimeCoupling',
                 'ObserveNativeRuntimeServiceState',
                 'MaterializeNativeBusOwnership',
             ],
