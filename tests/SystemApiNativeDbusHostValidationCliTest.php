@@ -53,16 +53,29 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertSame('install-native-dbus-extension', $payload['next_action']);
         self::assertContains('install-native-dbus-extension', $payload['recommended_next_actions']);
         self::assertFileExists($payload['report_path']);
+        self::assertFileExists($payload['summary_path']);
         self::assertFileExists($payload['step_files']['diagnosis']);
         self::assertFileExists($payload['step_files']['service_definition']);
         self::assertFileExists($payload['step_files']['startup']);
         self::assertFileExists($payload['step_files']['coupling']);
         self::assertFileExists($payload['step_files']['ownership']);
+        self::assertIsArray($payload['preparation_plan']);
+        self::assertContains(
+            'install-native-dbus-extension',
+            array_map(
+                static fn (array $step): string => (string) ($step['action'] ?? ''),
+                $payload['preparation_plan']
+            )
+        );
 
         $savedReport = $this->decodeJsonFile($payload['report_path']);
         self::assertSame('blocked', $savedReport['status']);
         self::assertSame('native-runtime-service-blocked', $savedReport['steps']['startup']['status']);
         self::assertSame('missing-runtime-capabilities', $savedReport['steps']['diagnosis']['blocking_reason'] ?? 'missing-runtime-capabilities');
+        $savedSummary = file_get_contents($payload['summary_path']);
+        self::assertNotFalse($savedSummary);
+        self::assertStringContainsString('## Preparation Plan', $savedSummary);
+        self::assertStringContainsString('install-native-dbus-extension', $savedSummary);
     }
 
     public function testValidationCanPrepareOwnedRuntimeAgainstFakeNativeDbusService(): void
@@ -98,14 +111,48 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertSame('bus-name-owned', $payload['steps']['ownership']['ownership_state']);
         self::assertSame('native-runtime-service-observed-active', $payload['steps']['observation_after_ownership']['status']);
         self::assertFileExists($payload['report_path']);
+        self::assertFileExists($payload['summary_path']);
         self::assertDirectoryExists($payload['artifacts_dir']);
         self::assertFileExists($payload['artifacts_dir'] . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime.ready');
         self::assertFileExists($payload['artifacts_dir'] . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime-status.json');
         self::assertFileExists($payload['artifacts_dir'] . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime.pid');
+        self::assertContains(
+            'capture-release-evidence',
+            array_map(
+                static fn (array $step): string => (string) ($step['action'] ?? ''),
+                $payload['preparation_plan']
+            )
+        );
 
         $savedReport = $this->decodeJsonFile($payload['report_path']);
         self::assertSame('ownership-validated', $savedReport['status']);
         self::assertSame('W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver', $savedReport['steps']['ownership']['ownership_driver']['class_name']);
+    }
+
+    public function testValidationCanRenderMarkdownSummaryDirectlyFromRunner(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'markdown-host';
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--format',
+            'markdown',
+            '--attempt-ownership',
+            'false',
+        ], [
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_BUSCTL' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_GDBUS' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON' => '0',
+            'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET' => '0',
+        ]);
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+        self::assertStringContainsString('# Native D-Bus Runtime Validation', $result['stdout']);
+        self::assertStringContainsString('## Preparation Plan', $result['stdout']);
+        self::assertStringContainsString('install-native-dbus-extension', $result['stdout']);
     }
 
     private function scriptPath(): string

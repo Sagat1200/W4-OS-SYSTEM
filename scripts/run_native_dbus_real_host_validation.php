@@ -50,7 +50,7 @@ try {
         }
     }
 
-    if (!in_array($format, ['json', 'text'], true)) {
+    if (!in_array($format, ['json', 'text', 'markdown'], true)) {
         throw new ValidationError(sprintf('Formato no soportado: %s', $format));
     }
 
@@ -59,6 +59,8 @@ try {
 
     if ($format === 'text') {
         fwrite(STDOUT, $toolkit->renderSummaryText($report));
+    } elseif ($format === 'markdown') {
+        fwrite(STDOUT, $toolkit->renderMarkdownSummary($report));
     } else {
         printJson($report);
     }

@@ -31,6 +31,7 @@ final class SystemApiNativeDbusHostValidationToolkit
                 ?? ($normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'runtime-artifacts')
         );
         $reportPath = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-runtime-validation-report.json';
+        $summaryPath = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-runtime-validation-summary.md';
         $stepsDir = $normalizedEvidenceDir . DIRECTORY_SEPARATOR . 'steps';
 
         $defaultOverrides = [
@@ -106,6 +107,17 @@ final class SystemApiNativeDbusHostValidationToolkit
         $exitCode = $ownershipValidated || (!$attemptOwnership && $couplingReady)
             ? 0
             : ($hasFailure ? 1 : 3);
+        $preparationPlan = $this->createPreparationPlan(
+            $steps['diagnosis'],
+            $steps['service_definition'],
+            $steps['startup'],
+            $steps['coupling'],
+            $steps['ownership'],
+            $effectiveOverrides,
+            $attemptOwnership,
+            $ownershipValidated,
+            $couplingReady
+        );
 
         $report = [
             'api_version' => '1.0',
@@ -116,6 +128,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             'root_dir' => $this->rootDir,
             'evidence_dir' => $normalizedEvidenceDir,
             'report_path' => $reportPath,
+            'summary_path' => $summaryPath,
             'artifacts_dir' => $artifactsDir,
             'runtime_backend' => $effectiveOverrides['W4_SYSTEM_API_RUNTIME_BACKEND'] ?? 'native-dbus-extension',
             'bus_name' => 'org.w4.System1',
@@ -146,6 +159,7 @@ final class SystemApiNativeDbusHostValidationToolkit
                 $steps['ownership'],
                 $steps['observation_after_ownership']
             ),
+            'preparation_plan' => $preparationPlan,
             'environment_overrides' => $effectiveOverrides,
             'steps' => $steps,
             'step_files' => [
@@ -164,6 +178,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         ];
 
         $this->writeJsonFile($reportPath, $report);
+        $this->writeTextFile($summaryPath, $this->renderMarkdownSummary($report));
 
         return $report;
     }
@@ -190,6 +205,82 @@ final class SystemApiNativeDbusHostValidationToolkit
                 static fn (mixed $value): string => is_string($value) ? $value : '',
                 $recommended
             ));
+        }
+
+        $preparationPlan = $report['preparation_plan'] ?? [];
+        if (is_array($preparationPlan) && $preparationPlan !== []) {
+            $lines[] = 'preparation_plan_steps: ' . (string) count($preparationPlan);
+        }
+
+        $lines[] = sprintf('summary_path: %s', (string) ($report['summary_path'] ?? 'n/a'));
+
+        return implode(PHP_EOL, $lines) . PHP_EOL;
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     */
+    public function renderMarkdownSummary(array $report): string
+    {
+        $lines = [
+            '# Native D-Bus Runtime Validation',
+            '',
+            sprintf('- Status: `%s`', (string) ($report['status'] ?? 'unknown')),
+            sprintf('- Exit code: `%s`', (string) ($report['exit_code'] ?? '3')),
+            sprintf('- Ownership validated: `%s`', (($report['ownership_validated'] ?? false) === true) ? 'yes' : 'no'),
+            sprintf('- Coupling ready: `%s`', (($report['coupling_ready'] ?? false) === true) ? 'yes' : 'no'),
+            sprintf('- Startup acknowledged: `%s`', (($report['startup_acknowledged'] ?? false) === true) ? 'yes' : 'no'),
+            sprintf('- Blocking reason: `%s`', (string) ($report['blocking_reason'] ?? 'n/a')),
+            sprintf('- Next action: `%s`', (string) ($report['next_action'] ?? 'n/a')),
+            sprintf('- Report path: `%s`', (string) ($report['report_path'] ?? 'n/a')),
+            '',
+            '## Recommended Next Actions',
+            '',
+        ];
+
+        $recommended = $report['recommended_next_actions'] ?? [];
+        if (is_array($recommended) && $recommended !== []) {
+            foreach ($recommended as $action) {
+                if (is_string($action) && trim($action) !== '') {
+                    $lines[] = sprintf('- `%s`', trim($action));
+                }
+            }
+        } else {
+            $lines[] = '- None';
+        }
+
+        $lines[] = '';
+        $lines[] = '## Preparation Plan';
+        $lines[] = '';
+
+        $preparationPlan = $report['preparation_plan'] ?? [];
+        if (is_array($preparationPlan) && $preparationPlan !== []) {
+            foreach ($preparationPlan as $step) {
+                if (!is_array($step)) {
+                    continue;
+                }
+
+                $lines[] = sprintf(
+                    '1. `%s` - %s',
+                    (string) ($step['action'] ?? 'unknown'),
+                    (string) ($step['description'] ?? 'Sin descripcion')
+                );
+
+                $commands = $step['commands'] ?? null;
+                if (is_array($commands) && $commands !== []) {
+                    $lines[] = '';
+                    $lines[] = '```bash';
+                    foreach ($commands as $command) {
+                        if (is_string($command) && trim($command) !== '') {
+                            $lines[] = trim($command);
+                        }
+                    }
+                    $lines[] = '```';
+                    $lines[] = '';
+                }
+            }
+        } else {
+            $lines[] = '1. `validation-complete` - No additional preparation steps are currently required.';
         }
 
         return implode(PHP_EOL, $lines) . PHP_EOL;
@@ -262,6 +353,14 @@ final class SystemApiNativeDbusHostValidationToolkit
         }
     }
 
+    private function writeTextFile(string $path, string $content): void
+    {
+        $this->ensureDirectory(dirname($path));
+        if (file_put_contents($path, $content) === false) {
+            throw new ValidationError(sprintf('No se pudo escribir %s', $path));
+        }
+    }
+
     /**
      * @param array<string, mixed> ...$snapshots
      */
@@ -311,5 +410,143 @@ final class SystemApiNativeDbusHostValidationToolkit
         }
 
         return array_values(array_unique($actions));
+    }
+
+    /**
+     * @param array<string, mixed> $diagnosis
+     * @param array<string, mixed> $serviceDefinition
+     * @param array<string, mixed> $startup
+     * @param array<string, mixed> $coupling
+     * @param array<string, mixed>|null $ownership
+     * @param array<string, string> $environmentOverrides
+     * @return list<array<string, mixed>>
+     */
+    private function createPreparationPlan(
+        array $diagnosis,
+        array $serviceDefinition,
+        array $startup,
+        array $coupling,
+        ?array $ownership,
+        array $environmentOverrides,
+        bool $attemptOwnership,
+        bool $ownershipValidated,
+        bool $couplingReady
+    ): array {
+        $plan = [];
+        $environment = is_array($diagnosis['environment'] ?? null) ? $diagnosis['environment'] : [];
+        $osFamily = is_string($environment['os_family'] ?? null) ? $environment['os_family'] : 'Unknown';
+        $missingCapabilities = $diagnosis['missing_capabilities'] ?? [];
+
+        if (is_array($missingCapabilities)) {
+            foreach ($missingCapabilities as $capability) {
+                if (!is_string($capability)) {
+                    continue;
+                }
+
+                $step = $this->createCapabilityPreparationStep($capability, $osFamily);
+                if ($step !== null) {
+                    $plan[] = $step;
+                }
+            }
+        }
+
+        if ((($startup['startup_acknowledged'] ?? false) === true) && !$couplingReady) {
+            $plan[] = [
+                'action' => 'inspect-native-runtime-artifacts',
+                'description' => 'Revisar los artefactos del runtime nativo y confirmar que startup, status y pid quedaron materializados antes del ownership.',
+                'commands' => [
+                    sprintf('Get-ChildItem -Force "%s"', $environmentOverrides['W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR'] ?? ''),
+                    sprintf('Get-Content "%s"', $serviceDefinition['artifacts']['status_file_path'] ?? ''),
+                ],
+            ];
+        }
+
+        if ($attemptOwnership && !$ownershipValidated && is_array($ownership)) {
+            $plan[] = [
+                'action' => 'retry-native-bus-ownership',
+                'description' => 'Reintentar el ownership real del bus solo cuando el host confirme extension PECL dbus, daemon, socket y tooling del sistema disponibles.',
+                'commands' => [
+                    'php scripts/run_native_dbus_real_host_validation.php --format text',
+                ],
+            ];
+        }
+
+        if ($ownershipValidated || (!$attemptOwnership && $couplingReady)) {
+            $plan[] = [
+                'action' => 'capture-release-evidence',
+                'description' => 'Conservar el reporte y los artefactos como evidencia para el cierre de la validacion V1 del runtime D-Bus nativo.',
+                'commands' => [
+                    'php scripts/run_native_dbus_real_host_validation.php --format markdown',
+                ],
+            ];
+        }
+
+        return $plan;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function createCapabilityPreparationStep(string $capability, string $osFamily): ?array
+    {
+        return match ($capability) {
+            'php-dbus-runtime-adapter' => [
+                'action' => 'install-native-dbus-extension',
+                'description' => 'Instalar y habilitar la extension PECL `dbus` para que PHP pueda pedir el bus name y exportar el objeto D-Bus.',
+                'commands' => $this->resolveCapabilityCommands($capability, $osFamily),
+            ],
+            'dbus-daemon' => [
+                'action' => 'install-dbus-daemon',
+                'description' => 'Asegurar que `dbus-daemon` este instalado y disponible en el host.',
+                'commands' => $this->resolveCapabilityCommands($capability, $osFamily),
+            ],
+            'system-bus-socket' => [
+                'action' => 'materialize-system-bus-socket',
+                'description' => 'Confirmar que el socket del system bus exista y que el servicio D-Bus del sistema este activo.',
+                'commands' => $this->resolveCapabilityCommands($capability, $osFamily),
+            ],
+            'dbus-client-tooling' => [
+                'action' => 'install-dbus-client-tooling',
+                'description' => 'Instalar al menos una herramienta de cliente D-Bus (`busctl` o `gdbus`) para contrastar el runtime desde el host.',
+                'commands' => $this->resolveCapabilityCommands($capability, $osFamily),
+            ],
+            default => null,
+        };
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function resolveCapabilityCommands(string $capability, string $osFamily): array
+    {
+        if ($osFamily === 'Linux') {
+            return match ($capability) {
+                'php-dbus-runtime-adapter' => [
+                    'sudo apt-get update',
+                    'sudo apt-get install -y php-pear php-dev libdbus-1-dev pkg-config',
+                    'sudo pecl install dbus',
+                    'php --ri dbus',
+                ],
+                'dbus-daemon' => [
+                    'sudo apt-get update',
+                    'sudo apt-get install -y dbus',
+                    'dbus-daemon --version',
+                ],
+                'system-bus-socket' => [
+                    'sudo systemctl status dbus',
+                    'test -S /run/dbus/system_bus_socket && echo system-bus-socket-ready',
+                ],
+                'dbus-client-tooling' => [
+                    'sudo apt-get update',
+                    'sudo apt-get install -y systemd dbus',
+                    'busctl --version || gdbus --version',
+                ],
+                default => [],
+            };
+        }
+
+        return [
+            sprintf('Resolver manualmente la capacidad faltante `%s` para el sistema operativo `%s`.', $capability, $osFamily),
+        ];
     }
 }

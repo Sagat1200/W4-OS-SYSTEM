@@ -7,13 +7,14 @@
     "root_dir": "C:\\W4\\Packages\\W4-OS SYSTEM",
     "evidence_dir": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host",
     "report_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\native-dbus-runtime-validation-report.json",
+    "summary_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\native-dbus-runtime-validation-summary.md",
     "artifacts_dir": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\runtime-artifacts",
     "runtime_backend": "native-dbus-extension",
     "bus_name": "org.w4.System1",
     "object_path": "/org/w4/System1",
     "interface": "org.w4.System1.Manager",
-    "started_at": "2026-10-16T11:19:40+00:00",
-    "completed_at": "2026-10-16T11:19:44+00:00",
+    "started_at": "2026-10-16T11:35:29+00:00",
+    "completed_at": "2026-10-16T11:35:35+00:00",
     "ownership_validated": false,
     "coupling_ready": false,
     "startup_acknowledged": false,
@@ -21,6 +22,43 @@
     "next_action": "install-native-dbus-extension",
     "recommended_next_actions": [
         "install-native-dbus-extension"
+    ],
+    "preparation_plan": [
+        {
+            "action": "install-native-dbus-extension",
+            "description": "Instalar y habilitar la extension PECL `dbus` para que PHP pueda pedir el bus name y exportar el objeto D-Bus.",
+            "commands": [
+                "Resolver manualmente la capacidad faltante `php-dbus-runtime-adapter` para el sistema operativo `Windows`."
+            ]
+        },
+        {
+            "action": "install-dbus-daemon",
+            "description": "Asegurar que `dbus-daemon` este instalado y disponible en el host.",
+            "commands": [
+                "Resolver manualmente la capacidad faltante `dbus-daemon` para el sistema operativo `Windows`."
+            ]
+        },
+        {
+            "action": "materialize-system-bus-socket",
+            "description": "Confirmar que el socket del system bus exista y que el servicio D-Bus del sistema este activo.",
+            "commands": [
+                "Resolver manualmente la capacidad faltante `system-bus-socket` para el sistema operativo `Windows`."
+            ]
+        },
+        {
+            "action": "install-dbus-client-tooling",
+            "description": "Instalar al menos una herramienta de cliente D-Bus (`busctl` o `gdbus`) para contrastar el runtime desde el host.",
+            "commands": [
+                "Resolver manualmente la capacidad faltante `dbus-client-tooling` para el sistema operativo `Windows`."
+            ]
+        },
+        {
+            "action": "retry-native-bus-ownership",
+            "description": "Reintentar el ownership real del bus solo cuando el host confirme extension PECL dbus, daemon, socket y tooling del sistema disponibles.",
+            "commands": [
+                "php scripts/run_native_dbus_real_host_validation.php --format text"
+            ]
+        }
     ],
     "environment_overrides": {
         "W4_SYSTEM_API_RUNTIME_BACKEND": "native-dbus-extension",
