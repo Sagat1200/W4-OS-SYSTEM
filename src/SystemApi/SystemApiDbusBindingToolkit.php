@@ -1283,11 +1283,13 @@ function createRuntimeBackend(array $runtimeDiagnosis, ?array $environment = nul
 function createNativeRuntimeServiceDefinition(array $runtimeDiagnosis): array
 {
     $environment = captureEnvironment();
+    $ready = ($runtimeDiagnosis['ready'] ?? false) === true;
     $runtimeBackend = createRuntimeBackend($runtimeDiagnosis);
     $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null)
         ? $runtimeBackend['selected_backend']
         : 'contract-pending';
     $eligible = $selectedBackend === 'native-dbus-extension' && (($runtimeBackend['materialized'] ?? false) === true);
+    $recoveryContext = createNativeRuntimeRecoveryContext($ready, $selectedBackend, $environment);
     $artifactsBasePath = resolveNativeRuntimeArtifactsBasePath($environment);
 
     return [
@@ -1321,12 +1323,13 @@ function createNativeRuntimeServiceDefinition(array $runtimeDiagnosis): array
             ),
         ],
         'runtime_backend' => $runtimeBackend,
+        'native_backend_candidate' => $recoveryContext['native_backend_candidate'],
         'blocking_reason' => $eligible
             ? 'native-runtime-service-not-started'
             : (is_string($runtimeBackend['blocking_reason'] ?? null)
                 ? $runtimeBackend['blocking_reason']
                 : 'native-runtime-service-unavailable'),
-        'next_action' => $eligible ? 'start-native-runtime-service' : 'complete-native-runtime-backend',
+        'next_action' => $eligible ? 'start-native-runtime-service' : $recoveryContext['next_action'],
     ];
 }
 
@@ -1356,7 +1359,11 @@ function createNativeRuntimeServiceStartupReport(array $runtimeDiagnosis): array
             : (is_string($serviceDefinition['blocking_reason'] ?? null)
                 ? $serviceDefinition['blocking_reason']
                 : 'native-runtime-service-unavailable'),
-        'next_action' => $eligible ? 'observe-native-runtime-service-state' : 'complete-native-runtime-backend',
+        'next_action' => $eligible
+            ? 'observe-native-runtime-service-state'
+            : (is_string($serviceDefinition['next_action'] ?? null)
+                ? $serviceDefinition['next_action']
+                : 'complete-native-runtime-backend'),
     ];
 }
 
@@ -1400,7 +1407,9 @@ function createNativeRuntimeServiceObservationReport(array $runtimeDiagnosis): a
                 ? 'native-runtime-service-artifacts-incomplete'
                 : ($ownershipState === 'bus-name-owned' ? null : 'native-runtime-bus-ownership-pending')));
     $nextAction = !$eligible
-        ? 'complete-native-runtime-backend'
+        ? (is_string($serviceDefinition['next_action'] ?? null)
+            ? $serviceDefinition['next_action']
+            : 'complete-native-runtime-backend')
         : ($status === 'native-runtime-service-not-observed'
             ? 'start-native-runtime-service'
             : ($status === 'native-runtime-service-observation-incomplete'
@@ -1446,12 +1455,8 @@ function createNativeRuntimeCouplingReport(array $runtimeDiagnosis): array
     $selectedBackend = is_string($serviceDefinition['selected_backend'] ?? null)
         ? $serviceDefinition['selected_backend']
         : 'contract-pending';
-    $nativeBackendCandidate = createRuntimeBackend([
-        'ready' => $ready,
-    ], array_merge($environment, [
-        'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
-    ]));
-    $nativeBackendCandidateCompatible = (($nativeBackendCandidate['native_runtime_api']['compatible_for_service'] ?? false) === true);
+    $recoveryContext = createNativeRuntimeRecoveryContext($ready, $selectedBackend, $environment);
+    $nativeBackendCandidate = $recoveryContext['native_backend_candidate'];
     $eligible = ($serviceDefinition['eligible'] ?? false) === true;
     $driverExecution = $eligible ? executeNativeRuntimeCouplingDriver($serviceDefinition, $environment) : null;
     $described = is_array($driverExecution);
@@ -1473,11 +1478,7 @@ function createNativeRuntimeCouplingReport(array $runtimeDiagnosis): array
             : 'native-runtime-service-unavailable')
         : ($compatible ? null : ($driverBlockingReason ?? 'native-runtime-coupling-not-described'));
     $nextAction = !$eligible
-        ? ($selectedBackend !== 'native-dbus-extension' && $nativeBackendCandidateCompatible
-            ? 'select-native-dbus-extension-backend'
-            : (is_string($nativeBackendCandidate['native_runtime_api']['diagnostic_next_action'] ?? null)
-                ? $nativeBackendCandidate['native_runtime_api']['diagnostic_next_action']
-                : 'complete-native-runtime-backend'))
+        ? $recoveryContext['next_action']
         : ($compatible ? 'materialize-native-bus-ownership' : 'inspect-native-runtime-coupling');
 
     return [
@@ -1599,7 +1600,9 @@ function createNativeBusOwnershipReport(array $runtimeDiagnosis): array
                             ? 'native-runtime-wait-loop-failed'
                             : ($busOwned ? null : 'native-runtime-bus-ownership-pending'))))));
     $nextAction = !$eligible
-        ? 'complete-native-runtime-backend'
+        ? (is_string($serviceDefinition['next_action'] ?? null)
+            ? $serviceDefinition['next_action']
+            : 'complete-native-runtime-backend')
         : (!$observed
             ? 'observe-native-runtime-service-state'
             : ($busOwned
@@ -1686,6 +1689,42 @@ function resolveNativeDbusExtensionLoaded(array $environment): bool
     }
 
     return extension_loaded('dbus');
+}
+
+/**
+ * @param array<string, string> $environment
+ * @return array{native_backend_candidate: array<string, mixed>, next_action: string}
+ */
+function createNativeRuntimeRecoveryContext(bool $ready, string $selectedBackend, array $environment): array
+{
+    $nativeBackendCandidate = createRuntimeBackend([
+        'ready' => $ready,
+    ], array_merge($environment, [
+        'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+    ]));
+
+    return [
+        'native_backend_candidate' => $nativeBackendCandidate,
+        'next_action' => resolveNativeRuntimeRecoveryNextAction($ready, $selectedBackend, $nativeBackendCandidate),
+    ];
+}
+
+/**
+ * @param array<string, mixed> $nativeBackendCandidate
+ */
+function resolveNativeRuntimeRecoveryNextAction(bool $ready, string $selectedBackend, array $nativeBackendCandidate): string
+{
+    $nativeBackendCandidateCompatible = (($nativeBackendCandidate['native_runtime_api']['compatible_for_service'] ?? false) === true);
+    if ($selectedBackend !== 'native-dbus-extension' && $nativeBackendCandidateCompatible) {
+        return 'select-native-dbus-extension-backend';
+    }
+
+    $diagnosticNextAction = $nativeBackendCandidate['native_runtime_api']['diagnostic_next_action'] ?? null;
+    if (is_string($diagnosticNextAction) && $diagnosticNextAction !== '') {
+        return $diagnosticNextAction;
+    }
+
+    return $ready ? 'complete-native-runtime-backend' : 'materialize-runtime-adapter';
 }
 
 /**
@@ -2460,6 +2499,7 @@ function createActivationPreparation(): array
         : [];
     $ready = ($runtimeDiagnosis['ready'] ?? false) === true;
     $runtimeBackend = createRuntimeBackend($runtimeDiagnosis);
+    $nativeRuntimeService = createNativeRuntimeServiceContext($runtimeDiagnosis, $runtimeBackend);
     $resolvedContract = [
         'bus_name' => W4_SYSTEM_API_BUS_NAME,
         'object_path' => W4_SYSTEM_API_OBJECT_PATH,
@@ -2480,6 +2520,7 @@ function createActivationPreparation(): array
         'activation_bootstrap' => createActivationBootstrap(),
         'runtime_diagnosis' => $runtimeDiagnosis,
         'runtime_backend' => $runtimeBackend,
+        'native_runtime_service' => $nativeRuntimeService,
         'execution_plan' => [
             'launcher' => [
                 'entrypoint' => getenv('W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-launcher',
@@ -2499,7 +2540,7 @@ function createActivationPreparation(): array
             'runtime_backend' => createRuntimeBackendExecutionPlan($runtimeBackend, $resolvedContract),
         ],
         'unresolved_requirements' => $missingCapabilities,
-        'next_action' => resolvePreparationNextAction($ready, $runtimeBackend),
+        'next_action' => resolvePreparationNextAction($ready, $runtimeBackend, $nativeRuntimeService),
     ];
 }
 
@@ -2512,6 +2553,9 @@ function createActivationAttempt(): array
     $preparation = createActivationPreparation();
     $ready = ($preparation['ready'] ?? false) === true;
     $runtimeBackend = is_array($preparation['runtime_backend'] ?? null) ? $preparation['runtime_backend'] : [];
+    $nativeRuntimeService = is_array($preparation['native_runtime_service'] ?? null)
+        ? $preparation['native_runtime_service']
+        : null;
     $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null) ? $runtimeBackend['selected_backend'] : 'contract-pending';
     $nativeBackend = $selectedBackend === 'native-dbus-extension';
     $nativeReady = $nativeBackend && (($runtimeBackend['materialized'] ?? false) === true);
@@ -2533,19 +2577,18 @@ function createActivationAttempt(): array
             : ($nativeReady
                 ? 'native-runtime-service-not-launched'
                 : ($nativeBackend
-                    ? (is_string($runtimeBackend['blocking_reason'] ?? null) ? $runtimeBackend['blocking_reason'] : 'dbus-extension-api-incomplete')
+                    ? (is_string($nativeRuntimeService['blocking_reason'] ?? null)
+                        ? $nativeRuntimeService['blocking_reason']
+                        : (is_string($runtimeBackend['blocking_reason'] ?? null) ? $runtimeBackend['blocking_reason'] : 'dbus-extension-api-incomplete'))
                     : 'runtime-adapter-not-materialized')),
         'activation_preparation' => $preparation,
         'runtime_diagnosis' => $runtimeDiagnosis,
         'runtime_backend' => $runtimeBackend,
+        'native_runtime_service' => $nativeRuntimeService,
         'missing_capabilities' => is_array($runtimeDiagnosis['missing_capabilities'] ?? null)
             ? $runtimeDiagnosis['missing_capabilities']
             : [],
-        'next_action' => !$ready
-            ? 'materialize-runtime-adapter'
-            : ($nativeReady
-                ? 'execute-native-runtime-service'
-                : ($nativeBackend ? 'complete-native-runtime-backend' : 'execute-runtime-adapter')),
+        'next_action' => resolveAttemptNextAction($ready, $nativeReady, $nativeBackend, $nativeRuntimeService),
     ];
 }
 
@@ -2752,7 +2795,7 @@ function createRuntimeBackendExecutionPlan(array $runtimeBackend, array $resolve
 /**
  * @param array<string, mixed> $runtimeBackend
  */
-function resolvePreparationNextAction(bool $ready, array $runtimeBackend): string
+function resolvePreparationNextAction(bool $ready, array $runtimeBackend, ?array $nativeRuntimeService = null): string
 {
     if (!$ready) {
         return 'materialize-runtime-adapter';
@@ -2768,7 +2811,81 @@ function resolvePreparationNextAction(bool $ready, array $runtimeBackend): strin
 
     return (($runtimeBackend['materialized'] ?? false) === true)
         ? 'launch-native-runtime-service'
-        : 'complete-native-runtime-backend';
+        : resolveNativeRuntimeServiceNextAction($nativeRuntimeService, 'complete-native-runtime-backend');
+}
+
+/**
+ * @param array<string, mixed>|null $nativeRuntimeService
+ */
+function resolveAttemptNextAction(
+    bool $ready,
+    bool $nativeReady,
+    bool $nativeBackend,
+    ?array $nativeRuntimeService = null
+): string {
+    if (!$ready) {
+        return 'materialize-runtime-adapter';
+    }
+
+    if ($nativeReady) {
+        return 'execute-native-runtime-service';
+    }
+
+    if ($nativeBackend) {
+        return resolveNativeRuntimeServiceNextAction($nativeRuntimeService, 'complete-native-runtime-backend');
+    }
+
+    return 'execute-runtime-adapter';
+}
+
+/**
+ * @param array<string, mixed> $runtimeDiagnosis
+ * @param array<string, mixed> $runtimeBackend
+ * @return array<string, mixed>|null
+ */
+function createNativeRuntimeServiceContext(array $runtimeDiagnosis, array $runtimeBackend): ?array
+{
+    $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null)
+        ? $runtimeBackend['selected_backend']
+        : 'contract-pending';
+    if ($selectedBackend !== 'native-dbus-extension') {
+        return null;
+    }
+
+    $ready = ($runtimeDiagnosis['ready'] ?? false) === true;
+    $materialized = (($runtimeBackend['materialized'] ?? false) === true);
+    $diagnosticNextAction = $runtimeBackend['native_runtime_api']['diagnostic_next_action'] ?? null;
+    $blockingReason = $materialized
+        ? 'native-runtime-service-not-started'
+        : (is_string($runtimeBackend['blocking_reason'] ?? null)
+            ? $runtimeBackend['blocking_reason']
+            : ($ready ? 'native-runtime-service-unavailable' : 'missing-runtime-capabilities'));
+    $nextAction = $materialized
+        ? 'start-native-runtime-service'
+        : (is_string($diagnosticNextAction) && $diagnosticNextAction !== ''
+            ? $diagnosticNextAction
+            : ($ready ? 'complete-native-runtime-backend' : 'materialize-runtime-adapter'));
+
+    return [
+        'api_version' => '1.0',
+        'kind' => 'system-api-dbus-native-runtime-service',
+        'status' => $materialized ? 'native-runtime-service-ready-to-start' : 'native-runtime-service-blocked',
+        'eligible' => $materialized,
+        'selected_backend' => 'native-dbus-extension',
+        'runtime_backend' => $runtimeBackend,
+        'blocking_reason' => $blockingReason,
+        'next_action' => $nextAction,
+    ];
+}
+
+/**
+ * @param array<string, mixed>|null $nativeRuntimeService
+ */
+function resolveNativeRuntimeServiceNextAction(?array $nativeRuntimeService, string $default): string
+{
+    $nextAction = $nativeRuntimeService['next_action'] ?? null;
+
+    return is_string($nextAction) && $nextAction !== '' ? $nextAction : $default;
 }
 
 /**
@@ -3800,6 +3917,7 @@ function createActivationPreparation(): array
         : [];
     $ready = ($runtimeDiagnosis['ready'] ?? false) === true;
     $runtimeBackend = createRuntimeBackend($runtimeDiagnosis);
+    $nativeRuntimeService = createNativeRuntimeServiceContext($runtimeDiagnosis, $runtimeBackend);
     $resolvedContract = [
         'bus_name' => W4_SYSTEM_API_BUS_NAME,
         'object_path' => W4_SYSTEM_API_OBJECT_PATH,
@@ -3820,6 +3938,7 @@ function createActivationPreparation(): array
         'activation_bootstrap' => createActivationBootstrap(),
         'runtime_diagnosis' => $runtimeDiagnosis,
         'runtime_backend' => $runtimeBackend,
+        'native_runtime_service' => $nativeRuntimeService,
         'execution_plan' => [
             'launcher' => [
                 'entrypoint' => getenv('W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-launcher',
@@ -3839,7 +3958,7 @@ function createActivationPreparation(): array
             'runtime_backend' => createRuntimeBackendExecutionPlan($runtimeBackend, $resolvedContract),
         ],
         'unresolved_requirements' => $missingCapabilities,
-        'next_action' => resolvePreparationNextAction($ready, $runtimeBackend),
+        'next_action' => resolvePreparationNextAction($ready, $runtimeBackend, $nativeRuntimeService),
     ];
 }
 
@@ -3849,6 +3968,9 @@ function createActivationAttempt(): array
     $preparation = createActivationPreparation();
     $ready = ($preparation['ready'] ?? false) === true;
     $runtimeBackend = is_array($preparation['runtime_backend'] ?? null) ? $preparation['runtime_backend'] : [];
+    $nativeRuntimeService = is_array($preparation['native_runtime_service'] ?? null)
+        ? $preparation['native_runtime_service']
+        : null;
     $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null) ? $runtimeBackend['selected_backend'] : 'contract-pending';
     $nativeBackend = $selectedBackend === 'native-dbus-extension';
     $nativeReady = $nativeBackend && (($runtimeBackend['materialized'] ?? false) === true);
@@ -3870,19 +3992,18 @@ function createActivationAttempt(): array
             : ($nativeReady
                 ? 'native-runtime-service-not-launched'
                 : ($nativeBackend
-                    ? (is_string($runtimeBackend['blocking_reason'] ?? null) ? $runtimeBackend['blocking_reason'] : 'dbus-extension-api-incomplete')
+                    ? (is_string($nativeRuntimeService['blocking_reason'] ?? null)
+                        ? $nativeRuntimeService['blocking_reason']
+                        : (is_string($runtimeBackend['blocking_reason'] ?? null) ? $runtimeBackend['blocking_reason'] : 'dbus-extension-api-incomplete'))
                     : 'runtime-adapter-not-materialized')),
         'activation_preparation' => $preparation,
         'runtime_diagnosis' => $runtimeDiagnosis,
         'runtime_backend' => $runtimeBackend,
+        'native_runtime_service' => $nativeRuntimeService,
         'missing_capabilities' => is_array($runtimeDiagnosis['missing_capabilities'] ?? null)
             ? $runtimeDiagnosis['missing_capabilities']
             : [],
-        'next_action' => !$ready
-            ? 'materialize-runtime-adapter'
-            : ($nativeReady
-                ? 'execute-native-runtime-service'
-                : ($nativeBackend ? 'complete-native-runtime-backend' : 'execute-runtime-adapter')),
+        'next_action' => resolveAttemptNextAction($ready, $nativeReady, $nativeBackend, $nativeRuntimeService),
     ];
 }
 
@@ -4190,7 +4311,7 @@ function createRuntimeBackendExecutionPlan(array $runtimeBackend, array $resolve
 /**
  * @param array<string, mixed> $runtimeBackend
  */
-function resolvePreparationNextAction(bool $ready, array $runtimeBackend): string
+function resolvePreparationNextAction(bool $ready, array $runtimeBackend, ?array $nativeRuntimeService = null): string
 {
     if (!$ready) {
         return 'materialize-runtime-adapter';
@@ -4206,7 +4327,81 @@ function resolvePreparationNextAction(bool $ready, array $runtimeBackend): strin
 
     return (($runtimeBackend['materialized'] ?? false) === true)
         ? 'launch-native-runtime-service'
-        : 'complete-native-runtime-backend';
+        : resolveNativeRuntimeServiceNextAction($nativeRuntimeService, 'complete-native-runtime-backend');
+}
+
+/**
+ * @param array<string, mixed>|null $nativeRuntimeService
+ */
+function resolveAttemptNextAction(
+    bool $ready,
+    bool $nativeReady,
+    bool $nativeBackend,
+    ?array $nativeRuntimeService = null
+): string {
+    if (!$ready) {
+        return 'materialize-runtime-adapter';
+    }
+
+    if ($nativeReady) {
+        return 'execute-native-runtime-service';
+    }
+
+    if ($nativeBackend) {
+        return resolveNativeRuntimeServiceNextAction($nativeRuntimeService, 'complete-native-runtime-backend');
+    }
+
+    return 'execute-runtime-adapter';
+}
+
+/**
+ * @param array<string, mixed> $runtimeDiagnosis
+ * @param array<string, mixed> $runtimeBackend
+ * @return array<string, mixed>|null
+ */
+function createNativeRuntimeServiceContext(array $runtimeDiagnosis, array $runtimeBackend): ?array
+{
+    $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null)
+        ? $runtimeBackend['selected_backend']
+        : 'contract-pending';
+    if ($selectedBackend !== 'native-dbus-extension') {
+        return null;
+    }
+
+    $ready = ($runtimeDiagnosis['ready'] ?? false) === true;
+    $materialized = (($runtimeBackend['materialized'] ?? false) === true);
+    $diagnosticNextAction = $runtimeBackend['native_runtime_api']['diagnostic_next_action'] ?? null;
+    $blockingReason = $materialized
+        ? 'native-runtime-service-not-started'
+        : (is_string($runtimeBackend['blocking_reason'] ?? null)
+            ? $runtimeBackend['blocking_reason']
+            : ($ready ? 'native-runtime-service-unavailable' : 'missing-runtime-capabilities'));
+    $nextAction = $materialized
+        ? 'start-native-runtime-service'
+        : (is_string($diagnosticNextAction) && $diagnosticNextAction !== ''
+            ? $diagnosticNextAction
+            : ($ready ? 'complete-native-runtime-backend' : 'materialize-runtime-adapter'));
+
+    return [
+        'api_version' => '1.0',
+        'kind' => 'system-api-dbus-native-runtime-service',
+        'status' => $materialized ? 'native-runtime-service-ready-to-start' : 'native-runtime-service-blocked',
+        'eligible' => $materialized,
+        'selected_backend' => 'native-dbus-extension',
+        'runtime_backend' => $runtimeBackend,
+        'blocking_reason' => $blockingReason,
+        'next_action' => $nextAction,
+    ];
+}
+
+/**
+ * @param array<string, mixed>|null $nativeRuntimeService
+ */
+function resolveNativeRuntimeServiceNextAction(?array $nativeRuntimeService, string $default): string
+{
+    $nextAction = $nativeRuntimeService['next_action'] ?? null;
+
+    return is_string($nextAction) && $nextAction !== '' ? $nextAction : $default;
 }
 
 /**

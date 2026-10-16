@@ -77,6 +77,7 @@ final class SystemApiDbusRuntimeActivationToolkit
         $missingCapabilities = $this->normalizeMissingCapabilities($runtimeDiagnosis);
         $ready = ($runtimeDiagnosis['ready'] ?? false) === true;
         $runtimeBackend = $this->runtimeBackend->createReport($runtimeDiagnosis, $env);
+        $nativeRuntimeService = $this->createNativeRuntimeServiceContext($runtimeDiagnosis, $runtimeBackend, $env);
 
         $resolvedContract = [
             'bus_name' => $this->resolveStringValue($env, 'W4_SYSTEM_API_BUS_NAME', 'org.w4.System1'),
@@ -115,6 +116,7 @@ final class SystemApiDbusRuntimeActivationToolkit
             'activation_bootstrap' => $this->createActivationBootstrap(),
             'runtime_diagnosis' => $runtimeDiagnosis,
             'runtime_backend' => $runtimeBackend,
+            'native_runtime_service' => $nativeRuntimeService,
             'execution_plan' => [
                 'launcher' => [
                     'entrypoint' => $resolvedContract['runtime_launcher_entry'],
@@ -134,7 +136,7 @@ final class SystemApiDbusRuntimeActivationToolkit
                 'runtime_backend' => $runtimeBackendPlan,
             ],
             'unresolved_requirements' => $missingCapabilities,
-            'next_action' => $this->resolvePreparationNextAction($ready, $runtimeBackend),
+            'next_action' => $this->resolvePreparationNextAction($ready, $runtimeBackend, $nativeRuntimeService),
         ];
     }
 
@@ -154,6 +156,9 @@ final class SystemApiDbusRuntimeActivationToolkit
         $ready = ($preparation['ready'] ?? false) === true;
         /** @var array<string, mixed> $runtimeBackend */
         $runtimeBackend = is_array($preparation['runtime_backend'] ?? null) ? $preparation['runtime_backend'] : [];
+        $nativeRuntimeService = is_array($preparation['native_runtime_service'] ?? null)
+            ? $preparation['native_runtime_service']
+            : null;
         $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null) ? $runtimeBackend['selected_backend'] : 'contract-pending';
         $nativeBackend = $selectedBackend === 'native-dbus-extension';
         $nativeReady = $nativeBackend && (($runtimeBackend['materialized'] ?? false) === true);
@@ -166,7 +171,9 @@ final class SystemApiDbusRuntimeActivationToolkit
             : ($nativeReady
                 ? 'native-runtime-service-not-launched'
                 : ($nativeBackend
-                    ? (is_string($runtimeBackend['blocking_reason'] ?? null) ? $runtimeBackend['blocking_reason'] : 'dbus-extension-api-incomplete')
+                    ? (is_string($nativeRuntimeService['blocking_reason'] ?? null)
+                        ? $nativeRuntimeService['blocking_reason']
+                        : (is_string($runtimeBackend['blocking_reason'] ?? null) ? $runtimeBackend['blocking_reason'] : 'dbus-extension-api-incomplete'))
                     : 'runtime-adapter-not-materialized'));
 
         return [
@@ -183,12 +190,14 @@ final class SystemApiDbusRuntimeActivationToolkit
             'activation_preparation' => $preparation,
             'runtime_diagnosis' => $runtimeDiagnosis,
             'runtime_backend' => $runtimeBackend,
+            'native_runtime_service' => $nativeRuntimeService,
             'missing_capabilities' => $this->normalizeMissingCapabilities($runtimeDiagnosis),
-            'next_action' => !$ready
-                ? 'materialize-runtime-adapter'
-                : ($nativeReady
-                    ? 'execute-native-runtime-service'
-                    : ($nativeBackend ? 'complete-native-runtime-backend' : 'execute-runtime-adapter')),
+            'next_action' => $this->resolveAttemptNextAction(
+                $ready,
+                $nativeReady,
+                $nativeBackend,
+                $nativeRuntimeService
+            ),
         ];
     }
 
@@ -418,7 +427,7 @@ final class SystemApiDbusRuntimeActivationToolkit
     /**
      * @param array<string, mixed> $runtimeBackend
      */
-    private function resolvePreparationNextAction(bool $ready, array $runtimeBackend): string
+    private function resolvePreparationNextAction(bool $ready, array $runtimeBackend, ?array $nativeRuntimeService = null): string
     {
         if (!$ready) {
             return 'materialize-runtime-adapter';
@@ -434,6 +443,61 @@ final class SystemApiDbusRuntimeActivationToolkit
 
         return (($runtimeBackend['materialized'] ?? false) === true)
             ? 'launch-native-runtime-service'
-            : 'complete-native-runtime-backend';
+            : $this->resolveNativeRuntimeServiceNextAction($nativeRuntimeService, 'complete-native-runtime-backend');
+    }
+
+    /**
+     * @param array<string, mixed>|null $nativeRuntimeService
+     */
+    private function resolveAttemptNextAction(
+        bool $ready,
+        bool $nativeReady,
+        bool $nativeBackend,
+        ?array $nativeRuntimeService = null
+    ): string {
+        if (!$ready) {
+            return 'materialize-runtime-adapter';
+        }
+
+        if ($nativeReady) {
+            return 'execute-native-runtime-service';
+        }
+
+        if ($nativeBackend) {
+            return $this->resolveNativeRuntimeServiceNextAction($nativeRuntimeService, 'complete-native-runtime-backend');
+        }
+
+        return 'execute-runtime-adapter';
+    }
+
+    /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, mixed> $runtimeBackend
+     * @param array<string, string> $environment
+     * @return array<string, mixed>|null
+     */
+    private function createNativeRuntimeServiceContext(
+        array $runtimeDiagnosis,
+        array $runtimeBackend,
+        array $environment
+    ): ?array {
+        $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null)
+            ? $runtimeBackend['selected_backend']
+            : 'contract-pending';
+        if ($selectedBackend !== 'native-dbus-extension') {
+            return null;
+        }
+
+        return $this->runtimeBackend->createNativeRuntimeServiceDefinition($runtimeDiagnosis, $environment);
+    }
+
+    /**
+     * @param array<string, mixed>|null $nativeRuntimeService
+     */
+    private function resolveNativeRuntimeServiceNextAction(?array $nativeRuntimeService, string $default): string
+    {
+        $nextAction = $nativeRuntimeService['next_action'] ?? null;
+
+        return is_string($nextAction) && $nextAction !== '' ? $nextAction : $default;
     }
 }

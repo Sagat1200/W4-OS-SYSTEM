@@ -125,6 +125,55 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
         self::assertSame('start-native-runtime-service', $report['native_backend_candidate']['native_runtime_api']['diagnostic_next_action']);
     }
 
+    public function testCreateNativeRuntimeServiceDefinitionPublishesRecoveryPlanWhenBackendIsNotSelected(): void
+    {
+        $toolkit = new SystemApiDbusRuntimeBackendToolkit();
+
+        $report = $toolkit->createNativeRuntimeServiceDefinition(
+            ['ready' => true],
+            [
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+            ]
+        );
+
+        self::assertSame('system-api-dbus-native-runtime-service', $report['kind']);
+        self::assertSame('native-runtime-service-blocked', $report['status']);
+        self::assertFalse($report['eligible']);
+        self::assertSame('runtime-backend-not-configured', $report['blocking_reason']);
+        self::assertSame('select-native-dbus-extension-backend', $report['next_action']);
+        self::assertSame('native-dbus-extension', $report['native_backend_candidate']['selected_backend']);
+        self::assertTrue($report['native_backend_candidate']['native_runtime_api']['compatible_for_service']);
+    }
+
+    public function testCreateNativeRuntimeServiceStartupReportUsesActionableRecoveryPlanWhenExtensionIsMissing(): void
+    {
+        $toolkit = new SystemApiDbusRuntimeBackendToolkit();
+
+        $report = $toolkit->createNativeRuntimeServiceStartupReport(
+            ['ready' => true],
+            [
+                'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '0',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '0',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '0',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '0',
+            ]
+        );
+
+        self::assertSame('system-api-dbus-native-runtime-startup', $report['kind']);
+        self::assertSame('native-runtime-service-blocked', $report['status']);
+        self::assertFalse($report['startup_acknowledged']);
+        self::assertSame(3, $report['exit_code']);
+        self::assertSame('dbus-extension-service-backend-unavailable', $report['blocking_reason']);
+        self::assertSame('install-native-dbus-extension', $report['next_action']);
+        self::assertSame('install-native-dbus-extension', $report['service_definition']['next_action']);
+        self::assertFalse($report['service_definition']['native_backend_candidate']['native_runtime_api']['extension_loaded']);
+    }
+
     public function testCreateNativeRuntimeServiceStartupReportAcknowledgesEligibleNativeBackend(): void
     {
         $toolkit = new SystemApiDbusRuntimeBackendToolkit();
@@ -245,6 +294,30 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
             @unlink($pidFilePath);
             @rmdir($baseDirectory);
         }
+    }
+
+    public function testCreateNativeBusOwnershipReportUsesServiceRecoveryPlanWhenBackendIsBlocked(): void
+    {
+        $toolkit = new SystemApiDbusRuntimeBackendToolkit();
+
+        $report = $toolkit->createNativeBusOwnershipReport(
+            ['ready' => true],
+            [
+                'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '0',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '0',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '0',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '0',
+            ]
+        );
+
+        self::assertSame('system-api-dbus-native-runtime-ownership', $report['kind']);
+        self::assertSame('native-runtime-service-blocked', $report['status']);
+        self::assertFalse($report['attempted']);
+        self::assertSame(3, $report['exit_code']);
+        self::assertSame('dbus-extension-service-backend-unavailable', $report['blocking_reason']);
+        self::assertSame('install-native-dbus-extension', $report['next_action']);
+        self::assertSame('install-native-dbus-extension', $report['service_definition']['next_action']);
     }
 
     public function testCreateNativeBusOwnershipReportUsesConfiguredDriverWhenAvailable(): void

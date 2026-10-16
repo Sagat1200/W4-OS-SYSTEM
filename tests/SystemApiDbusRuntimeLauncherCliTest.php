@@ -88,6 +88,32 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertSame('long-running-dbus-service', $payload['execution_plan']['runtime_backend']['activation_mode']);
     }
 
+    public function testDescribeActivationPreparationPublishesActionableNativeRecoveryWhenApiIsIncomplete(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'DescribeActivationPreparation',
+        ], '', array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '0',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+            ]
+        ));
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('system-api-dbus-runtime-activation-context', $payload['kind']);
+        self::assertSame('inspect-native-dbus-extension-api', $payload['next_action']);
+        self::assertSame('inspect-native-dbus-extension-api', $payload['native_runtime_service']['next_action']);
+        self::assertSame('dbus-extension-api-incomplete', $payload['native_runtime_service']['blocking_reason']);
+    }
+
     public function testAttemptActivationReturnsStructuredBlockedAttempt(): void
     {
         $result = $this->runPhpScript([
@@ -104,6 +130,32 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertSame('blocked-missing-capabilities', $payload['status']);
         self::assertSame('missing-runtime-capabilities', $payload['blocking_reason']);
         self::assertSame('materialize-runtime-adapter', $payload['next_action']);
+    }
+
+    public function testAttemptActivationPublishesActionableNativeRecoveryWhenApiIsIncomplete(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'AttemptActivation',
+        ], '', array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '0',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+            ]
+        ));
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('blocked-native-runtime-backend', $payload['status']);
+        self::assertSame('dbus-extension-api-incomplete', $payload['blocking_reason']);
+        self::assertSame('inspect-native-dbus-extension-api', $payload['next_action']);
+        self::assertSame('inspect-native-dbus-extension-api', $payload['native_runtime_service']['next_action']);
     }
 
     public function testExecuteActivationReturnsStructuredBlockedExecution(): void
@@ -123,6 +175,32 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertSame('missing-runtime-capabilities', $payload['blocking_reason']);
         self::assertSame('materialize-runtime-adapter', $payload['next_action']);
         self::assertSame('system-api-dbus-runtime-activation-attempt', $payload['activation_attempt']['kind']);
+    }
+
+    public function testExecuteActivationPublishesActionableNativeRecoveryWhenApiIsIncomplete(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'ExecuteActivation',
+        ], '', array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '0',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+            ]
+        ));
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('execution-blocked', $payload['status']);
+        self::assertSame('dbus-extension-api-incomplete', $payload['blocking_reason']);
+        self::assertSame('inspect-native-dbus-extension-api', $payload['next_action']);
+        self::assertSame('inspect-native-dbus-extension-api', $payload['activation_attempt']['next_action']);
     }
 
     public function testExecuteActivationRunsTargetCommandWhenRuntimeIsReady(): void
