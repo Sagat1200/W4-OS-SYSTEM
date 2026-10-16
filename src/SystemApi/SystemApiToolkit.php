@@ -16,11 +16,13 @@ final class SystemApiToolkit
 
     private W4ctlApplication $w4ctl;
     private SystemApiDbusRuntimeProbeToolkit $dbusRuntimeProbe;
+    private SystemApiDbusRuntimeActivationToolkit $dbusRuntimeActivation;
 
     public function __construct(string $rootDir)
     {
         $this->w4ctl = new W4ctlApplication($rootDir);
         $this->dbusRuntimeProbe = new SystemApiDbusRuntimeProbeToolkit();
+        $this->dbusRuntimeActivation = new SystemApiDbusRuntimeActivationToolkit();
     }
 
     /**
@@ -50,6 +52,8 @@ final class SystemApiToolkit
         $resolvedRequestId = $requestId !== null && trim($requestId) !== ''
             ? trim($requestId)
             : 'system-api-capabilities';
+        $runtimeDiagnosis = $this->dbusRuntimeProbe->createReport();
+        $activationPreparation = $this->dbusRuntimeActivation->createActivationPreparation($runtimeDiagnosis);
 
         $payload = [
             'kind' => 'system-api-capabilities',
@@ -88,6 +92,10 @@ final class SystemApiToolkit
                     ],
                     'adapter_status' => 'pending-runtime-adapter',
                     'activation_command' => 'serve-dbus',
+                    'activation_next_action' => $activationPreparation['next_action'] ?? 'materialize-runtime-adapter',
+                    'activation_recovery_plan' => is_array($activationPreparation['recovery_plan'] ?? null)
+                        ? $activationPreparation['recovery_plan']
+                        : ['materialize-runtime-adapter'],
                 ],
                 'local_runtime_adapter' => [
                     'script' => 'scripts/system_api_dbus_runtime_adapter.php',
@@ -240,13 +248,16 @@ final class SystemApiToolkit
         }
 
         if ($method === 'system.dbus-runtime') {
+            $runtimeDiagnosis = $this->dbusRuntimeProbe->createReport();
+            $activationPreparation = $this->dbusRuntimeActivation->createActivationPreparation($runtimeDiagnosis);
+
             return $this->createSuccessResponse(
                 requestId: $requestId,
                 method: 'system.dbus-runtime',
                 resourceKind: 'system-api-dbus-runtime-diagnosis',
                 resourceId: 'org.w4.System1',
-                data: $this->dbusRuntimeProbe->createReport(),
-                provider: 'local-system-api-runtime-probe'
+                data: $this->createRuntimeContractPayload($runtimeDiagnosis, $activationPreparation),
+                provider: 'local-system-api-runtime-contract'
             );
         }
 
@@ -474,5 +485,28 @@ final class SystemApiToolkit
         }
 
         return 'VALIDATION_ERROR';
+    }
+
+    /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, mixed> $activationPreparation
+     * @return array<string, mixed>
+     */
+    private function createRuntimeContractPayload(array $runtimeDiagnosis, array $activationPreparation): array
+    {
+        $payload = $runtimeDiagnosis;
+        $payload['next_action'] = $activationPreparation['next_action'] ?? 'materialize-runtime-adapter';
+        $payload['recovery_plan'] = is_array($activationPreparation['recovery_plan'] ?? null)
+            ? $activationPreparation['recovery_plan']
+            : ['materialize-runtime-adapter'];
+        $payload['runtime_backend'] = is_array($activationPreparation['runtime_backend'] ?? null)
+            ? $activationPreparation['runtime_backend']
+            : [];
+        $payload['native_runtime_service'] = is_array($activationPreparation['native_runtime_service'] ?? null)
+            ? $activationPreparation['native_runtime_service']
+            : null;
+        $payload['activation_preparation'] = $activationPreparation;
+
+        return $payload;
     }
 }

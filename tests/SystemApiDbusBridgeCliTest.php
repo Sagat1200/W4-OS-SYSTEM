@@ -69,7 +69,10 @@ final class SystemApiDbusBridgeCliTest extends TestCase
         self::assertNull($payload['error']);
         self::assertSame('system.dbus-runtime', $payload['result']['method']);
         self::assertSame('org.w4.System1', $payload['result']['resource']['id']);
-        self::assertSame('local-system-api-runtime-probe', $payload['result']['resource']['provider']);
+        self::assertSame('local-system-api-runtime-contract', $payload['result']['resource']['provider']);
+        self::assertSame('materialize-runtime-adapter', $payload['result']['data']['next_action']);
+        self::assertSame(['materialize-runtime-adapter'], $payload['result']['data']['recovery_plan']);
+        self::assertSame('system-api-dbus-runtime-activation-context', $payload['result']['data']['activation_preparation']['kind']);
     }
 
     public function testServeStdioBridgeProcessesDbusStyleMethods(): void

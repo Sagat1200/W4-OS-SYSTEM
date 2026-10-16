@@ -29,6 +29,8 @@ final class SystemApiCliTest extends TestCase
         self::assertContains('Call', $payload['result']['data']['binding']['local_dbus_bridge']['commands']);
         self::assertSame('pending-runtime-adapter', $payload['result']['data']['binding']['local_dbus_bridge']['adapter_status']);
         self::assertSame('serve-dbus', $payload['result']['data']['binding']['local_dbus_bridge']['activation_command']);
+        self::assertSame('materialize-runtime-adapter', $payload['result']['data']['binding']['local_dbus_bridge']['activation_next_action']);
+        self::assertSame(['materialize-runtime-adapter'], $payload['result']['data']['binding']['local_dbus_bridge']['activation_recovery_plan']);
         self::assertSame('scripts/system_api_dbus_runtime_adapter.php', $payload['result']['data']['binding']['local_runtime_adapter']['script']);
         self::assertSame('spec-ready', $payload['result']['data']['binding']['local_runtime_adapter']['status']);
         self::assertContains('DescribeSpecification', $payload['result']['data']['binding']['local_runtime_adapter']['commands']);
@@ -75,9 +77,12 @@ final class SystemApiCliTest extends TestCase
         self::assertSame('system.dbus-runtime', $payload['result']['method']);
         self::assertSame('system-api-dbus-runtime-diagnosis', $payload['result']['resource']['kind']);
         self::assertSame('org.w4.System1', $payload['result']['resource']['id']);
-        self::assertSame('local-system-api-runtime-probe', $payload['result']['resource']['provider']);
+        self::assertSame('local-system-api-runtime-contract', $payload['result']['resource']['provider']);
         self::assertSame('system-api-dbus-runtime-diagnosis', $payload['result']['data']['kind']);
         self::assertArrayHasKey('missing_capabilities', $payload['result']['data']);
+        self::assertSame('materialize-runtime-adapter', $payload['result']['data']['next_action']);
+        self::assertSame(['materialize-runtime-adapter'], $payload['result']['data']['recovery_plan']);
+        self::assertSame('system-api-dbus-runtime-activation-context', $payload['result']['data']['activation_preparation']['kind']);
     }
 
     public function testProfilesGetReusesW4ctlContract(): void
