@@ -40,6 +40,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertFalse($payload['ready']);
         self::assertSame('scripts/system_api_dbus_runtime_adapter.php', $payload['resolved_contract']['runtime_adapter_entry']);
         self::assertSame('materialize-runtime-adapter', $payload['next_action']);
+        self::assertSame(['materialize-runtime-adapter'], $payload['recovery_plan']);
     }
 
     public function testAttemptActivationReturnsStructuredBlockedAttempt(): void
@@ -58,6 +59,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertSame('blocked-missing-capabilities', $payload['status']);
         self::assertSame('missing-runtime-capabilities', $payload['blocking_reason']);
         self::assertSame('materialize-runtime-adapter', $payload['next_action']);
+        self::assertSame(['materialize-runtime-adapter'], $payload['recovery_plan']);
     }
 
     public function testExecuteActivationReturnsStructuredBlockedExecution(): void
@@ -76,6 +78,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertSame('execution-blocked', $payload['status']);
         self::assertSame('missing-runtime-capabilities', $payload['blocking_reason']);
         self::assertSame('materialize-runtime-adapter', $payload['next_action']);
+        self::assertSame(['materialize-runtime-adapter'], $payload['recovery_plan']);
         self::assertSame('system-api-dbus-runtime-activation-attempt', $payload['activation_attempt']['kind']);
     }
 
@@ -135,6 +138,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertSame('inspect-native-dbus-extension-api', $payload['next_action']);
         self::assertSame('inspect-native-dbus-extension-api', $payload['native_runtime_service']['next_action']);
         self::assertSame('dbus-extension-api-incomplete', $payload['native_runtime_service']['blocking_reason']);
+        self::assertSame(['inspect-native-dbus-extension-api'], $payload['recovery_plan']);
     }
 
     public function testAttemptActivationPublishesActionableNativeRecoveryWhenApiIsIncomplete(): void
@@ -162,6 +166,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertSame('dbus-extension-api-incomplete', $payload['blocking_reason']);
         self::assertSame('inspect-native-dbus-extension-api', $payload['next_action']);
         self::assertSame('inspect-native-dbus-extension-api', $payload['native_runtime_service']['next_action']);
+        self::assertSame(['inspect-native-dbus-extension-api'], $payload['recovery_plan']);
     }
 
     public function testExecuteActivationPublishesActionableNativeRecoveryWhenApiIsIncomplete(): void
@@ -189,6 +194,32 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertSame('dbus-extension-api-incomplete', $payload['blocking_reason']);
         self::assertSame('inspect-native-dbus-extension-api', $payload['next_action']);
         self::assertSame('inspect-native-dbus-extension-api', $payload['activation_attempt']['next_action']);
+        self::assertSame(['inspect-native-dbus-extension-api'], $payload['recovery_plan']);
+    }
+
+    public function testAttemptActivationPublishesTwoStepRecoveryPlanWhenRuntimeIsMissingAndNativeApiIsIncomplete(): void
+    {
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'AttemptActivation',
+        ], '', [
+            'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+            'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '0',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('blocked-missing-capabilities', $payload['status']);
+        self::assertSame('materialize-runtime-adapter', $payload['next_action']);
+        self::assertSame(
+            ['materialize-runtime-adapter', 'inspect-native-dbus-extension-api'],
+            $payload['recovery_plan']
+        );
     }
 
     public function testDescribeNativeRuntimeCouplingPublishesNativeBackendCandidateWhenBackendIsNotSelected(): void

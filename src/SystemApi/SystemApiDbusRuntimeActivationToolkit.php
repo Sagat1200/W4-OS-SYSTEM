@@ -105,6 +105,7 @@ final class SystemApiDbusRuntimeActivationToolkit
             ),
         ];
         $runtimeBackendPlan = $this->createRuntimeBackendExecutionPlan($runtimeBackend, $resolvedContract);
+        $nextAction = $this->resolvePreparationNextAction($ready, $runtimeBackend, $nativeRuntimeService);
 
         return [
             'api_version' => '1.0',
@@ -136,7 +137,8 @@ final class SystemApiDbusRuntimeActivationToolkit
                 'runtime_backend' => $runtimeBackendPlan,
             ],
             'unresolved_requirements' => $missingCapabilities,
-            'next_action' => $this->resolvePreparationNextAction($ready, $runtimeBackend, $nativeRuntimeService),
+            'next_action' => $nextAction,
+            'recovery_plan' => $this->createRecoveryPlan($nextAction, $nativeRuntimeService),
         ];
     }
 
@@ -175,6 +177,12 @@ final class SystemApiDbusRuntimeActivationToolkit
                         ? $nativeRuntimeService['blocking_reason']
                         : (is_string($runtimeBackend['blocking_reason'] ?? null) ? $runtimeBackend['blocking_reason'] : 'dbus-extension-api-incomplete'))
                     : 'runtime-adapter-not-materialized'));
+        $nextAction = $this->resolveAttemptNextAction(
+            $ready,
+            $nativeReady,
+            $nativeBackend,
+            $nativeRuntimeService
+        );
 
         return [
             'api_version' => '1.0',
@@ -192,12 +200,8 @@ final class SystemApiDbusRuntimeActivationToolkit
             'runtime_backend' => $runtimeBackend,
             'native_runtime_service' => $nativeRuntimeService,
             'missing_capabilities' => $this->normalizeMissingCapabilities($runtimeDiagnosis),
-            'next_action' => $this->resolveAttemptNextAction(
-                $ready,
-                $nativeReady,
-                $nativeBackend,
-                $nativeRuntimeService
-            ),
+            'next_action' => $nextAction,
+            'recovery_plan' => $this->createRecoveryPlan($nextAction, $nativeRuntimeService),
         ];
     }
 
@@ -227,6 +231,7 @@ final class SystemApiDbusRuntimeActivationToolkit
         $readyForAdapter = ($attempt['status'] ?? null) === 'ready-to-attempt-runtime-adapter';
         $readyForNative = ($attempt['status'] ?? null) === 'ready-to-launch-native-runtime';
         $exitCode = 3;
+        $nextAction = $attempt['next_action'] ?? 'materialize-runtime-adapter';
 
         return [
             'api_version' => '1.0',
@@ -255,7 +260,10 @@ final class SystemApiDbusRuntimeActivationToolkit
             'activation_attempt' => $attempt,
             'runtime_diagnosis' => $runtimeDiagnosis,
             'runtime_backend' => $attempt['runtime_backend'] ?? [],
-            'next_action' => $attempt['next_action'] ?? 'materialize-runtime-adapter',
+            'next_action' => $nextAction,
+            'recovery_plan' => is_array($attempt['recovery_plan'] ?? null)
+                ? $attempt['recovery_plan']
+                : $this->createRecoveryPlan($nextAction),
         ];
     }
 
@@ -499,5 +507,23 @@ final class SystemApiDbusRuntimeActivationToolkit
         $nextAction = $nativeRuntimeService['next_action'] ?? null;
 
         return is_string($nextAction) && $nextAction !== '' ? $nextAction : $default;
+    }
+
+    /**
+     * @param array<string, mixed>|null $nativeRuntimeService
+     * @return list<string>
+     */
+    private function createRecoveryPlan(string $nextAction, ?array $nativeRuntimeService = null): array
+    {
+        $plan = [];
+        foreach ([$nextAction, $this->resolveNativeRuntimeServiceNextAction($nativeRuntimeService, '')] as $candidate) {
+            if (!is_string($candidate) || $candidate === '' || in_array($candidate, $plan, true)) {
+                continue;
+            }
+
+            $plan[] = $candidate;
+        }
+
+        return $plan;
     }
 }

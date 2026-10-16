@@ -2509,6 +2509,7 @@ function createActivationPreparation(): array
         'runtime_adapter_entry' => getenv('W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-adapter',
         'runtime_bootstrap_spec' => getenv('W4_SYSTEM_API_RUNTIME_BOOTSTRAP_SPEC') ?: '/usr/share/w4/system-api/org.w4.System1.runtime-bootstrap.json',
     ];
+    $nextAction = resolvePreparationNextAction($ready, $runtimeBackend, $nativeRuntimeService);
 
     return [
         'api_version' => '1.0',
@@ -2540,7 +2541,8 @@ function createActivationPreparation(): array
             'runtime_backend' => createRuntimeBackendExecutionPlan($runtimeBackend, $resolvedContract),
         ],
         'unresolved_requirements' => $missingCapabilities,
-        'next_action' => resolvePreparationNextAction($ready, $runtimeBackend, $nativeRuntimeService),
+        'next_action' => $nextAction,
+        'recovery_plan' => createRecoveryPlan($nextAction, $nativeRuntimeService),
     ];
 }
 
@@ -2559,6 +2561,7 @@ function createActivationAttempt(): array
     $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null) ? $runtimeBackend['selected_backend'] : 'contract-pending';
     $nativeBackend = $selectedBackend === 'native-dbus-extension';
     $nativeReady = $nativeBackend && (($runtimeBackend['materialized'] ?? false) === true);
+    $nextAction = resolveAttemptNextAction($ready, $nativeReady, $nativeBackend, $nativeRuntimeService);
 
     return [
         'api_version' => '1.0',
@@ -2588,7 +2591,8 @@ function createActivationAttempt(): array
         'missing_capabilities' => is_array($runtimeDiagnosis['missing_capabilities'] ?? null)
             ? $runtimeDiagnosis['missing_capabilities']
             : [],
-        'next_action' => resolveAttemptNextAction($ready, $nativeReady, $nativeBackend, $nativeRuntimeService),
+        'next_action' => $nextAction,
+        'recovery_plan' => createRecoveryPlan($nextAction, $nativeRuntimeService),
     ];
 }
 
@@ -2608,6 +2612,7 @@ function createActivationExecution(): array
         : [];
     $readyForAdapter = ($attempt['status'] ?? null) === 'ready-to-attempt-runtime-adapter';
     $readyForNative = ($attempt['status'] ?? null) === 'ready-to-launch-native-runtime';
+    $nextAction = $attempt['next_action'] ?? 'materialize-runtime-adapter';
 
     return [
         'api_version' => '1.0',
@@ -2636,7 +2641,10 @@ function createActivationExecution(): array
         'activation_attempt' => $attempt,
         'runtime_diagnosis' => $runtimeDiagnosis,
         'runtime_backend' => $attempt['runtime_backend'] ?? [],
-        'next_action' => $attempt['next_action'] ?? 'materialize-runtime-adapter',
+        'next_action' => $nextAction,
+        'recovery_plan' => is_array($attempt['recovery_plan'] ?? null)
+            ? $attempt['recovery_plan']
+            : createRecoveryPlan($nextAction),
     ];
 }
 
@@ -2886,6 +2894,24 @@ function resolveNativeRuntimeServiceNextAction(?array $nativeRuntimeService, str
     $nextAction = $nativeRuntimeService['next_action'] ?? null;
 
     return is_string($nextAction) && $nextAction !== '' ? $nextAction : $default;
+}
+
+/**
+ * @param array<string, mixed>|null $nativeRuntimeService
+ * @return list<string>
+ */
+function createRecoveryPlan(string $nextAction, ?array $nativeRuntimeService = null): array
+{
+    $plan = [];
+    foreach ([$nextAction, resolveNativeRuntimeServiceNextAction($nativeRuntimeService, '')] as $candidate) {
+        if (!is_string($candidate) || $candidate === '' || in_array($candidate, $plan, true)) {
+            continue;
+        }
+
+        $plan[] = $candidate;
+    }
+
+    return $plan;
 }
 
 /**
@@ -3927,6 +3953,7 @@ function createActivationPreparation(): array
         'runtime_adapter_entry' => getenv('W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY') ?: '/usr/local/bin/w4-system-api-dbus-runtime-adapter',
         'runtime_bootstrap_spec' => getenv('W4_SYSTEM_API_RUNTIME_BOOTSTRAP_SPEC') ?: '/usr/share/w4/system-api/org.w4.System1.runtime-bootstrap.json',
     ];
+    $nextAction = resolvePreparationNextAction($ready, $runtimeBackend, $nativeRuntimeService);
 
     return [
         'api_version' => '1.0',
@@ -3958,7 +3985,8 @@ function createActivationPreparation(): array
             'runtime_backend' => createRuntimeBackendExecutionPlan($runtimeBackend, $resolvedContract),
         ],
         'unresolved_requirements' => $missingCapabilities,
-        'next_action' => resolvePreparationNextAction($ready, $runtimeBackend, $nativeRuntimeService),
+        'next_action' => $nextAction,
+        'recovery_plan' => createRecoveryPlan($nextAction, $nativeRuntimeService),
     ];
 }
 
@@ -3974,6 +4002,7 @@ function createActivationAttempt(): array
     $selectedBackend = is_string($runtimeBackend['selected_backend'] ?? null) ? $runtimeBackend['selected_backend'] : 'contract-pending';
     $nativeBackend = $selectedBackend === 'native-dbus-extension';
     $nativeReady = $nativeBackend && (($runtimeBackend['materialized'] ?? false) === true);
+    $nextAction = resolveAttemptNextAction($ready, $nativeReady, $nativeBackend, $nativeRuntimeService);
 
     return [
         'api_version' => '1.0',
@@ -4003,7 +4032,8 @@ function createActivationAttempt(): array
         'missing_capabilities' => is_array($runtimeDiagnosis['missing_capabilities'] ?? null)
             ? $runtimeDiagnosis['missing_capabilities']
             : [],
-        'next_action' => resolveAttemptNextAction($ready, $nativeReady, $nativeBackend, $nativeRuntimeService),
+        'next_action' => $nextAction,
+        'recovery_plan' => createRecoveryPlan($nextAction, $nativeRuntimeService),
     ];
 }
 
@@ -4020,6 +4050,7 @@ function createActivationExecution(): array
         : [];
     $readyForAdapter = ($attempt['status'] ?? null) === 'ready-to-attempt-runtime-adapter';
     $readyForNative = ($attempt['status'] ?? null) === 'ready-to-launch-native-runtime';
+    $nextAction = $attempt['next_action'] ?? 'materialize-runtime-adapter';
 
     return [
         'api_version' => '1.0',
@@ -4048,7 +4079,10 @@ function createActivationExecution(): array
         'activation_attempt' => $attempt,
         'runtime_diagnosis' => $runtimeDiagnosis,
         'runtime_backend' => $attempt['runtime_backend'] ?? [],
-        'next_action' => $attempt['next_action'] ?? 'materialize-runtime-adapter',
+        'next_action' => $nextAction,
+        'recovery_plan' => is_array($attempt['recovery_plan'] ?? null)
+            ? $attempt['recovery_plan']
+            : createRecoveryPlan($nextAction),
     ];
 }
 
@@ -4402,6 +4436,24 @@ function resolveNativeRuntimeServiceNextAction(?array $nativeRuntimeService, str
     $nextAction = $nativeRuntimeService['next_action'] ?? null;
 
     return is_string($nextAction) && $nextAction !== '' ? $nextAction : $default;
+}
+
+/**
+ * @param array<string, mixed>|null $nativeRuntimeService
+ * @return list<string>
+ */
+function createRecoveryPlan(string $nextAction, ?array $nativeRuntimeService = null): array
+{
+    $plan = [];
+    foreach ([$nextAction, resolveNativeRuntimeServiceNextAction($nativeRuntimeService, '')] as $candidate) {
+        if (!is_string($candidate) || $candidate === '' || in_array($candidate, $plan, true)) {
+            continue;
+        }
+
+        $plan[] = $candidate;
+    }
+
+    return $plan;
 }
 
 /**
