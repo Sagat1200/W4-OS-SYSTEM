@@ -16,7 +16,7 @@ gcc --version || true
 printf '%s
 ' "Ultimo motivo reportado: zend_object_store_get_object"
 printf '%s
-' "Firma detectada del fallo: - fallo final: `make: *** [Makefile:192: dbus.lo] Error 1`"
+' "Firma detectada del fallo: make: *** [Makefile:192: dbus.lo] Error 1"
 test -f "c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md" && tail -n 80 "c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md" || echo "Build log no disponible: c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md"
 cd "/srv/w4/os-system" && php -r "echo json_decode(file_get_contents('composer.json'), true)['require']['php'], PHP_EOL;"
 

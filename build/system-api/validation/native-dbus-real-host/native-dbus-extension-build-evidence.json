@@ -1,12 +1,12 @@
 {
     "api_version": "1.0",
     "kind": "system-api-native-dbus-extension-build-evidence",
-    "generated_at": "2026-10-16T22:18:21+00:00",
+    "generated_at": "2026-10-16T22:20:01+00:00",
     "source_path": "c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md",
     "state": "build-failed",
     "build_phase": "make",
     "reason": "zend_object_store_get_object",
-    "failure_signature": "- fallo final: `make: *** [Makefile:192: dbus.lo] Error 1`",
+    "failure_signature": "make: *** [Makefile:192: dbus.lo] Error 1",
     "log_path": "c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md",
     "markers": [
         "zend_object_store_get_object",
