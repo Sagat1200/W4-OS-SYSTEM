@@ -232,6 +232,10 @@ TEXT);
             self::assertSame('pecl-download', $payload['native_dbus_extension_installation']['build_phase']);
             self::assertSame('pecl-release-is-beta', $payload['native_dbus_extension_installation']['reason']);
             self::assertSame('inspect-native-dbus-pecl-download', $payload['native_dbus_extension_installation']['next_action']);
+            self::assertSame(
+                'Failed to download pecl/dbus within preferred state "stable", latest release is beta',
+                $payload['native_dbus_extension_installation']['failure_signature']
+            );
             self::assertTrue($payload['native_dbus_extension_installation']['pecl_available']);
         } finally {
             @unlink($evidencePath);

@@ -401,16 +401,27 @@ TEXT);
         $payload = $this->decodeJson($result['stdout']);
         self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
         self::assertSame('pecl-download', $payload['native_dbus_extension_installability']['build_phase']);
+        self::assertSame('pecl-release-is-beta', $payload['native_dbus_extension_installability']['reason']);
+        self::assertSame(
+            'Failed to download pecl/dbus within preferred state "stable", latest release is beta',
+            $payload['native_dbus_extension_installability']['failure_signature']
+        );
         self::assertSame('inspect-native-dbus-pecl-download', $payload['preparation_plan'][0]['action']);
 
         $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
         self::assertNotFalse($preparationChecklist);
         self::assertStringContainsString('inspect-native-dbus-pecl-download', $preparationChecklist);
+        self::assertStringContainsString('pecl channel-update pecl.php.net || true', $preparationChecklist);
+        self::assertStringContainsString('pecl remote-info pecl/dbus || true', $preparationChecklist);
         self::assertStringContainsString('pecl remote-info channel://pecl.php.net/dbus-0.1.1', $preparationChecklist);
+        self::assertStringContainsString('pecl install channel://pecl.php.net/dbus-0.1.1 || true', $preparationChecklist);
+        self::assertStringContainsString('Firma detectada del fallo: Failed to download pecl/dbus within preferred state', $preparationChecklist);
+        self::assertStringContainsString('latest release is beta', $preparationChecklist);
 
         $savedSummary = file_get_contents($payload['summary_path']);
         self::assertNotFalse($savedSummary);
         self::assertStringContainsString('- Installation build phase: `pecl-download`', $savedSummary);
+        self::assertStringContainsString('- Installation failure signature: `Failed to download pecl/dbus within preferred state "stable", latest release is beta`', $savedSummary);
     }
 
     public function testValidationCanInferConfigureFailureFromRawBuildLogPathWithoutExplicitState(): void

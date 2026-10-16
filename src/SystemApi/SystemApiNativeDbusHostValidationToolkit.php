@@ -1010,7 +1010,7 @@ final class SystemApiNativeDbusHostValidationToolkit
     ): array {
         $description = $state === 'unsupported-stack'
             ? 'El stack actual no parece compatible con la extension `dbus`. Conviene inspeccionar el entorno y mover el contraste a un Linux moderno homologado para este runtime.'
-            : $this->describeNativeDbusBuildFailurePhase($buildPhase);
+            : $this->describeNativeDbusBuildFailurePhase($buildPhase, $reason);
 
         return [
             'action' => $state === 'unsupported-stack'
@@ -1049,9 +1049,23 @@ final class SystemApiNativeDbusHostValidationToolkit
 
         if ($peclAvailable) {
             $commands[] = 'pecl version';
+            $commands[] = 'pecl channel-info pecl.php.net || true';
+            $commands[] = 'pecl channel-update pecl.php.net || true';
+            $commands[] = 'pecl remote-info pecl/dbus || true';
             $commands[] = 'pecl remote-info channel://pecl.php.net/dbus-0.1.1';
+            $commands[] = 'pecl search dbus || true';
         } else {
             $commands[] = 'echo "PECL no esta disponible en este host."';
+        }
+
+        if ($buildPhase === 'pecl-download' && $peclAvailable) {
+            if ($reason === 'pecl-release-is-beta') {
+                $commands[] = 'pecl install channel://pecl.php.net/dbus-0.1.1 || true';
+            }
+
+            if ($reason === 'native-dbus-extension-download-failed') {
+                $commands[] = 'pecl list-channels || true';
+            }
         }
 
         if ($buildPhase === 'phpize') {
@@ -1118,10 +1132,12 @@ final class SystemApiNativeDbusHostValidationToolkit
         };
     }
 
-    private function describeNativeDbusBuildFailurePhase(string $buildPhase): string
+    private function describeNativeDbusBuildFailurePhase(string $buildPhase, ?string $reason): string
     {
         return match ($buildPhase) {
-            'pecl-download' => 'La extension `dbus` fallo antes de descargar o resolver correctamente la release PECL. Conviene inspeccionar el canal, la release objetivo y la disponibilidad real del paquete antes de repetir la instalacion.',
+            'pecl-download' => $reason === 'pecl-release-is-beta'
+                ? 'La extension `dbus` fallo porque la release estable no esta disponible en PECL y la disponible aparece como beta. Conviene validar el canal PECL, inspeccionar la metadata del paquete y probar la release explicita `channel://pecl.php.net/dbus-0.1.1` antes de seguir.'
+                : 'La extension `dbus` fallo antes de descargar o resolver correctamente la release PECL. Conviene inspeccionar el canal, la release objetivo y la disponibilidad real del paquete antes de repetir la instalacion.',
             'phpize' => 'La extension `dbus` fallo durante `phpize` o en la disponibilidad de la toolchain autotools. Conviene inspeccionar `phpize`, `autoconf`, `autoheader` y `aclocal` antes de pasar a `configure`.',
             'configure' => 'La extension `dbus` fallo durante `configure`. Conviene inspeccionar `pkg-config`, `xml2-config` y las dependencias de desarrollo requeridas antes de volver a compilar.',
             'make' => 'La extension `dbus` ya avanzo hasta `make`, pero la compilacion fallo. Conviene inspeccionar el toolchain C y la evidencia del error de compilacion antes de seguir insistiendo con PECL.',
