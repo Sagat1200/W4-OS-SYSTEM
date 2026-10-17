@@ -440,8 +440,14 @@ final class SystemApiNativeDbusHostValidationToolkit
             sprintf('- Target repo root: `%s`', $targetRepoRoot !== '' ? $targetRepoRoot : 'set-this-before-running'),
             sprintf('- Current status: `%s`', (string) ($report['status'] ?? 'unknown')),
             sprintf('- Blocking reason: `%s`', (string) ($report['blocking_reason'] ?? 'n/a')),
-            sprintf('- Preparation script: `%s`', (string) ($report['preparation_shell_script_path'] ?? 'n/a')),
-            sprintf('- Preparation checklist: `%s`', (string) ($report['preparation_checklist_path'] ?? 'n/a')),
+            sprintf(
+                '- Preparation script: `%s`',
+                $portablePreparationScriptPath ?? 'local-only artifact; use Preparation Plan below'
+            ),
+            sprintf(
+                '- Preparation checklist: `%s`',
+                $portablePreparationChecklistPath ?? 'local-only artifact; use Preparation Plan below'
+            ),
             '',
             '## Target Host Workflow',
             '',

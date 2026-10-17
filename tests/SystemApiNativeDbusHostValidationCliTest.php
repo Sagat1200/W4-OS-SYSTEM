@@ -1170,6 +1170,8 @@ TEXT);
 
         $handoff = file_get_contents($payload['handoff_path']);
         self::assertNotFalse($handoff);
+        self::assertStringContainsString('- Preparation script: `local-only artifact; use Preparation Plan below`', $handoff);
+        self::assertStringContainsString('- Preparation checklist: `local-only artifact; use Preparation Plan below`', $handoff);
         self::assertStringContainsString('## Preparation Shortcuts', $handoff);
         self::assertStringContainsString('# No preparation shortcuts available. Use the preparation plan below.', $handoff);
         self::assertStringContainsString('## Preparation Plan', $handoff);
@@ -1215,6 +1217,8 @@ TEXT);
         $handoff = file_get_contents($payload['handoff_path']);
         self::assertNotFalse($handoff);
         self::assertStringContainsString('- Target repo root: `/srv/w4/os-system`', $handoff);
+        self::assertStringContainsString('- Preparation script: `local-only artifact; use Preparation Plan below`', $handoff);
+        self::assertStringContainsString('- Preparation checklist: `local-only artifact; use Preparation Plan below`', $handoff);
         self::assertStringContainsString('## Preparation Shortcuts', $handoff);
         self::assertStringContainsString('# No preparation shortcuts available. Use the preparation plan below.', $handoff);
         self::assertStringContainsString('## Preparation Plan', $handoff);
