@@ -1157,6 +1157,8 @@ TEXT);
         $savedSummary = file_get_contents($payload['summary_path']);
         self::assertNotFalse($savedSummary);
         self::assertStringContainsString('- Preparation target OS family: `Linux`', $savedSummary);
+        self::assertStringContainsString('- Preparation shell script: `local-only artifact; use Preparation Plan below`', $savedSummary);
+        self::assertStringContainsString('- Preparation checklist: `local-only artifact; use Preparation Plan below`', $savedSummary);
 
         $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
         self::assertNotFalse($preparationChecklist);
@@ -1209,6 +1211,8 @@ TEXT);
         $savedSummary = file_get_contents($payload['summary_path']);
         self::assertNotFalse($savedSummary);
         self::assertStringContainsString('- Preparation target repo root: `/srv/w4/os-system`', $savedSummary);
+        self::assertStringContainsString('- Preparation shell script: `local-only artifact; use Preparation Plan below`', $savedSummary);
+        self::assertStringContainsString('- Preparation checklist: `local-only artifact; use Preparation Plan below`', $savedSummary);
 
         $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
         self::assertNotFalse($preparationChecklist);

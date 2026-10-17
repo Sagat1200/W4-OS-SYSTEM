@@ -306,6 +306,16 @@ final class SystemApiNativeDbusHostValidationToolkit
      */
     public function renderMarkdownSummary(array $report): string
     {
+        $preparationShellScriptDisplayPath = $this->resolvePreparationArtifactDisplayPath(
+            is_string($report['preparation_shell_script_path'] ?? null)
+                ? trim((string) $report['preparation_shell_script_path'])
+                : null
+        );
+        $preparationChecklistDisplayPath = $this->resolvePreparationArtifactDisplayPath(
+            is_string($report['preparation_checklist_path'] ?? null)
+                ? trim((string) $report['preparation_checklist_path'])
+                : null
+        );
         $lines = [
             '# Native D-Bus Runtime Validation',
             '',
@@ -323,8 +333,8 @@ final class SystemApiNativeDbusHostValidationToolkit
             sprintf('- Report path: `%s`', (string) ($report['report_path'] ?? 'n/a')),
             sprintf('- Native D-Bus build evidence path: `%s`', (string) ($report['native_dbus_extension_build_evidence_path'] ?? 'n/a')),
             sprintf('- Handoff path: `%s`', (string) ($report['handoff_path'] ?? 'n/a')),
-            sprintf('- Preparation shell script: `%s`', (string) ($report['preparation_shell_script_path'] ?? 'n/a')),
-            sprintf('- Preparation checklist: `%s`', (string) ($report['preparation_checklist_path'] ?? 'n/a')),
+            sprintf('- Preparation shell script: `%s`', $preparationShellScriptDisplayPath),
+            sprintf('- Preparation checklist: `%s`', $preparationChecklistDisplayPath),
             '',
             '## Host Compatibility',
             '',
@@ -440,14 +450,16 @@ final class SystemApiNativeDbusHostValidationToolkit
             sprintf('- Target repo root: `%s`', $targetRepoRoot !== '' ? $targetRepoRoot : 'set-this-before-running'),
             sprintf('- Current status: `%s`', (string) ($report['status'] ?? 'unknown')),
             sprintf('- Blocking reason: `%s`', (string) ($report['blocking_reason'] ?? 'n/a')),
-            sprintf(
-                '- Preparation script: `%s`',
-                $portablePreparationScriptPath ?? 'local-only artifact; use Preparation Plan below'
-            ),
-            sprintf(
-                '- Preparation checklist: `%s`',
-                $portablePreparationChecklistPath ?? 'local-only artifact; use Preparation Plan below'
-            ),
+            sprintf('- Preparation script: `%s`', $this->resolvePreparationArtifactDisplayPath(
+                is_string($report['preparation_shell_script_path'] ?? null)
+                    ? trim((string) $report['preparation_shell_script_path'])
+                    : null
+            )),
+            sprintf('- Preparation checklist: `%s`', $this->resolvePreparationArtifactDisplayPath(
+                is_string($report['preparation_checklist_path'] ?? null)
+                    ? trim((string) $report['preparation_checklist_path'])
+                    : null
+            )),
             '',
             '## Target Host Workflow',
             '',
@@ -604,6 +616,16 @@ final class SystemApiNativeDbusHostValidationToolkit
         return $commands !== []
             ? $commands
             : ['# No preparation shortcuts available. Use the preparation plan below.'];
+    }
+
+    private function resolvePreparationArtifactDisplayPath(?string $path): string
+    {
+        $portablePath = $this->resolvePortableRepoPath($path);
+        if ($portablePath !== null) {
+            return $portablePath;
+        }
+
+        return 'local-only artifact; use Preparation Plan below';
     }
 
     /**
