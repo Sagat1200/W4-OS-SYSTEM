@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.272 | 2026-10-17 | Activa | El runtime patch del fork ya entra tambien al bloque de marshaling interno: `php_dbus_to_zval`, `php_dbus_fetch_child_type`, `php_dbus_fetch_child_type_as_string`, `dbus_append_var` y la preparacion de callbacks dejan de depender de `zend_object_store_get_object`, `ALLOC_ZVAL` y `MAKE_STD_ZVAL` en su carril principal |
 | TECH | TECH-1.271 | 2026-10-17 | Activa | El runtime patch del fork `pecl/DBus` ya cubre constructores, `dbus_instantiate`, `createProxy`, señales y wrappers instanciados por el runtime, reduciendo el uso directo de `zend_object_store_get_object` en el carril principal |
 | TECH | TECH-1.270 | 2026-10-17 | Activa | El fork editable de `DBus 0.1.1` ya incorpora un bootstrap inicial de compatibilidad de objetos para `PHP 8.4`, registrado como patches `0002` y `0003` dentro del workspace del fork |
 | TECH | TECH-1.269 | 2026-10-17 | Activa | El workspace del fork de `pecl/DBus` ya puede importar source-dir o source-archive, extraerlo a `upstream/imported-source` y sincronizar una copia editable en `fork/current` |

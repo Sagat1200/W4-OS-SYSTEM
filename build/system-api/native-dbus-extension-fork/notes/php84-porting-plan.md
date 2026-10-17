@@ -21,14 +21,14 @@
 ## Bootstrap Patch Status
 
 - `0002-php84-object-compat-bootstrap-header.patch` ya introduce en `php_dbus.h` la capa minima de compatibilidad para `PHP >= 8`, incluyendo `dbus_object_type`, `DBUS_GET_OBJECT`, `DBUS_ZEND_OBJECT_INIT_RETURN` y soporte explicito para `PHP 8.4`.
-- `0003-php84-object-compat-bootstrap-runtime.patch` ya mueve en `dbus.c` la primera capa de fabricas de objetos, handlers y `get_properties` desde `zend_object_value` hacia `zend_object*`, y ahora tambien cubre `dbus_instantiate`, `Dbus::__construct`, `DbusObject::__construct`, `Dbus::createProxy`, `DbusSignal::__construct`, `addWatch()` y la primera ola de wrappers instanciados durante `php_dbus_to_zval()`.
+- `0003-php84-object-compat-bootstrap-runtime.patch` ya mueve en `dbus.c` la primera capa de fabricas de objetos, handlers y `get_properties` desde `zend_object_value` hacia `zend_object*`, y ahora tambien cubre `dbus_instantiate`, `Dbus::__construct`, `DbusObject::__construct`, `Dbus::createProxy`, `DbusSignal::__construct`, `addWatch()`, `php_dbus_do_method_call()`, `php_dbus_fetch_child_type()`, `php_dbus_fetch_child_type_as_string()`, `dbus_append_var()` y la ola principal de wrappers instanciados durante `php_dbus_to_zval()`.
 - Este bootstrap todavia no completa el port. El source conserva varios puntos legacy fuera de la capa de objetos, especialmente llamadas directas a `zend_object_store_get_object`, `ALLOC_ZVAL`, `MAKE_STD_ZVAL` y rutas de inicializacion/metodos que siguen escritas para PHP 5.x.
 
 ## Next Runtime Hotspots
 
-1. Reemplazar los accesos restantes a `zend_object_store_get_object` en el marshaling/unmarshaling interno, especialmente los caminos sobre `child` y `*val`.
-2. Modernizar las zonas que aun usan `ALLOC_ZVAL` o `MAKE_STD_ZVAL`, empezando por `php_dbus_to_zval()` y la construccion de parametros/callbacks.
-3. Limpiar el residuo textual del macro legacy `DBUS_FETCH_OBJECT` para que el scan del fork no siga marcando una definicion obsoleta aunque ya este sobreescrita.
+1. Limpiar el residuo textual del macro legacy `DBUS_FETCH_OBJECT` para que el scan del fork no siga marcando una definicion obsoleta aunque ya este sobreescrita.
+2. Revisar si conviene migrar `DBUS_ZEND_MAKE_STD_ZVAL` de los property builders a helpers mas modernos o si ya es suficiente como capa de compatibilidad transitoria.
+3. Volver sobre `php_dbus_to_zval()` para cerrar detalles de ownership/memoria y alinearlo mejor con la referencia moderna, especialmente en `DICT_ENTRY`, `STRUCT` y firmas temporales.
 4. Solo despues de eso volver a revisar la fase de marshaling/unmarshaling para cerrar warnings y errores de compilacion adicionales.
 
 ## Execution Loop

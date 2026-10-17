@@ -1079,10 +1079,10 @@ static void php_dbus_do_method_call(php_dbus_obj *dbus, DBusMessage *msg, char *
 	zval *callback, *object = NULL;
 	DBusMessage *reply;
 
-	ALLOC_ZVAL(params);
+        DBUS_ZEND_ALLOC_ZVAL(params);
 	php_dbus_handle_reply(params, msg, 1 TSRMLS_CC);
 
-	ALLOC_ZVAL(callback);
+        DBUS_ZEND_ALLOC_ZVAL(callback);
 	array_init(callback);
 	add_next_index_string(callback, class, 0);
 	add_next_index_string(callback, member, 0);
@@ -1391,7 +1391,7 @@ static int php_dbus_fetch_child_type(zval *child TSRMLS_DC)
 			return DBUS_TYPE_STRING;
 		case IS_OBJECT:
 			/* We need to check for DbusArray, DbusDict and DbusVariant and the DBus types */
-			obj = (zend_object *) zend_object_store_get_object(child TSRMLS_CC);
+                        obj = Z_OBJ_P(child);
 			PHP_DBUS_MARSHAL_FIND_TYPE_CASE(variant, VARIANT);
 			PHP_DBUS_MARSHAL_FIND_TYPE_CASE(array, ARRAY);
 			PHP_DBUS_MARSHAL_FIND_TYPE_CASE(struct, STRUCT);
@@ -1430,7 +1430,7 @@ static char* php_dbus_fetch_child_type_as_string(zval *child TSRMLS_DC)
 			return DBUS_TYPE_STRING_AS_STRING;
 		case IS_OBJECT:
 			/* We need to check for DbusArray, DbusDict and DbusVariant and the DBus types */
-			obj = (zend_object *) zend_object_store_get_object(child TSRMLS_CC);
+                        obj = Z_OBJ_P(child);
 			PHP_DBUS_MARSHAL_FIND_TYPE_CASE_AS_STRING(variant, VARIANT);
 			PHP_DBUS_MARSHAL_FIND_TYPE_CASE_AS_STRING(array, ARRAY);
 			PHP_DBUS_MARSHAL_FIND_TYPE_CASE_AS_STRING(struct, STRUCT);
@@ -1574,7 +1574,7 @@ static int dbus_append_var(zval **val, php_dbus_data_array *data_array, DBusMess
 			break;
 		case IS_OBJECT:
 			/* We need to check for DbusArray, DbusDict, DbusVariant, DbusSet and the DBus types */
-			obj = (zend_object *) zend_object_store_get_object(*val TSRMLS_CC);
+                        obj = Z_OBJ_P(*val);
 			if (obj->ce == dbus_ce_dbus_array) {
 				dbus_append_var_array(data_array, iter, (php_dbus_array_obj*) obj TSRMLS_CC);
 			}
@@ -1654,7 +1654,7 @@ static zval* php_dbus_to_zval(DBusMessageIter *args, zval **key TSRMLS_DC)
 	int arg_type = 0;
 	
 	*key = NULL;
-	MAKE_STD_ZVAL(return_value);
+        DBUS_ZEND_ALLOC_ZVAL(return_value);
 	arg_type = dbus_message_iter_get_arg_type(args);
 	switch (arg_type) {
 		case DBUS_TYPE_ARRAY:
@@ -1671,9 +1671,9 @@ static zval* php_dbus_to_zval(DBusMessageIter *args, zval **key TSRMLS_DC)
 					if (new_key) {
 						if (!init) {
 							dbus_instantiate(dbus_ce_dbus_dict, return_value TSRMLS_CC);
-                                                                dictobj = DBUS_ZVAL_GET_OBJECT(php_dbus_dict_obj, return_value);
+                                                        dictobj = DBUS_ZVAL_GET_OBJECT(php_dbus_dict_obj, return_value);
 							dictobj->type = php_dbus_fetch_child_type(val TSRMLS_CC);
-							MAKE_STD_ZVAL(dictobj->elements);
+                                                        DBUS_ZEND_ALLOC_ZVAL(dictobj->elements);
 							array_init(dictobj->elements);
 							init = 1;
 						}
@@ -1685,12 +1685,15 @@ static zval* php_dbus_to_zval(DBusMessageIter *args, zval **key TSRMLS_DC)
 						}
 					} else {
 						if (!init) {
+                                                        char *tmp;
 							dbus_instantiate(dbus_ce_dbus_array, return_value TSRMLS_CC);
                                                         arrayobj = DBUS_ZVAL_GET_OBJECT(php_dbus_array_obj, return_value);
 							arrayobj->type = val ? php_dbus_fetch_child_type(val TSRMLS_CC) : DBUS_TYPE_INVALID;
-							MAKE_STD_ZVAL(arrayobj->elements);
+                                                        DBUS_ZEND_ALLOC_ZVAL(arrayobj->elements);
 							array_init(arrayobj->elements);
-							arrayobj->signature = estrdup(dbus_message_iter_get_signature(&subiter));
+                                                        tmp = dbus_message_iter_get_signature(&subiter);
+                                                        arrayobj->signature = estrdup(tmp);
+                                                        free(tmp);
 							init = 1;
 						}
 
@@ -1731,7 +1734,7 @@ static zval* php_dbus_to_zval(DBusMessageIter *args, zval **key TSRMLS_DC)
 
 				dbus_instantiate(dbus_ce_dbus_struct, return_value TSRMLS_CC);
                                 structobj = DBUS_ZVAL_GET_OBJECT(php_dbus_struct_obj, return_value);
-				MAKE_STD_ZVAL(structobj->elements);
+                                DBUS_ZEND_ALLOC_ZVAL(structobj->elements);
 				array_init(structobj->elements);
 
 				dbus_message_iter_recurse(args, &subiter);
