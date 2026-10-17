@@ -735,6 +735,18 @@ final class SystemApiNativeDbusHostValidationToolkit
                 }
             }
 
+            if ($this->shouldAddModernLinuxHostStep($hostCompatibility['recommended_next_actions'] ?? null, $osFamily)) {
+                $this->appendPreparationStepIfMissing(
+                    $plan,
+                    $this->createModernLinuxHostStep(
+                        is_string($hostCompatibility['required_php_version'] ?? null)
+                            ? trim((string) $hostCompatibility['required_php_version'])
+                            : null,
+                        $targetRepoRoot
+                    )
+                );
+            }
+
             $plan[] = [
                 'action' => 'rerun-native-runtime-validation',
                 'description' => 'Reejecutar el runner despues de homologar el runtime PHP del host Linux para confirmar si el siguiente bloqueo ya es exclusivamente D-Bus.',
@@ -758,6 +770,16 @@ final class SystemApiNativeDbusHostValidationToolkit
                         $plan[] = $step;
                     }
                 }
+            }
+
+            if ($this->shouldAddModernLinuxHostStep($nativeDbusExtensionInstallability['recommended_next_actions'] ?? null, $osFamily)) {
+                $this->appendPreparationStepIfMissing(
+                    $plan,
+                    $this->createModernLinuxHostStep(
+                        $this->resolveMinimumPhpVersionFromConstraint($this->resolveRequiredPhpConstraint()),
+                        $targetRepoRoot
+                    )
+                );
             }
 
             $plan[] = [
@@ -1194,14 +1216,14 @@ final class SystemApiNativeDbusHostValidationToolkit
 
         if ($reason !== null && $reason !== '') {
             $commands[] = sprintf(
-                "printf '%%s\n' %s",
+                "printf '%%s\\\\n' %s",
                 escapeshellarg('Ultimo motivo reportado: ' . $reason)
             );
         }
 
         if ($failureSignature !== null && $failureSignature !== '') {
             $commands[] = sprintf(
-                "printf '%%s\n' %s",
+                "printf '%%s\\\\n' %s",
                 escapeshellarg('Firma detectada del fallo: ' . $failureSignature)
             );
         }
@@ -1287,6 +1309,25 @@ final class SystemApiNativeDbusHostValidationToolkit
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    private function createModernLinuxHostStep(?string $requiredPhpVersion, string $targetRepoRoot): array
+    {
+        $requiredLabel = $requiredPhpVersion !== null && trim($requiredPhpVersion) !== ''
+            ? trim($requiredPhpVersion)
+            : '8.4.0';
+
+        return [
+            'action' => 'migrate-to-modern-linux-host',
+            'description' => sprintf(
+                'Preparar o elegir un Linux moderno homologado con PHP `%s+`, toolchain de compilacion y dependencias D-Bus antes de repetir el contraste nativo real.',
+                implode('.', array_slice(explode('.', $requiredLabel), 0, 2))
+            ),
+            'commands' => $this->buildModernLinuxHostCommands($requiredPhpVersion, $targetRepoRoot),
+        ];
+    }
+
+    /**
      * @return list<string>
      */
     private function buildPhpRuntimeCompatibilityCommands(?string $requiredPhpVersion, string $targetRepoRoot): array
@@ -1310,6 +1351,81 @@ final class SystemApiNativeDbusHostValidationToolkit
             sprintf('sudo apt-get install -y php%s-cli php%s-dev php%s-pear', $majorMinorVersion, $majorMinorVersion, $majorMinorVersion),
             'php --version',
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildModernLinuxHostCommands(?string $requiredPhpVersion, string $targetRepoRoot): array
+    {
+        $majorMinorVersion = $requiredPhpVersion !== null
+            ? implode('.', array_slice(explode('.', $requiredPhpVersion), 0, 2))
+            : '8.4';
+        $manifestProbe = $targetRepoRoot !== ''
+            ? sprintf(
+                'cd "%s" && php -r "echo json_decode(file_get_contents(\'composer.json\'), true)[\'require\'][\'php\'], PHP_EOL;"',
+                $targetRepoRoot
+            )
+            : 'php -r "echo json_decode(file_get_contents(\'composer.json\'), true)[\'require\'][\'php\'], PHP_EOL;"';
+
+        return [
+            'lsb_release -a || cat /etc/os-release',
+            'php --version || true',
+            sprintf('printf \'%%s\\\\n\' %s', escapeshellarg('Objetivo: host Linux moderno con PHP ' . $majorMinorVersion . '+ y toolchain homologada para PECL dbus.')),
+            'sudo apt-get update',
+            sprintf('sudo apt-cache policy php%s-cli php%s-dev php%s-pear', $majorMinorVersion, $majorMinorVersion, $majorMinorVersion),
+            'sudo apt-get install -y software-properties-common ca-certificates lsb-release apt-transport-https gnupg || true',
+            'sudo apt-get install -y build-essential autoconf automake libtool re2c pkg-config libdbus-1-dev libxml2-dev dbus dbus-user-session',
+            sprintf('sudo apt-get install -y php%s-cli php%s-dev php%s-pear', $majorMinorVersion, $majorMinorVersion, $majorMinorVersion),
+            'php --version',
+            'phpize --version || true',
+            'pecl version || true',
+            'busctl --version || true',
+            $manifestProbe,
+        ];
+    }
+
+    /**
+     * @param mixed $recommendedNextActions
+     */
+    private function shouldAddModernLinuxHostStep(mixed $recommendedNextActions, string $osFamily): bool
+    {
+        if ($this->normalizeOsFamily($osFamily) !== 'linux') {
+            return false;
+        }
+
+        if (!is_array($recommendedNextActions)) {
+            return false;
+        }
+
+        return in_array('migrate-to-modern-linux-host', $recommendedNextActions, true);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $plan
+     * @param array<string, mixed>|null $step
+     */
+    private function appendPreparationStepIfMissing(array &$plan, ?array $step): void
+    {
+        if ($step === null) {
+            return;
+        }
+
+        $action = is_string($step['action'] ?? null) ? trim((string) $step['action']) : null;
+        if ($action === null || $action === '') {
+            return;
+        }
+
+        foreach ($plan as $existingStep) {
+            $existingAction = is_string($existingStep['action'] ?? null)
+                ? trim((string) $existingStep['action'])
+                : null;
+            if ($existingAction === $action) {
+                return;
+            }
+        }
+
+        $plan[] = $step;
     }
 
     private function resolveRequiredPhpConstraint(): ?string

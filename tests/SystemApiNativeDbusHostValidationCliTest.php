@@ -137,7 +137,7 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
             $payload['preparation_plan']
         );
         self::assertSame(
-            ['upgrade-runtime-php', 'rerun-native-runtime-validation'],
+            ['upgrade-runtime-php', 'migrate-to-modern-linux-host', 'rerun-native-runtime-validation'],
             $preparationActions
         );
 
@@ -152,6 +152,8 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
         self::assertNotFalse($preparationChecklist);
         self::assertStringContainsString('php8.4-cli', $preparationChecklist);
+        self::assertStringContainsString('migrate-to-modern-linux-host', $preparationChecklist);
+        self::assertStringContainsString('build-essential', $preparationChecklist);
         self::assertStringContainsString('cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux', $preparationChecklist);
         self::assertStringNotContainsString('install-native-dbus-extension', $preparationChecklist);
     }
@@ -247,15 +249,19 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
             $payload['preparation_plan']
         );
         self::assertSame(
-            ['inspect-native-dbus-build-make', 'rerun-native-runtime-validation'],
+            ['inspect-native-dbus-build-make', 'migrate-to-modern-linux-host', 'rerun-native-runtime-validation'],
             $preparationActions
         );
 
         $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
         self::assertNotFalse($preparationChecklist);
         self::assertStringContainsString('inspect-native-dbus-build-make', $preparationChecklist);
+        self::assertStringContainsString('migrate-to-modern-linux-host', $preparationChecklist);
+        self::assertStringContainsString('build-essential', $preparationChecklist);
         self::assertStringContainsString('pecl remote-info channel://pecl.php.net/dbus-0.1.1', $preparationChecklist);
         self::assertStringContainsString('/tmp/pecl-dbus.log', $preparationChecklist);
+        self::assertStringContainsString('Ultimo motivo reportado: zend_object_store_get_object', $preparationChecklist);
+        self::assertStringContainsString('Firma detectada del fallo: zend_object_store_get_object', $preparationChecklist);
         self::assertStringContainsString('cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux', $preparationChecklist);
         self::assertStringNotContainsString('install-native-dbus-extension', $preparationChecklist);
 
@@ -323,7 +329,7 @@ TEXT);
             $payload['preparation_plan']
         );
         self::assertSame(
-            ['inspect-native-dbus-build-make', 'rerun-native-runtime-validation'],
+            ['inspect-native-dbus-build-make', 'migrate-to-modern-linux-host', 'rerun-native-runtime-validation'],
             $preparationActions
         );
     }
@@ -479,23 +485,23 @@ TEXT);
 
         self::assertStringContainsString(
             'Preserva la evidencia actual si solo vas a reinspeccionar el mismo intento de compilacion.',
-            $payload['preparation_plan'][1]['commands'][0]
+            $payload['preparation_plan'][2]['commands'][0]
         );
         self::assertStringContainsString(
             'cp "' . $expectedRelativePath . '" "' . $expectedRelativePath . '.before-rerun.',
-            $payload['preparation_plan'][1]['commands'][1]
+            $payload['preparation_plan'][2]['commands'][1]
         );
         self::assertStringContainsString(
             'rm -f "' . $expectedRelativePath . '" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux --evidence-dir ' . $expectedRelativeEvidenceDir,
-            $payload['preparation_plan'][1]['commands'][3]
+            $payload['preparation_plan'][2]['commands'][3]
         );
         self::assertStringContainsString(
             '--evidence-dir ' . $expectedRelativeEvidenceDir,
-            $payload['preparation_plan'][1]['commands'][4]
+            $payload['preparation_plan'][2]['commands'][4]
         );
         self::assertStringContainsString(
             '--native-dbus-build-evidence-json-path ' . $expectedRelativePath,
-            $payload['preparation_plan'][1]['commands'][4]
+            $payload['preparation_plan'][2]['commands'][4]
         );
 
         $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
@@ -655,7 +661,7 @@ TEXT);
         $expectedRelativeLogPath = str_replace('\\', '/', substr($rawLogPath, strlen($this->repoRoot) + 1));
         $expectedRelativeEvidenceDir = str_replace('\\', '/', substr($evidenceDir, strlen($this->repoRoot) + 1));
 
-        $rerunCommands = implode("\n", $payload['preparation_plan'][1]['commands']);
+        $rerunCommands = implode("\n", $payload['preparation_plan'][2]['commands']);
         self::assertStringContainsString(
             'cp "' . $expectedRelativeLogPath . '" "' . $expectedRelativeLogPath . '.before-rerun.',
             $rerunCommands
