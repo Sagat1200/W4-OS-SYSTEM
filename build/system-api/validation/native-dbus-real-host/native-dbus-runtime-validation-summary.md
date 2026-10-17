@@ -11,11 +11,11 @@
 - Native D-Bus extension installation: `build-failed`
 - Blocking reason: `native-dbus-extension-build-failed`
 - Next action: `inspect-native-dbus-build-make`
-- Report path: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-runtime-validation-report.json`
-- Native D-Bus build evidence path: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-extension-build-evidence.json`
-- Handoff path: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-runtime-validation-handoff.md`
-- Preparation shell script: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-runtime-validation-prepare.sh`
-- Preparation checklist: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\native-dbus-runtime-validation-preparation.txt`
+- Report path: `build/system-api/validation/native-dbus-real-host\native-dbus-runtime-validation-report.json`
+- Native D-Bus build evidence path: `build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json`
+- Handoff path: `build/system-api/validation/native-dbus-real-host\native-dbus-runtime-validation-handoff.md`
+- Preparation shell script: `build/system-api/validation/native-dbus-real-host\native-dbus-runtime-validation-prepare.sh`
+- Preparation checklist: `build/system-api/validation/native-dbus-real-host\native-dbus-runtime-validation-preparation.txt`
 
 ## Host Compatibility
 
@@ -50,7 +50,11 @@ php --version
 phpize --version || true
 lsb_release -a || cat /etc/os-release
 pecl version
+pecl channel-info pecl.php.net || true
+pecl channel-update pecl.php.net || true
+pecl remote-info pecl/dbus || true
 pecl remote-info channel://pecl.php.net/dbus-0.1.1
+pecl search dbus || true
 make --version || true
 gcc --version || true
 printf '%s

@@ -10,7 +10,11 @@ php --version
 phpize --version || true
 lsb_release -a || cat /etc/os-release
 pecl version
+pecl channel-info pecl.php.net || true
+pecl channel-update pecl.php.net || true
+pecl remote-info pecl/dbus || true
 pecl remote-info channel://pecl.php.net/dbus-0.1.1
+pecl search dbus || true
 make --version || true
 gcc --version || true
 printf '%s

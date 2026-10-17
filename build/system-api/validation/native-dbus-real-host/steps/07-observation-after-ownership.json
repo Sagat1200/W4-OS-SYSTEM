@@ -22,9 +22,9 @@
         "ownership_goal": "org.w4.System1",
         "service_lifecycle": "request-name-register-object-wait-loop",
         "artifacts": {
-            "ready_marker_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.ready",
-            "status_file_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime-status.json",
-            "pid_file_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.pid"
+            "ready_marker_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.ready",
+            "status_file_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime-status.json",
+            "pid_file_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.pid"
         },
         "runtime_backend": {
             "kind": "system-api-dbus-runtime-backend",
@@ -167,18 +167,18 @@
     "ownership_state": "native-runtime-service-not-started",
     "artifacts": {
         "ready_marker": {
-            "path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.ready",
+            "path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.ready",
             "exists": false,
             "contents": null
         },
         "status_file": {
-            "path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime-status.json",
+            "path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime-status.json",
             "exists": false,
             "payload": null,
             "parse_error": null
         },
         "pid_file": {
-            "path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.pid",
+            "path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.pid",
             "exists": false,
             "pid": null,
             "raw_value": null
