@@ -24,11 +24,11 @@
         "pecl_available": true,
         "extension_loaded": false,
         "blocking_reason": "native-dbus-extension-build-failed",
-        "next_action": "inspect-native-dbus-build-make",
+        "next_action": "prepare-native-dbus-fork-workspace",
         "build_phase": "make",
-        "reason": "zend_object_store_get_object",
-        "failure_signature": "make: *** [Makefile:192: dbus.lo] Error 1",
-        "log_path": "c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md"
+        "reason": "legacy-tsrmls-api-incompatible-with-php84",
+        "failure_signature": "make: *** [Makefile:208: dbus.lo] Error 1",
+        "log_path": "c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\virtualbox-modern-linux-pecl-dbus-retry-libxml2.log"
     },
     "missing_capabilities": [
         "php-dbus-runtime-adapter",

@@ -10,9 +10,9 @@
 - Host compatibility: `compatible`
 - Native D-Bus extension installation: `build-failed`
 - Blocking reason: `native-dbus-extension-build-failed`
-- Next action: `inspect-native-dbus-build-make`
+- Next action: `prepare-native-dbus-fork-workspace`
 - Report path: `build/system-api/validation/native-dbus-real-host/native-dbus-runtime-validation-report.json`
-- Native D-Bus build evidence path: `build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json`
+- Native D-Bus build evidence path: `build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-native-dbus-extension-build-evidence.json`
 - Handoff path: `build/system-api/validation/native-dbus-real-host/native-dbus-runtime-validation-handoff.md`
 - Preparation shell script: `build/system-api/validation/native-dbus-real-host/native-dbus-runtime-validation-prepare.sh`
 - Preparation checklist: `build/system-api/validation/native-dbus-real-host/native-dbus-runtime-validation-preparation.txt`
@@ -30,19 +30,19 @@
 - PECL available: `yes`
 - Installation build phase: `make`
 - Installation blocking reason: `native-dbus-extension-build-failed`
-- Installation next action: `inspect-native-dbus-build-make`
-- Installation reason: `zend_object_store_get_object`
-- Installation failure signature: `make: *** [Makefile:192: dbus.lo] Error 1`
-- Installation log path: `build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md`
+- Installation next action: `prepare-native-dbus-fork-workspace`
+- Installation reason: `legacy-tsrmls-api-incompatible-with-php84`
+- Installation failure signature: `make: *** [Makefile:208: dbus.lo] Error 1`
+- Installation log path: `build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-pecl-dbus-retry-libxml2.log`
 
 ## Recommended Next Actions
 
-- `inspect-native-dbus-build-make`
+- `prepare-native-dbus-fork-workspace`
 - `migrate-to-modern-linux-host`
 
 ## Preparation Plan
 
-1. `inspect-native-dbus-build-make` - La extension `dbus` ya avanzo hasta `make`, pero la compilacion fallo. Conviene inspeccionar el toolchain C y la evidencia del error de compilacion antes de seguir insistiendo con PECL.
+1. `prepare-native-dbus-fork-workspace` - La extension `dbus` ya avanzo hasta `make` y el fallo apunta a incompatibilidad legacy con `PHP 8.4`. Conviene preparar de inmediato el workspace del fork transitorio autorizado para V1, arrastrar la evidencia del build real y trabajar ahi el patch del port.
 
 ```bash
 php --version
@@ -56,9 +56,12 @@ pecl remote-info channel://pecl.php.net/dbus-0.1.1
 pecl search dbus || true
 make --version || true
 gcc --version || true
-printf '%s\n' "Ultimo motivo reportado: zend_object_store_get_object"
-printf '%s\n' "Firma detectada del fallo: make: *** [Makefile:192: dbus.lo] Error 1"
-test -f "build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md" && tail -n 80 "build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md" || echo "Build log no disponible: build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md"
+cd "/srv/w4/os-system" && php scripts/prepare_native_dbus_extension_fork.php --workspace-dir "build/system-api/native-dbus-extension-fork" --php-target 8.4 --pecl-package DBus-0.1.1 --build-evidence-json-path "build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-native-dbus-extension-build-evidence.json" --build-log-path "build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-pecl-dbus-retry-libxml2.log"
+cd "/srv/w4/os-system" && ls "build/system-api/native-dbus-extension-fork"
+cd "/srv/w4/os-system" && cat "build/system-api/native-dbus-extension-fork/notes/php84-porting-plan.md"
+printf '%s\n' "Ultimo motivo reportado: legacy-tsrmls-api-incompatible-with-php84"
+printf '%s\n' "Firma detectada del fallo: make: *** [Makefile:208: dbus.lo] Error 1"
+test -f "build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-pecl-dbus-retry-libxml2.log" && tail -n 80 "build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-pecl-dbus-retry-libxml2.log" || echo "Build log no disponible: build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-pecl-dbus-retry-libxml2.log"
 cd "/srv/w4/os-system" && php -r "echo json_decode(file_get_contents('composer.json'), true)['require']['php'], PHP_EOL;"
 ```
 
@@ -84,12 +87,12 @@ cd "/srv/w4/os-system" && php -r "echo json_decode(file_get_contents('composer.j
 
 ```bash
 printf '%s\n' "Preserva la evidencia actual si solo vas a reinspeccionar el mismo intento de compilacion."
-test -f "build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json" && cp "build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json" "build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json.before-rerun.$(date -u +%Y%m%dT%H%M%SZ).json" || true
-test -f "build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md" && cp "build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md" "build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md.before-rerun.$(date -u +%Y%m%dT%H%M%SZ).log" || true
+test -f "build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-native-dbus-extension-build-evidence.json" && cp "build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-native-dbus-extension-build-evidence.json" "build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-native-dbus-extension-build-evidence.json.before-rerun.$(date -u +%Y%m%dT%H%M%SZ).json" || true
+test -f "build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-pecl-dbus-retry-libxml2.log" && cp "build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-pecl-dbus-retry-libxml2.log" "build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-pecl-dbus-retry-libxml2.log.before-rerun.$(date -u +%Y%m%dT%H%M%SZ).log" || true
 printf '%s\n' "Despues de un build real nuevo, elimina el JSON previo para forzar una rematerializacion limpia en el siguiente rerun."
-cd "/srv/w4/os-system" && rm -f "build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host --native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md
-cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format text --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host --native-dbus-build-evidence-json-path build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json --native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md
-cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format markdown --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host --native-dbus-build-evidence-json-path build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json --native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md
-cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host --native-dbus-build-evidence-json-path build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json --native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md
+cd "/srv/w4/os-system" && rm -f "build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-native-dbus-extension-build-evidence.json" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host --native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-pecl-dbus-retry-libxml2.log
+cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format text --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host --native-dbus-build-evidence-json-path build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-native-dbus-extension-build-evidence.json --native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-pecl-dbus-retry-libxml2.log
+cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format markdown --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host --native-dbus-build-evidence-json-path build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-native-dbus-extension-build-evidence.json --native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-pecl-dbus-retry-libxml2.log
+cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host --native-dbus-build-evidence-json-path build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-native-dbus-extension-build-evidence.json --native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-pecl-dbus-retry-libxml2.log
 ```
 

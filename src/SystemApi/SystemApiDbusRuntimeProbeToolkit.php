@@ -358,18 +358,24 @@ final class SystemApiDbusRuntimeProbeToolkit
                             ? 'xml2-config-missing'
                             : 'native-dbus-extension-configure-failed')));
         } elseif (
-            str_contains($normalized, 'zend_object_store_get_object')
+            $this->isLegacyNativeDbusPhp84BuildFailureReason($normalized)
+            || str_contains($normalized, 'tsrmls_dc')
+            || str_contains($normalized, 'tsrmls_cc')
+            || str_contains($normalized, 'zend_parse_parameters')
+            || str_contains($normalized, 'zend_object_store_get_object')
             || str_contains($normalized, 'make: ***')
             || str_contains($normalized, 'compilacion sigue fallando')
             || str_contains($normalized, 'no compila')
         ) {
             $state = 'build-failed';
             $buildPhase = 'make';
-            $reason = str_contains($normalized, 'zend_object_store_get_object')
-                ? 'zend_object_store_get_object'
+            $reason = $this->isLegacyNativeDbusPhp84BuildFailureReason($normalized)
+                ? 'legacy-tsrmls-api-incompatible-with-php84'
+                : (str_contains($normalized, 'zend_object_store_get_object')
+                    ? 'zend_object_store_get_object'
                 : (str_contains($normalized, 'make: *** [makefile:192: dbus.lo] error 1')
                     ? 'make: *** [Makefile:192: dbus.lo] Error 1'
-                    : 'native-dbus-extension-build-failed');
+                    : 'native-dbus-extension-build-failed'));
         } elseif (
             str_contains($normalized, 'unsupported stack')
             || str_contains($normalized, 'stack no soportado')
@@ -423,7 +429,10 @@ final class SystemApiDbusRuntimeProbeToolkit
         }
 
         if (
-            str_contains($normalized, 'zend_object_store_get_object')
+            $this->isLegacyNativeDbusPhp84BuildFailureReason($normalized)
+            || str_contains($normalized, 'tsrmls')
+            || str_contains($normalized, 'zend_parse_parameters')
+            || str_contains($normalized, 'zend_object_store_get_object')
             || str_contains($normalized, 'make:')
             || str_contains($normalized, 'dbus.lo')
             || str_contains($normalized, 'build-failed')
@@ -448,9 +457,31 @@ final class SystemApiDbusRuntimeProbeToolkit
         return match ($buildPhase) {
             'phpize' => 'inspect-native-dbus-build-phpize',
             'configure' => 'inspect-native-dbus-build-configure',
-            'make' => 'inspect-native-dbus-build-make',
+            'make' => $this->shouldPrepareNativeDbusForkWorkspace($buildPhase, $reason)
+                ? 'prepare-native-dbus-fork-workspace'
+                : 'inspect-native-dbus-build-make',
             default => 'inspect-native-dbus-build-stack',
         };
+    }
+
+    private function shouldPrepareNativeDbusForkWorkspace(string $buildPhase, ?string $reason): bool
+    {
+        return $buildPhase === 'make' && $this->isLegacyNativeDbusPhp84BuildFailureReason($reason);
+    }
+
+    private function isLegacyNativeDbusPhp84BuildFailureReason(?string $reason): bool
+    {
+        if ($reason === null || trim($reason) === '') {
+            return false;
+        }
+
+        $normalized = strtolower(trim($reason));
+
+        return $normalized === 'legacy-tsrmls-api-incompatible-with-php84'
+            || str_contains($normalized, 'zend_object_store_get_object')
+            || str_contains($normalized, 'tsrmls')
+            || str_contains($normalized, 'zend_parse_parameters')
+            || str_contains($normalized, 'php84');
     }
 
     private function inferNativeDbusFailureSignatureFromReason(?string $reason, string $state): ?string

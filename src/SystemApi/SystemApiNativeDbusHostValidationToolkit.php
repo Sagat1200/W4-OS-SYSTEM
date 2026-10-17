@@ -128,7 +128,11 @@ final class SystemApiNativeDbusHostValidationToolkit
         $targetRepoRoot = $this->resolvePreparationTargetRepoRoot($effectiveOverrides, $osFamily);
         $hostCompatibility = $this->evaluateHostCompatibility($steps['diagnosis'], $targetRepoRoot);
         $hostCompatible = (($hostCompatibility['compatible'] ?? true) === true);
-        $nativeDbusExtensionInstallability = $this->evaluateNativeDbusExtensionInstallability($steps['diagnosis'], $targetRepoRoot);
+        $nativeDbusExtensionInstallability = $this->evaluateNativeDbusExtensionInstallability(
+            $steps['diagnosis'],
+            $targetRepoRoot,
+            $materializedNativeDbusBuildEvidenceArtifactPath
+        );
         $nativeDbusExtensionBlocked = (($nativeDbusExtensionInstallability['blocked'] ?? false) === true);
         if (!$hostCompatible) {
             $status = 'blocked';
@@ -1214,7 +1218,11 @@ final class SystemApiNativeDbusHostValidationToolkit
      * @param array<string, mixed> $diagnosis
      * @return array<string, mixed>
      */
-    private function evaluateNativeDbusExtensionInstallability(array $diagnosis, string $targetRepoRoot): array
+    private function evaluateNativeDbusExtensionInstallability(
+        array $diagnosis,
+        string $targetRepoRoot,
+        ?string $nativeDbusBuildEvidenceArtifactPath
+    ): array
     {
         $installation = is_array($diagnosis['native_dbus_extension_installation'] ?? null)
             ? $diagnosis['native_dbus_extension_installation']
@@ -1250,6 +1258,7 @@ final class SystemApiNativeDbusHostValidationToolkit
                 $reason,
                 $failureSignature,
                 $logPath,
+                $nativeDbusBuildEvidenceArtifactPath,
                 $targetRepoRoot,
                 $peclAvailable
             );
@@ -1279,6 +1288,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         ?string $reason,
         ?string $failureSignature,
         ?string $logPath,
+        ?string $nativeDbusBuildEvidenceArtifactPath,
         string $targetRepoRoot,
         bool $peclAvailable
     ): array {
@@ -1297,6 +1307,7 @@ final class SystemApiNativeDbusHostValidationToolkit
                 $reason,
                 $failureSignature,
                 $logPath,
+                $nativeDbusBuildEvidenceArtifactPath,
                 $targetRepoRoot,
                 $peclAvailable
             ),
@@ -1312,6 +1323,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         ?string $reason,
         ?string $failureSignature,
         ?string $logPath,
+        ?string $nativeDbusBuildEvidenceArtifactPath,
         string $targetRepoRoot,
         bool $peclAvailable
     ): array {
@@ -1374,6 +1386,16 @@ final class SystemApiNativeDbusHostValidationToolkit
             $commands[] = 'gcc --version || true';
         }
 
+        if ($this->shouldPrepareNativeDbusForkWorkspace($buildPhase, $reason)) {
+            foreach ($this->buildNativeDbusForkWorkspaceCommands(
+                $targetRepoRoot,
+                $nativeDbusBuildEvidenceArtifactPath,
+                $logPath
+            ) as $command) {
+                $commands[] = $command;
+            }
+        }
+
         if ($reason !== null && $reason !== '') {
             $commands[] = sprintf(
                 "printf '%%s\\n' %s",
@@ -1424,7 +1446,9 @@ final class SystemApiNativeDbusHostValidationToolkit
         return match ($buildPhase) {
             'phpize' => 'inspect-native-dbus-build-phpize',
             'configure' => 'inspect-native-dbus-build-configure',
-            'make' => 'inspect-native-dbus-build-make',
+            'make' => $this->shouldPrepareNativeDbusForkWorkspace($buildPhase, $reason)
+                ? 'prepare-native-dbus-fork-workspace'
+                : 'inspect-native-dbus-build-make',
             default => 'inspect-native-dbus-build-stack',
         };
     }
@@ -1441,9 +1465,87 @@ final class SystemApiNativeDbusHostValidationToolkit
                         : 'La extension `dbus` fallo al resolver o descargar la metadata del paquete desde PECL. Conviene inspeccionar el canal, la resolucion del paquete y la disponibilidad real de `pecl.php.net` antes de repetir la instalacion.')),
             'phpize' => 'La extension `dbus` fallo durante `phpize` o en la disponibilidad de la toolchain autotools. Conviene inspeccionar `phpize`, `autoconf`, `autoheader` y `aclocal` antes de pasar a `configure`.',
             'configure' => 'La extension `dbus` fallo durante `configure`. Conviene inspeccionar `pkg-config`, `xml2-config` y las dependencias de desarrollo requeridas antes de volver a compilar.',
-            'make' => 'La extension `dbus` ya avanzo hasta `make`, pero la compilacion fallo. Conviene inspeccionar el toolchain C y la evidencia del error de compilacion antes de seguir insistiendo con PECL.',
+            'make' => $this->shouldPrepareNativeDbusForkWorkspace($buildPhase, $reason)
+                ? 'La extension `dbus` ya avanzo hasta `make` y el fallo apunta a incompatibilidad legacy con `PHP 8.4`. Conviene preparar de inmediato el workspace del fork transitorio autorizado para V1, arrastrar la evidencia del build real y trabajar ahi el patch del port.'
+                : 'La extension `dbus` ya avanzo hasta `make`, pero la compilacion fallo. Conviene inspeccionar el toolchain C y la evidencia del error de compilacion antes de seguir insistiendo con PECL.',
             default => 'La extension `dbus` ya fue intentada pero la compilacion o instalacion fallo. Conviene inspeccionar el stack y la evidencia del build antes de seguir insistiendo con PECL.',
         };
+    }
+
+    private function shouldPrepareNativeDbusForkWorkspace(string $buildPhase, ?string $reason): bool
+    {
+        return $buildPhase === 'make' && $this->isLegacyNativeDbusPhp84BuildFailureReason($reason);
+    }
+
+    private function isLegacyNativeDbusPhp84BuildFailureReason(?string $reason): bool
+    {
+        if ($reason === null || trim($reason) === '') {
+            return false;
+        }
+
+        $normalized = strtolower(trim($reason));
+
+        return $normalized === 'legacy-tsrmls-api-incompatible-with-php84'
+            || str_contains($normalized, 'zend_object_store_get_object')
+            || str_contains($normalized, 'tsrmls')
+            || str_contains($normalized, 'zend_parse_parameters')
+            || str_contains($normalized, 'php84');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildNativeDbusForkWorkspaceCommands(
+        string $targetRepoRoot,
+        ?string $nativeDbusBuildEvidenceArtifactPath,
+        ?string $logPath
+    ): array {
+        $workspacePath = $this->resolveNativeDbusForkWorkspaceRelativePath();
+        $prepareCommand = sprintf(
+            'php scripts/prepare_native_dbus_extension_fork.php --workspace-dir %s --php-target 8.4 --pecl-package DBus-0.1.1',
+            escapeshellarg($workspacePath)
+        );
+
+        $portableEvidencePath = $this->resolvePortableRepoPath($nativeDbusBuildEvidenceArtifactPath);
+        if ($portableEvidencePath !== null) {
+            $prepareCommand .= sprintf(
+                ' --build-evidence-json-path %s',
+                escapeshellarg($portableEvidencePath)
+            );
+        }
+
+        if ($logPath !== null && trim($logPath) !== '') {
+            $displayLogPath = $this->resolvePortableRepoPath($logPath) ?? trim($logPath);
+            $prepareCommand .= sprintf(
+                ' --build-log-path %s',
+                escapeshellarg($displayLogPath)
+            );
+        }
+
+        $commands = [
+            $this->prefixTargetRepoRootCommand($targetRepoRoot, $prepareCommand),
+            $this->prefixTargetRepoRootCommand($targetRepoRoot, sprintf('ls "%s"', $workspacePath)),
+            $this->prefixTargetRepoRootCommand(
+                $targetRepoRoot,
+                sprintf('cat "%s"', $workspacePath . '/notes/php84-porting-plan.md')
+            ),
+        ];
+
+        return $commands;
+    }
+
+    private function resolveNativeDbusForkWorkspaceRelativePath(): string
+    {
+        return 'build/system-api/native-dbus-extension-fork';
+    }
+
+    private function prefixTargetRepoRootCommand(string $targetRepoRoot, string $command): string
+    {
+        if ($targetRepoRoot === '') {
+            return $command;
+        }
+
+        return sprintf('cd "%s" && %s', $targetRepoRoot, $command);
     }
 
     /**
@@ -1834,7 +1936,11 @@ final class SystemApiNativeDbusHostValidationToolkit
         }
 
         if (
-            str_contains($normalized, 'zend_object_store_get_object')
+            $this->isLegacyNativeDbusPhp84BuildFailureReason($normalized)
+            || str_contains($normalized, 'tsrmls_dc')
+            || str_contains($normalized, 'tsrmls_cc')
+            || str_contains($normalized, 'zend_parse_parameters')
+            || str_contains($normalized, 'zend_object_store_get_object')
             || str_contains($normalized, 'make: ***')
             || str_contains($normalized, 'compilacion sigue fallando')
             || str_contains($normalized, 'no compila')
@@ -1842,11 +1948,13 @@ final class SystemApiNativeDbusHostValidationToolkit
             $markers[] = 'make';
             $state = 'build-failed';
             $buildPhase = 'make';
-            $reason = str_contains($normalized, 'zend_object_store_get_object')
-                ? 'zend_object_store_get_object'
+            $reason = $this->isLegacyNativeDbusPhp84BuildFailureReason($normalized)
+                ? 'legacy-tsrmls-api-incompatible-with-php84'
+                : (str_contains($normalized, 'zend_object_store_get_object')
+                    ? 'zend_object_store_get_object'
                 : (str_contains($normalized, 'make: *** [makefile:192: dbus.lo] error 1')
                     ? 'make: *** [Makefile:192: dbus.lo] Error 1'
-                    : 'native-dbus-extension-build-failed');
+                    : 'native-dbus-extension-build-failed'));
         }
 
         if (
@@ -1967,7 +2075,10 @@ final class SystemApiNativeDbusHostValidationToolkit
         }
 
         if (
-            str_contains($normalized, 'zend_object_store_get_object')
+            $this->isLegacyNativeDbusPhp84BuildFailureReason($normalized)
+            || str_contains($normalized, 'tsrmls')
+            || str_contains($normalized, 'zend_parse_parameters')
+            || str_contains($normalized, 'zend_object_store_get_object')
             || str_contains($normalized, 'make:')
             || str_contains($normalized, 'dbus.lo')
             || str_contains($normalized, 'build-failed')
@@ -2012,6 +2123,8 @@ final class SystemApiNativeDbusHostValidationToolkit
             ],
             'make' => [
                 '/make:\s*\*\*\*/i',
+                '/tsrmls/i',
+                '/zend_parse_parameters/i',
                 '/zend_object_store_get_object/i',
                 '/dbus\.lo/i',
             ],

@@ -1,0 +1,29 @@
+{
+    "api_version": "1.0",
+    "kind": "system-api-native-dbus-fork-workspace",
+    "generated_at": "2026-10-17T16:32:02+00:00",
+    "workspace_dir": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork",
+    "php_target": "8.4",
+    "pecl_package": "DBus-0.1.1",
+    "paths": {
+        "workspace_dir": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork",
+        "upstream_dir": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/upstream",
+        "fork_dir": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/fork",
+        "patches_dir": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/patches",
+        "evidence_dir": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/evidence",
+        "notes_dir": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/notes"
+    },
+    "copied_inputs": {
+        "build_log": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/evidence/native-dbus-build.log",
+        "build_evidence_json": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/evidence/native-dbus-extension-build-evidence.json"
+    },
+    "notes": {
+        "porting_plan_path": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/notes/php84-porting-plan.md",
+        "patch_queue_readme_path": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/patches/README.md"
+    },
+    "next_steps": [
+        "Importar el codigo fuente upstream si todavia no esta disponible dentro del workspace.",
+        "Localizar y reemplazar los usos legacy de TSRMLS, zend_parse_parameters y zend_object_store_get_object.",
+        "Registrar cada intento de patch bajo patches/ y rerun de phpize/configure/make con evidencia nueva."
+    ]
+}

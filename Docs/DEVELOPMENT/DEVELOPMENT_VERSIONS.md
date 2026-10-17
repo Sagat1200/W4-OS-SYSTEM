@@ -26,6 +26,8 @@ Mantener trazabilidad entre:
 | PLAN | PLAN-1.0 | 2026-10-17 | Activa | Se fija como decision de proyecto usar `pecl/DBus` parcheado solo como puente de validacion V1 y ejecutar la migracion principal a Rust una vez cerradas las tres ediciones |
 | DOC | DOC-0.5 | 2026-10-16 | Activa | Se materializan la auditoria ejecutiva del estado V1 y la matriz operativa `V1-01` a `V1-20` con trazabilidad, evidencia y comandos de validacion |
 | DOC | DOC-0.6 | 2026-10-16 | Activa | Se incorpora una ficha directa de la `System API` para arquitectura, onboarding y comunicacion tecnica |
+| TECH | TECH-1.268 | 2026-10-17 | Activa | El runner y el handoff Linux ya convierten la incompatibilidad legacy de `pecl/DBus` con `PHP 8.4` en un paso operativo de `prepare-native-dbus-fork-workspace` |
+| TECH | TECH-1.267 | 2026-10-17 | Activa | El repo ya cuenta con un script PHP para preparar el workspace del fork transitorio de `pecl/DBus` e importar la evidencia real del build fallido |
 | TECH | TECH-1.266 | 2026-10-17 | Activa | El contraste en Linux moderno confirma que `pecl/DBus 0.1.1` falla en `make` por incompatibilidad real con PHP 8.4 |
 | TECH | TECH-1.265 | 2026-10-17 | Activa | Se materializa evidencia directa de que el WSL local actual no es un host valido para el contraste final |
 | TECH | TECH-1.264 | 2026-10-17 | Activa | El `summary.md` ya degrada igual que el handoff los artefactos no portables al host Linux |

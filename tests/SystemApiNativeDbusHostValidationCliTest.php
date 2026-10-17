@@ -240,8 +240,8 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         $payload = $this->decodeJson($result['stdout']);
         self::assertSame('blocked', $payload['status']);
         self::assertSame('native-dbus-extension-build-failed', $payload['blocking_reason']);
-        self::assertSame('inspect-native-dbus-build-make', $payload['next_action']);
-        self::assertContains('inspect-native-dbus-build-make', $payload['recommended_next_actions']);
+        self::assertSame('prepare-native-dbus-fork-workspace', $payload['next_action']);
+        self::assertContains('prepare-native-dbus-fork-workspace', $payload['recommended_next_actions']);
         self::assertContains('migrate-to-modern-linux-host', $payload['recommended_next_actions']);
         self::assertNotContains('install-native-dbus-extension', $payload['recommended_next_actions']);
         self::assertTrue($payload['host_compatibility']['compatible']);
@@ -255,16 +255,18 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
             $payload['preparation_plan']
         );
         self::assertSame(
-            ['inspect-native-dbus-build-make', 'migrate-to-modern-linux-host', 'rerun-native-runtime-validation'],
+            ['prepare-native-dbus-fork-workspace', 'migrate-to-modern-linux-host', 'rerun-native-runtime-validation'],
             $preparationActions
         );
 
         $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
         self::assertNotFalse($preparationChecklist);
-        self::assertStringContainsString('inspect-native-dbus-build-make', $preparationChecklist);
+        self::assertStringContainsString('prepare-native-dbus-fork-workspace', $preparationChecklist);
         self::assertStringContainsString('migrate-to-modern-linux-host', $preparationChecklist);
         self::assertStringContainsString('build-essential', $preparationChecklist);
         self::assertStringContainsString('pecl remote-info channel://pecl.php.net/dbus-0.1.1', $preparationChecklist);
+        self::assertStringContainsString('php scripts/prepare_native_dbus_extension_fork.php', $preparationChecklist);
+        self::assertStringContainsString('native-dbus-extension-fork/notes/php84-porting-plan.md', $preparationChecklist);
         self::assertStringContainsString('/tmp/pecl-dbus.log', $preparationChecklist);
         self::assertStringContainsString('printf \'%s\\n\' "Ultimo motivo reportado: zend_object_store_get_object"', $preparationChecklist);
         self::assertStringContainsString('Ultimo motivo reportado: zend_object_store_get_object', $preparationChecklist);
@@ -315,10 +317,10 @@ TEXT);
         $payload = $this->decodeJson($result['stdout']);
         self::assertSame('blocked', $payload['status']);
         self::assertSame('native-dbus-extension-build-failed', $payload['blocking_reason']);
-        self::assertSame('inspect-native-dbus-build-make', $payload['next_action']);
+        self::assertSame('prepare-native-dbus-fork-workspace', $payload['next_action']);
         self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
         self::assertSame('make', $payload['native_dbus_extension_installability']['build_phase']);
-        self::assertSame('zend_object_store_get_object', $payload['native_dbus_extension_installability']['reason']);
+        self::assertSame('legacy-tsrmls-api-incompatible-with-php84', $payload['native_dbus_extension_installability']['reason']);
         self::assertSame('make: *** [Makefile:192: dbus.lo] Error 1', $payload['native_dbus_extension_installability']['failure_signature']);
         self::assertSame(str_replace('\\', '/', $evidencePath), $payload['native_dbus_extension_installability']['log_path']);
         self::assertFileExists($payload['native_dbus_extension_build_evidence_path']);
@@ -327,7 +329,7 @@ TEXT);
         self::assertSame('system-api-native-dbus-extension-build-evidence', $structuredEvidence['kind']);
         self::assertSame('build-failed', $structuredEvidence['state']);
         self::assertSame('make', $structuredEvidence['build_phase']);
-        self::assertSame('zend_object_store_get_object', $structuredEvidence['reason']);
+        self::assertSame('legacy-tsrmls-api-incompatible-with-php84', $structuredEvidence['reason']);
         self::assertSame('make: *** [Makefile:192: dbus.lo] Error 1', $structuredEvidence['failure_signature']);
         self::assertSame($evidencePath, $structuredEvidence['source_path']);
         self::assertSame($evidencePath, $structuredEvidence['log_path']);
@@ -337,7 +339,7 @@ TEXT);
             $payload['preparation_plan']
         );
         self::assertSame(
-            ['inspect-native-dbus-build-make', 'migrate-to-modern-linux-host', 'rerun-native-runtime-validation'],
+            ['prepare-native-dbus-fork-workspace', 'migrate-to-modern-linux-host', 'rerun-native-runtime-validation'],
             $preparationActions
         );
     }
@@ -375,7 +377,7 @@ TEXT);
         $payload = $this->decodeJson($result['stdout']);
         self::assertSame('blocked', $payload['status']);
         self::assertSame('native-dbus-extension-build-failed', $payload['blocking_reason']);
-        self::assertSame('inspect-native-dbus-build-make', $payload['next_action']);
+        self::assertSame('prepare-native-dbus-fork-workspace', $payload['next_action']);
         self::assertFileExists($payload['native_dbus_extension_build_evidence_path']);
 
         $structuredEvidence = $this->decodeJsonFile($payload['native_dbus_extension_build_evidence_path']);
@@ -804,7 +806,7 @@ TEXT);
         self::assertStringContainsString('cd "/srv/w4/os-system" && cat "' . $relativeEvidenceDir . '/native-dbus-runtime-validation-preparation.txt"', $handoff);
         self::assertStringContainsString('cd "/srv/w4/os-system" && chmod +x "' . $relativeEvidenceDir . '/native-dbus-runtime-validation-prepare.sh" && bash "' . $relativeEvidenceDir . '/native-dbus-runtime-validation-prepare.sh"', $handoff);
         self::assertStringContainsString('## Recommended Next Actions', $handoff);
-        self::assertStringContainsString('`inspect-native-dbus-build-make`', $handoff);
+        self::assertStringContainsString('`prepare-native-dbus-fork-workspace`', $handoff);
         self::assertStringContainsString('`migrate-to-modern-linux-host`', $handoff);
         self::assertStringContainsString('## Preparation Plan', $handoff);
         self::assertStringContainsString('Reutiliza `--evidence-dir ' . $relativeEvidenceDir . '` mientras sigas diagnosticando el mismo intento de compilacion.', $handoff);
