@@ -311,12 +311,29 @@ final class SystemApiDbusRuntimeProbeToolkit
             str_contains($normalized, 'failed to download pecl/dbus')
             || str_contains($normalized, 'latest release is beta')
             || str_contains($normalized, 'no releases available for package')
+            || str_contains($normalized, 'temporary failure in name resolution')
+            || str_contains($normalized, 'getaddrinfo for pecl.php.net failed')
+            || str_contains($normalized, 'channel "pecl.php.net" is not responding')
+            || str_contains($normalized, 'connection to `ssl://pecl.php.net:443')
+            || str_contains($normalized, 'connection to ssl://pecl.php.net:443')
         ) {
             $state = 'build-failed';
             $buildPhase = 'pecl-download';
             $reason = str_contains($normalized, 'latest release is beta')
                 ? 'pecl-release-is-beta'
-                : 'native-dbus-extension-download-failed';
+                : (
+                    str_contains($normalized, 'no releases available for package')
+                    ? 'pecl-package-resolution-failed'
+                    : (
+                        str_contains($normalized, 'temporary failure in name resolution')
+                        || str_contains($normalized, 'getaddrinfo for pecl.php.net failed')
+                        || str_contains($normalized, 'channel "pecl.php.net" is not responding')
+                        || str_contains($normalized, 'connection to `ssl://pecl.php.net:443')
+                        || str_contains($normalized, 'connection to ssl://pecl.php.net:443')
+                            ? 'pecl-network-resolution-failed'
+                            : 'native-dbus-extension-download-failed'
+                    )
+                );
         } elseif (
             str_contains($normalized, 'configure: error')
             || str_contains($normalized, 'cannot find xml2-config')
@@ -420,9 +437,12 @@ final class SystemApiDbusRuntimeProbeToolkit
     private function resolveNativeDbusBuildFailureAction(string $buildPhase, ?string $reason): string
     {
         if ($buildPhase === 'pecl-download') {
-            return $reason === 'pecl-release-is-beta'
-                ? 'inspect-native-dbus-pecl-release'
-                : 'inspect-native-dbus-pecl-channel';
+            return match ($reason) {
+                'pecl-release-is-beta' => 'inspect-native-dbus-pecl-release',
+                'pecl-package-resolution-failed' => 'inspect-native-dbus-pecl-package',
+                'pecl-network-resolution-failed' => 'inspect-native-dbus-pecl-network',
+                default => 'inspect-native-dbus-pecl-channel',
+            };
         }
 
         return match ($buildPhase) {
@@ -450,6 +470,10 @@ final class SystemApiDbusRuntimeProbeToolkit
                 '/failed to download pecl\/dbus/i',
                 '/latest release is beta/i',
                 '/no releases available for package/i',
+                '/temporary failure in name resolution/i',
+                '/getaddrinfo for pecl\.php\.net failed/i',
+                '/channel "pecl\.php\.net" is not responding/i',
+                '/connection to `?ssl:\/\/pecl\.php\.net:443/i',
             ],
             'phpize' => [
                 '/cannot find autoconf/i',

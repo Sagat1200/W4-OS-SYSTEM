@@ -424,7 +424,7 @@ TEXT);
         self::assertStringContainsString('- Installation failure signature: `Failed to download pecl/dbus within preferred state "stable", latest release is beta`', $savedSummary);
     }
 
-    public function testValidationSeparatesPeclChannelFailureFromBetaReleaseCase(): void
+    public function testValidationSeparatesPeclPackageResolutionFailureFromBetaReleaseCase(): void
     {
         $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-native-dbus-pecl-channel-failed-host';
         $buildLogPath = $this->tempDir . DIRECTORY_SEPARATOR . 'native-dbus-pecl-channel.log';
@@ -456,25 +456,81 @@ TEXT);
         $payload = $this->decodeJson($result['stdout']);
         self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
         self::assertSame('pecl-download', $payload['native_dbus_extension_installability']['build_phase']);
-        self::assertSame('native-dbus-extension-download-failed', $payload['native_dbus_extension_installability']['reason']);
+        self::assertSame('pecl-package-resolution-failed', $payload['native_dbus_extension_installability']['reason']);
         self::assertSame(
             'Failed to download pecl/dbus within preferred state "stable", no releases available for package "pecl.php.net/dbus"',
             $payload['native_dbus_extension_installability']['failure_signature']
         );
-        self::assertSame('inspect-native-dbus-pecl-channel', $payload['preparation_plan'][0]['action']);
+        self::assertSame('inspect-native-dbus-pecl-package', $payload['preparation_plan'][0]['action']);
 
         $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
         self::assertNotFalse($preparationChecklist);
-        self::assertStringContainsString('inspect-native-dbus-pecl-channel', $preparationChecklist);
+        self::assertStringContainsString('inspect-native-dbus-pecl-package', $preparationChecklist);
+        self::assertStringContainsString('pecl search dbus || true', $preparationChecklist);
+        self::assertStringContainsString('pecl remote-info pecl/dbus || true', $preparationChecklist);
+        self::assertStringContainsString('pecl list-all | grep -i dbus || true', $preparationChecklist);
+        self::assertStringContainsString('pecl remote-info pecl/dbus || true', $preparationChecklist);
+        self::assertStringNotContainsString('pecl install channel://pecl.php.net/dbus-0.1.1 || true', $preparationChecklist);
+        self::assertStringNotContainsString('pecl channel-discover pecl.php.net || true', $preparationChecklist);
+
+        $savedSummary = file_get_contents($payload['summary_path']);
+        self::assertNotFalse($savedSummary);
+        self::assertStringContainsString('- Installation build phase: `pecl-download`', $savedSummary);
+        self::assertStringContainsString('- Installation next action: `inspect-native-dbus-pecl-package`', $savedSummary);
+    }
+
+    public function testValidationSeparatesPeclNetworkFailureFromPackageResolutionCase(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-native-dbus-pecl-network-failed-host';
+        $buildLogPath = $this->tempDir . DIRECTORY_SEPARATOR . 'native-dbus-pecl-network.log';
+        file_put_contents($buildLogPath, <<<TEXT
+Channel "pecl.php.net" is not responding over http://, failed with message: php_network_getaddresses: getaddrinfo for pecl.php.net failed: Temporary failure in name resolution
+Trying channel "pecl.php.net" over https:// instead
+TEXT);
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+            '--target-repo-root',
+            '/srv/w4/os-system',
+            '--native-dbus-build-log-path',
+            $buildLogPath,
+        ], array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '1',
+            ]
+        ));
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
+        self::assertSame('pecl-download', $payload['native_dbus_extension_installability']['build_phase']);
+        self::assertSame('pecl-network-resolution-failed', $payload['native_dbus_extension_installability']['reason']);
+        self::assertSame(
+            'Channel "pecl.php.net" is not responding over http://, failed with message: php_network_getaddresses: getaddrinfo for pecl.php.net failed: Temporary failure in name resolution',
+            $payload['native_dbus_extension_installability']['failure_signature']
+        );
+        self::assertSame('inspect-native-dbus-pecl-network', $payload['preparation_plan'][0]['action']);
+
+        $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
+        self::assertNotFalse($preparationChecklist);
+        self::assertStringContainsString('inspect-native-dbus-pecl-network', $preparationChecklist);
+        self::assertStringContainsString('getent hosts pecl.php.net || nslookup pecl.php.net || true', $preparationChecklist);
+        self::assertStringContainsString('ping -c 1 pecl.php.net || true', $preparationChecklist);
         self::assertStringContainsString('pecl list-channels || true', $preparationChecklist);
         self::assertStringContainsString('pecl channel-discover pecl.php.net || true', $preparationChecklist);
-        self::assertStringContainsString('pecl remote-info pecl/dbus || true', $preparationChecklist);
         self::assertStringNotContainsString('pecl install channel://pecl.php.net/dbus-0.1.1 || true', $preparationChecklist);
 
         $savedSummary = file_get_contents($payload['summary_path']);
         self::assertNotFalse($savedSummary);
         self::assertStringContainsString('- Installation build phase: `pecl-download`', $savedSummary);
-        self::assertStringContainsString('- Installation next action: `inspect-native-dbus-pecl-channel`', $savedSummary);
+        self::assertStringContainsString('- Installation next action: `inspect-native-dbus-pecl-network`', $savedSummary);
     }
 
     public function testValidationCanInferConfigureFailureFromRawBuildLogPathWithoutExplicitState(): void

@@ -1063,7 +1063,19 @@ final class SystemApiNativeDbusHostValidationToolkit
                 $commands[] = 'pecl install channel://pecl.php.net/dbus-0.1.1 || true';
             }
 
-            if ($reason === 'native-dbus-extension-download-failed') {
+            if ($reason === 'pecl-package-resolution-failed') {
+                $commands[] = 'pecl search dbus || true';
+                $commands[] = 'pecl remote-info pecl/dbus || true';
+                $commands[] = 'pecl list-all | grep -i dbus || true';
+            }
+
+            if ($reason === 'pecl-network-resolution-failed') {
+                $commands[] = 'getent hosts pecl.php.net || nslookup pecl.php.net || true';
+                $commands[] = 'ping -c 1 pecl.php.net || true';
+                $commands[] = 'php -r "var_export(gethostbynamel(\'pecl.php.net\')); echo PHP_EOL;" || true';
+            }
+
+            if ($reason === 'native-dbus-extension-download-failed' || $reason === 'pecl-network-resolution-failed') {
                 $commands[] = 'pecl list-channels || true';
                 $commands[] = 'pecl channel-discover pecl.php.net || true';
             }
@@ -1125,9 +1137,12 @@ final class SystemApiNativeDbusHostValidationToolkit
     private function resolveNativeDbusBuildFailureAction(string $buildPhase, ?string $reason): string
     {
         if ($buildPhase === 'pecl-download') {
-            return $reason === 'pecl-release-is-beta'
-                ? 'inspect-native-dbus-pecl-release'
-                : 'inspect-native-dbus-pecl-channel';
+            return match ($reason) {
+                'pecl-release-is-beta' => 'inspect-native-dbus-pecl-release',
+                'pecl-package-resolution-failed' => 'inspect-native-dbus-pecl-package',
+                'pecl-network-resolution-failed' => 'inspect-native-dbus-pecl-network',
+                default => 'inspect-native-dbus-pecl-channel',
+            };
         }
 
         return match ($buildPhase) {
@@ -1143,7 +1158,11 @@ final class SystemApiNativeDbusHostValidationToolkit
         return match ($buildPhase) {
             'pecl-download' => $reason === 'pecl-release-is-beta'
                 ? 'La extension `dbus` fallo porque la release estable no esta disponible en PECL y la disponible aparece como beta. Conviene validar el canal PECL, inspeccionar la metadata del paquete y probar la release explicita `channel://pecl.php.net/dbus-0.1.1` antes de seguir.'
-                : 'La extension `dbus` fallo al resolver o descargar la metadata del paquete desde PECL. Conviene inspeccionar el canal, la resolucion del paquete y la disponibilidad real de `pecl.php.net` antes de repetir la instalacion.',
+                : ($reason === 'pecl-package-resolution-failed'
+                    ? 'La extension `dbus` fallo porque PECL no pudo resolver una release publica del paquete. Conviene inspeccionar la metadata del paquete, la disponibilidad de versiones y la resolucion real de `pecl/dbus` antes de repetir la instalacion.'
+                    : ($reason === 'pecl-network-resolution-failed'
+                        ? 'La extension `dbus` fallo porque el host no pudo alcanzar correctamente `pecl.php.net`. Conviene inspeccionar DNS, conectividad saliente y reachability del canal antes de seguir con PECL.'
+                        : 'La extension `dbus` fallo al resolver o descargar la metadata del paquete desde PECL. Conviene inspeccionar el canal, la resolucion del paquete y la disponibilidad real de `pecl.php.net` antes de repetir la instalacion.')),
             'phpize' => 'La extension `dbus` fallo durante `phpize` o en la disponibilidad de la toolchain autotools. Conviene inspeccionar `phpize`, `autoconf`, `autoheader` y `aclocal` antes de pasar a `configure`.',
             'configure' => 'La extension `dbus` fallo durante `configure`. Conviene inspeccionar `pkg-config`, `xml2-config` y las dependencias de desarrollo requeridas antes de volver a compilar.',
             'make' => 'La extension `dbus` ya avanzo hasta `make`, pero la compilacion fallo. Conviene inspeccionar el toolchain C y la evidencia del error de compilacion antes de seguir insistiendo con PECL.',
@@ -1370,13 +1389,30 @@ final class SystemApiNativeDbusHostValidationToolkit
             str_contains($normalized, 'failed to download pecl/dbus')
             || str_contains($normalized, 'latest release is beta')
             || str_contains($normalized, 'no releases available for package')
+            || str_contains($normalized, 'temporary failure in name resolution')
+            || str_contains($normalized, 'getaddrinfo for pecl.php.net failed')
+            || str_contains($normalized, 'channel "pecl.php.net" is not responding')
+            || str_contains($normalized, 'connection to `ssl://pecl.php.net:443')
+            || str_contains($normalized, 'connection to ssl://pecl.php.net:443')
         ) {
             $markers[] = 'pecl-download';
             $state = 'build-failed';
             $buildPhase = 'pecl-download';
             $reason = str_contains($normalized, 'latest release is beta')
                 ? 'pecl-release-is-beta'
-                : 'native-dbus-extension-download-failed';
+                : (
+                    str_contains($normalized, 'no releases available for package')
+                    ? 'pecl-package-resolution-failed'
+                    : (
+                        str_contains($normalized, 'temporary failure in name resolution')
+                        || str_contains($normalized, 'getaddrinfo for pecl.php.net failed')
+                        || str_contains($normalized, 'channel "pecl.php.net" is not responding')
+                        || str_contains($normalized, 'connection to `ssl://pecl.php.net:443')
+                        || str_contains($normalized, 'connection to ssl://pecl.php.net:443')
+                            ? 'pecl-network-resolution-failed'
+                            : 'native-dbus-extension-download-failed'
+                    )
+                );
         }
 
         if (
@@ -1518,6 +1554,8 @@ final class SystemApiNativeDbusHostValidationToolkit
 
         if (
             str_contains($normalized, 'pecl-release-is-beta')
+            || str_contains($normalized, 'pecl-package-resolution-failed')
+            || str_contains($normalized, 'pecl-network-resolution-failed')
             || str_contains($normalized, 'download')
         ) {
             return 'pecl-download';
@@ -1568,6 +1606,10 @@ final class SystemApiNativeDbusHostValidationToolkit
                 '/failed to download pecl\/dbus/i',
                 '/latest release is beta/i',
                 '/no releases available for package/i',
+                '/temporary failure in name resolution/i',
+                '/getaddrinfo for pecl\.php\.net failed/i',
+                '/channel "pecl\.php\.net" is not responding/i',
+                '/connection to `?ssl:\/\/pecl\.php\.net:443/i',
             ],
             'phpize' => [
                 '/cannot find autoconf/i',
