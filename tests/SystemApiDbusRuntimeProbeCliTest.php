@@ -231,12 +231,54 @@ TEXT);
             self::assertSame('build-failed', $payload['native_dbus_extension_installation']['state']);
             self::assertSame('pecl-download', $payload['native_dbus_extension_installation']['build_phase']);
             self::assertSame('pecl-release-is-beta', $payload['native_dbus_extension_installation']['reason']);
-            self::assertSame('inspect-native-dbus-pecl-download', $payload['native_dbus_extension_installation']['next_action']);
+            self::assertSame('inspect-native-dbus-pecl-release', $payload['native_dbus_extension_installation']['next_action']);
             self::assertSame(
                 'Failed to download pecl/dbus within preferred state "stable", latest release is beta',
                 $payload['native_dbus_extension_installation']['failure_signature']
             );
             self::assertTrue($payload['native_dbus_extension_installation']['pecl_available']);
+        } finally {
+            @unlink($evidencePath);
+        }
+    }
+
+    public function testProbeCanInferPeclChannelResolutionFailureFromEvidenceFile(): void
+    {
+        $evidencePath = tempnam(sys_get_temp_dir(), 'w4-dbus-build-evidence-channel-');
+        self::assertNotFalse($evidencePath);
+
+        try {
+            file_put_contents($evidencePath, <<<TEXT
+Failed to download pecl/dbus within preferred state "stable", no releases available for package "pecl.php.net/dbus"
+pecl install dbus
+TEXT);
+
+            $result = $this->runPhpScript([
+                $this->scriptPath(),
+            ], [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '1',
+                'W4_SYSTEM_API_PROBE_HAS_BUSCTL' => '1',
+                'W4_SYSTEM_API_PROBE_HAS_GDBUS' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON' => '1',
+                'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET' => '1',
+                'W4_SYSTEM_API_PROBE_OS_FAMILY' => 'Linux',
+                'W4_SYSTEM_API_PROBE_PHP_BINARY' => '/usr/bin/php',
+                'W4_SYSTEM_API_PROBE_PHP_VERSION' => '8.4.3',
+                'W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_PATH' => $evidencePath,
+            ]);
+
+            self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+            $payload = $this->decodeJson($result['stdout']);
+            self::assertSame('build-failed', $payload['native_dbus_extension_installation']['state']);
+            self::assertSame('pecl-download', $payload['native_dbus_extension_installation']['build_phase']);
+            self::assertSame('native-dbus-extension-download-failed', $payload['native_dbus_extension_installation']['reason']);
+            self::assertSame('inspect-native-dbus-pecl-channel', $payload['native_dbus_extension_installation']['next_action']);
+            self::assertSame(
+                'Failed to download pecl/dbus within preferred state "stable", no releases available for package "pecl.php.net/dbus"',
+                $payload['native_dbus_extension_installation']['failure_signature']
+            );
         } finally {
             @unlink($evidencePath);
         }

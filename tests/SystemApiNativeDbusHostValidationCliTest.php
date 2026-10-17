@@ -406,11 +406,11 @@ TEXT);
             'Failed to download pecl/dbus within preferred state "stable", latest release is beta',
             $payload['native_dbus_extension_installability']['failure_signature']
         );
-        self::assertSame('inspect-native-dbus-pecl-download', $payload['preparation_plan'][0]['action']);
+        self::assertSame('inspect-native-dbus-pecl-release', $payload['preparation_plan'][0]['action']);
 
         $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
         self::assertNotFalse($preparationChecklist);
-        self::assertStringContainsString('inspect-native-dbus-pecl-download', $preparationChecklist);
+        self::assertStringContainsString('inspect-native-dbus-pecl-release', $preparationChecklist);
         self::assertStringContainsString('pecl channel-update pecl.php.net || true', $preparationChecklist);
         self::assertStringContainsString('pecl remote-info pecl/dbus || true', $preparationChecklist);
         self::assertStringContainsString('pecl remote-info channel://pecl.php.net/dbus-0.1.1', $preparationChecklist);
@@ -422,6 +422,59 @@ TEXT);
         self::assertNotFalse($savedSummary);
         self::assertStringContainsString('- Installation build phase: `pecl-download`', $savedSummary);
         self::assertStringContainsString('- Installation failure signature: `Failed to download pecl/dbus within preferred state "stable", latest release is beta`', $savedSummary);
+    }
+
+    public function testValidationSeparatesPeclChannelFailureFromBetaReleaseCase(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-native-dbus-pecl-channel-failed-host';
+        $buildLogPath = $this->tempDir . DIRECTORY_SEPARATOR . 'native-dbus-pecl-channel.log';
+        file_put_contents($buildLogPath, <<<TEXT
+Failed to download pecl/dbus within preferred state "stable", no releases available for package "pecl.php.net/dbus"
+pecl install dbus
+TEXT);
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+            '--target-repo-root',
+            '/srv/w4/os-system',
+            '--native-dbus-build-log-path',
+            $buildLogPath,
+        ], array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '1',
+            ]
+        ));
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
+        self::assertSame('pecl-download', $payload['native_dbus_extension_installability']['build_phase']);
+        self::assertSame('native-dbus-extension-download-failed', $payload['native_dbus_extension_installability']['reason']);
+        self::assertSame(
+            'Failed to download pecl/dbus within preferred state "stable", no releases available for package "pecl.php.net/dbus"',
+            $payload['native_dbus_extension_installability']['failure_signature']
+        );
+        self::assertSame('inspect-native-dbus-pecl-channel', $payload['preparation_plan'][0]['action']);
+
+        $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
+        self::assertNotFalse($preparationChecklist);
+        self::assertStringContainsString('inspect-native-dbus-pecl-channel', $preparationChecklist);
+        self::assertStringContainsString('pecl list-channels || true', $preparationChecklist);
+        self::assertStringContainsString('pecl channel-discover pecl.php.net || true', $preparationChecklist);
+        self::assertStringContainsString('pecl remote-info pecl/dbus || true', $preparationChecklist);
+        self::assertStringNotContainsString('pecl install channel://pecl.php.net/dbus-0.1.1 || true', $preparationChecklist);
+
+        $savedSummary = file_get_contents($payload['summary_path']);
+        self::assertNotFalse($savedSummary);
+        self::assertStringContainsString('- Installation build phase: `pecl-download`', $savedSummary);
+        self::assertStringContainsString('- Installation next action: `inspect-native-dbus-pecl-channel`', $savedSummary);
     }
 
     public function testValidationCanInferConfigureFailureFromRawBuildLogPathWithoutExplicitState(): void

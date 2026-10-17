@@ -197,7 +197,7 @@ final class SystemApiDbusRuntimeProbeToolkit
         };
 
         $nextAction = match ($state) {
-            'build-failed' => $this->resolveNativeDbusBuildFailureAction($buildPhase),
+            'build-failed' => $this->resolveNativeDbusBuildFailureAction($buildPhase, $reason),
             'unsupported-stack' => 'migrate-to-modern-linux-host',
             'buildable', 'not-attempted', 'unknown' => $extensionLoaded ? 'observe-runtime-backend' : 'install-native-dbus-extension',
             'installed' => 'observe-runtime-backend',
@@ -417,10 +417,15 @@ final class SystemApiDbusRuntimeProbeToolkit
         return null;
     }
 
-    private function resolveNativeDbusBuildFailureAction(string $buildPhase): string
+    private function resolveNativeDbusBuildFailureAction(string $buildPhase, ?string $reason): string
     {
+        if ($buildPhase === 'pecl-download') {
+            return $reason === 'pecl-release-is-beta'
+                ? 'inspect-native-dbus-pecl-release'
+                : 'inspect-native-dbus-pecl-channel';
+        }
+
         return match ($buildPhase) {
-            'pecl-download' => 'inspect-native-dbus-pecl-download',
             'phpize' => 'inspect-native-dbus-build-phpize',
             'configure' => 'inspect-native-dbus-build-configure',
             'make' => 'inspect-native-dbus-build-make',
