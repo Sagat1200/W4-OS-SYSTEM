@@ -370,6 +370,62 @@ TEXT);
         self::assertSame(['zend_object_store_get_object', 'make'], $structuredEvidence['markers']);
     }
 
+    public function testValidationCanConsumeStructuredBuildEvidenceJsonFromRunnerArgument(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-native-dbus-build-failed-from-structured-json-arg';
+        $structuredEvidencePath = $this->tempDir . DIRECTORY_SEPARATOR . 'native-dbus-extension-build-evidence.json';
+        file_put_contents($structuredEvidencePath, json_encode([
+            'api_version' => '1.0',
+            'kind' => 'system-api-native-dbus-extension-build-evidence',
+            'state' => 'build-failed',
+            'build_phase' => 'pecl-download',
+            'reason' => 'pecl-network-resolution-failed',
+            'failure_signature' => 'Channel "pecl.php.net" is not responding over http://, failed with message: php_network_getaddresses: getaddrinfo for pecl.php.net failed: Temporary failure in name resolution',
+            'log_path' => '/tmp/native-dbus-pecl-network.log',
+            'markers' => ['pecl-network-resolution-failed', 'pecl-download'],
+        ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+            '--target-repo-root',
+            '/srv/w4/os-system',
+            '--native-dbus-build-evidence-json-path',
+            $structuredEvidencePath,
+        ], array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '1',
+            ]
+        ));
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('blocked', $payload['status']);
+        self::assertSame('native-dbus-extension-build-failed', $payload['blocking_reason']);
+        self::assertSame('inspect-native-dbus-pecl-network', $payload['next_action']);
+        self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
+        self::assertSame('pecl-download', $payload['native_dbus_extension_installability']['build_phase']);
+        self::assertSame('pecl-network-resolution-failed', $payload['native_dbus_extension_installability']['reason']);
+        self::assertSame(
+            'Channel "pecl.php.net" is not responding over http://, failed with message: php_network_getaddresses: getaddrinfo for pecl.php.net failed: Temporary failure in name resolution',
+            $payload['native_dbus_extension_installability']['failure_signature']
+        );
+        self::assertSame('/tmp/native-dbus-pecl-network.log', $payload['native_dbus_extension_installability']['log_path']);
+        self::assertSame('inspect-native-dbus-pecl-network', $payload['preparation_plan'][0]['action']);
+
+        $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
+        self::assertNotFalse($preparationChecklist);
+        self::assertStringContainsString('inspect-native-dbus-pecl-network', $preparationChecklist);
+        self::assertStringContainsString('getent hosts pecl.php.net || nslookup pecl.php.net || true', $preparationChecklist);
+        self::assertStringContainsString('pecl channel-discover pecl.php.net || true', $preparationChecklist);
+    }
+
     public function testValidationTranslatesPeclDownloadFailureIntoSpecificPreparationStep(): void
     {
         $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-native-dbus-download-failed-host';

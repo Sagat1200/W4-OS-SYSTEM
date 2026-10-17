@@ -58,6 +58,10 @@ try {
                 $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_PATH'] = $value;
                 break;
 
+            case '--native-dbus-build-evidence-json-path':
+                $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_JSON_PATH'] = $value;
+                break;
+
             case '--native-dbus-build-state':
                 $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_STATE'] = $value;
                 break;
