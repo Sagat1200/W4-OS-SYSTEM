@@ -154,6 +154,7 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertStringContainsString('php8.4-cli', $preparationChecklist);
         self::assertStringContainsString('migrate-to-modern-linux-host', $preparationChecklist);
         self::assertStringContainsString('build-essential', $preparationChecklist);
+        self::assertStringContainsString('printf \'%s\\n\' "Objetivo: host Linux moderno con PHP 8.4+ y toolchain homologada para PECL dbus."', $preparationChecklist);
         self::assertStringContainsString('cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux', $preparationChecklist);
         self::assertStringNotContainsString('install-native-dbus-extension', $preparationChecklist);
     }
@@ -260,8 +261,9 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertStringContainsString('build-essential', $preparationChecklist);
         self::assertStringContainsString('pecl remote-info channel://pecl.php.net/dbus-0.1.1', $preparationChecklist);
         self::assertStringContainsString('/tmp/pecl-dbus.log', $preparationChecklist);
+        self::assertStringContainsString('printf \'%s\\n\' "Ultimo motivo reportado: zend_object_store_get_object"', $preparationChecklist);
         self::assertStringContainsString('Ultimo motivo reportado: zend_object_store_get_object', $preparationChecklist);
-        self::assertStringContainsString('Firma detectada del fallo: zend_object_store_get_object', $preparationChecklist);
+        self::assertStringContainsString('printf \'%s\\n\' "Firma detectada del fallo: zend_object_store_get_object"', $preparationChecklist);
         self::assertStringContainsString('cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux', $preparationChecklist);
         self::assertStringNotContainsString('install-native-dbus-extension', $preparationChecklist);
 

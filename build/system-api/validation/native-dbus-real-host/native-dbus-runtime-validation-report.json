@@ -19,8 +19,8 @@
     "bus_name": "org.w4.System1",
     "object_path": "/org/w4/System1",
     "interface": "org.w4.System1.Manager",
-    "started_at": "2026-10-17T13:13:20+00:00",
-    "completed_at": "2026-10-17T13:13:25+00:00",
+    "started_at": "2026-10-17T13:19:50+00:00",
+    "completed_at": "2026-10-17T13:19:57+00:00",
     "ownership_validated": false,
     "coupling_ready": false,
     "startup_acknowledged": false,
@@ -72,8 +72,8 @@
                     "pecl search dbus || true",
                     "make --version || true",
                     "gcc --version || true",
-                    "printf '%s\\\\n' \"Ultimo motivo reportado: zend_object_store_get_object\"",
-                    "printf '%s\\\\n' \"Firma detectada del fallo: make: *** [Makefile:192: dbus.lo] Error 1\"",
+                    "printf '%s\\n' \"Ultimo motivo reportado: zend_object_store_get_object\"",
+                    "printf '%s\\n' \"Firma detectada del fallo: make: *** [Makefile:192: dbus.lo] Error 1\"",
                     "test -f \"build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md\" && tail -n 80 \"build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md\" || echo \"Build log no disponible: build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md\"",
                     "cd \"/srv/w4/os-system\" && php -r \"echo json_decode(file_get_contents('composer.json'), true)['require']['php'], PHP_EOL;\""
                 ]
@@ -96,8 +96,8 @@
                 "pecl search dbus || true",
                 "make --version || true",
                 "gcc --version || true",
-                "printf '%s\\\\n' \"Ultimo motivo reportado: zend_object_store_get_object\"",
-                "printf '%s\\\\n' \"Firma detectada del fallo: make: *** [Makefile:192: dbus.lo] Error 1\"",
+                "printf '%s\\n' \"Ultimo motivo reportado: zend_object_store_get_object\"",
+                "printf '%s\\n' \"Firma detectada del fallo: make: *** [Makefile:192: dbus.lo] Error 1\"",
                 "test -f \"build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md\" && tail -n 80 \"build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md\" || echo \"Build log no disponible: build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md\"",
                 "cd \"/srv/w4/os-system\" && php -r \"echo json_decode(file_get_contents('composer.json'), true)['require']['php'], PHP_EOL;\""
             ]
@@ -108,7 +108,7 @@
             "commands": [
                 "lsb_release -a || cat /etc/os-release",
                 "php --version || true",
-                "printf '%s\\\\n' \"Objetivo: host Linux moderno con PHP 8.4+ y toolchain homologada para PECL dbus.\"",
+                "printf '%s\\n' \"Objetivo: host Linux moderno con PHP 8.4+ y toolchain homologada para PECL dbus.\"",
                 "sudo apt-get update",
                 "sudo apt-cache policy php8.4-cli php8.4-dev php8.4-pear",
                 "sudo apt-get install -y software-properties-common ca-certificates lsb-release apt-transport-https gnupg || true",

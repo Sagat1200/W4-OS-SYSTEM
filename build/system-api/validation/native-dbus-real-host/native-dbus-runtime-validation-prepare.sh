@@ -17,8 +17,8 @@ pecl remote-info channel://pecl.php.net/dbus-0.1.1
 pecl search dbus || true
 make --version || true
 gcc --version || true
-printf '%s\\n' "Ultimo motivo reportado: zend_object_store_get_object"
-printf '%s\\n' "Firma detectada del fallo: make: *** [Makefile:192: dbus.lo] Error 1"
+printf '%s\n' "Ultimo motivo reportado: zend_object_store_get_object"
+printf '%s\n' "Firma detectada del fallo: make: *** [Makefile:192: dbus.lo] Error 1"
 test -f "build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md" && tail -n 80 "build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md" || echo "Build log no disponible: build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md"
 cd "/srv/w4/os-system" && php -r "echo json_decode(file_get_contents('composer.json'), true)['require']['php'], PHP_EOL;"
 
@@ -26,7 +26,7 @@ cd "/srv/w4/os-system" && php -r "echo json_decode(file_get_contents('composer.j
 # Preparar o elegir un Linux moderno homologado con PHP `8.4+`, toolchain de compilacion y dependencias D-Bus antes de repetir el contraste nativo real.
 lsb_release -a || cat /etc/os-release
 php --version || true
-printf '%s\\n' "Objetivo: host Linux moderno con PHP 8.4+ y toolchain homologada para PECL dbus."
+printf '%s\n' "Objetivo: host Linux moderno con PHP 8.4+ y toolchain homologada para PECL dbus."
 sudo apt-get update
 sudo apt-cache policy php8.4-cli php8.4-dev php8.4-pear
 sudo apt-get install -y software-properties-common ca-certificates lsb-release apt-transport-https gnupg || true

@@ -1216,14 +1216,14 @@ final class SystemApiNativeDbusHostValidationToolkit
 
         if ($reason !== null && $reason !== '') {
             $commands[] = sprintf(
-                "printf '%%s\\\\n' %s",
+                "printf '%%s\\n' %s",
                 escapeshellarg('Ultimo motivo reportado: ' . $reason)
             );
         }
 
         if ($failureSignature !== null && $failureSignature !== '') {
             $commands[] = sprintf(
-                "printf '%%s\\\\n' %s",
+                "printf '%%s\\n' %s",
                 escapeshellarg('Firma detectada del fallo: ' . $failureSignature)
             );
         }
@@ -1371,7 +1371,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         return [
             'lsb_release -a || cat /etc/os-release',
             'php --version || true',
-            sprintf('printf \'%%s\\\\n\' %s', escapeshellarg('Objetivo: host Linux moderno con PHP ' . $majorMinorVersion . '+ y toolchain homologada para PECL dbus.')),
+            sprintf('printf \'%%s\\n\' %s', escapeshellarg('Objetivo: host Linux moderno con PHP ' . $majorMinorVersion . '+ y toolchain homologada para PECL dbus.')),
             'sudo apt-get update',
             sprintf('sudo apt-cache policy php%s-cli php%s-dev php%s-pear', $majorMinorVersion, $majorMinorVersion, $majorMinorVersion),
             'sudo apt-get install -y software-properties-common ca-certificates lsb-release apt-transport-https gnupg || true',
