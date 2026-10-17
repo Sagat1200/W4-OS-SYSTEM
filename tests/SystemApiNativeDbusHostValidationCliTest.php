@@ -478,16 +478,36 @@ TEXT);
         $expectedRelativePath = str_replace('\\', '/', substr($structuredEvidencePath, strlen($this->repoRoot) + 1));
 
         self::assertStringContainsString(
-            '--evidence-dir ' . $expectedRelativeEvidenceDir,
+            'Preserva la evidencia actual si solo vas a reinspeccionar el mismo intento de compilacion.',
             $payload['preparation_plan'][1]['commands'][0]
         );
         self::assertStringContainsString(
+            'cp "' . $expectedRelativePath . '" "' . $expectedRelativePath . '.before-rerun.',
+            $payload['preparation_plan'][1]['commands'][1]
+        );
+        self::assertStringContainsString(
+            'rm -f "' . $expectedRelativePath . '" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux --evidence-dir ' . $expectedRelativeEvidenceDir,
+            $payload['preparation_plan'][1]['commands'][3]
+        );
+        self::assertStringContainsString(
+            '--evidence-dir ' . $expectedRelativeEvidenceDir,
+            $payload['preparation_plan'][1]['commands'][4]
+        );
+        self::assertStringContainsString(
             '--native-dbus-build-evidence-json-path ' . $expectedRelativePath,
-            $payload['preparation_plan'][1]['commands'][0]
+            $payload['preparation_plan'][1]['commands'][4]
         );
 
         $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
         self::assertNotFalse($preparationChecklist);
+        self::assertStringContainsString(
+            'Preserva la evidencia actual si solo vas a reinspeccionar el mismo intento de compilacion.',
+            $preparationChecklist
+        );
+        self::assertStringContainsString(
+            'rm -f "' . $expectedRelativePath . '" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux --evidence-dir ' . $expectedRelativeEvidenceDir,
+            $preparationChecklist
+        );
         self::assertStringContainsString(
             '--evidence-dir ' . $expectedRelativeEvidenceDir,
             $preparationChecklist
@@ -510,6 +530,14 @@ TEXT);
         );
         self::assertStringContainsString(
             'regenera `native-dbus-extension-build-evidence.json` antes del siguiente rerun',
+            $handoff
+        );
+        self::assertStringContainsString(
+            'Preserva la evidencia actual si solo vas a reinspeccionar el mismo intento de compilacion.',
+            $handoff
+        );
+        self::assertStringContainsString(
+            'rm -f "' . $expectedRelativePath . '" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux --evidence-dir ' . $expectedRelativeEvidenceDir,
             $handoff
         );
         self::assertStringContainsString(

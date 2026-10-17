@@ -1751,11 +1751,59 @@ final class SystemApiNativeDbusHostValidationToolkit
         ?string $nativeDbusBuildEvidenceArtifactPath = null
     ): array
     {
-        return [
+        return array_merge(
+            $this->buildEvidenceLifecycleCommands(
+                $osFamily,
+                $targetRepoRoot,
+                $evidenceDir,
+                $nativeDbusBuildEvidenceArtifactPath
+            ),
+            [
             $this->buildValidationCommand('text', $osFamily, $targetRepoRoot, $evidenceDir, $nativeDbusBuildEvidenceArtifactPath),
             $this->buildValidationCommand('markdown', $osFamily, $targetRepoRoot, $evidenceDir, $nativeDbusBuildEvidenceArtifactPath),
             $this->buildValidationCommand('json', $osFamily, $targetRepoRoot, $evidenceDir, $nativeDbusBuildEvidenceArtifactPath),
+            ]
+        );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildEvidenceLifecycleCommands(
+        string $osFamily,
+        string $targetRepoRoot,
+        ?string $evidenceDir,
+        ?string $nativeDbusBuildEvidenceArtifactPath
+    ): array {
+        if ($osFamily !== 'Linux') {
+            return [];
+        }
+
+        $portableEvidenceDir = $this->resolvePortableRepoPath($evidenceDir);
+        $portableEvidencePath = $this->resolvePortableRepoPath($nativeDbusBuildEvidenceArtifactPath);
+        if ($portableEvidencePath === null) {
+            return [];
+        }
+
+        $commands = [
+            "printf '%s\\n' \"Preserva la evidencia actual si solo vas a reinspeccionar el mismo intento de compilacion.\"",
+            sprintf(
+                'test -f "%1$s" && cp "%1$s" "%1$s.before-rerun.$(date -u +%%Y%%m%%dT%%H%%M%%SZ).json" || true',
+                $portableEvidencePath
+            ),
         ];
+
+        if ($portableEvidenceDir !== null) {
+            $commands[] = "printf '%s\\n' \"Despues de un build real nuevo, elimina el JSON previo para forzar una rematerializacion limpia en el siguiente rerun.\"";
+            $commands[] = $this->buildEvidenceRegenerationCommand(
+                $targetRepoRoot,
+                $portableEvidenceDir,
+                $portableEvidencePath,
+                $osFamily
+            );
+        }
+
+        return $commands;
     }
 
     private function buildValidationCommand(
@@ -1821,6 +1869,34 @@ final class SystemApiNativeDbusHostValidationToolkit
         }
 
         return null;
+    }
+
+    private function buildEvidenceRegenerationCommand(
+        string $targetRepoRoot,
+        string $portableEvidenceDir,
+        string $portableEvidencePath,
+        string $osFamily
+    ): string {
+        $rerunCommand = sprintf(
+            'php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family %s --evidence-dir %s',
+            $osFamily,
+            $portableEvidenceDir
+        );
+
+        if ($targetRepoRoot !== '') {
+            return sprintf(
+                'cd "%s" && rm -f "%s" && %s',
+                $targetRepoRoot,
+                $portableEvidencePath,
+                $rerunCommand
+            );
+        }
+
+        return sprintf(
+            'rm -f "%s" && %s',
+            $portableEvidencePath,
+            $rerunCommand
+        );
     }
 
     /**
