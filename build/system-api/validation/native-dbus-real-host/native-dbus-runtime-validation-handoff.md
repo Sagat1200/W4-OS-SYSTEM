@@ -20,6 +20,13 @@
 - Si vuelves a ejecutar una compilacion real de `pecl dbus`, regenera `native-dbus-extension-build-evidence.json` antes del siguiente rerun para no mezclar evidencia vieja con un intento nuevo.
 - Conserva tambien `--native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md` cuando el rerun deba rematerializar el JSON estructurado desde el log crudo del intento real.
 
+## Preparation Shortcuts
+
+```bash
+cd "/srv/w4/os-system" && cat "build/system-api/validation/native-dbus-real-host/native-dbus-runtime-validation-preparation.txt"
+cd "/srv/w4/os-system" && chmod +x "build/system-api/validation/native-dbus-real-host/native-dbus-runtime-validation-prepare.sh" && bash "build/system-api/validation/native-dbus-real-host/native-dbus-runtime-validation-prepare.sh"
+```
+
 ## Recommended Next Actions
 
 - `inspect-native-dbus-build-make`

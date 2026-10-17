@@ -415,6 +415,16 @@ final class SystemApiNativeDbusHostValidationToolkit
         $portableEvidenceDir = $this->resolvePortableRepoPath($evidenceDir);
         $portableEvidencePath = $this->resolvePortableRepoPath($nativeDbusBuildEvidenceArtifactPath);
         $portableLogPath = $this->resolvePortableRepoPath($nativeDbusBuildLogPath);
+        $portablePreparationScriptPath = $this->resolvePortableRepoPath(
+            is_string($report['preparation_shell_script_path'] ?? null)
+                ? trim((string) $report['preparation_shell_script_path'])
+                : null
+        );
+        $portablePreparationChecklistPath = $this->resolvePortableRepoPath(
+            is_string($report['preparation_checklist_path'] ?? null)
+                ? trim((string) $report['preparation_checklist_path'])
+                : null
+        );
         $rerunCommands = $this->buildRerunCommands(
             $targetOsFamily,
             $targetRepoRoot,
@@ -447,6 +457,20 @@ final class SystemApiNativeDbusHostValidationToolkit
             $lines[] = $line;
         }
 
+        $lines[] = '';
+        $lines[] = '## Preparation Shortcuts';
+        $lines[] = '';
+        $lines[] = '```bash';
+
+        foreach ($this->buildPreparationShortcutCommands(
+            $targetRepoRoot,
+            $portablePreparationScriptPath,
+            $portablePreparationChecklistPath
+        ) as $command) {
+            $lines[] = $command;
+        }
+
+        $lines[] = '```';
         $lines[] = '';
         $lines[] = '## Recommended Next Actions';
         $lines[] = '';
@@ -547,6 +571,33 @@ final class SystemApiNativeDbusHostValidationToolkit
         return $lines !== []
             ? $lines
             : ['1. `validation-complete` - No additional preparation steps are currently required.'];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildPreparationShortcutCommands(
+        string $targetRepoRoot,
+        ?string $portablePreparationScriptPath,
+        ?string $portablePreparationChecklistPath
+    ): array {
+        $commands = [];
+
+        if ($portablePreparationChecklistPath !== null) {
+            $commands[] = $targetRepoRoot !== ''
+                ? sprintf('cd "%s" && cat "%s"', $targetRepoRoot, $portablePreparationChecklistPath)
+                : sprintf('cat "%s"', $portablePreparationChecklistPath);
+        }
+
+        if ($portablePreparationScriptPath !== null) {
+            $commands[] = $targetRepoRoot !== ''
+                ? sprintf('cd "%s" && chmod +x "%s" && bash "%s"', $targetRepoRoot, $portablePreparationScriptPath, $portablePreparationScriptPath)
+                : sprintf('chmod +x "%s" && bash "%s"', $portablePreparationScriptPath, $portablePreparationScriptPath);
+        }
+
+        return $commands !== []
+            ? $commands
+            : ['# No preparation shortcuts available. Use the preparation plan below.'];
     }
 
     /**

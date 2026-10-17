@@ -800,6 +800,9 @@ TEXT);
 
         $handoff = file_get_contents($payload['handoff_path']);
         self::assertNotFalse($handoff);
+        self::assertStringContainsString('## Preparation Shortcuts', $handoff);
+        self::assertStringContainsString('cd "/srv/w4/os-system" && cat "' . $relativeEvidenceDir . '/native-dbus-runtime-validation-preparation.txt"', $handoff);
+        self::assertStringContainsString('cd "/srv/w4/os-system" && chmod +x "' . $relativeEvidenceDir . '/native-dbus-runtime-validation-prepare.sh" && bash "' . $relativeEvidenceDir . '/native-dbus-runtime-validation-prepare.sh"', $handoff);
         self::assertStringContainsString('## Recommended Next Actions', $handoff);
         self::assertStringContainsString('`inspect-native-dbus-build-make`', $handoff);
         self::assertStringContainsString('`migrate-to-modern-linux-host`', $handoff);
@@ -1167,6 +1170,8 @@ TEXT);
 
         $handoff = file_get_contents($payload['handoff_path']);
         self::assertNotFalse($handoff);
+        self::assertStringContainsString('## Preparation Shortcuts', $handoff);
+        self::assertStringContainsString('# No preparation shortcuts available. Use the preparation plan below.', $handoff);
         self::assertStringContainsString('## Preparation Plan', $handoff);
         self::assertStringContainsString('sudo apt-get install -y php-pear php-dev libdbus-1-dev pkg-config', $handoff);
         self::assertStringContainsString('busctl --system introspect org.w4.System1 /org/w4/System1 org.w4.System1.Manager', $handoff);
@@ -1210,6 +1215,8 @@ TEXT);
         $handoff = file_get_contents($payload['handoff_path']);
         self::assertNotFalse($handoff);
         self::assertStringContainsString('- Target repo root: `/srv/w4/os-system`', $handoff);
+        self::assertStringContainsString('## Preparation Shortcuts', $handoff);
+        self::assertStringContainsString('# No preparation shortcuts available. Use the preparation plan below.', $handoff);
         self::assertStringContainsString('## Preparation Plan', $handoff);
         self::assertStringContainsString('cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format markdown --target-os-family Linux', $handoff);
         self::assertStringContainsString('sudo apt-get install -y php-pear php-dev libdbus-1-dev pkg-config', $handoff);
