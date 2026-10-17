@@ -29,6 +29,85 @@
 
 #define PHP_DBUS_VERSION "0.1.0"
 
+#if PHP_VERSION_ID >= 80000
+# define TSRMLS_DC
+# define TSRMLS_CC
+# define TSRMLS_D void
+# define TSRMLS_C
+# define dbus_object_type zend_object
+# define dbus_object_handlers_dbus_object dbus_object_handlers_zend_object
+# define DBUS_OBJ_WRAPPER DBUS_GET_OBJECT
+# define dbus_strip_obj
+#else
+# define dbus_object_type zval
+# define dbus_object_handlers_dbus_object dbus_object_handlers_zval
+# define dbus_strip_obj(o) Z_OBJ_P(o)
+# define DBUS_OBJ_WRAPPER DBUS_ZVAL_GET_OBJECT
+#endif
+
+#if PHP_VERSION_ID >= 80400
+# define DBUS_ZEND_OBJECT_PROPERTIES_INIT(_objPtr, _ce) \
+    object_properties_init(&_objPtr->std, _ce); \
+    if (!_objPtr->std.properties) { \
+        zend_std_get_properties_ex(&_objPtr->std); \
+    };
+#else
+# define DBUS_ZEND_OBJECT_PROPERTIES_INIT(_objPtr, _ce) \
+    object_properties_init(&_objPtr->std, _ce); \
+    if (!_objPtr->std.properties) { \
+        rebuild_object_properties(&_objPtr->std); \
+    };
+#endif
+
+#define DBUS_GET_OBJECT(class_entry, o) (class_entry *)((char *)o - XtOffsetOf(class_entry, std))
+#define DBUS_ZVAL_GET_OBJECT(class_entry, z) DBUS_GET_OBJECT(class_entry, Z_OBJ_P(z))
+
+#define DBUS_ZEND_OBJECT_ALLOC(_objPtr, _ce) \
+    do { \
+        _objPtr = ecalloc(1, sizeof(*_objPtr) + zend_object_properties_size(_ce)); \
+        if (ptr) { \
+            *ptr = _objPtr; \
+        } \
+    } while (0)
+
+#define DBUS_ZEND_OBJECT_SET_HANDLERS(_objPtr, _objType) \
+    do { \
+        dbus_object_handlers_##_objType.offset = XtOffsetOf(php_##_objType##_obj, std); \
+        dbus_object_handlers_##_objType.free_obj = (zend_object_free_obj_t) dbus_object_free_storage_##_objType; \
+        _objPtr->std.handlers = &dbus_object_handlers_##_objType; \
+    } while (0)
+
+#define DBUS_ZEND_OBJECT_INIT_RETURN(_objPtr, _ce, _objType) \
+    do { \
+        DBUS_ZEND_OBJECT_ALLOC(_objPtr, _ce); \
+        zend_object_std_init(&_objPtr->std, _ce); \
+        DBUS_ZEND_OBJECT_PROPERTIES_INIT(_objPtr, _ce); \
+        DBUS_ZEND_OBJECT_SET_HANDLERS(_objPtr, _objType); \
+        return &_objPtr->std; \
+    } while (0)
+
+#define DBUS_ZEND_HASH_DESTROY_CHECK(_ht) \
+    do { \
+        if (_ht.u.flags) { \
+            zend_hash_destroy(&_ht); \
+            _ht.u.flags = 0; \
+        } \
+    } while (0)
+
+#define DBUS_ZEND_MAKE_STD_ZVAL(_zval) \
+    { \
+        zval tmp; \
+        _zval = &tmp; \
+    }
+
+#define DBUS_ZEND_ALLOC_ZVAL(_zvalPtr) \
+    _zvalPtr = emalloc(sizeof(zval)); \
+    DBUS_ZEND_INIT_ZVAL(_zvalPtr)
+
+#define DBUS_ZEND_ZVAL_TYPE_P(_zval) Z_TYPE_INFO_P(_zval)
+#define DBUS_ZEND_ADDREF_P(_zval) Z_TRY_ADDREF_P(_zval)
+#define DBUS_ZEND_INIT_ZVAL(_zvalPtr) ZVAL_NULL(_zvalPtr)
+
 extern zend_module_entry dbus_module_entry;
 #define phpext_dbus_ptr &dbus_module_entry
 

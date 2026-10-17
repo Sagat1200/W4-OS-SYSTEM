@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.270 | 2026-10-17 | Activa | El fork editable de `DBus 0.1.1` ya incorpora un bootstrap inicial de compatibilidad de objetos para `PHP 8.4`, registrado como patches `0002` y `0003` dentro del workspace del fork |
 | TECH | TECH-1.269 | 2026-10-17 | Activa | El workspace del fork de `pecl/DBus` ya puede importar source-dir o source-archive, extraerlo a `upstream/imported-source` y sincronizar una copia editable en `fork/current` |
 | DOC | DOC-0.7 | 2026-10-17 | Activa | Se documenta la estrategia oficial de transicion: cerrar V1 en PHP con fork/patch de `pecl/DBus` y migrar despues `System API` y Linux Base a Rust |
 | PLAN | PLAN-1.0 | 2026-10-17 | Activa | Se fija como decision de proyecto usar `pecl/DBus` parcheado solo como puente de validacion V1 y ejecutar la migracion principal a Rust una vez cerradas las tres ediciones |

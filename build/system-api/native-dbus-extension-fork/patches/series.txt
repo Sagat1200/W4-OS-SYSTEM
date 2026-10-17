@@ -1,1 +1,3 @@
 0001-buildroot-php8-reference.patch
+0002-php84-object-compat-bootstrap-header.patch
+0003-php84-object-compat-bootstrap-runtime.patch

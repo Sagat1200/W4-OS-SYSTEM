@@ -34,6 +34,12 @@
 
 3. Aplicar despues el patch de referencia de Buildroot por partes, no como import ciego, para mantener trazabilidad clara del fork transitorio V1.
 
+## Local Progress
+
+- El paso 1 ya quedo materializado en `patches/0002-php84-object-compat-bootstrap-header.patch`.
+- El paso 2 ya tiene un bootstrap inicial en `patches/0003-php84-object-compat-bootstrap-runtime.patch`, limitado a fabricas de objetos, handlers y `get_properties`.
+- Aun no se ha completado la migracion de los metodos que siguen llamando `zend_object_store_get_object` de forma directa ni la modernizacion de `dbus_instantiate`.
+
 ## Local References
 
 - `upstream/imported-source/dbus.c`
