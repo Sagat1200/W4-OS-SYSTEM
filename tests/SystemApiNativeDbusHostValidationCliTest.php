@@ -604,6 +604,177 @@ TEXT);
         self::assertStringContainsString('- Installation failure signature: `Failed to download pecl/dbus within preferred state "stable", latest release is beta`', $savedSummary);
     }
 
+    public function testValidationPropagatesPortableRawBuildLogPathIntoRerunCommands(): void
+    {
+        $evidenceDir = $this->repoRoot
+            . DIRECTORY_SEPARATOR . 'build'
+            . DIRECTORY_SEPARATOR . 'system-api'
+            . DIRECTORY_SEPARATOR . 'validation'
+            . DIRECTORY_SEPARATOR . 'native-dbus-relative-log-' . bin2hex(random_bytes(4));
+        $this->repoCleanupDirs[] = $evidenceDir;
+        self::assertTrue(mkdir($evidenceDir, 0777, true) || is_dir($evidenceDir));
+
+        $structuredEvidencePath = $evidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-extension-build-evidence.json';
+        $rawLogPath = $evidenceDir . DIRECTORY_SEPARATOR . 'wsl-ubuntu-operational-attempt.md';
+        file_put_contents($rawLogPath, <<<TEXT
+Channel "pecl.php.net" is not responding over http://, failed with message: php_network_getaddresses: getaddrinfo for pecl.php.net failed: Temporary failure in name resolution
+Trying channel "pecl.php.net" over https:// instead
+TEXT);
+        file_put_contents($structuredEvidencePath, json_encode([
+            'api_version' => '1.0',
+            'kind' => 'system-api-native-dbus-extension-build-evidence',
+            'state' => 'build-failed',
+            'build_phase' => 'pecl-download',
+            'reason' => 'pecl-network-resolution-failed',
+            'failure_signature' => 'Channel "pecl.php.net" is not responding over http://, failed with message: php_network_getaddresses: getaddrinfo for pecl.php.net failed: Temporary failure in name resolution',
+            'log_path' => $rawLogPath,
+            'markers' => ['pecl-network-resolution-failed', 'pecl-download'],
+        ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+            '--target-repo-root',
+            '/srv/w4/os-system',
+            '--native-dbus-build-evidence-json-path',
+            $structuredEvidencePath,
+        ], array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '1',
+            ]
+        ));
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        $expectedRelativeLogPath = str_replace('\\', '/', substr($rawLogPath, strlen($this->repoRoot) + 1));
+        $expectedRelativeEvidenceDir = str_replace('\\', '/', substr($evidenceDir, strlen($this->repoRoot) + 1));
+
+        $rerunCommands = implode("\n", $payload['preparation_plan'][1]['commands']);
+        self::assertStringContainsString(
+            'cp "' . $expectedRelativeLogPath . '" "' . $expectedRelativeLogPath . '.before-rerun.',
+            $rerunCommands
+        );
+        self::assertStringContainsString(
+            '--native-dbus-build-log-path ' . $expectedRelativeLogPath,
+            $rerunCommands
+        );
+        self::assertStringContainsString(
+            'rm -f "build/system-api/validation/',
+            $rerunCommands
+        );
+        self::assertStringContainsString(
+            '--evidence-dir ' . $expectedRelativeEvidenceDir,
+            $rerunCommands
+        );
+
+        $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
+        self::assertNotFalse($preparationChecklist);
+        self::assertStringContainsString(
+            'cp "' . $expectedRelativeLogPath . '" "' . $expectedRelativeLogPath . '.before-rerun.',
+            $preparationChecklist
+        );
+        self::assertStringContainsString(
+            '--native-dbus-build-log-path ' . $expectedRelativeLogPath,
+            $preparationChecklist
+        );
+
+        $handoff = file_get_contents($payload['handoff_path']);
+        self::assertNotFalse($handoff);
+        self::assertStringContainsString(
+            'Conserva tambien `--native-dbus-build-log-path ' . $expectedRelativeLogPath . '` cuando el rerun deba rematerializar el JSON estructurado desde el log crudo del intento real.',
+            $handoff
+        );
+        self::assertStringContainsString(
+            'cp "' . $expectedRelativeLogPath . '" "' . $expectedRelativeLogPath . '.before-rerun.',
+            $handoff
+        );
+        self::assertStringContainsString(
+            '--native-dbus-build-log-path ' . $expectedRelativeLogPath,
+            $handoff
+        );
+    }
+
+    public function testValidationKeepsPortablePathsWhenCliUsesRepoRelativeInputsAndEvidenceStoresWindowsAbsoluteLog(): void
+    {
+        $evidenceDirAbsolute = $this->repoRoot
+            . DIRECTORY_SEPARATOR . 'build'
+            . DIRECTORY_SEPARATOR . 'system-api'
+            . DIRECTORY_SEPARATOR . 'validation'
+            . DIRECTORY_SEPARATOR . 'native-dbus-relative-operational-' . bin2hex(random_bytes(4));
+        $this->repoCleanupDirs[] = $evidenceDirAbsolute;
+        self::assertTrue(mkdir($evidenceDirAbsolute, 0777, true) || is_dir($evidenceDirAbsolute));
+
+        $relativeEvidenceDir = str_replace('\\', '/', substr($evidenceDirAbsolute, strlen($this->repoRoot) + 1));
+        $structuredEvidencePathAbsolute = $evidenceDirAbsolute . DIRECTORY_SEPARATOR . 'native-dbus-extension-build-evidence.json';
+        $structuredEvidencePathRelative = $relativeEvidenceDir . '/native-dbus-extension-build-evidence.json';
+        $rawLogPathAbsolute = $evidenceDirAbsolute . DIRECTORY_SEPARATOR . 'wsl-ubuntu-operational-attempt.md';
+        $rawLogPathLowerDrive = preg_replace_callback('/^[A-Z]:/', static fn (array $matches): string => strtolower($matches[0]), $rawLogPathAbsolute);
+        self::assertIsString($rawLogPathLowerDrive);
+
+        file_put_contents($rawLogPathAbsolute, <<<TEXT
+make: *** [Makefile:192: dbus.lo] Error 1
+zend_object_store_get_object
+TEXT);
+        file_put_contents($structuredEvidencePathAbsolute, json_encode([
+            'api_version' => '1.0',
+            'kind' => 'system-api-native-dbus-extension-build-evidence',
+            'state' => 'build-failed',
+            'build_phase' => 'make',
+            'reason' => 'zend_object_store_get_object',
+            'failure_signature' => 'make: *** [Makefile:192: dbus.lo] Error 1',
+            'log_path' => $rawLogPathLowerDrive,
+            'markers' => ['zend_object_store_get_object', 'make'],
+        ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $relativeEvidenceDir,
+            '--target-os-family',
+            'Linux',
+            '--target-repo-root',
+            '/srv/w4/os-system',
+            '--native-dbus-build-evidence-json-path',
+            $structuredEvidencePathRelative,
+            '--native-dbus-build-log-path',
+            $relativeEvidenceDir . '/wsl-ubuntu-operational-attempt.md',
+        ], array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '1',
+            ]
+        ));
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        $expectedRelativeLogPath = $relativeEvidenceDir . '/wsl-ubuntu-operational-attempt.md';
+
+        self::assertSame($relativeEvidenceDir, $payload['evidence_dir']);
+        self::assertSame($structuredEvidencePathRelative, $payload['native_dbus_extension_build_evidence_path']);
+
+        $checklist = file_get_contents($payload['preparation_checklist_path']);
+        self::assertNotFalse($checklist);
+        self::assertStringContainsString('--evidence-dir ' . $relativeEvidenceDir, $checklist);
+        self::assertStringContainsString('--native-dbus-build-evidence-json-path ' . $structuredEvidencePathRelative, $checklist);
+        self::assertStringContainsString('--native-dbus-build-log-path ' . $expectedRelativeLogPath, $checklist);
+        self::assertStringContainsString('tail -n 80 "' . $expectedRelativeLogPath . '"', $checklist);
+
+        $handoff = file_get_contents($payload['handoff_path']);
+        self::assertNotFalse($handoff);
+        self::assertStringContainsString('Reutiliza `--evidence-dir ' . $relativeEvidenceDir . '` mientras sigas diagnosticando el mismo intento de compilacion.', $handoff);
+        self::assertStringContainsString('Conserva `--native-dbus-build-evidence-json-path ' . $structuredEvidencePathRelative . '` cuando el rerun solo valida o reinspecciona la evidencia ya capturada.', $handoff);
+        self::assertStringContainsString('Conserva tambien `--native-dbus-build-log-path ' . $expectedRelativeLogPath . '` cuando el rerun deba rematerializar el JSON estructurado desde el log crudo del intento real.', $handoff);
+        self::assertStringContainsString('--native-dbus-build-log-path ' . $expectedRelativeLogPath, $handoff);
+    }
+
     public function testValidationSeparatesPeclPackageResolutionFailureFromBetaReleaseCase(): void
     {
         $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-native-dbus-pecl-channel-failed-host';

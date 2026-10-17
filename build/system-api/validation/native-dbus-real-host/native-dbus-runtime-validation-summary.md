@@ -61,15 +61,20 @@ printf '%s
 ' "Ultimo motivo reportado: zend_object_store_get_object"
 printf '%s
 ' "Firma detectada del fallo: make: *** [Makefile:192: dbus.lo] Error 1"
-test -f "c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md" && tail -n 80 "c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md" || echo "Build log no disponible: c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md"
+test -f "build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md" && tail -n 80 "build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md" || echo "Build log no disponible: build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md"
 cd "/srv/w4/os-system" && php -r "echo json_decode(file_get_contents('composer.json'), true)['require']['php'], PHP_EOL;"
 ```
 
 1. `rerun-native-runtime-validation` - Reejecutar el runner despues de corregir la instalacion o compilacion de la extension `dbus` para confirmar si el ownership ya puede progresar.
 
 ```bash
-cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format text --target-os-family Linux
-cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format markdown --target-os-family Linux
-cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux
+printf '%s\n' "Preserva la evidencia actual si solo vas a reinspeccionar el mismo intento de compilacion."
+test -f "build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json" && cp "build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json" "build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json.before-rerun.$(date -u +%Y%m%dT%H%M%SZ).json" || true
+test -f "build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md" && cp "build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md" "build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md.before-rerun.$(date -u +%Y%m%dT%H%M%SZ).log" || true
+printf '%s\n' "Despues de un build real nuevo, elimina el JSON previo para forzar una rematerializacion limpia en el siguiente rerun."
+cd "/srv/w4/os-system" && rm -f "build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host --native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md
+cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format text --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host --native-dbus-build-evidence-json-path build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json --native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md
+cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format markdown --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host --native-dbus-build-evidence-json-path build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json --native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md
+cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host --native-dbus-build-evidence-json-path build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json --native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md
 ```
 

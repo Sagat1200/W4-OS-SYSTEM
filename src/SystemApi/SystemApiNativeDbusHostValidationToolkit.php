@@ -151,6 +151,9 @@ final class SystemApiNativeDbusHostValidationToolkit
             $targetRepoRoot,
             $normalizedEvidenceDir,
             $materializedNativeDbusBuildEvidenceArtifactPath,
+            is_string($nativeDbusExtensionInstallability['log_path'] ?? null)
+                ? trim((string) $nativeDbusExtensionInstallability['log_path'])
+                : null,
             $attemptOwnership,
             $ownershipValidated,
             $couplingReady
@@ -402,13 +405,18 @@ final class SystemApiNativeDbusHostValidationToolkit
         $nativeDbusBuildEvidenceArtifactPath = is_string($report['native_dbus_extension_build_evidence_path'] ?? null)
             ? trim((string) $report['native_dbus_extension_build_evidence_path'])
             : null;
+        $nativeDbusBuildLogPath = is_string($report['native_dbus_extension_installability']['log_path'] ?? null)
+            ? trim((string) $report['native_dbus_extension_installability']['log_path'])
+            : null;
         $portableEvidenceDir = $this->resolvePortableRepoPath($evidenceDir);
         $portableEvidencePath = $this->resolvePortableRepoPath($nativeDbusBuildEvidenceArtifactPath);
+        $portableLogPath = $this->resolvePortableRepoPath($nativeDbusBuildLogPath);
         $rerunCommands = $this->buildRerunCommands(
             $targetOsFamily,
             $targetRepoRoot,
             $evidenceDir,
-            $nativeDbusBuildEvidenceArtifactPath
+            $nativeDbusBuildEvidenceArtifactPath,
+            $nativeDbusBuildLogPath
         );
         $verificationCommands = $this->buildVerificationCommands($targetOsFamily);
         $lines = [
@@ -431,7 +439,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             '',
         ];
 
-        foreach ($this->buildEvidencePolicyLines($portableEvidenceDir, $portableEvidencePath) as $line) {
+        foreach ($this->buildEvidencePolicyLines($portableEvidenceDir, $portableEvidencePath, $portableLogPath) as $line) {
             $lines[] = $line;
         }
 
@@ -463,7 +471,11 @@ final class SystemApiNativeDbusHostValidationToolkit
     /**
      * @return list<string>
      */
-    private function buildEvidencePolicyLines(?string $portableEvidenceDir, ?string $portableEvidencePath): array
+    private function buildEvidencePolicyLines(
+        ?string $portableEvidenceDir,
+        ?string $portableEvidencePath,
+        ?string $portableLogPath
+    ): array
     {
         $lines = [];
 
@@ -484,6 +496,13 @@ final class SystemApiNativeDbusHostValidationToolkit
             $lines[] = '- Si vuelves a ejecutar una compilacion real de `pecl dbus`, regenera `native-dbus-extension-build-evidence.json` antes del siguiente rerun para no mezclar evidencia vieja con un intento nuevo.';
         } else {
             $lines[] = '- Si generas un nuevo intento real de compilacion, actualiza o regenera `native-dbus-extension-build-evidence.json` antes del siguiente rerun.';
+        }
+
+        if ($portableLogPath !== null) {
+            $lines[] = sprintf(
+                '- Conserva tambien `--native-dbus-build-log-path %s` cuando el rerun deba rematerializar el JSON estructurado desde el log crudo del intento real.',
+                $portableLogPath
+            );
         }
 
         return $lines;
@@ -700,6 +719,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         string $targetRepoRoot,
         string $evidenceDir,
         ?string $nativeDbusBuildEvidenceArtifactPath,
+        ?string $nativeDbusBuildLogPath,
         bool $attemptOwnership,
         bool $ownershipValidated,
         bool $couplingReady
@@ -722,7 +742,8 @@ final class SystemApiNativeDbusHostValidationToolkit
                     $osFamily,
                     $targetRepoRoot,
                     $evidenceDir,
-                    $nativeDbusBuildEvidenceArtifactPath
+                    $nativeDbusBuildEvidenceArtifactPath,
+                    $nativeDbusBuildLogPath
                 ),
             ];
 
@@ -746,7 +767,8 @@ final class SystemApiNativeDbusHostValidationToolkit
                     $osFamily,
                     $targetRepoRoot,
                     $evidenceDir,
-                    $nativeDbusBuildEvidenceArtifactPath
+                    $nativeDbusBuildEvidenceArtifactPath,
+                    $nativeDbusBuildLogPath
                 ),
             ];
 
@@ -797,7 +819,8 @@ final class SystemApiNativeDbusHostValidationToolkit
                     $osFamily,
                     $targetRepoRoot,
                     $evidenceDir,
-                    $nativeDbusBuildEvidenceArtifactPath
+                    $nativeDbusBuildEvidenceArtifactPath,
+                    $nativeDbusBuildLogPath
                 ),
             ];
         }
@@ -1184,11 +1207,13 @@ final class SystemApiNativeDbusHostValidationToolkit
         }
 
         if ($logPath !== null && $logPath !== '') {
+            $portableLogPath = $this->resolvePortableRepoPath($logPath);
+            $displayLogPath = $portableLogPath ?? $logPath;
             $commands[] = sprintf(
                 'test -f "%s" && tail -n 80 "%s" || echo "Build log no disponible: %s"',
-                $logPath,
-                $logPath,
-                $logPath
+                $displayLogPath,
+                $displayLogPath,
+                $displayLogPath
             );
         }
 
@@ -1748,7 +1773,8 @@ final class SystemApiNativeDbusHostValidationToolkit
         string $osFamily,
         string $targetRepoRoot,
         ?string $evidenceDir = null,
-        ?string $nativeDbusBuildEvidenceArtifactPath = null
+        ?string $nativeDbusBuildEvidenceArtifactPath = null,
+        ?string $nativeDbusBuildLogPath = null
     ): array
     {
         return array_merge(
@@ -1756,12 +1782,34 @@ final class SystemApiNativeDbusHostValidationToolkit
                 $osFamily,
                 $targetRepoRoot,
                 $evidenceDir,
-                $nativeDbusBuildEvidenceArtifactPath
+                $nativeDbusBuildEvidenceArtifactPath,
+                $nativeDbusBuildLogPath
             ),
             [
-            $this->buildValidationCommand('text', $osFamily, $targetRepoRoot, $evidenceDir, $nativeDbusBuildEvidenceArtifactPath),
-            $this->buildValidationCommand('markdown', $osFamily, $targetRepoRoot, $evidenceDir, $nativeDbusBuildEvidenceArtifactPath),
-            $this->buildValidationCommand('json', $osFamily, $targetRepoRoot, $evidenceDir, $nativeDbusBuildEvidenceArtifactPath),
+            $this->buildValidationCommand(
+                'text',
+                $osFamily,
+                $targetRepoRoot,
+                $evidenceDir,
+                $nativeDbusBuildEvidenceArtifactPath,
+                $nativeDbusBuildLogPath
+            ),
+            $this->buildValidationCommand(
+                'markdown',
+                $osFamily,
+                $targetRepoRoot,
+                $evidenceDir,
+                $nativeDbusBuildEvidenceArtifactPath,
+                $nativeDbusBuildLogPath
+            ),
+            $this->buildValidationCommand(
+                'json',
+                $osFamily,
+                $targetRepoRoot,
+                $evidenceDir,
+                $nativeDbusBuildEvidenceArtifactPath,
+                $nativeDbusBuildLogPath
+            ),
             ]
         );
     }
@@ -1773,7 +1821,8 @@ final class SystemApiNativeDbusHostValidationToolkit
         string $osFamily,
         string $targetRepoRoot,
         ?string $evidenceDir,
-        ?string $nativeDbusBuildEvidenceArtifactPath
+        ?string $nativeDbusBuildEvidenceArtifactPath,
+        ?string $nativeDbusBuildLogPath
     ): array {
         if ($osFamily !== 'Linux') {
             return [];
@@ -1781,6 +1830,7 @@ final class SystemApiNativeDbusHostValidationToolkit
 
         $portableEvidenceDir = $this->resolvePortableRepoPath($evidenceDir);
         $portableEvidencePath = $this->resolvePortableRepoPath($nativeDbusBuildEvidenceArtifactPath);
+        $portableLogPath = $this->resolvePortableRepoPath($nativeDbusBuildLogPath);
         if ($portableEvidencePath === null) {
             return [];
         }
@@ -1793,13 +1843,21 @@ final class SystemApiNativeDbusHostValidationToolkit
             ),
         ];
 
+        if ($portableLogPath !== null) {
+            $commands[] = sprintf(
+                'test -f "%1$s" && cp "%1$s" "%1$s.before-rerun.$(date -u +%%Y%%m%%dT%%H%%M%%SZ).log" || true',
+                $portableLogPath
+            );
+        }
+
         if ($portableEvidenceDir !== null) {
             $commands[] = "printf '%s\\n' \"Despues de un build real nuevo, elimina el JSON previo para forzar una rematerializacion limpia en el siguiente rerun.\"";
             $commands[] = $this->buildEvidenceRegenerationCommand(
                 $targetRepoRoot,
                 $portableEvidenceDir,
                 $portableEvidencePath,
-                $osFamily
+                $osFamily,
+                $portableLogPath
             );
         }
 
@@ -1811,7 +1869,8 @@ final class SystemApiNativeDbusHostValidationToolkit
         string $osFamily,
         string $targetRepoRoot,
         ?string $evidenceDir = null,
-        ?string $nativeDbusBuildEvidenceArtifactPath = null
+        ?string $nativeDbusBuildEvidenceArtifactPath = null,
+        ?string $nativeDbusBuildLogPath = null
     ): string
     {
         $command = sprintf(
@@ -1832,6 +1891,14 @@ final class SystemApiNativeDbusHostValidationToolkit
             $command .= sprintf(
                 ' --native-dbus-build-evidence-json-path %s',
                 $portableEvidencePath
+            );
+        }
+
+        $portableLogPath = $this->resolvePortableRepoPath($nativeDbusBuildLogPath);
+        if ($portableLogPath !== null) {
+            $command .= sprintf(
+                ' --native-dbus-build-log-path %s',
+                $portableLogPath
             );
         }
 
@@ -1858,13 +1925,20 @@ final class SystemApiNativeDbusHostValidationToolkit
 
         $normalizedRootDir = str_replace('\\', '/', $this->normalizePath($this->rootDir));
         $normalizedPath = str_replace('\\', '/', $this->normalizePath($path));
+        $comparisonRootDir = strtolower($normalizedRootDir);
+        $comparisonPath = strtolower($normalizedPath);
 
-        if ($normalizedPath === $normalizedRootDir) {
+        if (!preg_match('/^[a-zA-Z]:\//', $normalizedPath) && !str_starts_with($normalizedPath, '/')) {
+            return ltrim($normalizedPath, '/');
+        }
+
+        if ($comparisonPath === $comparisonRootDir) {
             return null;
         }
 
         $rootPrefix = $normalizedRootDir . '/';
-        if (str_starts_with($normalizedPath, $rootPrefix)) {
+        $comparisonRootPrefix = $comparisonRootDir . '/';
+        if (str_starts_with($comparisonPath, $comparisonRootPrefix)) {
             return substr($normalizedPath, strlen($rootPrefix));
         }
 
@@ -1875,13 +1949,21 @@ final class SystemApiNativeDbusHostValidationToolkit
         string $targetRepoRoot,
         string $portableEvidenceDir,
         string $portableEvidencePath,
-        string $osFamily
+        string $osFamily,
+        ?string $portableLogPath = null
     ): string {
         $rerunCommand = sprintf(
             'php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family %s --evidence-dir %s',
             $osFamily,
             $portableEvidenceDir
         );
+
+        if ($portableLogPath !== null) {
+            $rerunCommand .= sprintf(
+                ' --native-dbus-build-log-path %s',
+                $portableLogPath
+            );
+        }
 
         if ($targetRepoRoot !== '') {
             return sprintf(
