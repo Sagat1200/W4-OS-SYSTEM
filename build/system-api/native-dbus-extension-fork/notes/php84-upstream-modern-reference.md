@@ -37,8 +37,8 @@
 ## Local Progress
 
 - El paso 1 ya quedo materializado en `patches/0002-php84-object-compat-bootstrap-header.patch`.
-- El paso 2 ya tiene un bootstrap inicial en `patches/0003-php84-object-compat-bootstrap-runtime.patch`, limitado a fabricas de objetos, handlers y `get_properties`.
-- Aun no se ha completado la migracion de los metodos que siguen llamando `zend_object_store_get_object` de forma directa ni la modernizacion de `dbus_instantiate`.
+- El paso 2 ya tiene un bootstrap inicial en `patches/0003-php84-object-compat-bootstrap-runtime.patch`, y ahora cubre tambien `dbus_instantiate`, `createProxy`, constructores principales, `DbusSignal` y parte de los wrappers creados por `php_dbus_to_zval()`.
+- Aun no se ha completado la migracion de los metodos internos que siguen llamando `zend_object_store_get_object` sobre `child` y `*val`, ni la limpieza final del macro legacy duplicado `DBUS_FETCH_OBJECT`.
 
 ## Local References
 
