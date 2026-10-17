@@ -1,0 +1,80 @@
+﻿php : sudo: unable to resolve host w4-server-live: Name or service not known
+En línea: 15 Carácter: 3593
++ ... Bus-0.1.1"; php scripts/run_remote_command_via_paramiko.php --host 12 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (sudo: unable to...rvice not known:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+sudo: unable to resolve host w4-server-live: Name or service not known
+Updating channel "pecl.php.net"
+Update of Channel "pecl.php.net" succeeded
+downloading dbus-0.1.1.tgz ...
+Starting to download dbus-0.1.1.tgz (17,131 bytes)
+......done: 17,131 bytes
+5 source files, building
+running: phpize
+Configuring for:
+PHP Version:             8.4
+PHP Api Version:         20240924
+Zend Module Api No:      20240924
+Zend Extension Api No:   420240924
+configure.ac:154: warning: The macro 'AC_PROG_LIBTOOL' is obsolete.
+configure.ac:154: You should run autoupdate.
+build/libtool.m4:100: AC_PROG_LIBTOOL is expanded from...
+configure.ac:154: the top level
+building in /tmp/pear/temp/pear-build-rootbtvhackesej7aw4g4OZ/dbus-0.1.1
+running: /tmp/pear/temp/dbus/configure --with-php-config=/usr/bin/php-config
+checking for grep that handles long lines and -e... /usr/bin/grep
+checking for egrep... /usr/bin/grep -E
+checking for a sed that does not truncate output... /usr/bin/sed
+checking build system type... x86_64-pc-linux-gnu
+checking host system type... x86_64-pc-linux-gnu
+checking target system type... x86_64-pc-linux-gnu
+shtool:echo:Warning: unable to determine terminal sequence for bold mode
+shtool:echo:Warning: unable to determine terminal sequence for bold mode
+checking for gawk... no
+checking for nawk... nawk
+checking if nawk is broken... no
+checking for pkg-config... /usr/bin/pkg-config
+checking pkg-config is at least version 0.9.0... yes
+checking for cc... cc
+checking whether the C compiler works... yes
+checking for C compiler default output file name... a.out
+checking for suffix of executables...
+checking whether we are cross compiling... no
+checking for suffix of object files... o
+checking whether the compiler supports GNU C... yes
+checking whether cc accepts -g... yes
+checking for cc option to enable C11 features... none needed
+checking how to run the C preprocessor... cc -E
+checking for egrep -e... (cached) /usr/bin/grep -E
+checking for icc... no
+checking for suncc... no
+checking for system library directory... lib
+checking if compiler supports -Wl,-rpath,... yes
+checking for PHP prefix... /usr
+checking for PHP includes... -I/usr/include/php/20240924 -I/usr/include/php/20240924/main 
+-I/usr/include/php/20240924/TSRM -I/usr/include/php/20240924/Zend -I/usr/include/php/20240924/ext 
+-I/usr/include/php/20240924/ext/date/lib
+checking for PHP extension directory... /usr/lib/php/20240924
+checking for PHP installed headers prefix... /usr/include/php/20240924
+checking if debugging is enabled... no
+checking if PHP is built with thread safety (ZTS)... no
+
+Configuring extension
+checking whether to enable dbus functions... yes, shared
+checking libxml2 install dir... no
+checking for pkg-config... found
+checking for dbus... found
+checking for libxml-2.0 >= 2.9.4... no
+configure: error: Package requirements (libxml-2.0 >= 2.9.4) were not met:
+
+Package 'libxml-2.0', required by 'virtual:world', not found
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables LIBXML_CFLAGS
+and LIBXML_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+ERROR: `/tmp/pear/temp/dbus/configure --with-php-config=/usr/bin/php-config' failed
