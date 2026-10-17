@@ -448,6 +448,22 @@ final class SystemApiNativeDbusHostValidationToolkit
         }
 
         $lines[] = '';
+        $lines[] = '## Recommended Next Actions';
+        $lines[] = '';
+
+        foreach ($this->buildRecommendedNextActionLines($report['recommended_next_actions'] ?? null) as $line) {
+            $lines[] = $line;
+        }
+
+        $lines[] = '';
+        $lines[] = '## Preparation Plan';
+        $lines[] = '';
+
+        foreach ($this->buildPreparationPlanMarkdownLines($report['preparation_plan'] ?? null) as $line) {
+            $lines[] = $line;
+        }
+
+        $lines[] = '';
         $lines[] = '## Re-run Commands';
         $lines[] = '';
         $lines[] = '```bash';
@@ -470,6 +486,67 @@ final class SystemApiNativeDbusHostValidationToolkit
         $lines[] = '';
 
         return implode(PHP_EOL, $lines) . PHP_EOL;
+    }
+
+    /**
+     * @param mixed $recommendedNextActions
+     * @return list<string>
+     */
+    private function buildRecommendedNextActionLines(mixed $recommendedNextActions): array
+    {
+        if (!is_array($recommendedNextActions) || $recommendedNextActions === []) {
+            return ['- None'];
+        }
+
+        $lines = [];
+        foreach ($recommendedNextActions as $action) {
+            if (is_string($action) && trim($action) !== '') {
+                $lines[] = sprintf('- `%s`', trim($action));
+            }
+        }
+
+        return $lines !== [] ? $lines : ['- None'];
+    }
+
+    /**
+     * @param mixed $preparationPlan
+     * @return list<string>
+     */
+    private function buildPreparationPlanMarkdownLines(mixed $preparationPlan): array
+    {
+        if (!is_array($preparationPlan) || $preparationPlan === []) {
+            return ['1. `validation-complete` - No additional preparation steps are currently required.'];
+        }
+
+        $lines = [];
+        foreach ($preparationPlan as $step) {
+            if (!is_array($step)) {
+                continue;
+            }
+
+            $lines[] = sprintf(
+                '1. `%s` - %s',
+                (string) ($step['action'] ?? 'unknown'),
+                (string) ($step['description'] ?? 'Sin descripcion')
+            );
+
+            $commands = $step['commands'] ?? null;
+            if (is_array($commands) && $commands !== []) {
+                $lines[] = '';
+                $lines[] = '```bash';
+                foreach ($commands as $command) {
+                    if (is_string($command) && trim($command) !== '') {
+                        $lines[] = trim($command);
+                    }
+                }
+                $lines[] = '```';
+                $lines[] = '';
+            }
+        }
+
+        return $lines !== []
+            ? $lines
+            : ['1. `validation-complete` - No additional preparation steps are currently required.'];
     }
 
     /**

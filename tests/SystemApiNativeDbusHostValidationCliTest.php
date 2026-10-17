@@ -92,6 +92,9 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertStringContainsString('echo', $preparationShellScript);
         $handoff = file_get_contents($payload['handoff_path']);
         self::assertNotFalse($handoff);
+        self::assertStringContainsString('## Recommended Next Actions', $handoff);
+        self::assertStringContainsString('## Preparation Plan', $handoff);
+        self::assertStringContainsString('install-native-dbus-extension', $handoff);
         self::assertStringContainsString('## Re-run Commands', $handoff);
     }
 
@@ -797,12 +800,17 @@ TEXT);
 
         $handoff = file_get_contents($payload['handoff_path']);
         self::assertNotFalse($handoff);
+        self::assertStringContainsString('## Recommended Next Actions', $handoff);
+        self::assertStringContainsString('`inspect-native-dbus-build-make`', $handoff);
+        self::assertStringContainsString('`migrate-to-modern-linux-host`', $handoff);
+        self::assertStringContainsString('## Preparation Plan', $handoff);
         self::assertStringContainsString('Reutiliza `--evidence-dir ' . $relativeEvidenceDir . '` mientras sigas diagnosticando el mismo intento de compilacion.', $handoff);
         self::assertStringContainsString('Conserva `--native-dbus-build-evidence-json-path ' . $structuredEvidencePathRelative . '` cuando el rerun solo valida o reinspecciona la evidencia ya capturada.', $handoff);
         self::assertStringContainsString('Conserva tambien `--native-dbus-build-log-path ' . $expectedRelativeLogPath . '` cuando el rerun deba rematerializar el JSON estructurado desde el log crudo del intento real.', $handoff);
         self::assertStringContainsString('--native-dbus-build-log-path ' . $expectedRelativeLogPath, $handoff);
         self::assertStringContainsString('- Preparation script: `' . $relativeEvidenceDir . '/native-dbus-runtime-validation-prepare.sh`', $handoff);
         self::assertStringContainsString('- Preparation checklist: `' . $relativeEvidenceDir . '/native-dbus-runtime-validation-preparation.txt`', $handoff);
+        self::assertStringNotContainsString('`install-native-dbus-extension`', $handoff);
         self::assertStringNotContainsString('\\native-dbus-runtime-validation-prepare.sh', $handoff);
         self::assertStringNotContainsString('\\native-dbus-runtime-validation-preparation.txt', $handoff);
     }
@@ -1159,6 +1167,8 @@ TEXT);
 
         $handoff = file_get_contents($payload['handoff_path']);
         self::assertNotFalse($handoff);
+        self::assertStringContainsString('## Preparation Plan', $handoff);
+        self::assertStringContainsString('sudo apt-get install -y php-pear php-dev libdbus-1-dev pkg-config', $handoff);
         self::assertStringContainsString('busctl --system introspect org.w4.System1 /org/w4/System1 org.w4.System1.Manager', $handoff);
         self::assertStringContainsString('cd "/opt/w4/w4-os-system" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux', $handoff);
     }
@@ -1200,6 +1210,9 @@ TEXT);
         $handoff = file_get_contents($payload['handoff_path']);
         self::assertNotFalse($handoff);
         self::assertStringContainsString('- Target repo root: `/srv/w4/os-system`', $handoff);
+        self::assertStringContainsString('## Preparation Plan', $handoff);
+        self::assertStringContainsString('cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format markdown --target-os-family Linux', $handoff);
+        self::assertStringContainsString('sudo apt-get install -y php-pear php-dev libdbus-1-dev pkg-config', $handoff);
         self::assertStringContainsString('cd "/srv/w4/os-system" && php scripts/run_native_dbus_real_host_validation.php --format markdown --target-os-family Linux', $handoff);
     }
 
