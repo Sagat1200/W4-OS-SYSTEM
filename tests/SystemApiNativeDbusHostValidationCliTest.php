@@ -499,6 +499,19 @@ TEXT);
 
         $handoff = file_get_contents($payload['handoff_path']);
         self::assertNotFalse($handoff);
+        self::assertStringContainsString('## Evidence Policy', $handoff);
+        self::assertStringContainsString(
+            'Reutiliza `--evidence-dir ' . $expectedRelativeEvidenceDir . '` mientras sigas diagnosticando el mismo intento de compilacion.',
+            $handoff
+        );
+        self::assertStringContainsString(
+            'Conserva `--native-dbus-build-evidence-json-path ' . $expectedRelativePath . '` cuando el rerun solo valida o reinspecciona la evidencia ya capturada.',
+            $handoff
+        );
+        self::assertStringContainsString(
+            'regenera `native-dbus-extension-build-evidence.json` antes del siguiente rerun',
+            $handoff
+        );
         self::assertStringContainsString(
             '--evidence-dir ' . $expectedRelativeEvidenceDir,
             $handoff

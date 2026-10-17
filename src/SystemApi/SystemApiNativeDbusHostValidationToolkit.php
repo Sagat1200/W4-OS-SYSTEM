@@ -402,6 +402,8 @@ final class SystemApiNativeDbusHostValidationToolkit
         $nativeDbusBuildEvidenceArtifactPath = is_string($report['native_dbus_extension_build_evidence_path'] ?? null)
             ? trim((string) $report['native_dbus_extension_build_evidence_path'])
             : null;
+        $portableEvidenceDir = $this->resolvePortableRepoPath($evidenceDir);
+        $portableEvidencePath = $this->resolvePortableRepoPath($nativeDbusBuildEvidenceArtifactPath);
         $rerunCommands = $this->buildRerunCommands(
             $targetOsFamily,
             $targetRepoRoot,
@@ -425,10 +427,18 @@ final class SystemApiNativeDbusHostValidationToolkit
             '2. Re-run the native validation commands from the repository root on the target host.',
             '3. Verify that `org.w4.System1` is visible on the system bus after ownership succeeds.',
             '',
-            '## Re-run Commands',
+            '## Evidence Policy',
             '',
-            '```bash',
         ];
+
+        foreach ($this->buildEvidencePolicyLines($portableEvidenceDir, $portableEvidencePath) as $line) {
+            $lines[] = $line;
+        }
+
+        $lines[] = '';
+        $lines[] = '## Re-run Commands';
+        $lines[] = '';
+        $lines[] = '```bash';
 
         foreach ($rerunCommands as $command) {
             $lines[] = $command;
@@ -448,6 +458,35 @@ final class SystemApiNativeDbusHostValidationToolkit
         $lines[] = '';
 
         return implode(PHP_EOL, $lines) . PHP_EOL;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildEvidencePolicyLines(?string $portableEvidenceDir, ?string $portableEvidencePath): array
+    {
+        $lines = [];
+
+        if ($portableEvidenceDir !== null) {
+            $lines[] = sprintf(
+                '- Reutiliza `--evidence-dir %s` mientras sigas diagnosticando el mismo intento de compilacion.',
+                $portableEvidenceDir
+            );
+        } else {
+            $lines[] = '- Reutiliza el directorio de evidencia actual solo si sigue representando el mismo intento de compilacion.';
+        }
+
+        if ($portableEvidencePath !== null) {
+            $lines[] = sprintf(
+                '- Conserva `--native-dbus-build-evidence-json-path %s` cuando el rerun solo valida o reinspecciona la evidencia ya capturada.',
+                $portableEvidencePath
+            );
+            $lines[] = '- Si vuelves a ejecutar una compilacion real de `pecl dbus`, regenera `native-dbus-extension-build-evidence.json` antes del siguiente rerun para no mezclar evidencia vieja con un intento nuevo.';
+        } else {
+            $lines[] = '- Si generas un nuevo intento real de compilacion, actualiza o regenera `native-dbus-extension-build-evidence.json` antes del siguiente rerun.';
+        }
+
+        return $lines;
     }
 
     private function normalizePath(string $path): string
