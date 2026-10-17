@@ -474,8 +474,13 @@ TEXT);
         self::assertSame(3, $result['exitCode'], $result['stderr']);
 
         $payload = $this->decodeJson($result['stdout']);
+        $expectedRelativeEvidenceDir = str_replace('\\', '/', substr($evidenceDir, strlen($this->repoRoot) + 1));
         $expectedRelativePath = str_replace('\\', '/', substr($structuredEvidencePath, strlen($this->repoRoot) + 1));
 
+        self::assertStringContainsString(
+            '--evidence-dir ' . $expectedRelativeEvidenceDir,
+            $payload['preparation_plan'][1]['commands'][0]
+        );
         self::assertStringContainsString(
             '--native-dbus-build-evidence-json-path ' . $expectedRelativePath,
             $payload['preparation_plan'][1]['commands'][0]
@@ -484,12 +489,20 @@ TEXT);
         $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
         self::assertNotFalse($preparationChecklist);
         self::assertStringContainsString(
+            '--evidence-dir ' . $expectedRelativeEvidenceDir,
+            $preparationChecklist
+        );
+        self::assertStringContainsString(
             '--native-dbus-build-evidence-json-path ' . $expectedRelativePath,
             $preparationChecklist
         );
 
         $handoff = file_get_contents($payload['handoff_path']);
         self::assertNotFalse($handoff);
+        self::assertStringContainsString(
+            '--evidence-dir ' . $expectedRelativeEvidenceDir,
+            $handoff
+        );
         self::assertStringContainsString(
             '--native-dbus-build-evidence-json-path ' . $expectedRelativePath,
             $handoff

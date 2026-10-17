@@ -149,6 +149,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             $effectiveOverrides,
             $osFamily,
             $targetRepoRoot,
+            $normalizedEvidenceDir,
             $materializedNativeDbusBuildEvidenceArtifactPath,
             $attemptOwnership,
             $ownershipValidated,
@@ -395,12 +396,16 @@ final class SystemApiNativeDbusHostValidationToolkit
     {
         $targetOsFamily = (string) ($report['preparation_target_os_family'] ?? 'Unknown');
         $targetRepoRoot = (string) ($report['preparation_target_repo_root'] ?? '');
+        $evidenceDir = is_string($report['evidence_dir'] ?? null)
+            ? trim((string) $report['evidence_dir'])
+            : null;
         $nativeDbusBuildEvidenceArtifactPath = is_string($report['native_dbus_extension_build_evidence_path'] ?? null)
             ? trim((string) $report['native_dbus_extension_build_evidence_path'])
             : null;
         $rerunCommands = $this->buildRerunCommands(
             $targetOsFamily,
             $targetRepoRoot,
+            $evidenceDir,
             $nativeDbusBuildEvidenceArtifactPath
         );
         $verificationCommands = $this->buildVerificationCommands($targetOsFamily);
@@ -654,6 +659,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         array $environmentOverrides,
         string $osFamily,
         string $targetRepoRoot,
+        string $evidenceDir,
         ?string $nativeDbusBuildEvidenceArtifactPath,
         bool $attemptOwnership,
         bool $ownershipValidated,
@@ -676,6 +682,7 @@ final class SystemApiNativeDbusHostValidationToolkit
                 'commands' => $this->buildRerunCommands(
                     $osFamily,
                     $targetRepoRoot,
+                    $evidenceDir,
                     $nativeDbusBuildEvidenceArtifactPath
                 ),
             ];
@@ -699,6 +706,7 @@ final class SystemApiNativeDbusHostValidationToolkit
                 'commands' => $this->buildRerunCommands(
                     $osFamily,
                     $targetRepoRoot,
+                    $evidenceDir,
                     $nativeDbusBuildEvidenceArtifactPath
                 ),
             ];
@@ -749,6 +757,7 @@ final class SystemApiNativeDbusHostValidationToolkit
                 'commands' => $this->buildRerunCommands(
                     $osFamily,
                     $targetRepoRoot,
+                    $evidenceDir,
                     $nativeDbusBuildEvidenceArtifactPath
                 ),
             ];
@@ -1699,13 +1708,14 @@ final class SystemApiNativeDbusHostValidationToolkit
     private function buildRerunCommands(
         string $osFamily,
         string $targetRepoRoot,
+        ?string $evidenceDir = null,
         ?string $nativeDbusBuildEvidenceArtifactPath = null
     ): array
     {
         return [
-            $this->buildValidationCommand('text', $osFamily, $targetRepoRoot, $nativeDbusBuildEvidenceArtifactPath),
-            $this->buildValidationCommand('markdown', $osFamily, $targetRepoRoot, $nativeDbusBuildEvidenceArtifactPath),
-            $this->buildValidationCommand('json', $osFamily, $targetRepoRoot, $nativeDbusBuildEvidenceArtifactPath),
+            $this->buildValidationCommand('text', $osFamily, $targetRepoRoot, $evidenceDir, $nativeDbusBuildEvidenceArtifactPath),
+            $this->buildValidationCommand('markdown', $osFamily, $targetRepoRoot, $evidenceDir, $nativeDbusBuildEvidenceArtifactPath),
+            $this->buildValidationCommand('json', $osFamily, $targetRepoRoot, $evidenceDir, $nativeDbusBuildEvidenceArtifactPath),
         ];
     }
 
@@ -1713,6 +1723,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         string $format,
         string $osFamily,
         string $targetRepoRoot,
+        ?string $evidenceDir = null,
         ?string $nativeDbusBuildEvidenceArtifactPath = null
     ): string
     {
@@ -1721,7 +1732,15 @@ final class SystemApiNativeDbusHostValidationToolkit
             $format,
             $osFamily
         );
-        $portableEvidencePath = $this->resolvePortableBuildEvidencePath($nativeDbusBuildEvidenceArtifactPath);
+        $portableEvidenceDir = $this->resolvePortableRepoPath($evidenceDir);
+        if ($portableEvidenceDir !== null) {
+            $command .= sprintf(
+                ' --evidence-dir %s',
+                $portableEvidenceDir
+            );
+        }
+
+        $portableEvidencePath = $this->resolvePortableRepoPath($nativeDbusBuildEvidenceArtifactPath);
         if ($portableEvidencePath !== null) {
             $command .= sprintf(
                 ' --native-dbus-build-evidence-json-path %s',
@@ -1744,7 +1763,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         );
     }
 
-    private function resolvePortableBuildEvidencePath(?string $path): ?string
+    private function resolvePortableRepoPath(?string $path): ?string
     {
         if ($path === null || trim($path) === '') {
             return null;
