@@ -185,18 +185,19 @@ Si el ownership real del bus no se cierra, la `System API` seguira siendo fuerte
 ## Prioridad 1 · Cerrar D-Bus nativo real
 
 Objetivo:
-validar la ruta nativa completa contra un host con extension `dbus` compatible.
+validar la ruta nativa completa contra un host con extension `dbus` compatible y suficiente para cerrar la V1 de las tres ediciones.
 
 Trabajo esperado:
 
-- instalar y exponer PECL `dbus` en entorno de validacion,
+- parchear o forkear `pecl/DBus` para `PHP 8.4`,
+- instalar y exponer ese runtime en entorno de validacion,
 - ejecutar `DescribeNativeRuntimeCoupling`,
 - ejecutar `StartNativeRuntimeService`,
 - ejecutar `MaterializeNativeBusOwnership`,
 - contrastar observacion, coupling y ownership sobre `org.w4.System1`.
 
 Resultado esperado:
-pasar del contrato avanzado y bien probado en fixtures a evidencia de runtime real.
+pasar del contrato avanzado y bien probado en fixtures a evidencia de runtime real, sin abrir todavia una migracion total de lenguaje que retrase la V1.
 
 ## Prioridad 2 · Convertir V1-01 a V1-20 en checklist ejecutable
 
@@ -217,6 +218,16 @@ tener una lectura honesta de que impide declarar V1.
 
 Objetivo:
 reducir el gap entre validacion por slices y recorridos integrados por edicion.
+
+## 9. Decision de transicion post-V1
+
+Queda asentada la siguiente decision de proyecto:
+
+- para cerrar la V1 de `W4 OS Home`, `W4 OS Business` y `W4 OS Server`, se autoriza parchear o forkear `pecl/DBus` para `PHP 8.4`,
+- esa estrategia se considera transitoria y orientada exclusivamente al cierre de release,
+- y una vez validada la V1, la direccion oficial del proyecto sera migrar `System API`, `W4 Linux Base` y otras estructuras nucleares hoy implementadas en PHP hacia Rust.
+
+La lectura correcta de esta decision es que PHP sigue siendo el lenguaje operativo de cierre V1, pero deja de considerarse el destino arquitectonico final de la base Linux y del runtime estructural del sistema.
 
 Trabajo esperado:
 

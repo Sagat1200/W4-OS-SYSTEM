@@ -195,8 +195,25 @@ Hoy puede considerarse una superficie real y util de gestion local, con la verti
 - con `PHP 8.x`,
 - y una extension `dbus` realmente viable para el stack objetivo.
 
-## 8. Resumen ejecutivo
+## 8. Estrategia de transicion de lenguaje
+
+La estrategia vigente para la `System API` queda definida en dos etapas:
+
+1. **cerrar la V1** de `W4 OS Home`, `W4 OS Business` y `W4 OS Server` manteniendo la base actual en PHP,
+2. **migrar despues** la `System API` y otras estructuras de plataforma hacia Rust.
+
+En consecuencia:
+
+- durante el cierre V1 se autoriza parchear o forkear `pecl/DBus` para `PHP 8.4`,
+- esa ruta se considera una solucion transitoria para no bloquear la validacion de producto,
+- y no debe interpretarse como la arquitectura definitiva del runtime nativo Linux.
+
+La direccion oficial post-V1 es que la `System API` deje de apoyarse estructuralmente en PHP para el runtime base de Linux y evolucione hacia una implementacion principal en Rust, alineada con la evolucion de `W4 Linux Base` y otras piezas nucleares del proyecto.
+
+## 9. Resumen ejecutivo
 
 La `System API` es la API local de administracion y control de `W4 OS`.
 
 Su funcion es exponer capacidades del sistema como contratos programaticos reutilizables, especialmente en la vertical D-Bus nativa. Ya cubre diagnostico, activacion, servicio, startup, observacion, coupling y ownership, y actua como la base del control plane local del sistema.
+
+Para el cierre V1, esa base sigue en PHP y puede apoyarse temporalmente en un fork o patch de `pecl/DBus`. Una vez validada la V1 de las ediciones del sistema, la direccion oficial del proyecto es migrar la `System API` y la base Linux estructural hacia Rust.
