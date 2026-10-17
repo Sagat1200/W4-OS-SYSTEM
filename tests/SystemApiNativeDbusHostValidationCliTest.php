@@ -126,6 +126,7 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertSame('upgrade-runtime-php', $payload['next_action']);
         self::assertContains('upgrade-runtime-php', $payload['recommended_next_actions']);
         self::assertContains('migrate-to-modern-linux-host', $payload['recommended_next_actions']);
+        self::assertNotContains('install-native-dbus-extension', $payload['recommended_next_actions']);
         self::assertFalse($payload['host_compatibility']['compatible']);
         self::assertSame('Linux', $payload['host_compatibility']['os_family']);
         self::assertSame('7.4.3', $payload['host_compatibility']['php_version']);
@@ -239,6 +240,7 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertSame('inspect-native-dbus-build-make', $payload['next_action']);
         self::assertContains('inspect-native-dbus-build-make', $payload['recommended_next_actions']);
         self::assertContains('migrate-to-modern-linux-host', $payload['recommended_next_actions']);
+        self::assertNotContains('install-native-dbus-extension', $payload['recommended_next_actions']);
         self::assertTrue($payload['host_compatibility']['compatible']);
         self::assertTrue($payload['native_dbus_extension_installability']['blocked']);
         self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
@@ -272,6 +274,7 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
         self::assertStringContainsString('## Native D-Bus Extension Installation', $savedSummary);
         self::assertStringContainsString('- Installation state: `build-failed`', $savedSummary);
         self::assertStringContainsString('- Installation reason: `zend_object_store_get_object`', $savedSummary);
+        self::assertStringNotContainsString('install-native-dbus-extension', $savedSummary);
     }
 
     public function testValidationCanInferExtensionBuildFailureFromPersistedLinuxEvidence(): void

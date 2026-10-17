@@ -39,7 +39,6 @@
 
 - `inspect-native-dbus-build-make`
 - `migrate-to-modern-linux-host`
-- `install-native-dbus-extension`
 
 ## Preparation Plan
 

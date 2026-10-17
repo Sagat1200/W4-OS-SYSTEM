@@ -178,7 +178,8 @@ final class SystemApiNativeDbusHostValidationToolkit
                 $steps['startup'],
                 $steps['service_definition']
             ));
-        $recommendedNextActions = array_values(array_unique(array_filter(array_merge(
+        $recommendedNextActions = $this->filterDominantRecommendedNextActions(
+            array_values(array_unique(array_filter(array_merge(
             is_array($hostCompatibility['recommended_next_actions'] ?? null)
                 ? $hostCompatibility['recommended_next_actions']
                 : [],
@@ -193,7 +194,10 @@ final class SystemApiNativeDbusHostValidationToolkit
                 $steps['ownership'],
                 $steps['observation_after_ownership']
             )
-        ), static fn (mixed $value): bool => is_string($value) && trim($value) !== '')));
+        ), static fn (mixed $value): bool => is_string($value) && trim($value) !== ''))),
+            $hostCompatible,
+            $nativeDbusExtensionBlocked
+        );
 
         $report = $this->normalizeReportPayloadPaths([
             'api_version' => '1.0',
@@ -1399,6 +1403,25 @@ final class SystemApiNativeDbusHostValidationToolkit
         }
 
         return in_array('migrate-to-modern-linux-host', $recommendedNextActions, true);
+    }
+
+    /**
+     * @param list<string> $recommendedNextActions
+     * @return list<string>
+     */
+    private function filterDominantRecommendedNextActions(
+        array $recommendedNextActions,
+        bool $hostCompatible,
+        bool $nativeDbusExtensionBlocked
+    ): array {
+        if ($hostCompatible && !$nativeDbusExtensionBlocked) {
+            return $recommendedNextActions;
+        }
+
+        return array_values(array_filter(
+            $recommendedNextActions,
+            static fn (string $action): bool => $action !== 'install-native-dbus-extension'
+        ));
     }
 
     /**

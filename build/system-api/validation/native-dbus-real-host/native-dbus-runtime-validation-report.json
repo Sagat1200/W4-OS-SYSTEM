@@ -19,8 +19,8 @@
     "bus_name": "org.w4.System1",
     "object_path": "/org/w4/System1",
     "interface": "org.w4.System1.Manager",
-    "started_at": "2026-10-17T13:19:50+00:00",
-    "completed_at": "2026-10-17T13:19:57+00:00",
+    "started_at": "2026-10-17T13:34:54+00:00",
+    "completed_at": "2026-10-17T13:34:59+00:00",
     "ownership_validated": false,
     "coupling_ready": false,
     "startup_acknowledged": false,
@@ -28,8 +28,7 @@
     "next_action": "inspect-native-dbus-build-make",
     "recommended_next_actions": [
         "inspect-native-dbus-build-make",
-        "migrate-to-modern-linux-host",
-        "install-native-dbus-extension"
+        "migrate-to-modern-linux-host"
     ],
     "host_compatibility": {
         "compatible": true,
