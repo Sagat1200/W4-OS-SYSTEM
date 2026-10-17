@@ -195,21 +195,21 @@ final class SystemApiNativeDbusHostValidationToolkit
             )
         ), static fn (mixed $value): bool => is_string($value) && trim($value) !== '')));
 
-        $report = [
+        $report = $this->normalizeReportPayloadPaths([
             'api_version' => '1.0',
             'kind' => 'system-api-dbus-native-runtime-validation-report',
             'status' => $status,
             'exit_code' => $exitCode,
             'attempted_ownership' => $attemptOwnership,
             'root_dir' => $this->rootDir,
-            'evidence_dir' => $normalizedEvidenceDir,
-            'report_path' => $reportPath,
-            'summary_path' => $summaryPath,
-            'preparation_shell_script_path' => $preparationShellScriptPath,
-            'preparation_checklist_path' => $preparationChecklistPath,
-            'handoff_path' => $handoffPath,
-            'native_dbus_extension_build_evidence_path' => $materializedNativeDbusBuildEvidenceArtifactPath,
-            'artifacts_dir' => $artifactsDir,
+            'evidence_dir' => $this->normalizeReportPath($normalizedEvidenceDir),
+            'report_path' => $this->normalizeReportPath($reportPath),
+            'summary_path' => $this->normalizeReportPath($summaryPath),
+            'preparation_shell_script_path' => $this->normalizeReportPath($preparationShellScriptPath),
+            'preparation_checklist_path' => $this->normalizeReportPath($preparationChecklistPath),
+            'handoff_path' => $this->normalizeReportPath($handoffPath),
+            'native_dbus_extension_build_evidence_path' => $this->normalizeReportPath($materializedNativeDbusBuildEvidenceArtifactPath),
+            'artifacts_dir' => $this->normalizeReportPath($artifactsDir),
             'runtime_backend' => $effectiveOverrides['W4_SYSTEM_API_RUNTIME_BACKEND'] ?? 'native-dbus-extension',
             'preparation_target_os_family' => $osFamily,
             'preparation_target_repo_root' => $targetRepoRoot,
@@ -230,19 +230,19 @@ final class SystemApiNativeDbusHostValidationToolkit
             'environment_overrides' => $effectiveOverrides,
             'steps' => $steps,
             'step_files' => [
-                'diagnosis' => $stepsDir . DIRECTORY_SEPARATOR . '01-diagnosis.json',
-                'service_definition' => $stepsDir . DIRECTORY_SEPARATOR . '02-service-definition.json',
-                'startup' => $stepsDir . DIRECTORY_SEPARATOR . '03-startup.json',
-                'observation_after_startup' => $stepsDir . DIRECTORY_SEPARATOR . '04-observation-after-startup.json',
-                'coupling' => $stepsDir . DIRECTORY_SEPARATOR . '05-coupling.json',
+                'diagnosis' => $this->normalizeReportPath($stepsDir . DIRECTORY_SEPARATOR . '01-diagnosis.json'),
+                'service_definition' => $this->normalizeReportPath($stepsDir . DIRECTORY_SEPARATOR . '02-service-definition.json'),
+                'startup' => $this->normalizeReportPath($stepsDir . DIRECTORY_SEPARATOR . '03-startup.json'),
+                'observation_after_startup' => $this->normalizeReportPath($stepsDir . DIRECTORY_SEPARATOR . '04-observation-after-startup.json'),
+                'coupling' => $this->normalizeReportPath($stepsDir . DIRECTORY_SEPARATOR . '05-coupling.json'),
                 'ownership' => is_array($steps['ownership'])
-                    ? $stepsDir . DIRECTORY_SEPARATOR . '06-ownership.json'
+                    ? $this->normalizeReportPath($stepsDir . DIRECTORY_SEPARATOR . '06-ownership.json')
                     : null,
                 'observation_after_ownership' => is_array($steps['observation_after_ownership'])
-                    ? $stepsDir . DIRECTORY_SEPARATOR . '07-observation-after-ownership.json'
+                    ? $this->normalizeReportPath($stepsDir . DIRECTORY_SEPARATOR . '07-observation-after-ownership.json')
                     : null,
             ],
-        ];
+        ]);
 
         $this->writeJsonFile($reportPath, $report);
         $this->writeTextFile($summaryPath, $this->renderMarkdownSummary($report));
@@ -1943,6 +1943,75 @@ final class SystemApiNativeDbusHostValidationToolkit
         }
 
         return null;
+    }
+
+    private function normalizeReportPath(?string $path): ?string
+    {
+        if ($path === null || trim($path) === '') {
+            return null;
+        }
+
+        $portablePath = $this->resolvePortableRepoPath($path);
+        if ($portablePath !== null) {
+            return $portablePath;
+        }
+
+        return str_replace('\\', '/', $this->normalizePath($path));
+    }
+
+    /**
+     * @param mixed $payload
+     * @return mixed
+     */
+    private function normalizeReportPayloadPaths(mixed $payload, ?string $key = null): mixed
+    {
+        if (is_array($payload)) {
+            $normalized = [];
+            foreach ($payload as $nestedKey => $nestedValue) {
+                $normalized[$nestedKey] = $this->normalizeReportPayloadPaths(
+                    $nestedValue,
+                    is_string($nestedKey) ? $nestedKey : null
+                );
+            }
+
+            return $normalized;
+        }
+
+        if (!is_string($payload) || $payload === '') {
+            return $payload;
+        }
+
+        if (!$this->isFilesystemPathField($key, $payload)) {
+            return $payload;
+        }
+
+        return $this->normalizeReportPath($payload) ?? $payload;
+    }
+
+    private function isFilesystemPathField(?string $key, string $value): bool
+    {
+        if ($key === null) {
+            return false;
+        }
+
+        $normalizedKey = strtolower($key);
+        if (in_array($normalizedKey, ['object_path', 'interface'], true)) {
+            return false;
+        }
+
+        if (
+            str_ends_with($normalizedKey, '_path')
+            || str_ends_with($normalizedKey, '_dir')
+            || $normalizedKey === 'path'
+        ) {
+            return true;
+        }
+
+        if (!str_starts_with($normalizedKey, 'w4_system_api_')) {
+            return false;
+        }
+
+        return str_contains($normalizedKey, '_path') || str_contains($normalizedKey, '_dir');
     }
 
     private function buildEvidenceRegenerationCommand(

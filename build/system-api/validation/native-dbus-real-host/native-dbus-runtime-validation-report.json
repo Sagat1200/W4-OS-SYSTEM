@@ -4,23 +4,23 @@
     "status": "blocked",
     "exit_code": 3,
     "attempted_ownership": true,
-    "root_dir": "C:\\W4\\Packages\\W4-OS SYSTEM",
+    "root_dir": "C:/W4/Packages/W4-OS SYSTEM",
     "evidence_dir": "build/system-api/validation/native-dbus-real-host",
-    "report_path": "build/system-api/validation/native-dbus-real-host\\native-dbus-runtime-validation-report.json",
-    "summary_path": "build/system-api/validation/native-dbus-real-host\\native-dbus-runtime-validation-summary.md",
-    "preparation_shell_script_path": "build/system-api/validation/native-dbus-real-host\\native-dbus-runtime-validation-prepare.sh",
-    "preparation_checklist_path": "build/system-api/validation/native-dbus-real-host\\native-dbus-runtime-validation-preparation.txt",
-    "handoff_path": "build/system-api/validation/native-dbus-real-host\\native-dbus-runtime-validation-handoff.md",
+    "report_path": "build/system-api/validation/native-dbus-real-host/native-dbus-runtime-validation-report.json",
+    "summary_path": "build/system-api/validation/native-dbus-real-host/native-dbus-runtime-validation-summary.md",
+    "preparation_shell_script_path": "build/system-api/validation/native-dbus-real-host/native-dbus-runtime-validation-prepare.sh",
+    "preparation_checklist_path": "build/system-api/validation/native-dbus-real-host/native-dbus-runtime-validation-preparation.txt",
+    "handoff_path": "build/system-api/validation/native-dbus-real-host/native-dbus-runtime-validation-handoff.md",
     "native_dbus_extension_build_evidence_path": "build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json",
-    "artifacts_dir": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts",
+    "artifacts_dir": "build/system-api/validation/native-dbus-real-host/runtime-artifacts",
     "runtime_backend": "native-dbus-extension",
     "preparation_target_os_family": "Linux",
     "preparation_target_repo_root": "/srv/w4/os-system",
     "bus_name": "org.w4.System1",
     "object_path": "/org/w4/System1",
     "interface": "org.w4.System1.Manager",
-    "started_at": "2026-10-17T12:16:32+00:00",
-    "completed_at": "2026-10-17T12:16:37+00:00",
+    "started_at": "2026-10-17T12:35:46+00:00",
+    "completed_at": "2026-10-17T12:35:51+00:00",
     "ownership_validated": false,
     "coupling_ready": false,
     "startup_acknowledged": false,
@@ -50,7 +50,7 @@
         "build_phase": "make",
         "reason": "zend_object_store_get_object",
         "failure_signature": "make: *** [Makefile:192: dbus.lo] Error 1",
-        "log_path": "c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md",
+        "log_path": "build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md",
         "pecl_available": true,
         "recommended_next_actions": [
             "inspect-native-dbus-build-make",
@@ -119,7 +119,7 @@
     ],
     "environment_overrides": {
         "W4_SYSTEM_API_RUNTIME_BACKEND": "native-dbus-extension",
-        "W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts",
+        "W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR": "build/system-api/validation/native-dbus-real-host/runtime-artifacts",
         "W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_JSON_PATH": "build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json",
         "W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_PATH": "build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md",
         "W4_SYSTEM_API_PREPARATION_TARGET_OS_FAMILY": "Linux",
@@ -156,7 +156,7 @@
                 "build_phase": "make",
                 "reason": "zend_object_store_get_object",
                 "failure_signature": "make: *** [Makefile:192: dbus.lo] Error 1",
-                "log_path": "c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-ubuntu-operational-attempt.md"
+                "log_path": "build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md"
             },
             "missing_capabilities": [
                 "php-dbus-runtime-adapter",
@@ -179,9 +179,9 @@
             "ownership_goal": "org.w4.System1",
             "service_lifecycle": "request-name-register-object-wait-loop",
             "artifacts": {
-                "ready_marker_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.ready",
-                "status_file_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime-status.json",
-                "pid_file_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.pid"
+                "ready_marker_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.ready",
+                "status_file_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime-status.json",
+                "pid_file_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.pid"
             },
             "runtime_backend": {
                 "kind": "system-api-dbus-runtime-backend",
@@ -299,9 +299,9 @@
                 "ownership_goal": "org.w4.System1",
                 "service_lifecycle": "request-name-register-object-wait-loop",
                 "artifacts": {
-                    "ready_marker_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.ready",
-                    "status_file_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime-status.json",
-                    "pid_file_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.pid"
+                    "ready_marker_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.ready",
+                    "status_file_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime-status.json",
+                    "pid_file_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.pid"
                 },
                 "runtime_backend": {
                     "kind": "system-api-dbus-runtime-backend",
@@ -469,9 +469,9 @@
                 "ownership_goal": "org.w4.System1",
                 "service_lifecycle": "request-name-register-object-wait-loop",
                 "artifacts": {
-                    "ready_marker_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.ready",
-                    "status_file_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime-status.json",
-                    "pid_file_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.pid"
+                    "ready_marker_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.ready",
+                    "status_file_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime-status.json",
+                    "pid_file_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.pid"
                 },
                 "runtime_backend": {
                     "kind": "system-api-dbus-runtime-backend",
@@ -614,18 +614,18 @@
             "ownership_state": "native-runtime-service-not-started",
             "artifacts": {
                 "ready_marker": {
-                    "path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.ready",
+                    "path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.ready",
                     "exists": false,
                     "contents": null
                 },
                 "status_file": {
-                    "path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime-status.json",
+                    "path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime-status.json",
                     "exists": false,
                     "payload": null,
                     "parse_error": null
                 },
                 "pid_file": {
-                    "path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.pid",
+                    "path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.pid",
                     "exists": false,
                     "pid": null,
                     "raw_value": null
@@ -660,9 +660,9 @@
                 "ownership_goal": "org.w4.System1",
                 "service_lifecycle": "request-name-register-object-wait-loop",
                 "artifacts": {
-                    "ready_marker_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.ready",
-                    "status_file_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime-status.json",
-                    "pid_file_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.pid"
+                    "ready_marker_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.ready",
+                    "status_file_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime-status.json",
+                    "pid_file_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.pid"
                 },
                 "runtime_backend": {
                     "kind": "system-api-dbus-runtime-backend",
@@ -876,9 +876,9 @@
                 "ownership_goal": "org.w4.System1",
                 "service_lifecycle": "request-name-register-object-wait-loop",
                 "artifacts": {
-                    "ready_marker_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.ready",
-                    "status_file_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime-status.json",
-                    "pid_file_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.pid"
+                    "ready_marker_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.ready",
+                    "status_file_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime-status.json",
+                    "pid_file_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.pid"
                 },
                 "runtime_backend": {
                     "kind": "system-api-dbus-runtime-backend",
@@ -1042,9 +1042,9 @@
                     "ownership_goal": "org.w4.System1",
                     "service_lifecycle": "request-name-register-object-wait-loop",
                     "artifacts": {
-                        "ready_marker_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.ready",
-                        "status_file_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime-status.json",
-                        "pid_file_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.pid"
+                        "ready_marker_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.ready",
+                        "status_file_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime-status.json",
+                        "pid_file_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.pid"
                     },
                     "runtime_backend": {
                         "kind": "system-api-dbus-runtime-backend",
@@ -1187,18 +1187,18 @@
                 "ownership_state": "native-runtime-service-not-started",
                 "artifacts": {
                     "ready_marker": {
-                        "path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.ready",
+                        "path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.ready",
                         "exists": false,
                         "contents": null
                     },
                     "status_file": {
-                        "path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime-status.json",
+                        "path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime-status.json",
                         "exists": false,
                         "payload": null,
                         "parse_error": null
                     },
                     "pid_file": {
-                        "path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.pid",
+                        "path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.pid",
                         "exists": false,
                         "pid": null,
                         "raw_value": null
@@ -1253,9 +1253,9 @@
                 "ownership_goal": "org.w4.System1",
                 "service_lifecycle": "request-name-register-object-wait-loop",
                 "artifacts": {
-                    "ready_marker_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.ready",
-                    "status_file_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime-status.json",
-                    "pid_file_path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.pid"
+                    "ready_marker_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.ready",
+                    "status_file_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime-status.json",
+                    "pid_file_path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.pid"
                 },
                 "runtime_backend": {
                     "kind": "system-api-dbus-runtime-backend",
@@ -1398,18 +1398,18 @@
             "ownership_state": "native-runtime-service-not-started",
             "artifacts": {
                 "ready_marker": {
-                    "path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.ready",
+                    "path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.ready",
                     "exists": false,
                     "contents": null
                 },
                 "status_file": {
-                    "path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime-status.json",
+                    "path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime-status.json",
                     "exists": false,
                     "payload": null,
                     "parse_error": null
                 },
                 "pid_file": {
-                    "path": "build/system-api/validation/native-dbus-real-host\\runtime-artifacts\\w4-system-api-native-runtime.pid",
+                    "path": "build/system-api/validation/native-dbus-real-host/runtime-artifacts/w4-system-api-native-runtime.pid",
                     "exists": false,
                     "pid": null,
                     "raw_value": null
@@ -1422,12 +1422,12 @@
         }
     },
     "step_files": {
-        "diagnosis": "build/system-api/validation/native-dbus-real-host\\steps\\01-diagnosis.json",
-        "service_definition": "build/system-api/validation/native-dbus-real-host\\steps\\02-service-definition.json",
-        "startup": "build/system-api/validation/native-dbus-real-host\\steps\\03-startup.json",
-        "observation_after_startup": "build/system-api/validation/native-dbus-real-host\\steps\\04-observation-after-startup.json",
-        "coupling": "build/system-api/validation/native-dbus-real-host\\steps\\05-coupling.json",
-        "ownership": "build/system-api/validation/native-dbus-real-host\\steps\\06-ownership.json",
-        "observation_after_ownership": "build/system-api/validation/native-dbus-real-host\\steps\\07-observation-after-ownership.json"
+        "diagnosis": "build/system-api/validation/native-dbus-real-host/steps/01-diagnosis.json",
+        "service_definition": "build/system-api/validation/native-dbus-real-host/steps/02-service-definition.json",
+        "startup": "build/system-api/validation/native-dbus-real-host/steps/03-startup.json",
+        "observation_after_startup": "build/system-api/validation/native-dbus-real-host/steps/04-observation-after-startup.json",
+        "coupling": "build/system-api/validation/native-dbus-real-host/steps/05-coupling.json",
+        "ownership": "build/system-api/validation/native-dbus-real-host/steps/06-ownership.json",
+        "observation_after_ownership": "build/system-api/validation/native-dbus-real-host/steps/07-observation-after-ownership.json"
     }
 }

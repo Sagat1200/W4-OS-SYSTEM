@@ -11,11 +11,11 @@
 - Native D-Bus extension installation: `build-failed`
 - Blocking reason: `native-dbus-extension-build-failed`
 - Next action: `inspect-native-dbus-build-make`
-- Report path: `build/system-api/validation/native-dbus-real-host\native-dbus-runtime-validation-report.json`
+- Report path: `build/system-api/validation/native-dbus-real-host/native-dbus-runtime-validation-report.json`
 - Native D-Bus build evidence path: `build/system-api/validation/native-dbus-real-host/native-dbus-extension-build-evidence.json`
-- Handoff path: `build/system-api/validation/native-dbus-real-host\native-dbus-runtime-validation-handoff.md`
-- Preparation shell script: `build/system-api/validation/native-dbus-real-host\native-dbus-runtime-validation-prepare.sh`
-- Preparation checklist: `build/system-api/validation/native-dbus-real-host\native-dbus-runtime-validation-preparation.txt`
+- Handoff path: `build/system-api/validation/native-dbus-real-host/native-dbus-runtime-validation-handoff.md`
+- Preparation shell script: `build/system-api/validation/native-dbus-real-host/native-dbus-runtime-validation-prepare.sh`
+- Preparation checklist: `build/system-api/validation/native-dbus-real-host/native-dbus-runtime-validation-preparation.txt`
 
 ## Host Compatibility
 
@@ -33,7 +33,7 @@
 - Installation next action: `inspect-native-dbus-build-make`
 - Installation reason: `zend_object_store_get_object`
 - Installation failure signature: `make: *** [Makefile:192: dbus.lo] Error 1`
-- Installation log path: `c:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-ubuntu-operational-attempt.md`
+- Installation log path: `build/system-api/validation/native-dbus-real-host/wsl-ubuntu-operational-attempt.md`
 
 ## Recommended Next Actions
 

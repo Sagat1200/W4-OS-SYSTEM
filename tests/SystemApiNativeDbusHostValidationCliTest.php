@@ -306,7 +306,7 @@ TEXT);
         self::assertSame('make', $payload['native_dbus_extension_installability']['build_phase']);
         self::assertSame('zend_object_store_get_object', $payload['native_dbus_extension_installability']['reason']);
         self::assertSame('make: *** [Makefile:192: dbus.lo] Error 1', $payload['native_dbus_extension_installability']['failure_signature']);
-        self::assertSame($evidencePath, $payload['native_dbus_extension_installability']['log_path']);
+        self::assertSame(str_replace('\\', '/', $evidencePath), $payload['native_dbus_extension_installability']['log_path']);
         self::assertFileExists($payload['native_dbus_extension_build_evidence_path']);
 
         $structuredEvidence = $this->decodeJsonFile($payload['native_dbus_extension_build_evidence_path']);
@@ -759,6 +759,23 @@ TEXT);
 
         self::assertSame($relativeEvidenceDir, $payload['evidence_dir']);
         self::assertSame($structuredEvidencePathRelative, $payload['native_dbus_extension_build_evidence_path']);
+        self::assertSame($relativeEvidenceDir . '/runtime-artifacts', $payload['artifacts_dir']);
+        self::assertSame(
+            $relativeEvidenceDir . '/runtime-artifacts',
+            $payload['environment_overrides']['W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR']
+        );
+        self::assertSame(
+            $expectedRelativeLogPath,
+            $payload['steps']['diagnosis']['native_dbus_extension_installation']['log_path']
+        );
+        self::assertSame(
+            $relativeEvidenceDir . '/runtime-artifacts/w4-system-api-native-runtime.ready',
+            $payload['steps']['service_definition']['artifacts']['ready_marker_path']
+        );
+        self::assertSame(
+            $relativeEvidenceDir . '/runtime-artifacts/w4-system-api-native-runtime.ready',
+            $payload['steps']['observation_after_startup']['artifacts']['ready_marker']['path']
+        );
 
         $checklist = file_get_contents($payload['preparation_checklist_path']);
         self::assertNotFalse($checklist);
@@ -773,6 +790,10 @@ TEXT);
         self::assertStringContainsString('Conserva `--native-dbus-build-evidence-json-path ' . $structuredEvidencePathRelative . '` cuando el rerun solo valida o reinspecciona la evidencia ya capturada.', $handoff);
         self::assertStringContainsString('Conserva tambien `--native-dbus-build-log-path ' . $expectedRelativeLogPath . '` cuando el rerun deba rematerializar el JSON estructurado desde el log crudo del intento real.', $handoff);
         self::assertStringContainsString('--native-dbus-build-log-path ' . $expectedRelativeLogPath, $handoff);
+        self::assertStringContainsString('- Preparation script: `' . $relativeEvidenceDir . '/native-dbus-runtime-validation-prepare.sh`', $handoff);
+        self::assertStringContainsString('- Preparation checklist: `' . $relativeEvidenceDir . '/native-dbus-runtime-validation-preparation.txt`', $handoff);
+        self::assertStringNotContainsString('\\native-dbus-runtime-validation-prepare.sh', $handoff);
+        self::assertStringNotContainsString('\\native-dbus-runtime-validation-preparation.txt', $handoff);
     }
 
     public function testValidationSeparatesPeclPackageResolutionFailureFromBetaReleaseCase(): void
