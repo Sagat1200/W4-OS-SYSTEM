@@ -149,6 +149,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             $effectiveOverrides,
             $osFamily,
             $targetRepoRoot,
+            $materializedNativeDbusBuildEvidenceArtifactPath,
             $attemptOwnership,
             $ownershipValidated,
             $couplingReady
@@ -394,7 +395,14 @@ final class SystemApiNativeDbusHostValidationToolkit
     {
         $targetOsFamily = (string) ($report['preparation_target_os_family'] ?? 'Unknown');
         $targetRepoRoot = (string) ($report['preparation_target_repo_root'] ?? '');
-        $rerunCommands = $this->buildRerunCommands($targetOsFamily, $targetRepoRoot);
+        $nativeDbusBuildEvidenceArtifactPath = is_string($report['native_dbus_extension_build_evidence_path'] ?? null)
+            ? trim((string) $report['native_dbus_extension_build_evidence_path'])
+            : null;
+        $rerunCommands = $this->buildRerunCommands(
+            $targetOsFamily,
+            $targetRepoRoot,
+            $nativeDbusBuildEvidenceArtifactPath
+        );
         $verificationCommands = $this->buildVerificationCommands($targetOsFamily);
         $lines = [
             '# Native D-Bus Runtime Handoff',
@@ -646,6 +654,7 @@ final class SystemApiNativeDbusHostValidationToolkit
         array $environmentOverrides,
         string $osFamily,
         string $targetRepoRoot,
+        ?string $nativeDbusBuildEvidenceArtifactPath,
         bool $attemptOwnership,
         bool $ownershipValidated,
         bool $couplingReady
@@ -664,7 +673,11 @@ final class SystemApiNativeDbusHostValidationToolkit
             $plan[] = [
                 'action' => 'rerun-native-runtime-validation',
                 'description' => 'Reejecutar el runner despues de homologar el runtime PHP del host Linux para confirmar si el siguiente bloqueo ya es exclusivamente D-Bus.',
-                'commands' => $this->buildRerunCommands($osFamily, $targetRepoRoot),
+                'commands' => $this->buildRerunCommands(
+                    $osFamily,
+                    $targetRepoRoot,
+                    $nativeDbusBuildEvidenceArtifactPath
+                ),
             ];
 
             return $plan;
@@ -683,7 +696,11 @@ final class SystemApiNativeDbusHostValidationToolkit
             $plan[] = [
                 'action' => 'rerun-native-runtime-validation',
                 'description' => 'Reejecutar el runner despues de corregir la instalacion o compilacion de la extension `dbus` para confirmar si el ownership ya puede progresar.',
-                'commands' => $this->buildRerunCommands($osFamily, $targetRepoRoot),
+                'commands' => $this->buildRerunCommands(
+                    $osFamily,
+                    $targetRepoRoot,
+                    $nativeDbusBuildEvidenceArtifactPath
+                ),
             ];
 
             return $plan;
@@ -729,7 +746,11 @@ final class SystemApiNativeDbusHostValidationToolkit
             $plan[] = [
                 'action' => 'retry-native-bus-ownership',
                 'description' => 'Reintentar el ownership real del bus solo cuando el host confirme extension PECL dbus, daemon, socket y tooling del sistema disponibles.',
-                'commands' => $this->buildRerunCommands($osFamily, $targetRepoRoot),
+                'commands' => $this->buildRerunCommands(
+                    $osFamily,
+                    $targetRepoRoot,
+                    $nativeDbusBuildEvidenceArtifactPath
+                ),
             ];
         }
 
@@ -1675,22 +1696,38 @@ final class SystemApiNativeDbusHostValidationToolkit
     /**
      * @return list<string>
      */
-    private function buildRerunCommands(string $osFamily, string $targetRepoRoot): array
+    private function buildRerunCommands(
+        string $osFamily,
+        string $targetRepoRoot,
+        ?string $nativeDbusBuildEvidenceArtifactPath = null
+    ): array
     {
         return [
-            $this->buildValidationCommand('text', $osFamily, $targetRepoRoot),
-            $this->buildValidationCommand('markdown', $osFamily, $targetRepoRoot),
-            $this->buildValidationCommand('json', $osFamily, $targetRepoRoot),
+            $this->buildValidationCommand('text', $osFamily, $targetRepoRoot, $nativeDbusBuildEvidenceArtifactPath),
+            $this->buildValidationCommand('markdown', $osFamily, $targetRepoRoot, $nativeDbusBuildEvidenceArtifactPath),
+            $this->buildValidationCommand('json', $osFamily, $targetRepoRoot, $nativeDbusBuildEvidenceArtifactPath),
         ];
     }
 
-    private function buildValidationCommand(string $format, string $osFamily, string $targetRepoRoot): string
+    private function buildValidationCommand(
+        string $format,
+        string $osFamily,
+        string $targetRepoRoot,
+        ?string $nativeDbusBuildEvidenceArtifactPath = null
+    ): string
     {
         $command = sprintf(
             'php scripts/run_native_dbus_real_host_validation.php --format %s --target-os-family %s',
             $format,
             $osFamily
         );
+        $portableEvidencePath = $this->resolvePortableBuildEvidencePath($nativeDbusBuildEvidenceArtifactPath);
+        if ($portableEvidencePath !== null) {
+            $command .= sprintf(
+                ' --native-dbus-build-evidence-json-path %s',
+                $portableEvidencePath
+            );
+        }
 
         if ($targetRepoRoot === '') {
             return $command;
@@ -1705,6 +1742,27 @@ final class SystemApiNativeDbusHostValidationToolkit
             $targetRepoRoot,
             $command
         );
+    }
+
+    private function resolvePortableBuildEvidencePath(?string $path): ?string
+    {
+        if ($path === null || trim($path) === '') {
+            return null;
+        }
+
+        $normalizedRootDir = str_replace('\\', '/', $this->normalizePath($this->rootDir));
+        $normalizedPath = str_replace('\\', '/', $this->normalizePath($path));
+
+        if ($normalizedPath === $normalizedRootDir) {
+            return null;
+        }
+
+        $rootPrefix = $normalizedRootDir . '/';
+        if (str_starts_with($normalizedPath, $rootPrefix)) {
+            return substr($normalizedPath, strlen($rootPrefix));
+        }
+
+        return null;
     }
 
     /**

@@ -10,6 +10,8 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
 {
     private string $repoRoot;
     private string $tempDir;
+    /** @var list<string> */
+    private array $repoCleanupDirs = [];
 
     protected function setUp(): void
     {
@@ -23,6 +25,9 @@ final class SystemApiNativeDbusHostValidationCliTest extends TestCase
     protected function tearDown(): void
     {
         $this->removeDirectory($this->tempDir);
+        foreach ($this->repoCleanupDirs as $path) {
+            $this->removeDirectory($path);
+        }
 
         parent::tearDown();
     }
@@ -424,6 +429,71 @@ TEXT);
         self::assertStringContainsString('inspect-native-dbus-pecl-network', $preparationChecklist);
         self::assertStringContainsString('getent hosts pecl.php.net || nslookup pecl.php.net || true', $preparationChecklist);
         self::assertStringContainsString('pecl channel-discover pecl.php.net || true', $preparationChecklist);
+    }
+
+    public function testValidationPropagatesReusableStructuredBuildEvidencePathIntoRerunCommands(): void
+    {
+        $evidenceDir = $this->repoRoot
+            . DIRECTORY_SEPARATOR . 'build'
+            . DIRECTORY_SEPARATOR . 'system-api'
+            . DIRECTORY_SEPARATOR . 'validation'
+            . DIRECTORY_SEPARATOR . 'native-dbus-relative-json-' . bin2hex(random_bytes(4));
+        $this->repoCleanupDirs[] = $evidenceDir;
+        self::assertTrue(mkdir($evidenceDir, 0777, true) || is_dir($evidenceDir));
+
+        $structuredEvidencePath = $evidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-extension-build-evidence.json';
+        file_put_contents($structuredEvidencePath, json_encode([
+            'api_version' => '1.0',
+            'kind' => 'system-api-native-dbus-extension-build-evidence',
+            'state' => 'build-failed',
+            'build_phase' => 'pecl-download',
+            'reason' => 'pecl-network-resolution-failed',
+            'failure_signature' => 'Channel "pecl.php.net" is not responding over http://, failed with message: php_network_getaddresses: getaddrinfo for pecl.php.net failed: Temporary failure in name resolution',
+            'log_path' => '/tmp/native-dbus-pecl-network.log',
+            'markers' => ['pecl-network-resolution-failed', 'pecl-download'],
+        ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+            '--target-repo-root',
+            '/srv/w4/os-system',
+            '--native-dbus-build-evidence-json-path',
+            $structuredEvidencePath,
+        ], array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '1',
+            ]
+        ));
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        $expectedRelativePath = str_replace('\\', '/', substr($structuredEvidencePath, strlen($this->repoRoot) + 1));
+
+        self::assertStringContainsString(
+            '--native-dbus-build-evidence-json-path ' . $expectedRelativePath,
+            $payload['preparation_plan'][1]['commands'][0]
+        );
+
+        $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
+        self::assertNotFalse($preparationChecklist);
+        self::assertStringContainsString(
+            '--native-dbus-build-evidence-json-path ' . $expectedRelativePath,
+            $preparationChecklist
+        );
+
+        $handoff = file_get_contents($payload['handoff_path']);
+        self::assertNotFalse($handoff);
+        self::assertStringContainsString(
+            '--native-dbus-build-evidence-json-path ' . $expectedRelativePath,
+            $handoff
+        );
     }
 
     public function testValidationTranslatesPeclDownloadFailureIntoSpecificPreparationStep(): void
