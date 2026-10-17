@@ -1,0 +1,4 @@
+- Property support.
+- Change array/struct/dict entry signature passing.
+- Added introspection for other things than u and i.
+- Test 64/32 bit issues.

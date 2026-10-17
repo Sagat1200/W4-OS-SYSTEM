@@ -32,6 +32,9 @@ final class PrepareNativeDbusExtensionForkCliTest extends TestCase
         $buildLogPath = $this->tempDir . DIRECTORY_SEPARATOR . 'native-dbus-build.log';
         $buildEvidenceJsonPath = $this->tempDir . DIRECTORY_SEPARATOR . 'native-dbus-extension-build-evidence.json';
         $workspaceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'workspace';
+        $sourceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'dbus-source';
+
+        self::assertTrue(mkdir($sourceDir, 0777, true) || is_dir($sourceDir));
 
         file_put_contents($buildLogPath, <<<TEXT
 TSRMLS_DC
@@ -39,6 +42,7 @@ zend_parse_parameters
 zend_object_store_get_object
 make: *** [Makefile:208: dbus.lo] Error 1
 TEXT);
+        file_put_contents($sourceDir . DIRECTORY_SEPARATOR . 'dbus.c', "<?php84_compat_stub = 1;\n");
         file_put_contents($buildEvidenceJsonPath, json_encode([
             'api_version' => '1.0',
             'kind' => 'system-api-native-dbus-extension-build-evidence',
@@ -60,6 +64,8 @@ TEXT);
             $this->scriptPath(),
             '--workspace-dir',
             $workspaceDir,
+            '--source-dir',
+            $sourceDir,
             '--build-log-path',
             $buildLogPath,
             '--build-evidence-json-path',
@@ -75,6 +81,14 @@ TEXT);
         self::assertFileExists($payload['porting_plan_path']);
         self::assertFileExists($payload['patch_queue_readme_path']);
         self::assertSame(
+            str_replace('\\', '/', $workspaceDir . DIRECTORY_SEPARATOR . 'upstream' . DIRECTORY_SEPARATOR . 'imported-source'),
+            $payload['copied_inputs']['source_dir']
+        );
+        self::assertSame(
+            str_replace('\\', '/', $workspaceDir . DIRECTORY_SEPARATOR . 'fork' . DIRECTORY_SEPARATOR . 'current'),
+            $payload['copied_inputs']['fork_current_dir']
+        );
+        self::assertSame(
             str_replace('\\', '/', $workspaceDir . DIRECTORY_SEPARATOR . 'evidence' . DIRECTORY_SEPARATOR . 'native-dbus-build.log'),
             $payload['copied_inputs']['build_log']
         );
@@ -87,6 +101,7 @@ TEXT);
         self::assertSame('system-api-native-dbus-fork-workspace', $manifest['kind']);
         self::assertSame('8.4', $manifest['php_target']);
         self::assertSame('DBus-0.1.1', $manifest['pecl_package']);
+        self::assertFileExists($workspaceDir . DIRECTORY_SEPARATOR . 'fork' . DIRECTORY_SEPARATOR . 'current' . DIRECTORY_SEPARATOR . 'dbus.c');
 
         $portingPlan = file_get_contents($payload['porting_plan_path']);
         self::assertNotFalse($portingPlan);
@@ -94,6 +109,7 @@ TEXT);
         self::assertStringContainsString('zend_parse_parameters', $portingPlan);
         self::assertStringContainsString('zend_object_store_get_object', $portingPlan);
         self::assertStringContainsString('Imported Evidence', $portingPlan);
+        self::assertStringContainsString('Editable fork tree', $portingPlan);
     }
 
     private function scriptPath(): string

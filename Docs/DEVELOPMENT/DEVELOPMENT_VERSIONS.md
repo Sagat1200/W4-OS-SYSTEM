@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.269 | 2026-10-17 | Activa | El workspace del fork de `pecl/DBus` ya puede importar source-dir o source-archive, extraerlo a `upstream/imported-source` y sincronizar una copia editable en `fork/current` |
 | DOC | DOC-0.7 | 2026-10-17 | Activa | Se documenta la estrategia oficial de transicion: cerrar V1 en PHP con fork/patch de `pecl/DBus` y migrar despues `System API` y Linux Base a Rust |
 | PLAN | PLAN-1.0 | 2026-10-17 | Activa | Se fija como decision de proyecto usar `pecl/DBus` parcheado solo como puente de validacion V1 y ejecutar la migracion principal a Rust una vez cerradas las tres ediciones |
 | DOC | DOC-0.5 | 2026-10-16 | Activa | Se materializan la auditoria ejecutiva del estado V1 y la matriz operativa `V1-01` a `V1-20` con trazabilidad, evidencia y comandos de validacion |

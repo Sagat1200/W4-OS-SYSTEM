@@ -8,6 +8,8 @@
 
 - Build log: `C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/evidence/native-dbus-build.log`
 - Structured evidence: `C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/evidence/native-dbus-extension-build-evidence.json`
+- Imported source tree: `C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/upstream/imported-source`
+- Editable fork tree: `C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/fork/current`
 
 ## Patch Targets
 
@@ -19,11 +21,7 @@
 ## Execution Loop
 
 1. Importar o actualizar el codigo fuente upstream dentro de `upstream/`.
-2. Aplicar el patch activo dentro de `fork/` y registrar la evidencia del cambio.
+2. Trabajar el patch activo dentro de `fork/current/` y registrar la evidencia del cambio.
 3. Repetir `phpize`, `./configure` y `make`, guardando logs frescos en `evidence/`.
 4. Regenerar el reporte del runner para confirmar si el bloqueo se movio o quedo resuelto.
-
-## Pending Input
-
-- Todavia no se importo el source upstream de `DBus 0.1.1`; ese es el siguiente paso tecnico dentro del workspace.
 

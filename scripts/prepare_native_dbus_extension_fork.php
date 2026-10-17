@@ -76,6 +76,7 @@ try {
         'workspace_dir' => $workspaceDir,
         'upstream_dir' => $workspaceDir . DIRECTORY_SEPARATOR . 'upstream',
         'fork_dir' => $workspaceDir . DIRECTORY_SEPARATOR . 'fork',
+        'fork_current_dir' => $workspaceDir . DIRECTORY_SEPARATOR . 'fork' . DIRECTORY_SEPARATOR . 'current',
         'patches_dir' => $workspaceDir . DIRECTORY_SEPARATOR . 'patches',
         'evidence_dir' => $workspaceDir . DIRECTORY_SEPARATOR . 'evidence',
         'notes_dir' => $workspaceDir . DIRECTORY_SEPARATOR . 'notes',
@@ -90,6 +91,7 @@ try {
     $resolvedSourceArchivePath = resolveOptionalInputPath($rootDir, $sourceArchivePath);
     $resolvedBuildLogPath = resolveOptionalInputPath($rootDir, $buildLogPath);
     $resolvedBuildEvidenceJsonPath = resolveOptionalInputPath($rootDir, $buildEvidenceJsonPath);
+    $importedSourceDir = null;
 
     if ($resolvedSourceDir !== null) {
         if (!is_dir($resolvedSourceDir)) {
@@ -109,6 +111,15 @@ try {
         $importedArchivePath = $paths['upstream_dir'] . DIRECTORY_SEPARATOR . basename($resolvedSourceArchivePath);
         copyFile($resolvedSourceArchivePath, $importedArchivePath);
         $copiedInputs['source_archive'] = normalizePath($importedArchivePath);
+
+        $importedSourceDir = $paths['upstream_dir'] . DIRECTORY_SEPARATOR . 'imported-source';
+        extractArchiveIntoDirectory($importedArchivePath, $importedSourceDir);
+        $copiedInputs['source_archive_extracted_dir'] = normalizePath($importedSourceDir);
+    }
+
+    if ($importedSourceDir !== null && is_dir($importedSourceDir)) {
+        replaceDirectory($importedSourceDir, $paths['fork_current_dir']);
+        $copiedInputs['fork_current_dir'] = normalizePath($paths['fork_current_dir']);
     }
 
     if ($resolvedBuildLogPath !== null) {
@@ -161,7 +172,7 @@ try {
             'patch_queue_readme_path' => normalizePath($patchQueueReadmePath),
         ],
         'next_steps' => [
-            'Importar el codigo fuente upstream si todavia no esta disponible dentro del workspace.',
+            'Revisar el source upstream ya importado dentro de `upstream/imported-source` y trabajar el patch editable en `fork/current`.',
             'Localizar y reemplazar los usos legacy de TSRMLS, zend_parse_parameters y zend_object_store_get_object.',
             'Registrar cada intento de patch bajo patches/ y rerun de phpize/configure/make con evidencia nueva.',
         ],
@@ -244,6 +255,12 @@ function writeJsonFile(string $path, array $payload): void
 
 function copyFile(string $sourcePath, string $targetPath): void
 {
+    $normalizedSourcePath = normalizePath($sourcePath);
+    $normalizedTargetPath = normalizePath($targetPath);
+    if ($normalizedSourcePath === $normalizedTargetPath) {
+        return;
+    }
+
     ensureDirectory(dirname($targetPath));
     if (!copy($sourcePath, $targetPath)) {
         throw new ValidationError(sprintf('No se pudo copiar %s hacia %s', $sourcePath, $targetPath));
@@ -305,6 +322,123 @@ function deleteDirectory(string $path): void
     @rmdir($path);
 }
 
+function extractArchiveIntoDirectory(string $archivePath, string $targetDir): void
+{
+    deleteDirectory($targetDir);
+    ensureDirectory($targetDir);
+
+    $extension = strtolower(pathinfo($archivePath, PATHINFO_EXTENSION));
+    if ($extension === 'zip') {
+        $zip = new ZipArchive();
+        $openResult = $zip->open($archivePath);
+        if ($openResult !== true) {
+            throw new ValidationError(sprintf('No se pudo abrir el archivo zip: %s', $archivePath));
+        }
+
+        if (!$zip->extractTo($targetDir)) {
+            $zip->close();
+            throw new ValidationError(sprintf('No se pudo extraer el archivo zip: %s', $archivePath));
+        }
+
+        $zip->close();
+        collapseSingleTopLevelDirectory($targetDir);
+        return;
+    }
+
+    try {
+        $archiveForExtraction = $archivePath;
+        if (str_ends_with(strtolower($archivePath), '.tar.gz') || str_ends_with(strtolower($archivePath), '.tgz')) {
+            $archiveForExtraction = decompressTarGzArchive($archivePath);
+        }
+
+        $phar = new PharData($archiveForExtraction);
+        $phar->extractTo($targetDir, null, true);
+        collapseSingleTopLevelDirectory($targetDir);
+    } catch (Exception $exception) {
+        throw new ValidationError(sprintf('No se pudo extraer el archivo %s: %s', $archivePath, $exception->getMessage()));
+    }
+}
+
+function decompressTarGzArchive(string $archivePath): string
+{
+    $tarPath = preg_replace('/(\.tar)?\.gz$/i', '.tar', $archivePath);
+    if ($tarPath === null || $tarPath === '') {
+        throw new ValidationError(sprintf('No se pudo resolver el tar intermedio para %s', $archivePath));
+    }
+
+    if (is_file($tarPath)) {
+        return $tarPath;
+    }
+
+    try {
+        $phar = new PharData($archivePath);
+        $phar->decompress();
+    } catch (Exception $exception) {
+        throw new ValidationError(sprintf('No se pudo descomprimir %s: %s', $archivePath, $exception->getMessage()));
+    }
+
+    if (!is_file($tarPath)) {
+        throw new ValidationError(sprintf('El tar intermedio esperado no existe: %s', $tarPath));
+    }
+
+    return $tarPath;
+}
+
+function collapseSingleTopLevelDirectory(string $path): void
+{
+    $items = array_values(array_filter(scandir($path) ?: [], static function (string $item): bool {
+        return $item !== '.' && $item !== '..';
+    }));
+
+    if (count($items) !== 1) {
+        return;
+    }
+
+    $onlyItemPath = $path . DIRECTORY_SEPARATOR . $items[0];
+    if (!is_dir($onlyItemPath)) {
+        return;
+    }
+
+    $tempPath = $path . DIRECTORY_SEPARATOR . '__flattened';
+    rename($onlyItemPath, $tempPath);
+
+    $currentItems = array_values(array_filter(scandir($path) ?: [], static function (string $item): bool {
+        return $item !== '.' && $item !== '..';
+    }));
+
+    foreach ($currentItems as $item) {
+        $itemPath = $path . DIRECTORY_SEPARATOR . $item;
+        if ($itemPath === $tempPath) {
+            continue;
+        }
+
+        if (is_dir($itemPath)) {
+            deleteDirectory($itemPath);
+            continue;
+        }
+
+        @unlink($itemPath);
+    }
+
+    $flattenedItems = scandir($tempPath);
+    if ($flattenedItems === false) {
+        throw new ValidationError(sprintf('No se pudo leer el directorio extraido: %s', $tempPath));
+    }
+
+    foreach ($flattenedItems as $item) {
+        if ($item === '.' || $item === '..') {
+            continue;
+        }
+
+        rename(
+            $tempPath . DIRECTORY_SEPARATOR . $item,
+            $path . DIRECTORY_SEPARATOR . $item
+        );
+    }
+
+    @rmdir($tempPath);
+}
+
 /**
  * @param array<string, string> $copiedInputs
  */
@@ -332,6 +466,15 @@ function renderPortingPlan(
             '- Structured evidence: `%s`',
             $copiedInputs['build_evidence_json'] ?? ($originalBuildEvidenceJsonPath !== null ? normalizePath($originalBuildEvidenceJsonPath) : 'pending-import')
         ),
+        sprintf(
+            '- Imported source tree: `%s`',
+            $copiedInputs['source_archive_extracted_dir']
+                ?? ($copiedInputs['source_dir'] ?? 'pending-import')
+        ),
+        sprintf(
+            '- Editable fork tree: `%s`',
+            $copiedInputs['fork_current_dir'] ?? 'pending-import'
+        ),
         '',
         '## Patch Targets',
         '',
@@ -343,7 +486,7 @@ function renderPortingPlan(
         '## Execution Loop',
         '',
         '1. Importar o actualizar el codigo fuente upstream dentro de `upstream/`.',
-        '2. Aplicar el patch activo dentro de `fork/` y registrar la evidencia del cambio.',
+        '2. Trabajar el patch activo dentro de `fork/current/` y registrar la evidencia del cambio.',
         '3. Repetir `phpize`, `./configure` y `make`, guardando logs frescos en `evidence/`.',
         '4. Regenerar el reporte del runner para confirmar si el bloqueo se movio o quedo resuelto.',
         '',
@@ -385,6 +528,7 @@ function renderTextSummary(array $result): string
         sprintf('workspace_dir: %s', (string) ($result['workspace_dir'] ?? 'n/a')),
         sprintf('manifest_path: %s', (string) ($result['manifest_path'] ?? 'n/a')),
         sprintf('porting_plan_path: %s', (string) ($result['porting_plan_path'] ?? 'n/a')),
+        sprintf('fork_current_dir: %s', (string) (($result['copied_inputs']['fork_current_dir'] ?? 'n/a'))),
         sprintf('next_action: %s', (string) ($result['next_action'] ?? 'n/a')),
     ];
 
