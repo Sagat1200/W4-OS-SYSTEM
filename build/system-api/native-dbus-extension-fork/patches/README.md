@@ -17,10 +17,12 @@ Estado actual:
 - `0008-php84-parameter-length-and-registerobject-alignment.patch` normaliza longitudes a `size_t` en rutas de parseo que seguian con `int`, y alinea `Dbus::registerObject()` con el upstream moderno usando interfaz opcional nula y `zend_hash_str_add_ptr` via helper de compatibilidad.
 - `0009-php84-bool-and-parameter-array-modernization.patch` mueve el runtime de callbacks y los buffers de `zend_get_parameters_array_ex` hacia el contrato moderno del upstream, y deja el carril booleano alineado con `IS_TRUE`/`IS_FALSE`.
 - `0010-php84-append-parameters-hash-iteration-cleanup.patch` limpia `php_dbus_append_parameters()` para que itere `HashTable` con `zval *` y los helpers `DBUS_ZEND_HASH_GET_CURRENT_DATA_CHECK_EX`, dejando atras la firma vieja con `zval **entry`.
+- `0011-php84-wait-loop-signal-shutdown-stabilization.patch` estabiliza `waitLoop()` en `PHP 8.4`: para señales entrantes deja de materializar `DbusSignal` en el carril `PHP >= 8`, libera el `DBusMessage` dentro del propio metodo y cierra tambien la liberacion del mensaje tras el dispatch de method calls, eliminando el `segfault` que aparecia al volver de `waitLoop()` o al destruir el valor devuelto en probes reales sobre `BUS_SYSTEM`.
 
 Estado real del fork tras el ultimo contraste:
 
 - El source activo ya completa `phpize`, `./configure` y `make` en `Debian 13 + PHP 8.4.24`, y deja `modules/dbus.so` materializado en la VM moderna usada para el contraste real.
 - La reflexion del modulo cargado confirma la clase `Dbus`, la constante `BUS_SYSTEM` y los metodos `requestName`, `registerObject` y `waitLoop`, por lo que el port ya cruzo el umbral de compatibilidad minima de API visible.
+- El contraste mas reciente en la VM moderna confirma ademas que `waitLoop(250)` ya devuelve `true`, sobrevive a `unset($connection)` y deja de disparar el `general protection fault`/`segfault` del shutdown legacy cuando el modulo recompilado se carga en `PHP 8.4`.
 - Siguen abiertos warnings no bloqueantes de `Missing arginfo` sobre los metodos internos y el warning legacy `AC_PROG_LIBTOOL is obsolete`, ademas del `#warning` historico sobre `signature` en el carril `struct`.
 

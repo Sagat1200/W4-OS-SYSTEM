@@ -1169,6 +1169,7 @@ PHP_METHOD(Dbus, waitLoop)
 	long timeout = 0;
 	DBusMessage *msg;
 	php_dbus_obj *dbus;
+        int release_msg = 0;
 
 	dbus_set_error_handling(EH_THROW, NULL TSRMLS_CC);
 	if (FAILURE == zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
@@ -1184,12 +1185,26 @@ PHP_METHOD(Dbus, waitLoop)
 	if (msg != NULL) {
 		switch (dbus_message_get_type(msg)) {
 			case DBUS_MESSAGE_TYPE_SIGNAL:
+#if PHP_VERSION_ID >= 80000
+                                release_msg = 1;
+                                RETVAL_TRUE;
+#else
 				php_dbus_accept_incoming_signal(msg, &return_value TSRMLS_CC);
+                                release_msg = 0;
+#endif
 				break;
 			case DBUS_MESSAGE_TYPE_METHOD_CALL:
 				php_dbus_accept_incoming_method_call(dbus, msg, &return_value TSRMLS_CC);
+                                release_msg = 1;
+                                break;
+                        default:
+                                release_msg = 1;
 				break;
 		}
+
+                if (release_msg) {
+                        dbus_message_unref(msg);
+                }
 	}
 	dbus_set_error_handling(EH_NORMAL, NULL TSRMLS_CC);
 }

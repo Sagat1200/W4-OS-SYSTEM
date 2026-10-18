@@ -250,22 +250,6 @@ final class NativeDbusExtensionOwnershipDriver
         try {
             $waitLoopSignature = $this->createWaitLoopSignatureReport($connection);
             $waitLoopInvocationPlan = $this->createWaitLoopInvocationPlan($connection);
-            if ($this->shouldDeferLegacyWaitLoopExecution($connection)) {
-                $driver['wait_loop_signature'] = $waitLoopSignature;
-                $driver['wait_loop_invocation_plan'] = $waitLoopInvocationPlan['report'];
-                $driver['wait_loop_result'] = 'deferred-legacy-one-shot';
-                $driver['wait_loop_execution'] = 'deferred-legacy-one-shot';
-                $driver['wait_loop_note'] = 'La extension legacy completa requestName/registerObject, pero waitLoop() provoca segfault al cerrar el proceso one-shot.';
-
-                return [
-                    'request_name_state' => 'owned',
-                    'register_object_state' => 'registered',
-                    'wait_loop_state' => 'running',
-                    'driver_status' => 'ownership-materialized',
-                    'driver' => $driver,
-                ];
-            }
-
             $waitLoopResult = $this->invokeWaitLoop($connection, $waitLoopInvocationPlan['arguments']);
             if ($waitLoopResult === false) {
                 return [
@@ -530,11 +514,6 @@ final class NativeDbusExtensionOwnershipDriver
     private function shouldUseLegacyWaitLoopFallback(ReflectionMethod $method): bool
     {
         return $method->isInternal() && $method->getNumberOfParameters() === 0;
-    }
-
-    private function shouldDeferLegacyWaitLoopExecution(object $connection): bool
-    {
-        return $this->shouldUseLegacyWaitLoopFallback(new ReflectionMethod($connection, 'waitLoop'));
     }
 
     private function prepareLegacyRegisterObjectCallbackClass(

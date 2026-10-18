@@ -88,3 +88,22 @@ El bloqueo que queda para la vertical `org.w4.System1` ya esta acotado al carril
 1. Contrastar el mismo `requestName()` en `BUS_SYSTEM` con una politica D-Bus explicita para `org.w4.System1` o sobre un host donde esa politica ya permita ownership del nombre.
 2. Intentar la misma prueba minima dentro del runtime real de `System API`, no solo con la sonda aislada.
 3. Abrir un corte de limpieza de `arginfo` para reducir el ruido de warnings `Missing arginfo` al cargar la extension en PHP 8.4.
+
+## Actualizacion posterior: `waitLoop()` estable en el host moderno
+
+Tras aplicar el corte `0011-php84-wait-loop-signal-shutdown-stabilization.patch` sobre el fork activo y recompilar `/home/w4live/dbus-0.1.1/modules/dbus.so` en la misma VM:
+
+- `check_native_dbus_wait_loop.php` ya completa `phase:after-wait-loop` y devuelve:
+  - `"wait_loop": true`
+- `check_native_dbus_shutdown_after_wait_loop.php` ya completa:
+  - `phase:after-wait-loop`
+  - `phase:after-unset-connection`
+  - `"after_unset_connection": true`
+
+La regresion previa quedo mejor acotada:
+
+- el `general protection fault` no estaba en `requestName()` ni en `registerObject()`;
+- tampoco en el destructor base de `Dbus`;
+- estaba en el carril de señales de `waitLoop()`, donde la extension legacy materializaba `DbusSignal` y destruia ese valor devuelto de forma inestable bajo `PHP 8.4`.
+
+El ajuste aplicado para `PHP >= 8` consume las señales entrantes dentro de `waitLoop()`, libera el `DBusMessage` en el propio metodo y evita devolver `DbusSignal` en ese carril. El runtime host de `System API` ya vuelve a publicar `wait_loop_result = true` dentro de `MaterializeNativeBusOwnership`, por lo que el ownership real de `org.w4.System1` deja de depender del workaround `deferred-legacy-one-shot`.

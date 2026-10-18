@@ -50,14 +50,15 @@
 - El runner local de validacion ya rematerializa el log fresco como evidencia `buildable`, en lugar de seguir arrastrando el bloqueo `legacy-tsrmls-api-incompatible-with-php84` de los intentos previos.
 - El driver nativo de `System API` ya no depende ciegamente de `Reflection` cuando la extension legacy carece de `arginfo`: para `requestName()` sintetiza la llamada minima `requestName('org.w4.System1')`, y para `registerObject()` usa el bridge `NativeDbusExtensionCallbackBridge` para registrar la clase callback real que la extension espera (`path`, `interface`, `class`).
 - La validacion real en `W4-OS-Server-DbusModern` ya confirma desde el runtime host que `requestName()` y `registerObject()` completan sobre `BUS_SYSTEM` con el nombre exacto `org.w4.System1`, devolviendo `status = native-runtime-bus-owned`, `ownership_state = bus-name-owned` y `exit_code = 0` en `MaterializeNativeBusOwnership`.
-- La deuda inmediata ya no esta en construir argumentos del driver, sino en el carril de cierre del fork legacy: un probe aislado demuestra que `waitLoop(250)` puede completar y devolver control, pero el proceso one-shot sigue pudiendo caer en `segfault` durante o despues del cierre, por lo que el reporte one-shot del ownership difiere explicitamente la ejecucion real del loop y deja esa condicion anotada en `wait_loop_note`.
+- El siguiente corte del fork ya estabiliza `waitLoop()` para `PHP >= 8`: las señales entrantes dejan de materializar `DbusSignal` en el carril moderno, el propio metodo libera el `DBusMessage` y el dispatch de method calls ya cierra tambien su `msg`. Con el modulo recompilado en la VM moderna, los probes `check_native_dbus_wait_loop.php` y `check_native_dbus_shutdown_after_wait_loop.php` ya completan `phase:after-wait-loop`, sobreviven a `unset($connection)` y dejan de disparar el `general protection fault` del cierre legacy.
+- `MaterializeNativeBusOwnership` vuelve asi a ejecutar `waitLoop()` real dentro del driver nativo, y el payload final del runtime host ya publica `wait_loop_result = true` en lugar del workaround `deferred-legacy-one-shot`.
 
 ## Deuda inmediata tras el build real exitoso
 
 1. Reducir o eliminar los warnings `Missing arginfo` que `PHP 8.4` emite al cargar la extension, empezando por `Dbus`, `DbusSignal` y los wrappers de tipos simples.
 2. Decidir si conviene limpiar ya el warning legacy de `AC_PROG_LIBTOOL` o dejarlo explicitamente como deuda no bloqueante del fork transitorio.
-3. La sonda minima de runtime ya confirma constructor operativo y `requestName()` funcional en `BUS_SESSION`, mientras `BUS_SYSTEM` devuelve `Not Primary Owner (-1)` incluso con nombres unicos; el siguiente corte ya no es "probar si ejecuta", sino aislar politica/permisos o semantica de ownership en el bus del sistema.
-4. Investigar y reducir el `segfault` del carril one-shot alrededor de `waitLoop()`/shutdown, ahora que el ownership real previo al loop ya queda cerrado desde el runtime de `System API`.
+3. Extender el contraste del runtime real desde el ownership hacia method calls efectivos sobre `org.w4.System1.Manager`, ahora que `requestName()`, `registerObject()` y `waitLoop()` ya sobreviven juntos en el host homologado.
+4. Revisar si el carril de señales que hoy devolvemos como `true` en `PHP >= 8` merece un contrato mas expresivo o si basta documentarlo como ajuste transitorio del fork para V1.
 
 ## Execution Loop
 
