@@ -191,10 +191,13 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
         );
 
         self::assertSame('system-api-dbus-native-runtime-startup', $report['kind']);
-        self::assertSame('native-runtime-service-started', $report['status']);
+        self::assertSame('native-runtime-service-bootstrap-recorded', $report['status']);
         self::assertTrue($report['startup_acknowledged']);
         self::assertSame(0, $report['exit_code']);
+        self::assertSame('startup-recorded-no-process', $report['ownership_state']);
+        self::assertSame('native-runtime-service-not-running', $report['blocking_reason']);
         self::assertSame('start-native-runtime-service', $report['service_definition']['next_action']);
+        self::assertSame('launch-native-runtime-service', $report['next_action']);
         self::assertSame('native-runtime-service-not-started', $report['service_definition']['blocking_reason']);
     }
 
@@ -208,10 +211,10 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
 
         try {
             self::assertTrue(mkdir($baseDirectory, 0777, true) || is_dir($baseDirectory));
-            file_put_contents($readyMarkerPath, "native-runtime-service-started\n");
+            file_put_contents($readyMarkerPath, "native-runtime-service-bootstrap-recorded\n");
             file_put_contents($statusFilePath, json_encode([
                 'startup_acknowledged' => true,
-                'ownership_state' => 'pending-bus-name-ownership',
+                'ownership_state' => 'startup-recorded-no-process',
             ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
             file_put_contents($pidFilePath, "0\n");
 
@@ -231,12 +234,12 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
             );
 
             self::assertSame('system-api-dbus-native-runtime-observation', $report['kind']);
-            self::assertSame('native-runtime-service-observed-pending-ownership', $report['status']);
-            self::assertTrue($report['observed']);
+            self::assertSame('native-runtime-service-not-running', $report['status']);
+            self::assertFalse($report['observed']);
             self::assertTrue($report['startup_acknowledged']);
-            self::assertSame('pending-bus-name-ownership', $report['ownership_state']);
-            self::assertSame('native-runtime-bus-ownership-pending', $report['blocking_reason']);
-            self::assertSame('materialize-native-bus-ownership', $report['next_action']);
+            self::assertSame('startup-recorded-no-process', $report['ownership_state']);
+            self::assertSame('native-runtime-service-not-running', $report['blocking_reason']);
+            self::assertSame('launch-native-runtime-service', $report['next_action']);
         } finally {
             @unlink($readyMarkerPath);
             @unlink($statusFilePath);
@@ -255,12 +258,12 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
 
         try {
             self::assertTrue(mkdir($baseDirectory, 0777, true) || is_dir($baseDirectory));
-            file_put_contents($readyMarkerPath, "native-runtime-service-started\n");
+            file_put_contents($readyMarkerPath, "native-runtime-service-bootstrap-recorded\n");
             file_put_contents($statusFilePath, json_encode([
                 'startup_acknowledged' => true,
                 'ownership_state' => 'pending-bus-name-ownership',
             ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
-            file_put_contents($pidFilePath, "0\n");
+            file_put_contents($pidFilePath, "4242\n");
 
             $report = $toolkit->createNativeBusOwnershipReport(
                 ['ready' => true],
@@ -330,12 +333,12 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
 
         try {
             self::assertTrue(mkdir($baseDirectory, 0777, true) || is_dir($baseDirectory));
-            file_put_contents($readyMarkerPath, "native-runtime-service-started\n");
+            file_put_contents($readyMarkerPath, "native-runtime-service-bootstrap-recorded\n");
             file_put_contents($statusFilePath, json_encode([
                 'startup_acknowledged' => true,
                 'ownership_state' => 'pending-bus-name-ownership',
             ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
-            file_put_contents($pidFilePath, "0\n");
+            file_put_contents($pidFilePath, "4242\n");
 
             $report = $toolkit->createNativeBusOwnershipReport(
                 ['ready' => true],
@@ -381,12 +384,12 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
 
         try {
             self::assertTrue(mkdir($baseDirectory, 0777, true) || is_dir($baseDirectory));
-            file_put_contents($readyMarkerPath, "native-runtime-service-started\n");
+            file_put_contents($readyMarkerPath, "native-runtime-service-bootstrap-recorded\n");
             file_put_contents($statusFilePath, json_encode([
                 'startup_acknowledged' => true,
                 'ownership_state' => 'pending-bus-name-ownership',
             ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
-            file_put_contents($pidFilePath, "0\n");
+            file_put_contents($pidFilePath, "4242\n");
 
             $report = $toolkit->createNativeBusOwnershipReport(
                 ['ready' => true],

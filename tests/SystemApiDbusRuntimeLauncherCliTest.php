@@ -302,8 +302,8 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
         self::assertSame('native-runtime-service-bootstrap', $payload['target_command']['command_role']);
         self::assertSame('long-running-dbus-service', $payload['target_command']['activation_mode']);
         self::assertSame('system-api-dbus-native-runtime-startup', $payload['command_result']['payload']['kind']);
-        self::assertSame('native-runtime-service-started', $payload['command_result']['payload']['status']);
-        self::assertSame('observe-native-runtime-service-state', $payload['next_action']);
+        self::assertSame('native-runtime-service-bootstrap-recorded', $payload['command_result']['payload']['status']);
+        self::assertSame('launch-native-runtime-service', $payload['next_action']);
     }
 
     public function testServeDbusReturnsActivationWithLaunchPlan(): void
@@ -460,7 +460,7 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
 
             $payload = $this->decodeJson($result['stdout']);
             self::assertSame('system-api-dbus-native-runtime-startup', $payload['kind']);
-            self::assertSame('native-runtime-service-started', $payload['status']);
+            self::assertSame('native-runtime-service-bootstrap-recorded', $payload['status']);
             self::assertFileExists($readyMarkerPath);
             self::assertFileExists($statusFilePath);
             self::assertFileExists($pidFilePath);
@@ -510,7 +510,7 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
             self::assertCount(2, $responses);
             self::assertSame('system-api-dbus-native-runtime-service', $responses[0]['kind']);
             self::assertSame('system-api-dbus-native-runtime-startup', $responses[1]['kind']);
-            self::assertSame('native-runtime-service-started', $responses[1]['status']);
+            self::assertSame('native-runtime-service-bootstrap-recorded', $responses[1]['status']);
             self::assertFileExists($readyMarkerPath);
         } finally {
             $this->cleanupDirectory($baseDirectory);

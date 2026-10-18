@@ -453,7 +453,7 @@ final class SystemApiDbusRuntimeAdapter
         $report['command_result'] = $commandResult;
         $report['next_action'] = match ($exitCode) {
             0 => $commandRole === 'native-runtime-service-bootstrap'
-                ? 'observe-native-runtime-service-state'
+                ? 'launch-native-runtime-service'
                 : 'observe-runtime-adapter-state',
             3 => $commandRole === 'native-runtime-service-bootstrap'
                 ? 'inspect-native-runtime-service-report'

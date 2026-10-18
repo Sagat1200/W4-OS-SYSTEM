@@ -508,8 +508,8 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('StartNativeRuntimeService', $runtimeLauncherExecuteNativePayload['target_command']['command']);
         self::assertSame('native-runtime-service-bootstrap', $runtimeLauncherExecuteNativePayload['target_command']['command_role']);
         self::assertSame('system-api-dbus-native-runtime-startup', $runtimeLauncherExecuteNativePayload['command_result']['payload']['kind']);
-        self::assertSame('native-runtime-service-started', $runtimeLauncherExecuteNativePayload['command_result']['payload']['status']);
-        self::assertSame('observe-native-runtime-service-state', $runtimeLauncherExecuteNativePayload['next_action']);
+        self::assertSame('native-runtime-service-bootstrap-recorded', $runtimeLauncherExecuteNativePayload['command_result']['payload']['status']);
+        self::assertSame('launch-native-runtime-service', $runtimeLauncherExecuteNativePayload['next_action']);
 
         $runtimeLauncherExecuteNativeBlocked = $this->runGeneratedPhpScript([
             $runtimeLauncherScriptPath,
@@ -738,8 +738,8 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('StartNativeRuntimeService', $runtimeAdapterExecuteNativePayload['target_command']['command']);
         self::assertSame('native-runtime-service-bootstrap', $runtimeAdapterExecuteNativePayload['target_command']['command_role']);
         self::assertSame('system-api-dbus-native-runtime-startup', $runtimeAdapterExecuteNativePayload['command_result']['payload']['kind']);
-        self::assertSame('native-runtime-service-started', $runtimeAdapterExecuteNativePayload['command_result']['payload']['status']);
-        self::assertSame('observe-native-runtime-service-state', $runtimeAdapterExecuteNativePayload['next_action']);
+        self::assertSame('native-runtime-service-bootstrap-recorded', $runtimeAdapterExecuteNativePayload['command_result']['payload']['status']);
+        self::assertSame('launch-native-runtime-service', $runtimeAdapterExecuteNativePayload['next_action']);
 
         $runtimeAdapterExecuteNativeBlocked = $this->runGeneratedPhpScript([
             $runtimeAdapterScriptPath,
@@ -826,10 +826,11 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame(3, $runtimeAdapterObserveNative['exitCode'], $runtimeAdapterObserveNative['stderr']);
         $runtimeAdapterObserveNativePayload = $this->decodeJson($runtimeAdapterObserveNative['stdout']);
         self::assertSame('system-api-dbus-native-runtime-observation', $runtimeAdapterObserveNativePayload['kind']);
-        self::assertSame('native-runtime-service-observed-pending-ownership', $runtimeAdapterObserveNativePayload['status']);
-        self::assertTrue($runtimeAdapterObserveNativePayload['observed']);
-        self::assertSame('pending-bus-name-ownership', $runtimeAdapterObserveNativePayload['ownership_state']);
-        self::assertSame('materialize-native-bus-ownership', $runtimeAdapterObserveNativePayload['next_action']);
+        self::assertSame('native-runtime-service-not-running', $runtimeAdapterObserveNativePayload['status']);
+        self::assertFalse($runtimeAdapterObserveNativePayload['observed']);
+        self::assertSame('startup-recorded-no-process', $runtimeAdapterObserveNativePayload['ownership_state']);
+        self::assertSame('launch-native-runtime-service', $runtimeAdapterObserveNativePayload['next_action']);
+        file_put_contents($nativeArtifactsDir . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime.pid', "4242\n");
 
         $runtimeAdapterOwnNative = $this->runGeneratedPhpScript([
             $runtimeAdapterScriptPath,
@@ -886,6 +887,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
             'W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR' => $nativeDriverArtifactsDir,
         ]));
         self::assertSame(0, $runtimeAdapterStartNativeDriver['exitCode'], $runtimeAdapterStartNativeDriver['stderr']);
+        file_put_contents($nativeDriverArtifactsDir . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime.pid', "4242\n");
 
         $runtimeAdapterOwnNativeDriver = $this->runGeneratedPhpScript([
             $runtimeAdapterScriptPath,
@@ -924,6 +926,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
             'W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR' => $nativeExtensionDriverArtifactsDir,
         ]));
         self::assertSame(0, $runtimeAdapterStartNativeExtensionDriver['exitCode'], $runtimeAdapterStartNativeExtensionDriver['stderr']);
+        file_put_contents($nativeExtensionDriverArtifactsDir . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime.pid', "4242\n");
 
         $runtimeAdapterCouplingNativeCandidate = $this->runGeneratedPhpScript([
             $runtimeAdapterScriptPath,

@@ -127,7 +127,7 @@ final class SystemApiDbusRuntimeHostCliTest extends TestCase
 
             $payload = $this->decodeJson($result['stdout']);
             self::assertSame('system-api-dbus-native-runtime-startup', $payload['kind']);
-            self::assertSame('native-runtime-service-started', $payload['status']);
+            self::assertSame('native-runtime-service-bootstrap-recorded', $payload['status']);
             self::assertTrue($payload['startup_acknowledged']);
             self::assertFileExists($readyMarkerPath);
             self::assertFileExists($statusFilePath);
@@ -155,6 +155,7 @@ final class SystemApiDbusRuntimeHostCliTest extends TestCase
                 'StartNativeRuntimeService',
             ], '', $environment);
             self::assertSame(0, $startup['exitCode'], $startup['stderr']);
+            file_put_contents($pidFilePath, "4242\n");
 
             $ownership = $this->runPhpScript([
                 $this->scriptPath(),

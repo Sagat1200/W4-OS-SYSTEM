@@ -1,7 +1,7 @@
 {
     "api_version": "1.0",
     "kind": "system-api-dbus-native-runtime-startup",
-    "status": "native-runtime-service-started",
+    "status": "native-runtime-service-bootstrap-recorded",
     "startup_acknowledged": true,
     "exit_code": 0,
     "bus_name": "org.w4.System1",
@@ -145,7 +145,7 @@
         },
         "blocking_reason": null
     },
-    "ownership_state": "pending-bus-name-ownership",
-    "blocking_reason": null,
-    "next_action": "observe-native-runtime-service-state"
+    "ownership_state": "startup-recorded-no-process",
+    "blocking_reason": "native-runtime-service-not-running",
+    "next_action": "launch-native-runtime-service"
 }

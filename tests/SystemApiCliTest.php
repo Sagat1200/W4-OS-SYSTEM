@@ -325,10 +325,11 @@ final class SystemApiCliTest extends TestCase
         $payload = $this->decodeJson($result['stdout']);
         self::assertNull($payload['error']);
         self::assertSame('system.dbus-native-startup', $payload['result']['method']);
-        self::assertSame('native-runtime-service-started', $payload['result']['data']['status']);
+        self::assertSame('native-runtime-service-bootstrap-recorded', $payload['result']['data']['status']);
         self::assertTrue($payload['result']['data']['startup_acknowledged']);
-        self::assertSame('pending-bus-name-ownership', $payload['result']['data']['ownership_state']);
-        self::assertSame('observe-native-runtime-service-state', $payload['result']['data']['next_action']);
+        self::assertSame('startup-recorded-no-process', $payload['result']['data']['ownership_state']);
+        self::assertSame('native-runtime-service-not-running', $payload['result']['data']['blocking_reason']);
+        self::assertSame('launch-native-runtime-service', $payload['result']['data']['next_action']);
         self::assertSame(
             'native-runtime-service-ready-to-start',
             $payload['result']['data']['service_definition']['status']
@@ -377,15 +378,15 @@ final class SystemApiCliTest extends TestCase
 
             $payload = $this->decodeJson($result['stdout']);
             self::assertNull($payload['error']);
-            self::assertSame('native-runtime-service-started', $payload['result']['data']['status']);
+            self::assertSame('native-runtime-service-bootstrap-recorded', $payload['result']['data']['status']);
             self::assertTrue($payload['result']['data']['startup_acknowledged']);
             self::assertFileExists($readyMarkerPath);
             self::assertFileExists($statusFilePath);
             self::assertFileExists($pidFilePath);
-            self::assertSame("native-runtime-service-started\n", file_get_contents($readyMarkerPath));
+            self::assertSame("native-runtime-service-bootstrap-recorded\n", file_get_contents($readyMarkerPath));
             $statusPayload = json_decode((string) file_get_contents($statusFilePath), true, 512, JSON_THROW_ON_ERROR);
             self::assertSame('system-api-dbus-native-runtime-startup', $statusPayload['kind']);
-            self::assertSame('pending-bus-name-ownership', $statusPayload['ownership_state']);
+            self::assertSame('startup-recorded-no-process', $statusPayload['ownership_state']);
             self::assertSame("0\n", file_get_contents($pidFilePath));
         } finally {
             $this->cleanupDirectory($baseDirectory);
@@ -437,10 +438,10 @@ final class SystemApiCliTest extends TestCase
 
         try {
             self::assertTrue(mkdir($baseDirectory, 0777, true) || is_dir($baseDirectory));
-            file_put_contents($readyMarkerPath, "native-runtime-service-started\n");
+            file_put_contents($readyMarkerPath, "native-runtime-service-bootstrap-recorded\n");
             file_put_contents($statusFilePath, json_encode([
                 'startup_acknowledged' => true,
-                'ownership_state' => 'pending-bus-name-ownership',
+                'ownership_state' => 'startup-recorded-no-process',
             ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
             file_put_contents($pidFilePath, "0\n");
 
@@ -473,12 +474,12 @@ final class SystemApiCliTest extends TestCase
             $payload = $this->decodeJson($result['stdout']);
             self::assertNull($payload['error']);
             self::assertSame('system.dbus-native-observation', $payload['result']['method']);
-            self::assertSame('native-runtime-service-observed-pending-ownership', $payload['result']['data']['status']);
-            self::assertTrue($payload['result']['data']['observed']);
+            self::assertSame('native-runtime-service-not-running', $payload['result']['data']['status']);
+            self::assertFalse($payload['result']['data']['observed']);
             self::assertTrue($payload['result']['data']['startup_acknowledged']);
-            self::assertSame('pending-bus-name-ownership', $payload['result']['data']['ownership_state']);
-            self::assertSame('native-runtime-bus-ownership-pending', $payload['result']['data']['blocking_reason']);
-            self::assertSame('materialize-native-bus-ownership', $payload['result']['data']['next_action']);
+            self::assertSame('startup-recorded-no-process', $payload['result']['data']['ownership_state']);
+            self::assertSame('native-runtime-service-not-running', $payload['result']['data']['blocking_reason']);
+            self::assertSame('launch-native-runtime-service', $payload['result']['data']['next_action']);
         } finally {
             @unlink($readyMarkerPath);
             @unlink($statusFilePath);
@@ -611,12 +612,12 @@ final class SystemApiCliTest extends TestCase
 
         try {
             self::assertTrue(mkdir($baseDirectory, 0777, true) || is_dir($baseDirectory));
-            file_put_contents($readyMarkerPath, "native-runtime-service-started\n");
+            file_put_contents($readyMarkerPath, "native-runtime-service-bootstrap-recorded\n");
             file_put_contents($statusFilePath, json_encode([
                 'startup_acknowledged' => true,
                 'ownership_state' => 'pending-bus-name-ownership',
             ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
-            file_put_contents($pidFilePath, "0\n");
+            file_put_contents($pidFilePath, "4242\n");
 
             $result = $this->runPhpScript([
                 $this->scriptPath(),
@@ -685,12 +686,12 @@ final class SystemApiCliTest extends TestCase
 
         try {
             self::assertTrue(mkdir($baseDirectory, 0777, true) || is_dir($baseDirectory));
-            file_put_contents($readyMarkerPath, "native-runtime-service-started\n");
+            file_put_contents($readyMarkerPath, "native-runtime-service-bootstrap-recorded\n");
             file_put_contents($statusFilePath, json_encode([
                 'startup_acknowledged' => true,
                 'ownership_state' => 'pending-bus-name-ownership',
             ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
-            file_put_contents($pidFilePath, "0\n");
+            file_put_contents($pidFilePath, "4242\n");
 
             $result = $this->runPhpScript([
                 $this->scriptPath(),
@@ -728,7 +729,7 @@ final class SystemApiCliTest extends TestCase
             $statusPayload = json_decode((string) file_get_contents($statusFilePath), true, 512, JSON_THROW_ON_ERROR);
             self::assertSame('system-api-dbus-native-runtime-ownership', $statusPayload['kind']);
             self::assertSame('bus-name-owned', $statusPayload['ownership_state']);
-            self::assertSame("0\n", file_get_contents($pidFilePath));
+            self::assertSame("4242\n", file_get_contents($pidFilePath));
         } finally {
             $this->cleanupDirectory($baseDirectory);
         }

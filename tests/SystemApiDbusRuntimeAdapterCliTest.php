@@ -298,9 +298,11 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
 
             $payload = $this->decodeJson($result['stdout']);
             self::assertSame('system-api-dbus-native-runtime-startup', $payload['kind']);
-            self::assertSame('native-runtime-service-started', $payload['status']);
+            self::assertSame('native-runtime-service-bootstrap-recorded', $payload['status']);
             self::assertTrue($payload['startup_acknowledged']);
-            self::assertSame('observe-native-runtime-service-state', $payload['next_action']);
+            self::assertSame('startup-recorded-no-process', $payload['ownership_state']);
+            self::assertSame('native-runtime-service-not-running', $payload['blocking_reason']);
+            self::assertSame('launch-native-runtime-service', $payload['next_action']);
             self::assertFileExists($readyMarkerPath);
             self::assertFileExists($statusFilePath);
             self::assertFileExists($pidFilePath);
@@ -369,12 +371,12 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
 
             $payload = $this->decodeJson($result['stdout']);
             self::assertSame('system-api-dbus-native-runtime-observation', $payload['kind']);
-            self::assertSame('native-runtime-service-observed-pending-ownership', $payload['status']);
-            self::assertTrue($payload['observed']);
+            self::assertSame('native-runtime-service-not-running', $payload['status']);
+            self::assertFalse($payload['observed']);
             self::assertTrue($payload['startup_acknowledged']);
-            self::assertSame('pending-bus-name-ownership', $payload['ownership_state']);
-            self::assertSame('native-runtime-bus-ownership-pending', $payload['blocking_reason']);
-            self::assertSame('materialize-native-bus-ownership', $payload['next_action']);
+            self::assertSame('startup-recorded-no-process', $payload['ownership_state']);
+            self::assertSame('native-runtime-service-not-running', $payload['blocking_reason']);
+            self::assertSame('launch-native-runtime-service', $payload['next_action']);
         } finally {
             $this->cleanupDirectory($baseDirectory);
         }
@@ -405,6 +407,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
                 'StartNativeRuntimeService',
             ], '', $environment);
             self::assertSame(0, $startup['exitCode'], $startup['stderr']);
+            file_put_contents($pidFilePath, "4242\n");
 
             $ownership = $this->runPhpScript([
                 $this->scriptPath(),
@@ -459,6 +462,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
                 'StartNativeRuntimeService',
             ], '', $environment);
             self::assertSame(0, $startup['exitCode'], $startup['stderr']);
+            file_put_contents($pidFilePath, "4242\n");
 
             $ownership = $this->runPhpScript([
                 $this->scriptPath(),
@@ -529,6 +533,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
                 'StartNativeRuntimeService',
             ], '', $environment);
             self::assertSame(0, $startup['exitCode'], $startup['stderr']);
+            file_put_contents($pidFilePath, "4242\n");
 
             $ownership = $this->runPhpScript([
                 $this->scriptPath(),
@@ -630,6 +635,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
                 'StartNativeRuntimeService',
             ], '', $environment);
             self::assertSame(0, $startup['exitCode'], $startup['stderr']);
+            file_put_contents($pidFilePath, "4242\n");
 
             $ownership = $this->runPhpScript([
                 $this->scriptPath(),
@@ -783,8 +789,8 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertSame('long-running-dbus-service', $payload['target_command']['activation_mode']);
         self::assertSame(0, $payload['command_result']['exit_code']);
         self::assertSame('system-api-dbus-native-runtime-startup', $payload['command_result']['payload']['kind']);
-        self::assertSame('native-runtime-service-started', $payload['command_result']['payload']['status']);
-        self::assertSame('observe-native-runtime-service-state', $payload['next_action']);
+        self::assertSame('native-runtime-service-bootstrap-recorded', $payload['command_result']['payload']['status']);
+        self::assertSame('launch-native-runtime-service', $payload['next_action']);
     }
 
     public function testCallDelegatesToSystemApiContract(): void

@@ -1426,7 +1426,7 @@ function createNativeRuntimeServiceStartupReport(array $runtimeDiagnosis): array
     return [
         'api_version' => '1.0',
         'kind' => 'system-api-dbus-native-runtime-startup',
-        'status' => $eligible ? 'native-runtime-service-started' : 'native-runtime-service-blocked',
+        'status' => $eligible ? 'native-runtime-service-bootstrap-recorded' : 'native-runtime-service-blocked',
         'startup_acknowledged' => $eligible,
         'exit_code' => $eligible ? 0 : 3,
         'bus_name' => W4_SYSTEM_API_BUS_NAME,
@@ -1434,14 +1434,14 @@ function createNativeRuntimeServiceStartupReport(array $runtimeDiagnosis): array
         'interface' => W4_SYSTEM_API_INTERFACE,
         'service_definition' => $serviceDefinition,
         'runtime_backend' => $serviceDefinition['runtime_backend'] ?? [],
-        'ownership_state' => $eligible ? 'pending-bus-name-ownership' : 'blocked-before-startup',
+        'ownership_state' => $eligible ? 'startup-recorded-no-process' : 'blocked-before-startup',
         'blocking_reason' => $eligible
-            ? null
+            ? 'native-runtime-service-not-running'
             : (is_string($serviceDefinition['blocking_reason'] ?? null)
                 ? $serviceDefinition['blocking_reason']
                 : 'native-runtime-service-unavailable'),
         'next_action' => $eligible
-            ? 'observe-native-runtime-service-state'
+            ? 'launch-native-runtime-service'
             : (is_string($serviceDefinition['next_action'] ?? null)
                 ? $serviceDefinition['next_action']
                 : 'complete-native-runtime-backend'),
@@ -1462,13 +1462,24 @@ function createNativeRuntimeServiceObservationReport(array $runtimeDiagnosis): a
     $pidFile = observePidArtifact(optionalArtifactPath($artifacts, 'pid_file_path'));
     $startupReport = is_array($statusFile['payload'] ?? null) ? $statusFile['payload'] : null;
     $startupAcknowledged = ($startupReport['startup_acknowledged'] ?? false) === true;
+    $pid = is_int($pidFile['pid'] ?? null) ? $pidFile['pid'] : null;
+    $pidIndicatesRunningProcess = is_int($pid) && $pid > 0;
     $artifactsObserved = ($readyMarker['exists'] ?? false) === true
         && ($statusFile['exists'] ?? false) === true
         && ($pidFile['exists'] ?? false) === true;
-    $observed = $eligible && $startupAcknowledged && $artifactsObserved;
-    $ownershipState = is_string($startupReport['ownership_state'] ?? null)
+    $observed = $eligible && $startupAcknowledged && $artifactsObserved && $pidIndicatesRunningProcess;
+    $reportedOwnershipState = is_string($startupReport['ownership_state'] ?? null)
         ? $startupReport['ownership_state']
-        : ($observed ? 'pending-bus-name-ownership' : 'native-runtime-service-not-started');
+        : null;
+    $ownershipState = $reportedOwnershipState;
+    if ($ownershipState === null) {
+        $ownershipState = $observed
+            ? 'pending-bus-name-ownership'
+            : ($startupAcknowledged ? 'startup-recorded-no-process' : 'native-runtime-service-not-started');
+    }
+    if ($pidIndicatesRunningProcess && $ownershipState === 'startup-recorded-no-process') {
+        $ownershipState = 'pending-bus-name-ownership';
+    }
     $status = !$eligible
         ? 'native-runtime-service-blocked'
         : ($observed
@@ -1476,7 +1487,9 @@ function createNativeRuntimeServiceObservationReport(array $runtimeDiagnosis): a
                 ? 'native-runtime-service-observed-active'
                 : 'native-runtime-service-observed-pending-ownership')
             : (($readyMarker['exists'] ?? false) === true || ($statusFile['exists'] ?? false) === true || ($pidFile['exists'] ?? false) === true
-                ? 'native-runtime-service-observation-incomplete'
+                ? ($startupAcknowledged && !$pidIndicatesRunningProcess
+                    ? 'native-runtime-service-not-running'
+                    : 'native-runtime-service-observation-incomplete')
                 : 'native-runtime-service-not-observed'));
     $blockingReason = !$eligible
         ? (is_string($serviceDefinition['blocking_reason'] ?? null)
@@ -1484,20 +1497,24 @@ function createNativeRuntimeServiceObservationReport(array $runtimeDiagnosis): a
             : 'native-runtime-service-unavailable')
         : ($status === 'native-runtime-service-not-observed'
             ? 'native-runtime-service-not-started'
-            : ($status === 'native-runtime-service-observation-incomplete'
+            : ($status === 'native-runtime-service-not-running'
+                ? 'native-runtime-service-not-running'
+                : ($status === 'native-runtime-service-observation-incomplete'
                 ? 'native-runtime-service-artifacts-incomplete'
-                : ($ownershipState === 'bus-name-owned' ? null : 'native-runtime-bus-ownership-pending')));
+                : ($ownershipState === 'bus-name-owned' ? null : 'native-runtime-bus-ownership-pending'))));
     $nextAction = !$eligible
         ? (is_string($serviceDefinition['next_action'] ?? null)
             ? $serviceDefinition['next_action']
             : 'complete-native-runtime-backend')
         : ($status === 'native-runtime-service-not-observed'
             ? 'start-native-runtime-service'
-            : ($status === 'native-runtime-service-observation-incomplete'
+            : ($status === 'native-runtime-service-not-running'
+                ? 'launch-native-runtime-service'
+                : ($status === 'native-runtime-service-observation-incomplete'
                 ? 'inspect-native-runtime-service-artifacts'
                 : ($ownershipState === 'bus-name-owned'
                     ? 'runtime-service-active'
-                    : 'materialize-native-bus-ownership')));
+                    : 'materialize-native-bus-ownership'))));
 
     return [
         'api_version' => '1.0',
@@ -2178,7 +2195,7 @@ function persistNativeRuntimeArtifacts(array $report): void
     $pidFilePath = optionalArtifactPath($artifacts, 'pid_file_path');
 
     if ($readyMarkerPath !== null) {
-        writeArtifactFile($readyMarkerPath, "native-runtime-service-started\n");
+        writeArtifactFile($readyMarkerPath, "native-runtime-service-bootstrap-recorded\n");
     }
 
     if ($statusFilePath !== null) {
@@ -2850,7 +2867,7 @@ function finalizeActivationExecution(array $activationExecution, array $commandR
     $activationExecution['command_result'] = $commandResult;
     $activationExecution['next_action'] = match ($exitCode) {
         0 => $commandRole === 'native-runtime-service-bootstrap'
-            ? 'observe-native-runtime-service-state'
+            ? 'launch-native-runtime-service'
             : 'observe-runtime-adapter-state',
         3 => $commandRole === 'native-runtime-service-bootstrap'
             ? 'inspect-native-runtime-service-report'
@@ -4811,7 +4828,7 @@ function finalizeActivationExecution(array $activationExecution, array $commandR
     $activationExecution['command_result'] = $commandResult;
     $activationExecution['next_action'] = match ($exitCode) {
         0 => $commandRole === 'native-runtime-service-bootstrap'
-            ? 'observe-native-runtime-service-state'
+            ? 'launch-native-runtime-service'
             : 'observe-runtime-adapter-state',
         3 => $commandRole === 'native-runtime-service-bootstrap'
             ? 'inspect-native-runtime-service-report'

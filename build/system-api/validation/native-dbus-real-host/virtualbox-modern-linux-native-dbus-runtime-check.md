@@ -200,3 +200,32 @@ El smoke complementario `GetCapabilities` sigue consistente en el mismo proceso,
 
 - `local_runtime_adapter.selected_runtime_backend = native-dbus-extension`
 - `local_runtime_launcher.selected_runtime_backend = native-dbus-extension`
+
+## Actualizacion posterior: startup honesto y observacion condicionada a PID real
+
+Al empujar el lifecycle nativo desde la misma sonda viva ya configurada con:
+
+- `W4_SYSTEM_API_RUNTIME_BACKEND=native-dbus-extension`
+
+aparecio un hallazgo mas util que seguir repitiendo llamadas: `system.dbus-native-startup` estaba declarando un estado demasiado optimista.
+
+Evidencia observada en el mismo corte:
+
+- el startup dejaba artefactos persistidos del runtime nativo;
+- el archivo `w4-system-api-native-runtime.pid` quedaba con `0`;
+- despues de ese corte, `busctl --system list` ya no mostraba `org.w4.System1` como poseido por un proceso vivo, sino solo como `(activatable)`.
+
+Lectura honesta de ese contraste:
+
+- el backend nativo ya puede registrar bootstrap del runtime;
+- ese bootstrap no demuestra por si solo que exista un proceso vivo atendiendo el servicio;
+- por tanto, llamar a ese estado `native-runtime-service-started` sobrestimaba la realidad del host.
+
+El contrato local queda endurecido a partir de este hallazgo:
+
+- `system.dbus-native-startup` pasa a reportar `status = native-runtime-service-bootstrap-recorded`;
+- el estado de ownership intermedio pasa a `startup-recorded-no-process`;
+- `system.dbus-native-observation` solo considera servicio observado cuando hay artefactos y `pid > 0`;
+- el siguiente paso sugerido tras un bootstrap exitoso ya no es observar pasivamente, sino `launch-native-runtime-service`.
+
+La alineacion de regresion se cerro localmente en PHPUnit sobre backend, adapter, launcher, host, binding generation y CLI, evitando volver a aceptar `pid = 0` como si representara un runtime nativo realmente activo.
