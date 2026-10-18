@@ -7,3 +7,4 @@
 0007-php84-hash-and-callback-compat-followup.patch
 0008-php84-parameter-length-and-registerobject-alignment.patch
 0009-php84-bool-and-parameter-array-modernization.patch
+0010-php84-append-parameters-hash-iteration-cleanup.patch

@@ -1,0 +1,17 @@
+diff --git "a/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c" "b/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c"
+--- "a/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c"
++++ "b/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c"
+@@
+-        zval **entry;
++        zval *entry;
+@@
+-                while (zend_hash_get_current_data_ex(Z_ARRVAL_P(data), (void **)&entry, &pos) == SUCCESS) {
++                while (DBUS_ZEND_HASH_GET_CURRENT_DATA_CHECK_EX(Z_ARRVAL_P(data), entry, pos)) {
+                         char *sig = NULL;
+                         if (it) {
+                                 it = php_dbus_get_next_sig(it, &sig);
+                         }
+-                        dbus_append_var(entry, &data_array, &dbus_args, it ? sig : NULL TSRMLS_CC);
++                        dbus_append_var(&entry, &data_array, &dbus_args, it ? sig : NULL TSRMLS_CC);
+                         zend_hash_move_forward_ex(Z_ARRVAL_P(data), &pos);
+                 }

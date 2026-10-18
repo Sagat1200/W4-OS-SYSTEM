@@ -44,6 +44,7 @@
 - `Dbus::requestName()` y `Dbus::addWatch()` ya normalizan sus longitudes de parseo a `size_t`, reduciendo otro foco de incompatibilidad silenciosa con la firma moderna de `zend_parse_*`.
 - `php_dbus_do_method_call()` ya se acerca al contrato moderno del upstream: usa `zval` en stack para `params` y `callback`, invoca `call_user_function()` en `PHP >= 8` y deja el fallback antiguo solo para ramas pre-PHP 8.
 - `DbusSignal::send()` y `DbusSet::__construct()` ya abandonan los buffers `zval ***` para `zend_get_parameters_array_ex`, mientras el carril booleano del marshaling pasa a `IS_TRUE`/`IS_FALSE` y `zval_is_true()`.
+- `php_dbus_append_parameters()` ya deja atras el pattern `zval **entry` + `zend_hash_get_current_data_ex(..., (void **)&entry, ...)` y utiliza `zval *` con `DBUS_ZEND_HASH_GET_CURRENT_DATA_CHECK_EX`, alineando tambien ese punto del marshaling con la capa de compatibilidad ya introducida.
 
 ## Execution Loop
 

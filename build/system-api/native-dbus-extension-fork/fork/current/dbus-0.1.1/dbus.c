@@ -1612,7 +1612,7 @@ static int php_dbus_append_parameters(DBusMessage *msg, zval *data, xmlNode *inX
 {
 	DBusMessageIter dbus_args;
 	HashPosition pos;
-	zval **entry;
+        zval *entry;
 	php_dbus_data_array data_array;
 	int i;
 	xmlNode **it = NULL;
@@ -1628,12 +1628,12 @@ static int php_dbus_append_parameters(DBusMessage *msg, zval *data, xmlNode *inX
 
 	if (type == PHP_DBUS_CALL_FUNCTION) {
 		zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(data), &pos);
-		while (zend_hash_get_current_data_ex(Z_ARRVAL_P(data), (void **)&entry, &pos) == SUCCESS) {
+                while (DBUS_ZEND_HASH_GET_CURRENT_DATA_CHECK_EX(Z_ARRVAL_P(data), entry, pos)) {
 			char *sig = NULL;
 			if (it) {
 				it = php_dbus_get_next_sig(it, &sig);
 			}
-			dbus_append_var(entry, &data_array, &dbus_args, it ? sig : NULL TSRMLS_CC);
+                        dbus_append_var(&entry, &data_array, &dbus_args, it ? sig : NULL TSRMLS_CC);
 			zend_hash_move_forward_ex(Z_ARRVAL_P(data), &pos);
 		}
 	} else if (type == PHP_DBUS_RETURN_FUNCTION) {

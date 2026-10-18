@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.279 | 2026-10-18 | Activa | El fork `pecl/DBus` ya limpia la iteracion de `HashTable` en `php_dbus_append_parameters()`, reduciendo otro punto de marshaling que seguia atado a firmas Zend antiguas |
 | TECH | TECH-1.278 | 2026-10-18 | Activa | El fork `pecl/DBus` ya moderniza el runtime de callbacks, los buffers de `zend_get_parameters_array_ex` y el manejo booleano, reduciendo varios puntos de friccion directos con `PHP 8.4` |
 | TECH | TECH-1.277 | 2026-10-18 | Activa | El fork `pecl/DBus` ya normaliza longitudes de parseo a `size_t` en rutas activas y alinea `Dbus::registerObject()` con el upstream moderno para reducir incompatibilidades directas de `zend_parse_*` y `HashTable` |
 | TECH | TECH-1.276 | 2026-10-18 | Activa | El fork `pecl/DBus` ya incorpora helpers de compatibilidad hash/string y limpia el carril de callbacks y builders de propiedades para reducir firmas Zend legacy antes del primer intento real de compilacion |
