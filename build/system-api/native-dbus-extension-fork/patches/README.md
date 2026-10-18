@@ -13,4 +13,5 @@ Estado actual:
 - `0004-php84-macro-cleanup-and-zval-allocation.patch` ya documenta la limpieza del macro legacy duplicado `DBUS_FETCH_OBJECT` y la correccion de `DBUS_ZEND_MAKE_STD_ZVAL`, que ahora asigna un `zval` real en vez de dejar un puntero a stack temporal.
 - `0005-php84-zval-ownership-followup.patch` documenta el cleanup de ownership en `php_dbus_to_zval()` y `php_dbus_handle_reply()`, incluyendo liberacion del contenedor `zval*` tras insertar en arrays, correccion del caso `DBUS_TYPE_DICT_ENTRY` y alineacion de keys string/object-path con la referencia moderna.
 - `0006-php84-variant-signature-struct-alignment.patch` alinea `php_dbus_variant_obj` con el upstream moderno, reintroduciendo el campo `signature` que el runtime ya consulta y libera en helpers de marshaling y destructores.
+- `0007-php84-hash-and-callback-compat-followup.patch` trae helpers de compatibilidad de hash/string desde el upstream moderno y los aplica al carril de callbacks, builders de propiedades y marshaling de arrays/dicts/structs, reduciendo el uso de firmas Zend pre-PHP 7 que todavia seguian en el source activo.
 

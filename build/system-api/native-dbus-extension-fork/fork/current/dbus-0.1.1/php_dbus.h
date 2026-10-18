@@ -86,6 +86,42 @@
         return &_objPtr->std; \
     } while (0)
 
+#define DBUS_ZVAL_STRING(zv, str, af) \
+    do { \
+        ZVAL_STRING(zv, str); \
+        if (0 == af) { \
+            efree(str); \
+        } \
+    } while (0)
+
+#define DBUS_ZEND_HASH_UPDATE(_ht, _key, _zval) \
+    zend_hash_str_update(_ht, _key, strlen(_key), *(_zval))
+
+#define DBUS_ZEND_HASH_GET_CURRENT_DATA(_ht, _zvalPtr) \
+    _zvalPtr = zend_hash_get_current_data(_ht)
+
+#define DBUS_ZEND_HASH_GET_CURRENT_DATA_CHECK(_ht, _zvalPtr) \
+    (DBUS_ZEND_HASH_GET_CURRENT_DATA(_ht, _zvalPtr)) != NULL
+
+#define DBUS_ZEND_HASH_GET_CURRENT_DATA_EX(_ht, _zvalPtr, _pos) \
+    _zvalPtr = zend_hash_get_current_data_ex(_ht, &(_pos))
+
+#define DBUS_ZEND_HASH_GET_CURRENT_DATA_CHECK_EX(_ht, _zvalPtr, _pos) \
+    (DBUS_ZEND_HASH_GET_CURRENT_DATA_EX(_ht, _zvalPtr, _pos)) != NULL
+
+#define DBUS_ZEND_HASH_GET_CURRENT_KEY_INFO(_ht, _idx, _info) \
+    do { \
+        zend_string *tmp_info = NULL; \
+        (_info).type = zend_hash_get_current_key(_ht, &tmp_info, (zend_ulong *)&(_idx)); \
+        if (tmp_info) { \
+            (_info).name = ZSTR_VAL(tmp_info); \
+            (_info).length = ZSTR_LEN(tmp_info); \
+        } else { \
+            (_info).name = NULL; \
+            (_info).length = 0; \
+        } \
+    } while (0)
+
 #define DBUS_ZEND_HASH_DESTROY_CHECK(_ht) \
     do { \
         if (_ht.u.flags) { \
@@ -107,6 +143,12 @@
 #define DBUS_ZEND_ZVAL_TYPE_P(_zval) Z_TYPE_INFO_P(_zval)
 #define DBUS_ZEND_ADDREF_P(_zval) Z_TRY_ADDREF_P(_zval)
 #define DBUS_ZEND_INIT_ZVAL(_zvalPtr) ZVAL_NULL(_zvalPtr)
+
+typedef struct _dbus_zend_hash_key_info {
+    char *name;
+    unsigned int length;
+    unsigned int type;
+} dbus_zend_hash_key_info;
 
 extern zend_module_entry dbus_module_entry;
 #define phpext_dbus_ptr &dbus_module_entry

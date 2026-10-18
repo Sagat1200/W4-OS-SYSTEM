@@ -4,3 +4,4 @@
 0004-php84-macro-cleanup-and-zval-allocation.patch
 0005-php84-zval-ownership-followup.patch
 0006-php84-variant-signature-struct-alignment.patch
+0007-php84-hash-and-callback-compat-followup.patch

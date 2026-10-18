@@ -38,6 +38,8 @@
 - `php_dbus_to_zval()` ya libera el contenedor `zval*` despues de insertarlo en arrays/structs, corrige el caso `DBUS_TYPE_DICT_ENTRY` para no perder el `return_value` reservado y alinea las keys string/object-path con la referencia moderna.
 - `php_dbus_handle_reply()` ya libera el contenedor `zval*` en los caminos `always_array` y retorno unico, y deja de descartar silenciosamente `key` temporales cuando esos valores no se reutilizan.
 - `php_dbus_variant_obj` vuelve a declarar `signature`, alineandose con el upstream moderno y con los helpers/destructores del propio fork que ya esperaban ese campo durante el marshaling del tipo `VARIANT`.
+- `php_dbus.h` ya incorpora helpers de compatibilidad de hash/string (`DBUS_ZVAL_STRING`, `DBUS_ZEND_HASH_UPDATE`, `DBUS_ZEND_HASH_GET_CURRENT_DATA_CHECK`, `DBUS_ZEND_HASH_GET_CURRENT_KEY_INFO`) y `dbus.c` los usa en callbacks, builders de propiedades y marshaling de arrays/dicts/structs.
+- El lookup de callbacks ya deja atras `zend_hash_find`, `zend_hash_exists`, `add_next_index_string(..., 0)` y la ruta vieja de iteracion sobre `HashTable`, ademas de liberar `key`, `lcname` y `class_name` temporales en el mismo bloque.
 
 ## Execution Loop
 
