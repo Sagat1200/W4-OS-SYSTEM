@@ -77,7 +77,7 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertNull($payload['error']);
         self::assertSame('system.dbus-runtime', $payload['result']['method']);
         self::assertSame('system-api-dbus-runtime-diagnosis', $payload['result']['resource']['kind']);
-        self::assertSame('local-system-api-runtime-probe', $payload['result']['resource']['provider']);
+        self::assertSame('local-system-api-runtime-contract', $payload['result']['resource']['provider']);
     }
 
     public function testCallReturnsProtocolErrorForInvalidJson(): void

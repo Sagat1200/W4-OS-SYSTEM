@@ -516,7 +516,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             $this->nativeCompatibleBackendEnvironment(),
             $this->nativeDbusExtensionDriverEnvironment(),
             [
-                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusService',
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusServiceOptionalBus',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
                 'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
                 'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
@@ -541,7 +541,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             self::assertSame('native-runtime-bus-owned', $payload['status']);
             self::assertSame('native-driver', $payload['execution_mode']);
             self::assertSame('W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver', $payload['ownership_driver']['class_name']);
-            self::assertSame('W4\\OS\\Tests\\Fixtures\\FakeNativeDbusService', $payload['ownership_driver']['runtime_class_name']);
+            self::assertSame('W4\\OS\\Tests\\Fixtures\\FakeNativeDbusServiceOptionalBus', $payload['ownership_driver']['runtime_class_name']);
             self::assertSame('bus-system-constructor', $payload['ownership_driver']['constructor_mode']);
             self::assertTrue($payload['ownership_driver']['request_name_signature']['compatible']);
             self::assertSame(
@@ -577,7 +577,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             $this->nativeCompatibleBackendEnvironment(),
             $this->nativeDbusExtensionDriverEnvironment(),
             [
-                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusService',
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusServiceOptionalBus',
             ]
         );
 
@@ -594,7 +594,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertTrue($payload['described']);
         self::assertTrue($payload['compatible']);
         self::assertSame('W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver', $payload['coupling_driver']['class_name']);
-        self::assertSame('W4\\OS\\Tests\\Fixtures\\FakeNativeDbusService', $payload['coupling_driver']['runtime_class_name']);
+        self::assertSame('W4\\OS\\Tests\\Fixtures\\FakeNativeDbusServiceOptionalBus', $payload['coupling_driver']['runtime_class_name']);
         self::assertSame(
             'org.w4.System1',
             $payload['coupling_driver']['request_name_invocation_plan']['parameter_bindings'][0]['value_preview']
@@ -604,6 +604,53 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertTrue($payload['service_lifecycle']['register_object']['compatible']);
         self::assertNull($payload['blocking_reason']);
         self::assertSame('materialize-native-bus-ownership', $payload['next_action']);
+    }
+
+    public function testMaterializeNativeBusOwnershipDefaultsToNativeDbusExtensionDriverWhenBootstrapIsPresent(): void
+    {
+        $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-native-runtime-default-driver-cli-' . bin2hex(random_bytes(6));
+        $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
+        $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
+        $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+        $environment = array_merge(
+            $this->readyRuntimeEnvironment(),
+            $this->nativeCompatibleBackendEnvironment(),
+            [
+                'W4_SYSTEM_API_NATIVE_RUNTIME_DRIVER_BOOTSTRAP' => dirname(__DIR__) . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR . 'Fixtures' . DIRECTORY_SEPARATOR . 'NativeDbusExtensionDriverBootstrap.php',
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusServiceOptionalBus',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+            ]
+        );
+
+        try {
+            $startup = $this->runPhpScript([
+                $this->scriptPath(),
+                'StartNativeRuntimeService',
+            ], '', $environment);
+            self::assertSame(0, $startup['exitCode'], $startup['stderr']);
+
+            $ownership = $this->runPhpScript([
+                $this->scriptPath(),
+                'MaterializeNativeBusOwnership',
+            ], '', $environment);
+            self::assertSame(0, $ownership['exitCode'], $ownership['stderr']);
+
+            $payload = $this->decodeJson($ownership['stdout']);
+            self::assertSame('system-api-dbus-native-runtime-ownership', $payload['kind']);
+            self::assertSame('native-runtime-bus-owned', $payload['status']);
+            self::assertSame('native-driver', $payload['execution_mode']);
+            self::assertSame('W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver', $payload['ownership_driver']['class_name']);
+            self::assertSame(
+                dirname(__DIR__) . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR . 'Fixtures' . DIRECTORY_SEPARATOR . 'NativeDbusExtensionDriverBootstrap.php',
+                $payload['ownership_driver']['bootstrap_path']
+            );
+            self::assertSame('W4\\OS\\Tests\\Fixtures\\FakeNativeDbusServiceOptionalBus', $payload['ownership_driver']['runtime_class_name']);
+            self::assertSame('bus-system-constructor', $payload['ownership_driver']['constructor_mode']);
+        } finally {
+            $this->cleanupDirectory($baseDirectory);
+        }
     }
 
     public function testExecuteActivationRunsTargetCommandWhenRuntimeIsReady(): void

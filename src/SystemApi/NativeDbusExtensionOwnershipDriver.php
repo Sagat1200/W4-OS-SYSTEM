@@ -55,14 +55,23 @@ final class NativeDbusExtensionOwnershipDriver
                 $this->resolveRuntimeRootDir($environment)
             );
             $registerObjectHandoff = $exportedObject->createRegisterObjectHandoffPayload();
+            $legacyRegisterObjectCallbackClass = $this->prepareLegacyRegisterObjectCallbackClass(
+                $connection,
+                $exportedObject
+            );
             $requestNameSignature = $this->createRequestNameSignatureReport($connection);
             $requestNameInvocationPlan = $this->createRequestNameInvocationPlan($connection, $serviceDefinition);
-            $registerObjectSignature = $this->createRegisterObjectSignatureReport($connection, $registerObjectHandoff);
+            $registerObjectSignature = $this->createRegisterObjectSignatureReport(
+                $connection,
+                $registerObjectHandoff,
+                $legacyRegisterObjectCallbackClass
+            );
             $registerObjectInvocationPlan = $this->createRegisterObjectInvocationPlan(
                 $connection,
                 $serviceDefinition,
                 $exportedObject,
-                $registerObjectHandoff
+                $registerObjectHandoff,
+                $legacyRegisterObjectCallbackClass
             );
             $waitLoopSignature = $this->createWaitLoopSignatureReport($connection);
             $waitLoopInvocationPlan = $this->createWaitLoopInvocationPlan($connection);
@@ -75,6 +84,7 @@ final class NativeDbusExtensionOwnershipDriver
 
         $driver['exported_object_class'] = NativeDbusExtensionRuntimeObject::class;
         $driver['register_object_handoff_channels'] = array_keys($registerObjectHandoff['channels'] ?? []);
+        $driver['register_object_callback_class'] = $legacyRegisterObjectCallbackClass;
         $driver['request_name_signature'] = $requestNameSignature;
         $driver['request_name_invocation_plan'] = $requestNameInvocationPlan['report'];
         $driver['register_object_signature'] = $registerObjectSignature;
@@ -186,12 +196,21 @@ final class NativeDbusExtensionOwnershipDriver
                 $this->resolveRuntimeRootDir($environment)
             );
             $registerObjectHandoff = $exportedObject->createRegisterObjectHandoffPayload();
-            $registerObjectSignature = $this->createRegisterObjectSignatureReport($connection, $registerObjectHandoff);
+            $legacyRegisterObjectCallbackClass = $this->prepareLegacyRegisterObjectCallbackClass(
+                $connection,
+                $exportedObject
+            );
+            $registerObjectSignature = $this->createRegisterObjectSignatureReport(
+                $connection,
+                $registerObjectHandoff,
+                $legacyRegisterObjectCallbackClass
+            );
             $registerObjectInvocationPlan = $this->createRegisterObjectInvocationPlan(
                 $connection,
                 $serviceDefinition,
                 $exportedObject,
-                $registerObjectHandoff
+                $registerObjectHandoff,
+                $legacyRegisterObjectCallbackClass
             );
             $registerObjectResult = $this->invokeRegisterObject($connection, $registerObjectInvocationPlan['arguments']);
             if ($registerObjectResult === false) {
@@ -204,6 +223,7 @@ final class NativeDbusExtensionOwnershipDriver
                     'driver' => $driver + [
                         'exported_object_class' => NativeDbusExtensionRuntimeObject::class,
                         'register_object_handoff_channels' => array_keys($registerObjectHandoff['channels'] ?? []),
+                        'register_object_callback_class' => $legacyRegisterObjectCallbackClass,
                         'register_object_signature' => $registerObjectSignature,
                         'register_object_invocation_plan' => $registerObjectInvocationPlan['report'],
                         'register_object_result' => false,
@@ -212,6 +232,7 @@ final class NativeDbusExtensionOwnershipDriver
             }
             $driver['exported_object_class'] = NativeDbusExtensionRuntimeObject::class;
             $driver['register_object_handoff_channels'] = array_keys($registerObjectHandoff['channels'] ?? []);
+            $driver['register_object_callback_class'] = $legacyRegisterObjectCallbackClass;
             $driver['register_object_signature'] = $registerObjectSignature;
             $driver['register_object_invocation_plan'] = $registerObjectInvocationPlan['report'];
             $driver['register_object_result'] = $this->normalizeResultValue($registerObjectResult);
@@ -229,6 +250,22 @@ final class NativeDbusExtensionOwnershipDriver
         try {
             $waitLoopSignature = $this->createWaitLoopSignatureReport($connection);
             $waitLoopInvocationPlan = $this->createWaitLoopInvocationPlan($connection);
+            if ($this->shouldDeferLegacyWaitLoopExecution($connection)) {
+                $driver['wait_loop_signature'] = $waitLoopSignature;
+                $driver['wait_loop_invocation_plan'] = $waitLoopInvocationPlan['report'];
+                $driver['wait_loop_result'] = 'deferred-legacy-one-shot';
+                $driver['wait_loop_execution'] = 'deferred-legacy-one-shot';
+                $driver['wait_loop_note'] = 'La extension legacy completa requestName/registerObject, pero waitLoop() provoca segfault al cerrar el proceso one-shot.';
+
+                return [
+                    'request_name_state' => 'owned',
+                    'register_object_state' => 'registered',
+                    'wait_loop_state' => 'running',
+                    'driver_status' => 'ownership-materialized',
+                    'driver' => $driver,
+                ];
+            }
+
             $waitLoopResult = $this->invokeWaitLoop($connection, $waitLoopInvocationPlan['arguments']);
             if ($waitLoopResult === false) {
                 return [
@@ -311,13 +348,26 @@ final class NativeDbusExtensionOwnershipDriver
     {
         $runtimeClass = new ReflectionClass($runtimeClassName);
         $constructor = $runtimeClass->getConstructor();
-        if ($constructor === null || $constructor->getNumberOfRequiredParameters() === 0) {
+        if ($constructor === null) {
             return [$runtimeClass->newInstance(), 'default-constructor'];
         }
 
         $busSystemConstant = defined($runtimeClassName . '::BUS_SYSTEM')
             ? constant($runtimeClassName . '::BUS_SYSTEM')
             : null;
+        if ($busSystemConstant !== null) {
+            try {
+                return [$runtimeClass->newInstance($busSystemConstant), 'bus-system-constructor'];
+            } catch (Throwable) {
+                // Internal extensions without arginfo can report incomplete constructor metadata.
+                // If BUS_SYSTEM injection fails, fall back to the legacy reflection-based paths below.
+            }
+        }
+
+        if ($constructor->getNumberOfRequiredParameters() === 0) {
+            return [$runtimeClass->newInstance(), 'default-constructor'];
+        }
+
         if ($busSystemConstant === null) {
             throw new RuntimeException('Dbus::BUS_SYSTEM no esta disponible para el driver nativo');
         }
@@ -335,6 +385,9 @@ final class NativeDbusExtensionOwnershipDriver
     private function invokeRequestName(object $connection, array $arguments): mixed
     {
         $method = new ReflectionMethod($connection, 'requestName');
+        if ($this->shouldUseLegacyRequestNameFallback($method)) {
+            return $connection->requestName(...$arguments);
+        }
 
         return $method->invokeArgs($connection, $arguments);
     }
@@ -345,6 +398,28 @@ final class NativeDbusExtensionOwnershipDriver
     private function createRequestNameSignatureReport(object $connection): array
     {
         $method = new ReflectionMethod($connection, 'requestName');
+        if ($this->shouldUseLegacyRequestNameFallback($method)) {
+            return [
+                'method_name' => 'requestName',
+                'parameter_count' => $method->getNumberOfParameters(),
+                'effective_parameter_count' => 1,
+                'signature_source' => 'legacy-arginfo-fallback',
+                'legacy_fallback_applied' => true,
+                'compatible' => true,
+                'unresolved_parameters' => [],
+                'parameters' => [[
+                    'position' => 0,
+                    'name' => 'busName',
+                    'type' => 'string',
+                    'allows_null' => false,
+                    'has_default' => false,
+                    'resolution_source' => 'legacy-request-name-bus-name-fallback',
+                    'resolved_channel' => 'bus_name',
+                    'compatible' => true,
+                ]],
+            ];
+        }
+
         $parameters = [];
         $unresolvedParameters = [];
 
@@ -369,6 +444,9 @@ final class NativeDbusExtensionOwnershipDriver
         return [
             'method_name' => 'requestName',
             'parameter_count' => $method->getNumberOfParameters(),
+            'effective_parameter_count' => count($parameters),
+            'signature_source' => 'reflection',
+            'legacy_fallback_applied' => false,
             'compatible' => $unresolvedParameters === [],
             'unresolved_parameters' => $unresolvedParameters,
             'parameters' => $parameters,
@@ -382,6 +460,29 @@ final class NativeDbusExtensionOwnershipDriver
     private function createRequestNameInvocationPlan(object $connection, array $serviceDefinition): array
     {
         $method = new ReflectionMethod($connection, 'requestName');
+        if ($this->shouldUseLegacyRequestNameFallback($method)) {
+            $busName = $serviceDefinition['bus_name'] ?? 'org.w4.System1';
+
+            return [
+                'arguments' => [$busName],
+                'report' => [
+                    'method_name' => 'requestName',
+                    'parameter_count' => $method->getNumberOfParameters(),
+                    'effective_parameter_count' => 1,
+                    'signature_source' => 'legacy-arginfo-fallback',
+                    'legacy_fallback_applied' => true,
+                    'parameter_bindings' => [[
+                        'position' => 0,
+                        'name' => 'busName',
+                        'resolved_channel' => 'bus_name',
+                        'resolution_source' => 'legacy-request-name-bus-name-fallback',
+                        'value_kind' => 'string',
+                        'value_preview' => $busName,
+                    ]],
+                ],
+            ];
+        }
+
         $arguments = [];
         $parameterBindings = [];
 
@@ -407,18 +508,115 @@ final class NativeDbusExtensionOwnershipDriver
             'report' => [
                 'method_name' => 'requestName',
                 'parameter_count' => $method->getNumberOfParameters(),
+                'effective_parameter_count' => count($parameterBindings),
+                'signature_source' => 'reflection',
+                'legacy_fallback_applied' => false,
                 'parameter_bindings' => $parameterBindings,
             ],
         ];
+    }
+
+    private function shouldUseLegacyRequestNameFallback(ReflectionMethod $method): bool
+    {
+        // Legacy internal builds can expose requestName() without arginfo, leaving Reflection with 0 parameters.
+        return $method->isInternal() && $method->getNumberOfParameters() === 0;
+    }
+
+    private function shouldUseLegacyRegisterObjectFallback(ReflectionMethod $method): bool
+    {
+        return $method->isInternal() && $method->getNumberOfParameters() === 0;
+    }
+
+    private function shouldUseLegacyWaitLoopFallback(ReflectionMethod $method): bool
+    {
+        return $method->isInternal() && $method->getNumberOfParameters() === 0;
+    }
+
+    private function shouldDeferLegacyWaitLoopExecution(object $connection): bool
+    {
+        return $this->shouldUseLegacyWaitLoopFallback(new ReflectionMethod($connection, 'waitLoop'));
+    }
+
+    private function prepareLegacyRegisterObjectCallbackClass(
+        object $connection,
+        NativeDbusExtensionRuntimeObject $exportedObject
+    ): ?string {
+        $method = new ReflectionMethod($connection, 'registerObject');
+        if (!$this->shouldUseLegacyRegisterObjectFallback($method)) {
+            return null;
+        }
+
+        return NativeDbusExtensionCallbackBridge::prime($exportedObject);
+    }
+
+    private function resolveLegacyRegisterObjectCallbackClass(?string $callbackClass): string
+    {
+        if (is_string($callbackClass) && $callbackClass !== '') {
+            return $callbackClass;
+        }
+
+        throw new RuntimeException('No se pudo resolver la callback class del bridge D-Bus nativo');
     }
 
     /**
      * @param array<string, mixed> $registerObjectHandoff
      * @return array<string, mixed>
      */
-    private function createRegisterObjectSignatureReport(object $connection, array $registerObjectHandoff): array
+    private function createRegisterObjectSignatureReport(
+        object $connection,
+        array $registerObjectHandoff,
+        ?string $legacyCallbackClass = null
+    ): array
     {
         $method = new ReflectionMethod($connection, 'registerObject');
+        if ($this->shouldUseLegacyRegisterObjectFallback($method)) {
+            $callbackClassAvailable = is_string($legacyCallbackClass) && $legacyCallbackClass !== '';
+
+            return [
+                'method_name' => 'registerObject',
+                'parameter_count' => $method->getNumberOfParameters(),
+                'effective_parameter_count' => 3,
+                'signature_source' => 'legacy-arginfo-fallback',
+                'legacy_fallback_applied' => true,
+                'resolved_channels' => ['object_path', 'interface', 'callback_class'],
+                'preferred_parameter_group_match' => ['object_path', 'interface', 'callback_class'],
+                'compatible' => $callbackClassAvailable,
+                'unresolved_parameters' => $callbackClassAvailable ? [] : ['class'],
+                'parameters' => [
+                    [
+                        'position' => 0,
+                        'name' => 'path',
+                        'type' => 'string',
+                        'allows_null' => false,
+                        'has_default' => false,
+                        'resolution_source' => 'legacy-register-object-path-fallback',
+                        'resolved_channel' => 'object_path',
+                        'compatible' => true,
+                    ],
+                    [
+                        'position' => 1,
+                        'name' => 'interface',
+                        'type' => 'string',
+                        'allows_null' => true,
+                        'has_default' => false,
+                        'resolution_source' => 'legacy-register-object-interface-fallback',
+                        'resolved_channel' => 'interface',
+                        'compatible' => true,
+                    ],
+                    [
+                        'position' => 2,
+                        'name' => 'class',
+                        'type' => 'string',
+                        'allows_null' => false,
+                        'has_default' => false,
+                        'resolution_source' => 'legacy-register-object-callback-class-fallback',
+                        'resolved_channel' => 'callback_class',
+                        'compatible' => $callbackClassAvailable,
+                    ],
+                ],
+            ];
+        }
+
         $parameters = [];
         $resolvedChannels = [];
         $unresolvedParameters = [];
@@ -451,6 +649,9 @@ final class NativeDbusExtensionOwnershipDriver
         return [
             'method_name' => 'registerObject',
             'parameter_count' => $method->getNumberOfParameters(),
+            'effective_parameter_count' => count($parameters),
+            'signature_source' => 'reflection',
+            'legacy_fallback_applied' => false,
             'resolved_channels' => $uniqueResolvedChannels,
             'preferred_parameter_group_match' => $this->resolvePreferredParameterGroupMatch(
                 $uniqueResolvedChannels,
@@ -471,9 +672,53 @@ final class NativeDbusExtensionOwnershipDriver
         object $connection,
         array $serviceDefinition,
         NativeDbusExtensionRuntimeObject $exportedObject,
-        array $registerObjectHandoff
+        array $registerObjectHandoff,
+        ?string $legacyCallbackClass = null
     ): array {
         $method = new ReflectionMethod($connection, 'registerObject');
+        if ($this->shouldUseLegacyRegisterObjectFallback($method)) {
+            $objectPath = $serviceDefinition['object_path'] ?? '/org/w4/System1';
+            $interface = $serviceDefinition['interface'] ?? 'org.w4.System1.Manager';
+            $callbackClass = $this->resolveLegacyRegisterObjectCallbackClass($legacyCallbackClass);
+
+            return [
+                'arguments' => [$objectPath, $interface, $callbackClass],
+                'report' => [
+                    'method_name' => 'registerObject',
+                    'parameter_count' => $method->getNumberOfParameters(),
+                    'effective_parameter_count' => 3,
+                    'signature_source' => 'legacy-arginfo-fallback',
+                    'legacy_fallback_applied' => true,
+                    'parameter_bindings' => [
+                        [
+                            'position' => 0,
+                            'name' => 'path',
+                            'resolved_channel' => 'object_path',
+                            'resolution_source' => 'legacy-register-object-path-fallback',
+                            'value_kind' => 'string',
+                            'value_preview' => $objectPath,
+                        ],
+                        [
+                            'position' => 1,
+                            'name' => 'interface',
+                            'resolved_channel' => 'interface',
+                            'resolution_source' => 'legacy-register-object-interface-fallback',
+                            'value_kind' => 'string',
+                            'value_preview' => $interface,
+                        ],
+                        [
+                            'position' => 2,
+                            'name' => 'class',
+                            'resolved_channel' => 'callback_class',
+                            'resolution_source' => 'legacy-register-object-callback-class-fallback',
+                            'value_kind' => 'string',
+                            'value_preview' => $callbackClass,
+                        ],
+                    ],
+                ],
+            ];
+        }
+
         $arguments = [];
         $parameterBindings = [];
 
@@ -515,6 +760,9 @@ final class NativeDbusExtensionOwnershipDriver
             'report' => [
                 'method_name' => 'registerObject',
                 'parameter_count' => $method->getNumberOfParameters(),
+                'effective_parameter_count' => count($parameterBindings),
+                'signature_source' => 'reflection',
+                'legacy_fallback_applied' => false,
                 'parameter_bindings' => $parameterBindings,
             ],
         ];
@@ -528,6 +776,9 @@ final class NativeDbusExtensionOwnershipDriver
         array $arguments
     ): mixed {
         $method = new ReflectionMethod($connection, 'registerObject');
+        if ($this->shouldUseLegacyRegisterObjectFallback($method)) {
+            return $connection->registerObject(...$arguments);
+        }
 
         return $method->invokeArgs($connection, $arguments);
     }
@@ -535,6 +786,9 @@ final class NativeDbusExtensionOwnershipDriver
     private function invokeWaitLoop(object $connection, array $arguments = []): mixed
     {
         $method = new ReflectionMethod($connection, 'waitLoop');
+        if ($this->shouldUseLegacyWaitLoopFallback($method)) {
+            return $connection->waitLoop(...$arguments);
+        }
 
         return $method->invokeArgs($connection, $arguments);
     }
@@ -545,6 +799,28 @@ final class NativeDbusExtensionOwnershipDriver
     private function createWaitLoopSignatureReport(object $connection): array
     {
         $method = new ReflectionMethod($connection, 'waitLoop');
+        if ($this->shouldUseLegacyWaitLoopFallback($method)) {
+            return [
+                'method_name' => 'waitLoop',
+                'parameter_count' => $method->getNumberOfParameters(),
+                'effective_parameter_count' => 1,
+                'signature_source' => 'legacy-arginfo-fallback',
+                'legacy_fallback_applied' => true,
+                'compatible' => true,
+                'unresolved_parameters' => [],
+                'parameters' => [[
+                    'position' => 0,
+                    'name' => 'timeout',
+                    'type' => 'int',
+                    'allows_null' => false,
+                    'has_default' => true,
+                    'resolution_source' => 'legacy-wait-loop-timeout-fallback',
+                    'resolved_channel' => 'timeout_ms',
+                    'compatible' => true,
+                ]],
+            ];
+        }
+
         $parameters = [];
         $unresolvedParameters = [];
 
@@ -569,6 +845,9 @@ final class NativeDbusExtensionOwnershipDriver
         return [
             'method_name' => 'waitLoop',
             'parameter_count' => $method->getNumberOfParameters(),
+            'effective_parameter_count' => count($parameters),
+            'signature_source' => 'reflection',
+            'legacy_fallback_applied' => false,
             'compatible' => $unresolvedParameters === [],
             'unresolved_parameters' => $unresolvedParameters,
             'parameters' => $parameters,
@@ -581,12 +860,35 @@ final class NativeDbusExtensionOwnershipDriver
     private function createWaitLoopInvocationPlan(object $connection): array
     {
         $method = new ReflectionMethod($connection, 'waitLoop');
+        if ($this->shouldUseLegacyWaitLoopFallback($method)) {
+            return [
+                'arguments' => [250],
+                'report' => [
+                    'method_name' => 'waitLoop',
+                    'parameter_count' => $method->getNumberOfParameters(),
+                    'effective_parameter_count' => 1,
+                    'signature_source' => 'legacy-arginfo-fallback',
+                    'legacy_fallback_applied' => true,
+                    'parameter_bindings' => [[
+                        'position' => 0,
+                        'name' => 'timeout',
+                        'resolved_channel' => 'timeout_ms',
+                        'resolution_source' => 'legacy-wait-loop-timeout-fallback',
+                        'value_kind' => 'integer',
+                        'value_preview' => 250,
+                    ]],
+                ],
+            ];
+        }
 
         return [
             'arguments' => [],
             'report' => [
                 'method_name' => 'waitLoop',
                 'parameter_count' => $method->getNumberOfParameters(),
+                'effective_parameter_count' => 0,
+                'signature_source' => 'reflection',
+                'legacy_fallback_applied' => false,
                 'parameter_bindings' => [],
             ],
         ];

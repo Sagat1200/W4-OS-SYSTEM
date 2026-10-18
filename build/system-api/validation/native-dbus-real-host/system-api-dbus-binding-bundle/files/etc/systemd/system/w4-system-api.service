@@ -1,0 +1,18 @@
+[Unit]
+Description=W4 System API D-Bus bridge
+Documentation=man:w4-system-api(7)
+After=dbus.service
+Requires=dbus.service
+
+[Service]
+Type=dbus
+BusName=org.w4.System1
+EnvironmentFile=-/etc/w4/system-api-binding.env
+ExecStart=/usr/local/bin/w4-system-api-dbus-runtime-launcher serve-dbus
+Restart=on-failure
+RestartSec=2s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

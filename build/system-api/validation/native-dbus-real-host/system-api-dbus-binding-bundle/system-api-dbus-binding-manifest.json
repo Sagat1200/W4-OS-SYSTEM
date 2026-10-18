@@ -1,0 +1,147 @@
+{
+    "binding_schema_version": 1,
+    "kind": "system-api-dbus-binding",
+    "api_version": "1.0",
+    "bus_name": "org.w4.System1",
+    "object_path": "/org/w4/System1",
+    "interface": "org.w4.System1.Manager",
+    "binding_status": "pending-runtime-adapter",
+    "enabled_by_default": false,
+    "transport": {
+        "current_local_runtime": "stdio-ndjson-launcher",
+        "future_public_binding": "dbus-system-bus"
+    },
+    "public_methods": [
+        {
+            "name": "Call",
+            "input": "request_json",
+            "output": "response_json"
+        },
+        {
+            "name": "GetCapabilities",
+            "input": "request_id",
+            "output": "response_json"
+        }
+    ],
+    "activation": {
+        "service_file": "files/usr/share/dbus-1/system-services/org.w4.System1.service",
+        "policy_file": "files/etc/dbus-1/system.d/org.w4.System1.conf",
+        "systemd_unit": "files/etc/systemd/system/w4-system-api.service",
+        "runtime_env": "files/etc/w4/system-api-binding.env",
+        "adapter_status": "pending-runtime-adapter",
+        "adapter_specification": "files/usr/share/w4/system-api/org.w4.System1.runtime-adapter.json",
+        "bootstrap_specification": "files/usr/share/w4/system-api/org.w4.System1.runtime-bootstrap.json",
+        "runtime_entrypoint": "files/usr/local/bin/w4-system-api-dbus-runtime-launcher"
+    },
+    "runtime_launcher": {
+        "entrypoint": "files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-launcher.php",
+        "wrapper": "files/usr/local/bin/w4-system-api-dbus-runtime-launcher",
+        "runtime_status": "launcher-ready",
+        "transport": "stdio-ndjson-launcher",
+        "handoff_mode": "child-process-stdio-relay",
+        "commands": [
+            "DescribeLauncher",
+            "DescribeLaunchPlan",
+            "DescribeActivationBootstrap",
+            "DescribeActivationPreparation",
+            "AttemptActivation",
+            "ExecuteActivation",
+            "DescribeHost",
+            "DescribeSpecification",
+            "DescribeRuntime",
+            "DiagnoseRuntime",
+            "DescribeNativeRuntimeService",
+            "StartNativeRuntimeService",
+            "DescribeNativeRuntimeCoupling",
+            "ObserveNativeRuntimeServiceState",
+            "MaterializeNativeBusOwnership",
+            "GetCapabilities",
+            "Call",
+            "serve-stdio-launcher",
+            "serve-dbus"
+        ]
+    },
+    "runtime_host": {
+        "entrypoint": "files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-host.php",
+        "wrapper": "files/usr/local/bin/w4-system-api-dbus-runtime-host",
+        "runtime_status": "pending-runtime-adapter",
+        "commands": [
+            "DescribeHost",
+            "DescribeSpecification",
+            "DescribeRuntime",
+            "DiagnoseRuntime",
+            "DescribeNativeRuntimeService",
+            "StartNativeRuntimeService",
+            "DescribeNativeRuntimeCoupling",
+            "ObserveNativeRuntimeServiceState",
+            "MaterializeNativeBusOwnership",
+            "GetCapabilities",
+            "Call",
+            "serve-stdio-host",
+            "serve-dbus"
+        ]
+    },
+    "runtime_adapter": {
+        "entrypoint": "files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-adapter.php",
+        "wrapper": "files/usr/local/bin/w4-system-api-dbus-runtime-adapter",
+        "runtime_status": "pending-runtime-adapter",
+        "commands": [
+            "DescribeSpecification",
+            "DescribeActivationPreparation",
+            "AttemptActivation",
+            "ExecuteActivation",
+            "DescribeNativeRuntimeService",
+            "StartNativeRuntimeService",
+            "DescribeNativeRuntimeCoupling",
+            "ObserveNativeRuntimeServiceState",
+            "MaterializeNativeBusOwnership",
+            "DescribeRuntime",
+            "DiagnoseRuntime",
+            "GetCapabilities",
+            "Call",
+            "serve-stdio-adapter",
+            "serve-dbus"
+        ]
+    },
+    "runtime_bridge": {
+        "entrypoint": "files/usr/local/lib/w4/system-api/w4-system-api-dbus-bridge.php",
+        "wrapper": "files/usr/local/bin/w4-system-api-dbus-bridge",
+        "readiness_entrypoint": "files/usr/local/lib/w4/system-api/w4-system-api-bridge-readiness.php",
+        "readiness_wrapper": "files/usr/local/bin/w4-system-api-dbus-bridge-readiness",
+        "diagnostics_entrypoint": "files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-diagnose.php",
+        "diagnostics_wrapper": "files/usr/local/bin/w4-system-api-dbus-runtime-diagnose",
+        "runtime_status": "pending-runtime-adapter",
+        "commands": [
+            "Call",
+            "GetCapabilities",
+            "DiagnoseRuntime",
+            "DescribeRuntime",
+            "serve-stdio-bridge",
+            "serve-dbus",
+            "check-readiness"
+        ]
+    },
+    "generated_files": [
+        "apply-binding.sh",
+        "files/etc/dbus-1/system.d/org.w4.System1.conf",
+        "files/etc/systemd/system/w4-system-api.service",
+        "files/etc/w4/system-api-binding.env",
+        "files/usr/local/bin/w4-system-api-dbus-bridge",
+        "files/usr/local/bin/w4-system-api-dbus-bridge-readiness",
+        "files/usr/local/bin/w4-system-api-dbus-runtime-adapter",
+        "files/usr/local/bin/w4-system-api-dbus-runtime-diagnose",
+        "files/usr/local/bin/w4-system-api-dbus-runtime-host",
+        "files/usr/local/bin/w4-system-api-dbus-runtime-launcher",
+        "files/usr/local/lib/w4/system-api/w4-system-api-bridge-readiness.php",
+        "files/usr/local/lib/w4/system-api/w4-system-api-dbus-bridge.php",
+        "files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-adapter.php",
+        "files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-diagnose.php",
+        "files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-host.php",
+        "files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-launcher.php",
+        "files/usr/share/dbus-1/system-services/org.w4.System1.service",
+        "files/usr/share/w4/system-api/org.w4.System1.Manager.xml",
+        "files/usr/share/w4/system-api/org.w4.System1.runtime-adapter.json",
+        "files/usr/share/w4/system-api/org.w4.System1.runtime-bootstrap.json",
+        "system-api-dbus-binding-manifest.json"
+    ]
+}

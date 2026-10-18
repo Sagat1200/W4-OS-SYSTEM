@@ -54,6 +54,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('dbus-system-bus', $manifest['transport']['future_public_binding']);
         self::assertSame('files/usr/share/w4/system-api/org.w4.System1.runtime-adapter.json', $manifest['activation']['adapter_specification']);
         self::assertSame('files/usr/share/w4/system-api/org.w4.System1.runtime-bootstrap.json', $manifest['activation']['bootstrap_specification']);
+        self::assertSame('files/etc/dbus-1/system.d/org.w4.System1.conf', $manifest['activation']['policy_file']);
         self::assertSame('files/usr/local/bin/w4-system-api-dbus-runtime-launcher', $manifest['activation']['runtime_entrypoint']);
         self::assertSame('files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-launcher.php', $manifest['runtime_launcher']['entrypoint']);
         self::assertSame('files/usr/local/bin/w4-system-api-dbus-runtime-launcher', $manifest['runtime_launcher']['wrapper']);
@@ -108,6 +109,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertContains('apply-binding.sh', $manifest['generated_files']);
         self::assertContains('files/usr/share/w4/system-api/org.w4.System1.runtime-adapter.json', $manifest['generated_files']);
         self::assertContains('files/usr/share/w4/system-api/org.w4.System1.runtime-bootstrap.json', $manifest['generated_files']);
+        self::assertContains('files/etc/dbus-1/system.d/org.w4.System1.conf', $manifest['generated_files']);
         self::assertContains('files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-launcher.php', $manifest['generated_files']);
         self::assertContains('files/usr/local/bin/w4-system-api-dbus-runtime-launcher', $manifest['generated_files']);
         self::assertContains('files/usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-host.php', $manifest['generated_files']);
@@ -144,6 +146,13 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertStringContainsString('SystemdService=w4-system-api.service', $serviceFile);
         self::assertStringContainsString('Exec=/usr/local/bin/w4-system-api-dbus-runtime-launcher serve-dbus', $serviceFile);
         self::assertStringContainsString('packaged runtime launcher orchestrates the host handoff', $serviceFile);
+
+        $policyFile = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'dbus-1' . DIRECTORY_SEPARATOR . 'system.d' . DIRECTORY_SEPARATOR . 'org.w4.System1.conf');
+        self::assertNotFalse($policyFile);
+        self::assertStringContainsString('<policy user="root">', $policyFile);
+        self::assertStringContainsString('<allow own="org.w4.System1"/>', $policyFile);
+        self::assertStringContainsString('<allow send_destination="org.w4.System1"/>', $policyFile);
+        self::assertStringContainsString('<allow receive_sender="org.w4.System1"/>', $policyFile);
 
         $systemdUnit = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'files' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'systemd' . DIRECTORY_SEPARATOR . 'system' . DIRECTORY_SEPARATOR . 'w4-system-api.service');
         self::assertNotFalse($systemdUnit);
@@ -1094,6 +1103,7 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         $applyScript = file_get_contents($outputDir . DIRECTORY_SEPARATOR . 'apply-binding.sh');
         self::assertNotFalse($applyScript);
         self::assertStringContainsString('usr/share/dbus-1/system-services', $applyScript);
+        self::assertStringContainsString('etc/dbus-1/system.d/org.w4.System1.conf', $applyScript);
         self::assertStringContainsString('etc/systemd/system/w4-system-api.service', $applyScript);
         self::assertStringContainsString('usr/local/lib/w4/system-api/w4-system-api-dbus-bridge.php', $applyScript);
         self::assertStringContainsString('usr/local/lib/w4/system-api/w4-system-api-dbus-runtime-adapter.php', $applyScript);

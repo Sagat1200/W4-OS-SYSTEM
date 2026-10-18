@@ -1,0 +1,6 @@
+[D-BUS Service]
+Name=org.w4.System1
+Exec=/usr/local/bin/w4-system-api-dbus-runtime-launcher serve-dbus
+User=root
+SystemdService=w4-system-api.service
+# Pending runtime adapter: the packaged runtime launcher orchestrates the host handoff and fails fast until a real D-Bus runtime lands.

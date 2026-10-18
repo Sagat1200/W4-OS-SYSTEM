@@ -48,13 +48,16 @@
 - El contraste real mas reciente ya completa `phpize`, `./configure` y `make` en `Debian 13 / PHP 8.4.24`, dejando `dbus.so` compilado en `/home/w4live/dbus-0.1.1/modules/`.
 - La reflexion del modulo cargado en la VM moderna confirma la clase `Dbus`, la constante `BUS_SYSTEM` y los metodos `requestName`, `registerObject` y `waitLoop`, asi que el port ya cubre la API minima visible que la vertical `org.w4.System1` necesita para seguir avanzando.
 - El runner local de validacion ya rematerializa el log fresco como evidencia `buildable`, en lugar de seguir arrastrando el bloqueo `legacy-tsrmls-api-incompatible-with-php84` de los intentos previos.
+- El driver nativo de `System API` ya no depende ciegamente de `Reflection` cuando la extension legacy carece de `arginfo`: para `requestName()` sintetiza la llamada minima `requestName('org.w4.System1')`, y para `registerObject()` usa el bridge `NativeDbusExtensionCallbackBridge` para registrar la clase callback real que la extension espera (`path`, `interface`, `class`).
+- La validacion real en `W4-OS-Server-DbusModern` ya confirma desde el runtime host que `requestName()` y `registerObject()` completan sobre `BUS_SYSTEM` con el nombre exacto `org.w4.System1`, devolviendo `status = native-runtime-bus-owned`, `ownership_state = bus-name-owned` y `exit_code = 0` en `MaterializeNativeBusOwnership`.
+- La deuda inmediata ya no esta en construir argumentos del driver, sino en el carril de cierre del fork legacy: un probe aislado demuestra que `waitLoop(250)` puede completar y devolver control, pero el proceso one-shot sigue pudiendo caer en `segfault` durante o despues del cierre, por lo que el reporte one-shot del ownership difiere explicitamente la ejecucion real del loop y deja esa condicion anotada en `wait_loop_note`.
 
 ## Deuda inmediata tras el build real exitoso
 
 1. Reducir o eliminar los warnings `Missing arginfo` que `PHP 8.4` emite al cargar la extension, empezando por `Dbus`, `DbusSignal` y los wrappers de tipos simples.
 2. Decidir si conviene limpiar ya el warning legacy de `AC_PROG_LIBTOOL` o dejarlo explicitamente como deuda no bloqueante del fork transitorio.
 3. La sonda minima de runtime ya confirma constructor operativo y `requestName()` funcional en `BUS_SESSION`, mientras `BUS_SYSTEM` devuelve `Not Primary Owner (-1)` incluso con nombres unicos; el siguiente corte ya no es "probar si ejecuta", sino aislar politica/permisos o semantica de ownership en el bus del sistema.
-4. Repetir despues el contraste del ownership real de `org.w4.System1` con el runtime de `System API`.
+4. Investigar y reducir el `segfault` del carril one-shot alrededor de `waitLoop()`/shutdown, ahora que el ownership real previo al loop ya queda cerrado desde el runtime de `System API`.
 
 ## Execution Loop
 

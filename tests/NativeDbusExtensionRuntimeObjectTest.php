@@ -78,7 +78,7 @@ final class NativeDbusExtensionRuntimeObjectTest extends TestCase
 
         self::assertSame('native-runtime-call', $payload['request_id']);
         self::assertSame('system.dbus-runtime', $payload['result']['method']);
-        self::assertSame('local-system-api-runtime-probe', $payload['result']['resource']['provider']);
+        self::assertSame('local-system-api-runtime-contract', $payload['result']['resource']['provider']);
         self::assertNull($payload['error']);
     }
 

@@ -855,7 +855,8 @@ final class SystemApiDbusRuntimeBackendToolkit
      */
     private function executeNativeRuntimeOwnershipDriver(array $serviceDefinition, array $environment): ?array
     {
-        $driverClassName = $this->resolveNativeRuntimeDriverClassName($environment);
+        $driverClassName = $this->resolveNativeRuntimeDriverClassName($environment)
+            ?? NativeDbusExtensionOwnershipDriver::class;
         $bootstrapPath = $this->resolveNativeRuntimeDriverBootstrapPath($environment);
         if ($driverClassName === null && $bootstrapPath === null) {
             return null;

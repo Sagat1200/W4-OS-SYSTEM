@@ -31,6 +31,7 @@ final class SystemApiDbusBindingToolkit
             'files/usr/share/w4/system-api/org.w4.System1.runtime-adapter.json' => $this->buildRuntimeAdapterSpecificationJson(),
             'files/usr/share/w4/system-api/org.w4.System1.runtime-bootstrap.json' => $this->buildRuntimeBootstrapJson(),
             'files/usr/share/dbus-1/system-services/org.w4.System1.service' => $this->buildDbusServiceFile(),
+            'files/etc/dbus-1/system.d/org.w4.System1.conf' => $this->buildDbusSystemPolicyFile(),
             'files/etc/systemd/system/w4-system-api.service' => $this->buildSystemdUnit(),
             'files/etc/w4/system-api-binding.env' => $this->buildBindingEnv(),
             'files/usr/local/lib/w4/system-api/w4-system-api-dbus-bridge.php' => $this->buildBridgeRuntimeScript(),
@@ -78,6 +79,7 @@ final class SystemApiDbusBindingToolkit
                 ],
                 'activation' => [
                     'service_file' => 'files/usr/share/dbus-1/system-services/org.w4.System1.service',
+                    'policy_file' => 'files/etc/dbus-1/system.d/org.w4.System1.conf',
                     'systemd_unit' => 'files/etc/systemd/system/w4-system-api.service',
                     'runtime_env' => 'files/etc/w4/system-api-binding.env',
                     'adapter_status' => self::BINDING_STATUS,
@@ -220,6 +222,27 @@ User=root
 SystemdService=w4-system-api.service
 # Pending runtime adapter: the packaged runtime launcher orchestrates the host handoff and fails fast until a real D-Bus runtime lands.
 SERVICE;
+    }
+
+    private function buildDbusSystemPolicyFile(): string
+    {
+        return <<<XML
+<!DOCTYPE busconfig PUBLIC
+ "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+<busconfig>
+  <policy user="root">
+    <allow own="org.w4.System1"/>
+    <allow send_destination="org.w4.System1"/>
+    <allow receive_sender="org.w4.System1"/>
+  </policy>
+
+  <policy context="default">
+    <allow send_destination="org.w4.System1"/>
+    <allow receive_sender="org.w4.System1"/>
+  </policy>
+</busconfig>
+XML;
     }
 
     private function buildSystemdUnit(): string
@@ -5331,6 +5354,7 @@ FILES_DIR="${BUNDLE_DIR}/files"
 
 install -d "${ROOTFS_DIR}/usr/share/w4/system-api"
 install -d "${ROOTFS_DIR}/usr/share/dbus-1/system-services"
+install -d "${ROOTFS_DIR}/etc/dbus-1/system.d"
 install -d "${ROOTFS_DIR}/etc/systemd/system"
 install -d "${ROOTFS_DIR}/etc/w4"
 install -d "${ROOTFS_DIR}/usr/local/lib/w4/system-api"
@@ -5338,6 +5362,7 @@ install -d "${ROOTFS_DIR}/usr/local/bin"
 
 cp -f "${FILES_DIR}/usr/share/w4/system-api/org.w4.System1.Manager.xml" "${ROOTFS_DIR}/usr/share/w4/system-api/org.w4.System1.Manager.xml"
 cp -f "${FILES_DIR}/usr/share/dbus-1/system-services/org.w4.System1.service" "${ROOTFS_DIR}/usr/share/dbus-1/system-services/org.w4.System1.service"
+cp -f "${FILES_DIR}/etc/dbus-1/system.d/org.w4.System1.conf" "${ROOTFS_DIR}/etc/dbus-1/system.d/org.w4.System1.conf"
 cp -f "${FILES_DIR}/etc/systemd/system/w4-system-api.service" "${ROOTFS_DIR}/etc/systemd/system/w4-system-api.service"
 cp -f "${FILES_DIR}/etc/w4/system-api-binding.env" "${ROOTFS_DIR}/etc/w4/system-api-binding.env"
 cp -f "${FILES_DIR}/usr/local/lib/w4/system-api/w4-system-api-dbus-bridge.php" "${ROOTFS_DIR}/usr/local/lib/w4/system-api/w4-system-api-dbus-bridge.php"

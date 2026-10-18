@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node name="/org/w4/System1">
+  <interface name="org.w4.System1.Manager">
+    <annotation name="org.freedesktop.DBus.DocString"
+     value="W4 System API public manager interface. The runtime adapter is still pending; this contract freezes the binding surface."/>
+    <method name="Call">
+      <arg name="request_json" type="s" direction="in"/>
+      <arg name="response_json" type="s" direction="out"/>
+    </method>
+    <method name="GetCapabilities">
+      <arg name="request_id" type="s" direction="in"/>
+      <arg name="response_json" type="s" direction="out"/>
+    </method>
+    <property name="ApiVersion" type="s" access="read"/>
+    <property name="BindingStatus" type="s" access="read"/>
+  </interface>
+</node>

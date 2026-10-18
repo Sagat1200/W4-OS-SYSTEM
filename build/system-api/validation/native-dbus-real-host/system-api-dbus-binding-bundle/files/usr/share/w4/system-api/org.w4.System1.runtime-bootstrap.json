@@ -1,0 +1,43 @@
+{
+    "api_version": "1.0",
+    "kind": "system-api-dbus-runtime-bootstrap",
+    "status": "pending-runtime-adapter",
+    "bus_name": "org.w4.System1",
+    "object_path": "/org/w4/System1",
+    "interface": "org.w4.System1.Manager",
+    "launcher": {
+        "entrypoint": "/usr/local/bin/w4-system-api-dbus-runtime-launcher",
+        "command": "serve-dbus",
+        "transport": "stdio-ndjson-launcher"
+    },
+    "host_handoff": {
+        "entrypoint": "/usr/local/bin/w4-system-api-dbus-runtime-host",
+        "command": "serve-stdio-host",
+        "mode": "child-process-stdio-relay"
+    },
+    "runtime_adapter": {
+        "entrypoint": "/usr/local/bin/w4-system-api-dbus-runtime-adapter",
+        "command": "serve-dbus",
+        "status": "pending-runtime-adapter",
+        "required_capabilities": [
+            "php-dbus-runtime-adapter",
+            "bus-name-ownership",
+            "dbus-method-dispatch"
+        ]
+    },
+    "environment_contract": [
+        "W4_SYSTEM_API_BUS_NAME",
+        "W4_SYSTEM_API_OBJECT_PATH",
+        "W4_SYSTEM_API_INTERFACE",
+        "W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY",
+        "W4_SYSTEM_API_RUNTIME_HOST_ENTRY",
+        "W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY"
+    ],
+    "phases": [
+        "launch-runtime-launcher",
+        "handoff-to-runtime-host",
+        "materialize-runtime-adapter",
+        "own-org.w4.System1"
+    ]
+}
+
