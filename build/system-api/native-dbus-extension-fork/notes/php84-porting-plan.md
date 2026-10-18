@@ -53,7 +53,7 @@
 
 1. Reducir o eliminar los warnings `Missing arginfo` que `PHP 8.4` emite al cargar la extension, empezando por `Dbus`, `DbusSignal` y los wrappers de tipos simples.
 2. Decidir si conviene limpiar ya el warning legacy de `AC_PROG_LIBTOOL` o dejarlo explicitamente como deuda no bloqueante del fork transitorio.
-3. Ejecutar una prueba minima de runtime real sobre la misma VM (`new Dbus(Dbus::BUS_SYSTEM)`, `requestName`, `registerObject`, `waitLoop`) para comprobar si el port ya sostiene tambien el contrato operativo, no solo la reflexion del modulo.
+3. La sonda minima de runtime ya confirma constructor operativo y `requestName()` funcional en `BUS_SESSION`, mientras `BUS_SYSTEM` devuelve `Not Primary Owner (-1)` incluso con nombres unicos; el siguiente corte ya no es "probar si ejecuta", sino aislar politica/permisos o semantica de ownership en el bus del sistema.
 4. Repetir despues el contraste del ownership real de `org.w4.System1` con el runtime de `System API`.
 
 ## Execution Loop

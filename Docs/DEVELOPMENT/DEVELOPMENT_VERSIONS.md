@@ -22,6 +22,8 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.282 | 2026-10-18 | Activa | El contraste directo con `busctl` ya devuelve `Access denied` en `BUS_SYSTEM` sobre la live moderna, lo que refuerza que el bloqueo actual del runtime nativo esta en la politica del bus del sistema y no en la carga basica del modulo compilado |
+| TECH | TECH-1.281 | 2026-10-18 | Activa | La sonda minima del modulo `dbus.so` ya confirma constructor y `requestName()` operativos en `BUS_SESSION`, mientras `BUS_SYSTEM` sigue devolviendo `Not Primary Owner (-1)` en la VM moderna, acotando el bloqueo actual al carril de ownership del bus del sistema |
 | TECH | TECH-1.280 | 2026-10-18 | Activa | El fork `pecl/DBus` ya compila de forma real en `Debian 13 + PHP 8.4.24`, el runner rematerializa esa evidencia como estado `buildable` y la reflexion del modulo confirma `Dbus::BUS_SYSTEM`, `requestName`, `registerObject` y `waitLoop` en la VM moderna |
 | TECH | TECH-1.279 | 2026-10-18 | Activa | El fork `pecl/DBus` ya limpia la iteracion de `HashTable` en `php_dbus_append_parameters()`, reduciendo otro punto de marshaling que seguia atado a firmas Zend antiguas |
 | TECH | TECH-1.278 | 2026-10-18 | Activa | El fork `pecl/DBus` ya moderniza el runtime de callbacks, los buffers de `zend_get_parameters_array_ex` y el manejo booleano, reduciendo varios puntos de friccion directos con `PHP 8.4` |
