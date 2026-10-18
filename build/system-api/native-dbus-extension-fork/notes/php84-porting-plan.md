@@ -54,13 +54,14 @@
 - `MaterializeNativeBusOwnership` vuelve asi a ejecutar `waitLoop()` real dentro del driver nativo, y el payload final del runtime host ya publica `wait_loop_result = true` en lugar del workaround `deferred-legacy-one-shot`.
 - El siguiente contraste real ya no se queda en ownership: con `serve_native_dbus_method_probe.php` corriendo sobre `BUS_SYSTEM`, `busctl --system call ... GetCapabilities ...` y `php /home/w4live/native-dbus-runtime-check/call_native_dbus_runtime_via_busctl.php` ya reciben respuestas JSON validas desde `org.w4.System1.Manager`. Eso confirma que el bridge callback atiende method calls reales de cliente sobre el host homologado, no solo que el nombre y el objeto se registran correctamente.
 - El corte `0012` ya limpia el ultimo ruido grueso de carga del modulo: el fork activo publica arginfo explicito para los metodos publicos de `Dbus`, `DbusObject`, `DbusSignal` y los wrappers de tipos/colecciones, y en la VM moderna `php -d extension=/home/w4live/dbus-0.1.1/modules/dbus.so -m 2>&1 | grep -i arginfo` ya no devuelve warnings `Missing arginfo`. El smoke de `GetCapabilities` sobre `org.w4.System1.Manager` sigue respondiendo correctamente tras recompilar el modulo con ese cambio.
+- La sonda viva ya cerro tambien el carril de seleccion explicita del backend: ejecutada con `W4_SYSTEM_API_RUNTIME_BACKEND=native-dbus-extension`, `system.dbus-runtime` deja de responder `contract-pending` y publica `runtime_backend.selected_backend = native-dbus-extension`, `status = native-runtime-backend-materialized` y `native_runtime_service.status = native-runtime-service-ready-to-start`. El siguiente cuello real queda ya en `start-native-runtime-service`, no en la eleccion del backend.
 
 ## Deuda inmediata tras el build real exitoso
 
 1. Decidir si conviene elevar la sonda viva `serve_native_dbus_method_probe.php` a un smoke permanente del fork/runner o si basta mantenerla como evidencia de validacion real.
-2. Decidir si conviene limpiar ya el warning legacy de `AC_PROG_LIBTOOL` o dejarlo explicitamente como deuda no bloqueante del fork transitorio.
-3. Revisar si el carril de señales que hoy devolvemos como `true` en `PHP >= 8` merece un contrato mas expresivo o si basta documentarlo como ajuste transitorio del fork para V1.
-4. Probar el mismo servicio exportado con override explicito `W4_SYSTEM_API_RUNTIME_BACKEND=native-dbus-extension` dentro de la sonda viva, para contrastar `system.dbus-runtime` fuera del estado `contract-pending`.
+2. Intentar `system.dbus-native-service` y/o `system.dbus-native-startup` desde la misma sonda viva ya configurada con `W4_SYSTEM_API_RUNTIME_BACKEND=native-dbus-extension`, para empujar el lifecycle desde `ready-to-start` hacia `started`.
+3. Decidir si conviene limpiar ya el warning legacy de `AC_PROG_LIBTOOL` o dejarlo explicitamente como deuda no bloqueante del fork transitorio.
+4. Revisar si el carril de señales que hoy devolvemos como `true` en `PHP >= 8` merece un contrato mas expresivo o si basta documentarlo como ajuste transitorio del fork para V1.
 
 ## Execution Loop
 

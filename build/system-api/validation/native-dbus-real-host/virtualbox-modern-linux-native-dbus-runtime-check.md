@@ -166,3 +166,37 @@ Ademas, el smoke funcional posterior sigue pasando:
 - `busctl --system call org.w4.System1 /org/w4/System1 org.w4.System1.Manager GetCapabilities s dbus-probe-post-arginfo`
   devuelve respuesta JSON valida `system.capabilities`;
 - el loop de la sonda sigue cerrando limpio con `stop-file-detected` y `service-loop-finished`.
+
+## Actualizacion posterior: `system.dbus-runtime` fuera de `contract-pending`
+
+Levantando la misma sonda viva con override explicito:
+
+- `W4_SYSTEM_API_RUNTIME_BACKEND=native-dbus-extension`
+
+en el proceso servido:
+
+- `env W4_SYSTEM_API_RUNTIME_BACKEND=native-dbus-extension php -d extension=/home/w4live/dbus-0.1.1/modules/dbus.so /home/w4live/native-dbus-runtime-check/serve_native_dbus_method_probe.php`
+
+la llamada cliente:
+
+- `php /home/w4live/native-dbus-runtime-check/call_native_dbus_runtime_via_busctl.php`
+
+ya devuelve `system.dbus-runtime` con el backend nativo realmente seleccionado:
+
+- `runtime_backend.selected_backend = native-dbus-extension`
+- `runtime_backend.status = native-runtime-backend-materialized`
+- `runtime_backend.materialized = true`
+- `native_runtime_service.selected_backend = native-dbus-extension`
+- `native_runtime_service.status = native-runtime-service-ready-to-start`
+
+Lectura honesta de este corte:
+
+- el estado `contract-pending` ya no es el resultado por defecto de la sonda viva cuando el proceso exportado recibe el override de entorno correcto;
+- el siguiente bloqueo real ya no es de seleccion de backend, sino de lifecycle:
+  - `native_runtime_service.blocking_reason = native-runtime-service-not-started`
+  - `next_action = start-native-runtime-service`
+
+El smoke complementario `GetCapabilities` sigue consistente en el mismo proceso, publicando:
+
+- `local_runtime_adapter.selected_runtime_backend = native-dbus-extension`
+- `local_runtime_launcher.selected_runtime_backend = native-dbus-extension`
