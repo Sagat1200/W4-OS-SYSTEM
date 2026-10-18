@@ -1,0 +1,36 @@
+diff --git "a/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\php_dbus.h" "b/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\php_dbus.h"
+--- "a/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\php_dbus.h"
++++ "b/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\php_dbus.h"
+@@
++#define DBUS_ZEND_HASH_ADD_PTR(_ht, _key, _ptr, _ptrSz) \
++    zend_hash_str_add_ptr(_ht, _key, strlen(_key), _ptr)
+diff --git "a/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c" "b/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c"
+--- "a/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c"
++++ "b/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c"
+@@
+-   int name_len;
++   size_t name_len;
+@@
+-   int name_len;
++   size_t name_len;
+@@
+-   int path_len, interface_len, class_len;
++   size_t path_len, interface_len, class_len;
+@@
+-   if (FAILURE == zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
+-           "Osss", &object, dbus_ce_dbus, &path, &path_len, &interface, &interface_len,
++   if (FAILURE == zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
++           "Oss!s", &object, dbus_ce_dbus, &path, &path_len, &interface, &interface_len,
+            &class, &class_len)) {
+            RETURN_FALSE;
+   }
+@@
+-   spprintf(&key, 0, "%s:%s", path, interface);
++   spprintf(&key, 0, "%s:%s", path, interface ? interface : "(null)");
+@@
+-   zend_hash_add(&(dbus->objects), key, path_len + interface_len + 2, (void*) estrdup(class), strlen(class)+1, NULL);
++   DBUS_ZEND_HASH_ADD_PTR(&(dbus->objects), key, estrdup(class), strlen(class) + 1);
++   efree(key);
+@@
+-   int interface_len, member_len;
++   size_t interface_len, member_len;

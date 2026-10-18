@@ -97,6 +97,9 @@
 #define DBUS_ZEND_HASH_UPDATE(_ht, _key, _zval) \
     zend_hash_str_update(_ht, _key, strlen(_key), *(_zval))
 
+#define DBUS_ZEND_HASH_ADD_PTR(_ht, _key, _ptr, _ptrSz) \
+    zend_hash_str_add_ptr(_ht, _key, strlen(_key), _ptr)
+
 #define DBUS_ZEND_HASH_GET_CURRENT_DATA(_ht, _zvalPtr) \
     _zvalPtr = zend_hash_get_current_data(_ht)
 

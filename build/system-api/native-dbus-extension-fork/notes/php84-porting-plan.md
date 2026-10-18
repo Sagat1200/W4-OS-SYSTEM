@@ -40,6 +40,8 @@
 - `php_dbus_variant_obj` vuelve a declarar `signature`, alineandose con el upstream moderno y con los helpers/destructores del propio fork que ya esperaban ese campo durante el marshaling del tipo `VARIANT`.
 - `php_dbus.h` ya incorpora helpers de compatibilidad de hash/string (`DBUS_ZVAL_STRING`, `DBUS_ZEND_HASH_UPDATE`, `DBUS_ZEND_HASH_GET_CURRENT_DATA_CHECK`, `DBUS_ZEND_HASH_GET_CURRENT_KEY_INFO`) y `dbus.c` los usa en callbacks, builders de propiedades y marshaling de arrays/dicts/structs.
 - El lookup de callbacks ya deja atras `zend_hash_find`, `zend_hash_exists`, `add_next_index_string(..., 0)` y la ruta vieja de iteracion sobre `HashTable`, ademas de liberar `key`, `lcname` y `class_name` temporales en el mismo bloque.
+- `php_dbus.h` ya expone tambien `DBUS_ZEND_HASH_ADD_PTR`, y `Dbus::registerObject()` pasa a usar interfaz opcional nula, `size_t` en longitudes y `zend_hash_str_add_ptr` via helper en lugar del `zend_hash_add()` legacy.
+- `Dbus::requestName()` y `Dbus::addWatch()` ya normalizan sus longitudes de parseo a `size_t`, reduciendo otro foco de incompatibilidad silenciosa con la firma moderna de `zend_parse_*`.
 
 ## Execution Loop
 

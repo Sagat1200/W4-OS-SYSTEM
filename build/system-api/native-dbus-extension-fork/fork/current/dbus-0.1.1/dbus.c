@@ -1196,7 +1196,7 @@ PHP_METHOD(Dbus, requestName)
 	DBusError err;
 	int ret;
 	char* name;
-	int name_len;
+   size_t name_len;
 	php_dbus_obj *dbus;
 
 	dbus_set_error_handling(EH_THROW, NULL TSRMLS_CC);
@@ -1224,23 +1224,24 @@ PHP_METHOD(Dbus, registerObject)
 {
 	zval *object;
 	char *path, *interface, *class;
-	int path_len, interface_len, class_len;
+   size_t path_len, interface_len, class_len;
 	php_dbus_obj *dbus;
 	char *key;
 
 	dbus_set_error_handling(EH_THROW, NULL TSRMLS_CC);
 	if (FAILURE == zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-		"Osss", &object, dbus_ce_dbus, &path, &path_len, &interface, &interface_len,
+           "Oss!s", &object, dbus_ce_dbus, &path, &path_len, &interface, &interface_len,
 		&class, &class_len)) {
 		RETURN_FALSE;
 	}
         dbus = DBUS_ZVAL_GET_OBJECT(php_dbus_obj, object);
 
 	/* Create the key out of the path and interface */
-	spprintf(&key, 0, "%s:%s", path, interface);
+   spprintf(&key, 0, "%s:%s", path, interface ? interface : "(null)");
 
 	/* Add class name to hash */
-	zend_hash_add(&(dbus->objects), key, path_len + interface_len + 2, (void*) estrdup(class), strlen(class)+1, NULL);
+   DBUS_ZEND_HASH_ADD_PTR(&(dbus->objects), key, estrdup(class), strlen(class) + 1);
+   efree(key);
 	dbus_set_error_handling(EH_NORMAL, NULL TSRMLS_CC);
 }
 /* }}} */
@@ -1864,7 +1865,7 @@ static int php_dbus_handle_reply(zval *return_value, DBusMessage *msg, int alway
 PHP_METHOD(DbusObject, __call)
 {
 	char *name;
-	int name_len;
+   size_t name_len;
 	zval *data;
 	zval *object;
 	php_dbus_object_obj *dbus_object;
@@ -1918,7 +1919,7 @@ PHP_METHOD(DbusObject, __call)
 PHP_METHOD(Dbus, addWatch)
 {
 	char *interface = NULL, *member = NULL;
-	int interface_len, member_len;
+   size_t interface_len, member_len;
 	zval *object;
 	php_dbus_obj *dbus_object;
 	DBusError err;

@@ -5,3 +5,4 @@
 0005-php84-zval-ownership-followup.patch
 0006-php84-variant-signature-struct-alignment.patch
 0007-php84-hash-and-callback-compat-followup.patch
+0008-php84-parameter-length-and-registerobject-alignment.patch

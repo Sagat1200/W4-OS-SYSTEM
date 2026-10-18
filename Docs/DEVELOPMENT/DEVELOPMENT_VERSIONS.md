@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.277 | 2026-10-18 | Activa | El fork `pecl/DBus` ya normaliza longitudes de parseo a `size_t` en rutas activas y alinea `Dbus::registerObject()` con el upstream moderno para reducir incompatibilidades directas de `zend_parse_*` y `HashTable` |
 | TECH | TECH-1.276 | 2026-10-18 | Activa | El fork `pecl/DBus` ya incorpora helpers de compatibilidad hash/string y limpia el carril de callbacks y builders de propiedades para reducir firmas Zend legacy antes del primer intento real de compilacion |
 | TECH | TECH-1.275 | 2026-10-17 | Activa | El fork `pecl/DBus` ya realinea `php_dbus_variant_obj` con el upstream moderno al restaurar el campo `signature`, evitando la desincronizacion entre struct, destructor y helpers de marshaling |
 | TECH | TECH-1.274 | 2026-10-17 | Activa | El fork `pecl/DBus` ya corrige ownership de `zval` en `php_dbus_to_zval()` y `php_dbus_handle_reply()`, evitando perder `return_value` en `DBUS_TYPE_DICT_ENTRY` y alineando keys string/object-path con la referencia moderna |
