@@ -306,8 +306,17 @@ final class SystemApiDbusRuntimeProbeToolkit
         $reason = null;
         $state = null;
         $buildPhase = 'unknown';
+        $failureSignature = null;
 
         if (
+            str_contains($normalized, 'build complete.')
+            || str_contains($normalized, "don't forget to run 'make test'.")
+            || str_contains($normalized, 'libraries have been installed in:')
+        ) {
+            $state = 'buildable';
+            $buildPhase = 'make';
+            $reason = 'build-complete';
+        } elseif (
             str_contains($normalized, 'failed to download pecl/dbus')
             || str_contains($normalized, 'latest release is beta')
             || str_contains($normalized, 'no releases available for package')
@@ -388,11 +397,15 @@ final class SystemApiDbusRuntimeProbeToolkit
             return [];
         }
 
+        if ($state === 'build-failed') {
+            $failureSignature = $this->resolveNativeDbusFailureSignature($raw, $buildPhase, $reason);
+        }
+
         return [
             'state' => $state,
             'build_phase' => $buildPhase,
             'reason' => $reason ?? '',
-            'failure_signature' => $this->resolveNativeDbusFailureSignature($raw, $buildPhase, $reason),
+            'failure_signature' => $failureSignature ?? '',
             'log_path' => $evidencePath,
         ];
     }

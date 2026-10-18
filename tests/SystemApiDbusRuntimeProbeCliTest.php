@@ -108,7 +108,7 @@ final class SystemApiDbusRuntimeProbeCliTest extends TestCase
         self::assertTrue($payload['native_dbus_extension_installation']['pecl_available']);
         self::assertSame('make', $payload['native_dbus_extension_installation']['build_phase']);
         self::assertSame('native-dbus-extension-build-failed', $payload['native_dbus_extension_installation']['blocking_reason']);
-        self::assertSame('inspect-native-dbus-build-make', $payload['native_dbus_extension_installation']['next_action']);
+        self::assertSame('prepare-native-dbus-fork-workspace', $payload['native_dbus_extension_installation']['next_action']);
         self::assertSame('zend_object_store_get_object', $payload['native_dbus_extension_installation']['reason']);
         self::assertSame('/tmp/pecl-dbus.log', $payload['native_dbus_extension_installation']['log_path']);
     }
@@ -148,8 +148,8 @@ TEXT);
             self::assertTrue($payload['native_dbus_extension_installation']['pecl_available']);
             self::assertSame('make', $payload['native_dbus_extension_installation']['build_phase']);
             self::assertSame('native-dbus-extension-build-failed', $payload['native_dbus_extension_installation']['blocking_reason']);
-            self::assertSame('inspect-native-dbus-build-make', $payload['native_dbus_extension_installation']['next_action']);
-            self::assertSame('zend_object_store_get_object', $payload['native_dbus_extension_installation']['reason']);
+            self::assertSame('prepare-native-dbus-fork-workspace', $payload['native_dbus_extension_installation']['next_action']);
+            self::assertSame('legacy-tsrmls-api-incompatible-with-php84', $payload['native_dbus_extension_installation']['reason']);
             self::assertSame('make: *** [Makefile:192: dbus.lo] Error 1', $payload['native_dbus_extension_installation']['failure_signature']);
             self::assertSame($evidencePath, $payload['native_dbus_extension_installation']['log_path']);
         } finally {

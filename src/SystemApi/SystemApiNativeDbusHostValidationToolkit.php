@@ -1839,30 +1839,45 @@ final class SystemApiNativeDbusHostValidationToolkit
         array $environmentOverrides
     ): ?string {
         $jsonOverride = $environmentOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_JSON_PATH'] ?? null;
+        $targetArtifactPath = $artifactPath;
         if (is_string($jsonOverride) && trim($jsonOverride) !== '') {
-            return trim($jsonOverride);
+            $targetArtifactPath = trim($jsonOverride);
         }
 
         $explicitPayload = $this->buildNativeDbusBuildEvidencePayloadFromOverrides($environmentOverrides);
         if ($explicitPayload !== null) {
-            $this->writeJsonFile($artifactPath, $explicitPayload);
+            $this->writeJsonFile($targetArtifactPath, $explicitPayload);
 
-            return $artifactPath;
+            return $targetArtifactPath;
         }
 
-        if ($sourcePath === null || !is_file($sourcePath)) {
-            return null;
+        if ($sourcePath !== null && is_file($sourcePath)) {
+            $raw = file_get_contents($sourcePath);
+            if (is_string($raw) && trim($raw) !== '') {
+                $shouldRefreshArtifact = !is_file($targetArtifactPath);
+
+                if (!$shouldRefreshArtifact && is_string($jsonOverride) && trim($jsonOverride) !== '') {
+                    $sourceMtime = @filemtime($sourcePath);
+                    $artifactMtime = @filemtime($targetArtifactPath);
+                    $shouldRefreshArtifact = $sourceMtime !== false
+                        && $artifactMtime !== false
+                        && $sourceMtime >= $artifactMtime;
+                }
+
+                if (!$shouldRefreshArtifact && !is_string($jsonOverride)) {
+                    $shouldRefreshArtifact = true;
+                }
+
+                if ($shouldRefreshArtifact) {
+                    $payload = $this->buildNativeDbusBuildEvidencePayload($sourcePath, $raw);
+                    $this->writeJsonFile($targetArtifactPath, $payload);
+                }
+
+                return is_file($targetArtifactPath) ? $targetArtifactPath : null;
+            }
         }
 
-        $raw = file_get_contents($sourcePath);
-        if (!is_string($raw) || trim($raw) === '') {
-            return null;
-        }
-
-        $payload = $this->buildNativeDbusBuildEvidencePayload($sourcePath, $raw);
-        $this->writeJsonFile($artifactPath, $payload);
-
-        return $artifactPath;
+        return is_file($targetArtifactPath) ? $targetArtifactPath : null;
     }
 
     /**
@@ -1875,9 +1890,23 @@ final class SystemApiNativeDbusHostValidationToolkit
         $state = 'unknown';
         $reason = null;
         $buildPhase = 'unknown';
+        $failureSignature = null;
 
         if (
-            str_contains($normalized, 'failed to download pecl/dbus')
+            str_contains($normalized, 'build complete.')
+            || str_contains($normalized, "don't forget to run 'make test'.")
+            || str_contains($normalized, 'libraries have been installed in:')
+        ) {
+            $markers[] = 'make';
+            $state = 'buildable';
+            $buildPhase = 'make';
+            $reason = 'build-complete';
+        }
+
+        if (
+            $state === 'unknown'
+            && (
+                str_contains($normalized, 'failed to download pecl/dbus')
             || str_contains($normalized, 'latest release is beta')
             || str_contains($normalized, 'no releases available for package')
             || str_contains($normalized, 'temporary failure in name resolution')
@@ -1885,6 +1914,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             || str_contains($normalized, 'channel "pecl.php.net" is not responding')
             || str_contains($normalized, 'connection to `ssl://pecl.php.net:443')
             || str_contains($normalized, 'connection to ssl://pecl.php.net:443')
+            )
         ) {
             $markers[] = 'pecl-download';
             $state = 'build-failed';
@@ -1970,6 +2000,10 @@ final class SystemApiNativeDbusHostValidationToolkit
             array_unshift($markers, $reason);
         }
 
+        if ($state === 'build-failed') {
+            $failureSignature = $this->resolveNativeDbusFailureSignature($raw, $buildPhase, $reason);
+        }
+
         return [
             'api_version' => '1.0',
             'kind' => 'system-api-native-dbus-extension-build-evidence',
@@ -1978,7 +2012,7 @@ final class SystemApiNativeDbusHostValidationToolkit
             'state' => $state,
             'build_phase' => $buildPhase,
             'reason' => $reason,
-            'failure_signature' => $this->resolveNativeDbusFailureSignature($raw, $buildPhase, $reason),
+            'failure_signature' => $failureSignature,
             'log_path' => $sourcePath,
             'markers' => $markers,
         ];

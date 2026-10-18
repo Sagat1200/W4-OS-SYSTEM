@@ -45,6 +45,16 @@
 - `php_dbus_do_method_call()` ya se acerca al contrato moderno del upstream: usa `zval` en stack para `params` y `callback`, invoca `call_user_function()` en `PHP >= 8` y deja el fallback antiguo solo para ramas pre-PHP 8.
 - `DbusSignal::send()` y `DbusSet::__construct()` ya abandonan los buffers `zval ***` para `zend_get_parameters_array_ex`, mientras el carril booleano del marshaling pasa a `IS_TRUE`/`IS_FALSE` y `zval_is_true()`.
 - `php_dbus_append_parameters()` ya deja atras el pattern `zval **entry` + `zend_hash_get_current_data_ex(..., (void **)&entry, ...)` y utiliza `zval *` con `DBUS_ZEND_HASH_GET_CURRENT_DATA_CHECK_EX`, alineando tambien ese punto del marshaling con la capa de compatibilidad ya introducida.
+- El contraste real mas reciente ya completa `phpize`, `./configure` y `make` en `Debian 13 / PHP 8.4.24`, dejando `dbus.so` compilado en `/home/w4live/dbus-0.1.1/modules/`.
+- La reflexion del modulo cargado en la VM moderna confirma la clase `Dbus`, la constante `BUS_SYSTEM` y los metodos `requestName`, `registerObject` y `waitLoop`, asi que el port ya cubre la API minima visible que la vertical `org.w4.System1` necesita para seguir avanzando.
+- El runner local de validacion ya rematerializa el log fresco como evidencia `buildable`, en lugar de seguir arrastrando el bloqueo `legacy-tsrmls-api-incompatible-with-php84` de los intentos previos.
+
+## Deuda inmediata tras el build real exitoso
+
+1. Reducir o eliminar los warnings `Missing arginfo` que `PHP 8.4` emite al cargar la extension, empezando por `Dbus`, `DbusSignal` y los wrappers de tipos simples.
+2. Decidir si conviene limpiar ya el warning legacy de `AC_PROG_LIBTOOL` o dejarlo explicitamente como deuda no bloqueante del fork transitorio.
+3. Ejecutar una prueba minima de runtime real sobre la misma VM (`new Dbus(Dbus::BUS_SYSTEM)`, `requestName`, `registerObject`, `waitLoop`) para comprobar si el port ya sostiene tambien el contrato operativo, no solo la reflexion del modulo.
+4. Repetir despues el contraste del ownership real de `org.w4.System1` con el runtime de `System API`.
 
 ## Execution Loop
 
@@ -52,4 +62,5 @@
 2. Trabajar el patch activo dentro de `fork/current/` y registrar la evidencia del cambio.
 3. Repetir `phpize`, `./configure` y `make`, guardando logs frescos en `evidence/`.
 4. Regenerar el reporte del runner para confirmar si el bloqueo se movio o quedo resuelto.
+5. Cuando el build ya sea `buildable`, pasar a una prueba minima de runtime real antes de declarar cerrada la vertical nativa.
 

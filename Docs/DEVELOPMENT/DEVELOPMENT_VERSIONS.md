@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.280 | 2026-10-18 | Activa | El fork `pecl/DBus` ya compila de forma real en `Debian 13 + PHP 8.4.24`, el runner rematerializa esa evidencia como estado `buildable` y la reflexion del modulo confirma `Dbus::BUS_SYSTEM`, `requestName`, `registerObject` y `waitLoop` en la VM moderna |
 | TECH | TECH-1.279 | 2026-10-18 | Activa | El fork `pecl/DBus` ya limpia la iteracion de `HashTable` en `php_dbus_append_parameters()`, reduciendo otro punto de marshaling que seguia atado a firmas Zend antiguas |
 | TECH | TECH-1.278 | 2026-10-18 | Activa | El fork `pecl/DBus` ya moderniza el runtime de callbacks, los buffers de `zend_get_parameters_array_ex` y el manejo booleano, reduciendo varios puntos de friccion directos con `PHP 8.4` |
 | TECH | TECH-1.277 | 2026-10-18 | Activa | El fork `pecl/DBus` ya normaliza longitudes de parseo a `size_t` en rutas activas y alinea `Dbus::registerObject()` con el upstream moderno para reducir incompatibilidades directas de `zend_parse_*` y `HashTable` |

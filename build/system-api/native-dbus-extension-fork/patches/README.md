@@ -18,3 +18,9 @@ Estado actual:
 - `0009-php84-bool-and-parameter-array-modernization.patch` mueve el runtime de callbacks y los buffers de `zend_get_parameters_array_ex` hacia el contrato moderno del upstream, y deja el carril booleano alineado con `IS_TRUE`/`IS_FALSE`.
 - `0010-php84-append-parameters-hash-iteration-cleanup.patch` limpia `php_dbus_append_parameters()` para que itere `HashTable` con `zval *` y los helpers `DBUS_ZEND_HASH_GET_CURRENT_DATA_CHECK_EX`, dejando atras la firma vieja con `zval **entry`.
 
+Estado real del fork tras el ultimo contraste:
+
+- El source activo ya completa `phpize`, `./configure` y `make` en `Debian 13 + PHP 8.4.24`, y deja `modules/dbus.so` materializado en la VM moderna usada para el contraste real.
+- La reflexion del modulo cargado confirma la clase `Dbus`, la constante `BUS_SYSTEM` y los metodos `requestName`, `registerObject` y `waitLoop`, por lo que el port ya cruzo el umbral de compatibilidad minima de API visible.
+- Siguen abiertos warnings no bloqueantes de `Missing arginfo` sobre los metodos internos y el warning legacy `AC_PROG_LIBTOOL is obsolete`, ademas del `#warning` historico sobre `signature` en el carril `struct`.
+

@@ -1,18 +1,15 @@
 {
     "api_version": "1.0",
     "kind": "system-api-native-dbus-extension-build-evidence",
-    "generated_at": "2026-10-17T09:56:50.5214795-06:00",
-    "source_path": "c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\virtualbox-modern-linux-host-assessment.md",
-    "state": "build-failed",
+    "generated_at": "2026-10-18T07:21:31+00:00",
+    "source_path": "build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-pecl-dbus-retry-libxml2.log",
+    "state": "buildable",
     "build_phase": "make",
-    "reason": "legacy-tsrmls-api-incompatible-with-php84",
-    "failure_signature": "make: *** [Makefile:208: dbus.lo] Error 1",
-    "log_path": "c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\virtualbox-modern-linux-pecl-dbus-retry-libxml2.log",
+    "reason": "build-complete",
+    "failure_signature": null,
+    "log_path": "build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-pecl-dbus-retry-libxml2.log",
     "markers": [
-        "TSRMLS_DC",
-        "TSRMLS_CC",
-        "zend_parse_parameters",
-        "zend_object_store_get_object",
+        "build-complete",
         "make"
     ]
 }

@@ -20,15 +20,15 @@
         "system_bus_socket": false
     },
     "native_dbus_extension_installation": {
-        "state": "build-failed",
+        "state": "buildable",
         "pecl_available": true,
         "extension_loaded": false,
-        "blocking_reason": "native-dbus-extension-build-failed",
-        "next_action": "prepare-native-dbus-fork-workspace",
+        "blocking_reason": null,
+        "next_action": "install-native-dbus-extension",
         "build_phase": "make",
-        "reason": "legacy-tsrmls-api-incompatible-with-php84",
-        "failure_signature": "make: *** [Makefile:208: dbus.lo] Error 1",
-        "log_path": "c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\virtualbox-modern-linux-pecl-dbus-retry-libxml2.log"
+        "reason": "build-complete",
+        "failure_signature": "",
+        "log_path": "build/system-api/validation/native-dbus-real-host/virtualbox-modern-linux-pecl-dbus-retry-libxml2.log"
     },
     "missing_capabilities": [
         "php-dbus-runtime-adapter",

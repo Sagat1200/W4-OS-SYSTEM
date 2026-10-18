@@ -447,6 +447,74 @@ TEXT);
         self::assertStringContainsString('pecl channel-discover pecl.php.net || true', $preparationChecklist);
     }
 
+    public function testValidationRefreshesStructuredBuildEvidenceWhenNewerBuildLogShowsSuccess(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'linux-native-dbus-buildable-from-newer-log';
+        $structuredEvidencePath = $this->tempDir . DIRECTORY_SEPARATOR . 'virtualbox-modern-linux-native-dbus-extension-build-evidence.json';
+        $buildLogPath = $this->tempDir . DIRECTORY_SEPARATOR . 'virtualbox-modern-linux-pecl-dbus-retry-libxml2.log';
+
+        file_put_contents($structuredEvidencePath, json_encode([
+            'api_version' => '1.0',
+            'kind' => 'system-api-native-dbus-extension-build-evidence',
+            'state' => 'build-failed',
+            'build_phase' => 'make',
+            'reason' => 'legacy-tsrmls-api-incompatible-with-php84',
+            'failure_signature' => 'make: *** [Makefile:208: dbus.lo] Error 1',
+            'log_path' => '/tmp/old-build.log',
+            'markers' => ['legacy-tsrmls-api-incompatible-with-php84', 'make'],
+        ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+        touch($structuredEvidencePath, time() - 10);
+
+        file_put_contents($buildLogPath, <<<TEXT
+Configuring extension
+Libraries have been installed in:
+   /home/w4live/dbus-0.1.1/modules
+
+Build complete.
+Don't forget to run 'make test'.
+TEXT);
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+            '--target-repo-root',
+            '/srv/w4/os-system',
+            '--native-dbus-build-evidence-json-path',
+            $structuredEvidencePath,
+            '--native-dbus-build-log-path',
+            $buildLogPath,
+        ], array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => '0',
+                'W4_SYSTEM_API_PROBE_HAS_PECL' => '1',
+            ]
+        ));
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame(str_replace('\\', '/', $structuredEvidencePath), $payload['native_dbus_extension_build_evidence_path']);
+        self::assertFalse($payload['native_dbus_extension_installability']['blocked']);
+        self::assertSame('buildable', $payload['native_dbus_extension_installability']['state']);
+        self::assertSame('make', $payload['native_dbus_extension_installability']['build_phase']);
+        self::assertSame('build-complete', $payload['native_dbus_extension_installability']['reason']);
+        self::assertSame('', $payload['native_dbus_extension_installability']['failure_signature']);
+        self::assertSame(str_replace('\\', '/', $buildLogPath), $payload['native_dbus_extension_installability']['log_path']);
+
+        $structuredEvidence = $this->decodeJsonFile($structuredEvidencePath);
+        self::assertSame('buildable', $structuredEvidence['state']);
+        self::assertSame('make', $structuredEvidence['build_phase']);
+        self::assertSame('build-complete', $structuredEvidence['reason']);
+        self::assertNull($structuredEvidence['failure_signature']);
+        self::assertSame(str_replace('\\', '/', $buildLogPath), str_replace('\\', '/', (string) $structuredEvidence['source_path']));
+        self::assertSame(str_replace('\\', '/', $buildLogPath), str_replace('\\', '/', (string) $structuredEvidence['log_path']));
+        self::assertSame(['build-complete', 'make'], $structuredEvidence['markers']);
+    }
+
     public function testValidationPropagatesReusableStructuredBuildEvidencePathIntoRerunCommands(): void
     {
         $evidenceDir = $this->repoRoot
