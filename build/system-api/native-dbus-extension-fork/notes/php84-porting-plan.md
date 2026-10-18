@@ -53,13 +53,14 @@
 - El siguiente corte del fork ya estabiliza `waitLoop()` para `PHP >= 8`: las señales entrantes dejan de materializar `DbusSignal` en el carril moderno, el propio metodo libera el `DBusMessage` y el dispatch de method calls ya cierra tambien su `msg`. Con el modulo recompilado en la VM moderna, los probes `check_native_dbus_wait_loop.php` y `check_native_dbus_shutdown_after_wait_loop.php` ya completan `phase:after-wait-loop`, sobreviven a `unset($connection)` y dejan de disparar el `general protection fault` del cierre legacy.
 - `MaterializeNativeBusOwnership` vuelve asi a ejecutar `waitLoop()` real dentro del driver nativo, y el payload final del runtime host ya publica `wait_loop_result = true` en lugar del workaround `deferred-legacy-one-shot`.
 - El siguiente contraste real ya no se queda en ownership: con `serve_native_dbus_method_probe.php` corriendo sobre `BUS_SYSTEM`, `busctl --system call ... GetCapabilities ...` y `php /home/w4live/native-dbus-runtime-check/call_native_dbus_runtime_via_busctl.php` ya reciben respuestas JSON validas desde `org.w4.System1.Manager`. Eso confirma que el bridge callback atiende method calls reales de cliente sobre el host homologado, no solo que el nombre y el objeto se registran correctamente.
+- El corte `0012` ya limpia el ultimo ruido grueso de carga del modulo: el fork activo publica arginfo explicito para los metodos publicos de `Dbus`, `DbusObject`, `DbusSignal` y los wrappers de tipos/colecciones, y en la VM moderna `php -d extension=/home/w4live/dbus-0.1.1/modules/dbus.so -m 2>&1 | grep -i arginfo` ya no devuelve warnings `Missing arginfo`. El smoke de `GetCapabilities` sobre `org.w4.System1.Manager` sigue respondiendo correctamente tras recompilar el modulo con ese cambio.
 
 ## Deuda inmediata tras el build real exitoso
 
-1. Reducir o eliminar los warnings `Missing arginfo` que `PHP 8.4` emite al cargar la extension, empezando por `Dbus`, `DbusSignal` y los wrappers de tipos simples.
+1. Decidir si conviene elevar la sonda viva `serve_native_dbus_method_probe.php` a un smoke permanente del fork/runner o si basta mantenerla como evidencia de validacion real.
 2. Decidir si conviene limpiar ya el warning legacy de `AC_PROG_LIBTOOL` o dejarlo explicitamente como deuda no bloqueante del fork transitorio.
-3. Decidir si conviene elevar la sonda viva `serve_native_dbus_method_probe.php` a un smoke permanente del fork/runner o si basta mantenerla como evidencia de validacion real.
-4. Revisar si el carril de señales que hoy devolvemos como `true` en `PHP >= 8` merece un contrato mas expresivo o si basta documentarlo como ajuste transitorio del fork para V1.
+3. Revisar si el carril de señales que hoy devolvemos como `true` en `PHP >= 8` merece un contrato mas expresivo o si basta documentarlo como ajuste transitorio del fork para V1.
+4. Probar el mismo servicio exportado con override explicito `W4_SYSTEM_API_RUNTIME_BACKEND=native-dbus-extension` dentro de la sonda viva, para contrastar `system.dbus-runtime` fuera del estado `contract-pending`.
 
 ## Execution Loop
 

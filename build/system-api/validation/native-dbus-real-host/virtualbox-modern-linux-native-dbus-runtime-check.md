@@ -148,3 +148,21 @@ Lectura honesta de este corte:
 - el bridge callback ya no solo registra el objeto en el bus;
 - tambien atiende method calls reales sobre `org.w4.System1.Manager` desde un cliente externo (`busctl`) en el host homologado;
 - el hecho de que `system.dbus-runtime` siga reportando `contract-pending` en esta sonda no implica fallo de dispatch D-Bus, sino que el request se resolvio con el contrato por defecto del manager exportado, sin inyectar `W4_SYSTEM_API_RUNTIME_BACKEND=native-dbus-extension` en ese proceso de prueba.
+
+## Actualizacion posterior: modulo recompilado sin `Missing arginfo`
+
+Despues de añadir arginfo explicito al fork activo y recompilar `/home/w4live/dbus-0.1.1/modules/dbus.so` en la misma VM:
+
+- comando de contraste:
+  - `php -d extension=/home/w4live/dbus-0.1.1/modules/dbus.so -m 2>&1 | grep -i arginfo`
+- resultado:
+  - sin salida
+
+Eso confirma que el modulo deja de emitir los warnings `Missing arginfo` que seguian contaminando la carga en `PHP 8.4`.
+
+Ademas, el smoke funcional posterior sigue pasando:
+
+- la sonda `serve_native_dbus_method_probe.php` vuelve a registrar `org.w4.System1`;
+- `busctl --system call org.w4.System1 /org/w4/System1 org.w4.System1.Manager GetCapabilities s dbus-probe-post-arginfo`
+  devuelve respuesta JSON valida `system.capabilities`;
+- el loop de la sonda sigue cerrando limpio con `stop-file-detected` y `service-loop-finished`.

@@ -44,51 +44,140 @@
 #endif
 
 /* {{{ arginfo */
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_void, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_ctor, 0, 0, 0)
+        ZEND_ARG_INFO(0, type)
+        ZEND_ARG_INFO(0, useIntrospection)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_add_watch, 0, 0, 0)
+        ZEND_ARG_INFO(0, interface)
+        ZEND_ARG_INFO(0, member)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_wait_loop, 0, 0, 0)
+        ZEND_ARG_INFO(0, timeout)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_request_name, 0, 0, 1)
+        ZEND_ARG_INFO(0, name)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_register_object, 0, 0, 3)
+        ZEND_ARG_INFO(0, path)
+        ZEND_ARG_INFO(0, interface)
+        ZEND_ARG_INFO(0, class)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_create_proxy, 0, 0, 3)
+        ZEND_ARG_INFO(0, destination)
+        ZEND_ARG_INFO(0, path)
+        ZEND_ARG_INFO(0, interface)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_object_ctor, 0, 0, 4)
+        ZEND_ARG_OBJ_INFO(0, dbus, Dbus, 0)
+        ZEND_ARG_INFO(0, destination)
+        ZEND_ARG_INFO(0, path)
+        ZEND_ARG_INFO(0, interface)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_object___call, 0, 0, 2)
 	ZEND_ARG_INFO(0, function_name)
 	ZEND_ARG_INFO(0, arguments)
 ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_signal_ctor, 0, 0, 4)
+        ZEND_ARG_OBJ_INFO(0, dbus, Dbus, 0)
+        ZEND_ARG_INFO(0, object)
+        ZEND_ARG_INFO(0, interface)
+        ZEND_ARG_INFO(0, signal)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_signal_matches, 0, 0, 2)
+        ZEND_ARG_INFO(0, interface)
+        ZEND_ARG_INFO(0, method)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_signal_send, 0, 0, 0)
+        ZEND_ARG_VARIADIC_INFO(0, data)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_array_ctor, 0, 0, 2)
+        ZEND_ARG_INFO(0, type)
+        ZEND_ARG_ARRAY_INFO(0, elements, 0)
+        ZEND_ARG_INFO(0, signature)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_dict_ctor, 0, 0, 2)
+        ZEND_ARG_INFO(0, type)
+        ZEND_ARG_ARRAY_INFO(0, elements, 0)
+        ZEND_ARG_INFO(0, signature)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_variant_ctor, 0, 0, 1)
+        ZEND_ARG_INFO(0, data)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_set_ctor, 0, 0, 0)
+        ZEND_ARG_VARIADIC_INFO(0, data)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_struct_ctor, 0, 0, 2)
+        ZEND_ARG_INFO(0, signature)
+        ZEND_ARG_ARRAY_INFO(0, elements, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_object_path_ctor, 0, 0, 1)
+        ZEND_ARG_INFO(0, path)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dbus_scalar_ctor, 0, 0, 1)
+        ZEND_ARG_INFO(0, data)
+ZEND_END_ARG_INFO()
 /* }}} */
 
 const zend_function_entry dbus_funcs_dbus[] = {
-	PHP_ME(Dbus, __construct, NULL, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC)
-	PHP_ME(Dbus, addWatch,    NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(Dbus, waitLoop,    NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(Dbus, requestName, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(Dbus, registerObject, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(Dbus, createProxy, NULL, ZEND_ACC_PUBLIC)
+        PHP_ME(Dbus, __construct, arginfo_dbus_ctor, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC)
+        PHP_ME(Dbus, addWatch,    arginfo_dbus_add_watch, ZEND_ACC_PUBLIC)
+        PHP_ME(Dbus, waitLoop,    arginfo_dbus_wait_loop, ZEND_ACC_PUBLIC)
+        PHP_ME(Dbus, requestName, arginfo_dbus_request_name, ZEND_ACC_PUBLIC)
+        PHP_ME(Dbus, registerObject, arginfo_dbus_register_object, ZEND_ACC_PUBLIC)
+        PHP_ME(Dbus, createProxy, arginfo_dbus_create_proxy, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
 const zend_function_entry dbus_funcs_dbus_object[] = {
-	PHP_ME(DbusObject, __construct, NULL, ZEND_ACC_CTOR|ZEND_ACC_PRIVATE)
+        PHP_ME(DbusObject, __construct, arginfo_dbus_object_ctor, ZEND_ACC_CTOR|ZEND_ACC_PRIVATE)
 	PHP_ME(DbusObject, __call,      arginfo_dbus_object___call, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
 const zend_function_entry dbus_funcs_dbus_signal[] = {
-	PHP_ME(DbusSignal, __construct, NULL, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC)
-	PHP_ME(DbusSignal, matches,     NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(DbusSignal, getData,     NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(DbusSignal, send,        NULL, ZEND_ACC_PUBLIC)
+        PHP_ME(DbusSignal, __construct, arginfo_dbus_signal_ctor, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC)
+        PHP_ME(DbusSignal, matches,     arginfo_dbus_signal_matches, ZEND_ACC_PUBLIC)
+        PHP_ME(DbusSignal, getData,     arginfo_dbus_void, ZEND_ACC_PUBLIC)
+        PHP_ME(DbusSignal, send,        arginfo_dbus_signal_send, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
 const zend_function_entry dbus_funcs_dbus_array[] = {
-	PHP_ME(DbusArray, __construct, NULL, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC)
-	PHP_ME(DbusArray, getData,     NULL, ZEND_ACC_PUBLIC)
+        PHP_ME(DbusArray, __construct, arginfo_dbus_array_ctor, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC)
+        PHP_ME(DbusArray, getData,     arginfo_dbus_void, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
 const zend_function_entry dbus_funcs_dbus_dict[] = {
-	PHP_ME(DbusDict, __construct, NULL, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC)
-	PHP_ME(DbusDict, getData,     NULL, ZEND_ACC_PUBLIC)
+        PHP_ME(DbusDict, __construct, arginfo_dbus_dict_ctor, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC)
+        PHP_ME(DbusDict, getData,     arginfo_dbus_void, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
 #define PHP_DBUS_INT_WRAPPER_DEF(s,t) \
 	const zend_function_entry dbus_funcs_dbus_##s[] = { \
-		PHP_ME(Dbus##t, __construct, NULL, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC) \
+                PHP_ME(Dbus##t, __construct, arginfo_dbus_scalar_ctor, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC) \
 		{NULL, NULL, NULL} \
 	};
 
@@ -103,26 +192,26 @@ PHP_DBUS_INT_WRAPPER_DEF(uint64,UInt64);
 PHP_DBUS_INT_WRAPPER_DEF(double, Double);
 
 const zend_function_entry dbus_funcs_dbus_variant[] = {
-	PHP_ME(DbusVariant, __construct, NULL, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC)
-	PHP_ME(DbusVariant, getData,     NULL, ZEND_ACC_PUBLIC)
+        PHP_ME(DbusVariant, __construct, arginfo_dbus_variant_ctor, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC)
+        PHP_ME(DbusVariant, getData,     arginfo_dbus_void, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
 const zend_function_entry dbus_funcs_dbus_set[] = {
-	PHP_ME(DbusSet, __construct, NULL, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC)
-	PHP_ME(DbusSet, getData,     NULL, ZEND_ACC_PUBLIC)
+        PHP_ME(DbusSet, __construct, arginfo_dbus_set_ctor, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC)
+        PHP_ME(DbusSet, getData,     arginfo_dbus_void, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
 const zend_function_entry dbus_funcs_dbus_struct[] = {
-	PHP_ME(DbusStruct, __construct, NULL, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC)
-	PHP_ME(DbusStruct, getData,     NULL, ZEND_ACC_PUBLIC)
+        PHP_ME(DbusStruct, __construct, arginfo_dbus_struct_ctor, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC)
+        PHP_ME(DbusStruct, getData,     arginfo_dbus_void, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
 const zend_function_entry dbus_funcs_dbus_object_path[] = {
-	PHP_ME(DbusObjectPath, __construct, NULL, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC)
-	PHP_ME(DbusObjectPath, getData,     NULL, ZEND_ACC_PUBLIC)
+        PHP_ME(DbusObjectPath, __construct, arginfo_dbus_object_path_ctor, ZEND_ACC_CTOR|ZEND_ACC_PUBLIC)
+        PHP_ME(DbusObjectPath, getData,     arginfo_dbus_void, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
