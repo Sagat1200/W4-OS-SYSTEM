@@ -95,10 +95,10 @@
     } while (0)
 
 #define DBUS_ZEND_MAKE_STD_ZVAL(_zval) \
-    { \
-        zval tmp; \
-        _zval = &tmp; \
-    }
+    do { \
+        (_zval) = emalloc(sizeof(zval)); \
+        DBUS_ZEND_INIT_ZVAL(_zval); \
+    } while (0)
 
 #define DBUS_ZEND_ALLOC_ZVAL(_zvalPtr) \
     _zvalPtr = emalloc(sizeof(zval)); \

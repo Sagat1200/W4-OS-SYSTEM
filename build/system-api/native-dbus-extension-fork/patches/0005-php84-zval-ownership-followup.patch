@@ -1,0 +1,90 @@
+diff --git "a/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c" "b/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c"
+--- "a/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c"
++++ "b/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c"
+@@
+-                                          if (val && Z_TYPE_P(new_key) == IS_STRING) {
+-                                                  add_assoc_zval_ex(dictobj->elements, Z_STRVAL_P(new_key), Z_STRLEN_P(new_key) + 1, val);
++                                          if (val && Z_TYPE_P(new_key) == IS_STRING) {
++                                                  add_assoc_zval_ex(dictobj->elements, Z_STRVAL_P(new_key), Z_STRLEN_P(new_key), val);
++                                          } else if (val && Z_TYPE_P(new_key) == IS_OBJECT) {
++                                                  zend_object *obj = Z_OBJ_P(new_key);
++                                                  if (obj->ce == dbus_ce_dbus_object_path) {
++                                                          php_dbus_object_path_obj *intern = DBUS_GET_OBJECT(php_dbus_object_path_obj, obj);
++                                                          add_assoc_zval_ex(dictobj->elements, intern->path, strlen(intern->path), val);
++                                                  }
+                                           } else if (val && Z_TYPE_P(new_key) == IS_LONG) {
+                                                   add_index_zval(dictobj->elements, Z_LVAL_P(new_key), val);
+                                           }
+                                   } else {
+@@
+                                           if (val) {
+                                                   add_next_index_zval(arrayobj->elements, val);
+                                           }
+                                   }
++
++                                  if (val) {
++                                          efree(val);
++                                  }
++
++                                  if (new_key) {
++                                          efree(new_key);
++                                  }
+                           } while (dbus_message_iter_next(&subiter));
+                   }
+                   break;
+           case DBUS_TYPE_DICT_ENTRY:
+                   {
+-                          zval *new_key = NULL;
++                          zval *new_key = NULL, *val;
+ 
+                           dbus_message_iter_recurse(args, &subiter);
+ 
+                           *key = php_dbus_to_zval(&subiter, &new_key TSRMLS_CC);
+                           dbus_message_iter_next(&subiter);
+-                          return_value = php_dbus_to_zval(&subiter, &new_key TSRMLS_CC);
++                          val = php_dbus_to_zval(&subiter, &new_key TSRMLS_CC);
++                          *return_value = *val;
++                          efree(val);
+                   }
+                   break;
+@@
+                           do {
+                                   zval *new_key = NULL;
+                                   zval *val = php_dbus_to_zval(&subiter, &new_key TSRMLS_CC);
+                                   add_next_index_zval(structobj->elements, val);
++                                  efree(val);
+                           } while (dbus_message_iter_next(&subiter));
+                   }
+                   break;
+@@
+           if (always_array) {
+                   array_init(return_value);
+                   do {
+                           zval *key = NULL;
+                           val = php_dbus_to_zval(&args, &key TSRMLS_CC);
+                           add_next_index_zval(return_value, val);
++                          efree(val);
++                          if (key) {
++                                  efree(key);
++                          }
+                   } while (dbus_message_iter_next(&args));
+           } else {
+@@
+                           val = php_dbus_to_zval(&args, &key TSRMLS_CC);
+ 
+                           set->elements[set->element_count] = val;
+                           set->element_count++;
++                          if (key) {
++                                  efree(key);
++                          }
+                   } while (dbus_message_iter_next(&args));
+           } else {
+                   // Exactly one return value
+                   zval *key = NULL;
+                   val = php_dbus_to_zval(&args, &key TSRMLS_CC);
+                   *return_value = *val;
++                  efree(val);
++                  if (key) {
++                          efree(key);
++                  }
+           }

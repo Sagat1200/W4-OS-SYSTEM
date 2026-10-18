@@ -222,6 +222,7 @@ struct _php_dbus_dict_obj {
 struct _php_dbus_variant_obj {
 	zend_object      std;
 	zval            *data;
+        char            *signature;
 };
 
 struct _php_dbus_set_obj {
@@ -266,30 +267,15 @@ struct _php_dbus_data_array {
 };
 
 #define DBUS_SET_CONTEXT \
-	zval *object; \
-	object = getThis(); \
-   
-#define DBUS_FETCH_OBJECT	\
-	php_date_obj *obj;	\
-	DBUS_SET_CONTEXT; \
-	if (object) {	\
-		if (zend_parse_parameters_none() == FAILURE) {	\
-			return;	\
-		}	\
-	} else {	\
-		if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, NULL, "O", &object, dbus_ce_dbus) == FAILURE) {	\
-			RETURN_FALSE;	\
-		}	\
-	}	\
-	obj = (php_dbus_obj *) zend_object_store_get_object(object TSRMLS_CC);	\
+  zval *object; \
+  object = getThis(); \
 
 #define DBUS_CHECK_INITIALIZED(member, class_name) \
-	if (!(member)) { \
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "The " #class_name " object has not been correctly initialized by its constructor"); \
-		RETURN_FALSE; \
-	}
+  if (!(member)) { \
+          php_error_docref(NULL TSRMLS_CC, E_WARNING, "The " #class_name " object has not been correctly initialized by its constructor"); \
+          RETURN_FALSE; \
+  }
 
-#undef DBUS_FETCH_OBJECT
 #define DBUS_FETCH_OBJECT       \
         php_dbus_obj *obj;      \
         DBUS_SET_CONTEXT; \
@@ -1668,7 +1654,7 @@ static zval* php_dbus_to_zval(DBusMessageIter *args, zval **key TSRMLS_DC)
 					php_dbus_array_obj *arrayobj;
 					zval *val = php_dbus_to_zval(&subiter, &new_key TSRMLS_CC);
 
-					if (new_key) {
+                                        if (new_key) {
 						if (!init) {
 							dbus_instantiate(dbus_ce_dbus_dict, return_value TSRMLS_CC);
                                                         dictobj = DBUS_ZVAL_GET_OBJECT(php_dbus_dict_obj, return_value);
@@ -1679,7 +1665,13 @@ static zval* php_dbus_to_zval(DBusMessageIter *args, zval **key TSRMLS_DC)
 						}
 
 						if (val && Z_TYPE_P(new_key) == IS_STRING) {
-							add_assoc_zval_ex(dictobj->elements, Z_STRVAL_P(new_key), Z_STRLEN_P(new_key) + 1, val);
+                                                        add_assoc_zval_ex(dictobj->elements, Z_STRVAL_P(new_key), Z_STRLEN_P(new_key), val);
+                                                } else if (val && Z_TYPE_P(new_key) == IS_OBJECT) {
+                                                        zend_object *obj = Z_OBJ_P(new_key);
+                                                        if (obj->ce == dbus_ce_dbus_object_path) {
+                                                                php_dbus_object_path_obj *intern = DBUS_GET_OBJECT(php_dbus_object_path_obj, obj);
+                                                                add_assoc_zval_ex(dictobj->elements, intern->path, strlen(intern->path), val);
+                                                        }
 						} else if (val && Z_TYPE_P(new_key) == IS_LONG) {
 							add_index_zval(dictobj->elements, Z_LVAL_P(new_key), val);
 						}
@@ -1701,18 +1693,28 @@ static zval* php_dbus_to_zval(DBusMessageIter *args, zval **key TSRMLS_DC)
 							add_next_index_zval(arrayobj->elements, val);
 						}
 					}
+
+                                        if (val) {
+                                                efree(val);
+                                        }
+
+                                        if (new_key) {
+                                                efree(new_key);
+                                        }
 				} while (dbus_message_iter_next(&subiter));
 			}
 			break;
 		case DBUS_TYPE_DICT_ENTRY:
 			{
-				zval *new_key = NULL;
+                                zval *new_key = NULL, *val;
 
 				dbus_message_iter_recurse(args, &subiter);
 					
 				*key = php_dbus_to_zval(&subiter, &new_key TSRMLS_CC);
 				dbus_message_iter_next(&subiter);
-				return_value = php_dbus_to_zval(&subiter, &new_key TSRMLS_CC);
+                                val = php_dbus_to_zval(&subiter, &new_key TSRMLS_CC);
+                                *return_value = *val;
+                                efree(val);
 			}
 			break;
 		case DBUS_TYPE_VARIANT:
@@ -1742,6 +1744,7 @@ static zval* php_dbus_to_zval(DBusMessageIter *args, zval **key TSRMLS_DC)
 					zval *new_key = NULL;
 					zval *val = php_dbus_to_zval(&subiter, &new_key TSRMLS_CC);
 					add_next_index_zval(structobj->elements, val);
+                                        efree(val);
 				} while (dbus_message_iter_next(&subiter));
 			}
 			break;
@@ -1815,6 +1818,10 @@ static int php_dbus_handle_reply(zval *return_value, DBusMessage *msg, int alway
 			zval *key = NULL;
 			val = php_dbus_to_zval(&args, &key TSRMLS_CC);
 			add_next_index_zval(return_value, val);
+                        efree(val);
+                        if (key) {
+                                efree(key);
+                        }
 		} while (dbus_message_iter_next(&args));
 	} else {
 		if (dbus_message_iter_has_next(&args)) {
@@ -1832,12 +1839,19 @@ static int php_dbus_handle_reply(zval *return_value, DBusMessage *msg, int alway
 
 				set->elements[set->element_count] = val;
 				set->element_count++;
+                                if (key) {
+                                        efree(key);
+                                }
 			} while (dbus_message_iter_next(&args));
 		} else {
 			// Exactly one return value
 			zval *key = NULL;
 			val = php_dbus_to_zval(&args, &key TSRMLS_CC);
 			*return_value = *val;
+                        efree(val);
+                        if (key) {
+                                efree(key);
+                        }
 		}
 	}
 
@@ -2198,6 +2212,7 @@ static int dbus_variant_initialize(php_dbus_variant_obj *dbusobj, zval *data TSR
 {
 	Z_ADDREF_P(data);
 	dbusobj->data = data;
+        dbusobj->signature = NULL;
 	return 1;
 }
 

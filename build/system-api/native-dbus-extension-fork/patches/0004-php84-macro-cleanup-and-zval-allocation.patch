@@ -1,0 +1,39 @@
+diff --git "a/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\php_dbus.h" "b/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\php_dbus.h"
+--- "a/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\php_dbus.h"
++++ "b/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\php_dbus.h"
+@@
+-#define DBUS_ZEND_MAKE_STD_ZVAL(_zval) \
+-    { \
+-        zval tmp; \
+-        _zval = &tmp; \
+-    }
++#define DBUS_ZEND_MAKE_STD_ZVAL(_zval) \
++    do { \
++        (_zval) = emalloc(sizeof(zval)); \
++        DBUS_ZEND_INIT_ZVAL(_zval); \
++    } while (0)
+diff --git "a/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c" "b/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c"
+--- "a/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c"
++++ "b/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c"
+@@
+ #define DBUS_SET_CONTEXT \
+   zval *object; \
+   object = getThis(); \
+ 
+-#define DBUS_FETCH_OBJECT \
+-  php_date_obj *obj;      \
+-  DBUS_SET_CONTEXT; \
+-  if (object) {   \
+-          if (zend_parse_parameters_none() == FAILURE) {  \
+-                  return; \
+-          }       \
+-  } else {        \
+-          if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, NULL, "O", &object, dbus_ce_dbus) == FAILURE) {     \
+-                  RETURN_FALSE;   \
+-          }       \
+-  }       \
+-  obj = (php_dbus_obj *) zend_object_store_get_object(object TSRMLS_CC);  \
+-
+ #define DBUS_CHECK_INITIALIZED(member, class_name) \
+   if (!(member)) { \
+           php_error_docref(NULL TSRMLS_CC, E_WARNING, "The " #class_name " object has not been correctly initialized by its constructor"); \

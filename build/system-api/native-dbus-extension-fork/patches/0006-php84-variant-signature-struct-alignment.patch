@@ -1,0 +1,17 @@
+diff --git "a/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c" "b/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c"
+--- "a/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c"
++++ "b/c:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-dbus-extension-fork\\fork\\current\\dbus-0.1.1\\dbus.c"
+@@
+ struct _php_dbus_variant_obj {
+         zend_object      std;
+         zval            *data;
++        char            *signature;
+ };
+@@
+ static int dbus_variant_initialize(php_dbus_variant_obj *dbusobj, zval *data TSRMLS_DC)
+ {
+         Z_ADDREF_P(data);
+         dbusobj->data = data;
++        dbusobj->signature = NULL;
+         return 1;
+ }

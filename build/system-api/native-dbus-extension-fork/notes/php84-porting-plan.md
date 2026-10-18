@@ -26,10 +26,18 @@
 
 ## Next Runtime Hotspots
 
-1. Limpiar el residuo textual del macro legacy `DBUS_FETCH_OBJECT` para que el scan del fork no siga marcando una definicion obsoleta aunque ya este sobreescrita.
-2. Revisar si conviene migrar `DBUS_ZEND_MAKE_STD_ZVAL` de los property builders a helpers mas modernos o si ya es suficiente como capa de compatibilidad transitoria.
-3. Volver sobre `php_dbus_to_zval()` para cerrar detalles de ownership/memoria y alinearlo mejor con la referencia moderna, especialmente en `DICT_ENTRY`, `STRUCT` y firmas temporales.
-4. Solo despues de eso volver a revisar la fase de marshaling/unmarshaling para cerrar warnings y errores de compilacion adicionales.
+1. Revisar el ownership/memoria de `php_dbus_to_zval()` y de los property builders para confirmar que cada `zval` temporal queda liberado o retenido con la semantica correcta bajo `PHP 8.4`.
+2. Reducir mas la capa transitoria `DBUS_ZEND_MAKE_STD_ZVAL` alli donde ya exista una ruta directa con `array_init()` o builders modernos, de modo que el diff del fork no cargue deuda evitable.
+3. Releer `DICT_ENTRY`, `STRUCT` y los wrappers de propiedades contra la referencia moderna para detectar si todavia quedan firmas temporales o ownership ambiguo.
+4. Solo despues de eso volver a correr `phpize`, `./configure` y `make` sobre un host Linux homologado para comprobar en que warning/error cae el siguiente corte real.
+
+## Current Increment
+
+- Se limpio el residuo textual del macro legacy `DBUS_FETCH_OBJECT` dentro de `dbus.c`, con lo que el scan del fork deja de reportar una definicion obsoleta que ya no representa el runtime activo.
+- `DBUS_ZEND_MAKE_STD_ZVAL` ya no apunta a memoria de stack temporal: ahora reserva un `zval` real y lo inicializa con `DBUS_ZEND_INIT_ZVAL`, evitando punteros colgantes en los property builders mientras seguimos cerrando el port.
+- `php_dbus_to_zval()` ya libera el contenedor `zval*` despues de insertarlo en arrays/structs, corrige el caso `DBUS_TYPE_DICT_ENTRY` para no perder el `return_value` reservado y alinea las keys string/object-path con la referencia moderna.
+- `php_dbus_handle_reply()` ya libera el contenedor `zval*` en los caminos `always_array` y retorno unico, y deja de descartar silenciosamente `key` temporales cuando esos valores no se reutilizan.
+- `php_dbus_variant_obj` vuelve a declarar `signature`, alineandose con el upstream moderno y con los helpers/destructores del propio fork que ya esperaban ese campo durante el marshaling del tipo `VARIANT`.
 
 ## Execution Loop
 

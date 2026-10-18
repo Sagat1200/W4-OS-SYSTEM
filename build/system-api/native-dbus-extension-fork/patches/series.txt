@@ -1,3 +1,6 @@
 0001-buildroot-php8-reference.patch
 0002-php84-object-compat-bootstrap-header.patch
 0003-php84-object-compat-bootstrap-runtime.patch
+0004-php84-macro-cleanup-and-zval-allocation.patch
+0005-php84-zval-ownership-followup.patch
+0006-php84-variant-signature-struct-alignment.patch
