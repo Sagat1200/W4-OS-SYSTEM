@@ -42,6 +42,8 @@
 - El lookup de callbacks ya deja atras `zend_hash_find`, `zend_hash_exists`, `add_next_index_string(..., 0)` y la ruta vieja de iteracion sobre `HashTable`, ademas de liberar `key`, `lcname` y `class_name` temporales en el mismo bloque.
 - `php_dbus.h` ya expone tambien `DBUS_ZEND_HASH_ADD_PTR`, y `Dbus::registerObject()` pasa a usar interfaz opcional nula, `size_t` en longitudes y `zend_hash_str_add_ptr` via helper en lugar del `zend_hash_add()` legacy.
 - `Dbus::requestName()` y `Dbus::addWatch()` ya normalizan sus longitudes de parseo a `size_t`, reduciendo otro foco de incompatibilidad silenciosa con la firma moderna de `zend_parse_*`.
+- `php_dbus_do_method_call()` ya se acerca al contrato moderno del upstream: usa `zval` en stack para `params` y `callback`, invoca `call_user_function()` en `PHP >= 8` y deja el fallback antiguo solo para ramas pre-PHP 8.
+- `DbusSignal::send()` y `DbusSet::__construct()` ya abandonan los buffers `zval ***` para `zend_get_parameters_array_ex`, mientras el carril booleano del marshaling pasa a `IS_TRUE`/`IS_FALSE` y `zval_is_true()`.
 
 ## Execution Loop
 
