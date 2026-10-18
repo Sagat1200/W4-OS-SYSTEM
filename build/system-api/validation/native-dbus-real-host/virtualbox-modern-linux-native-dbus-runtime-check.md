@@ -107,3 +107,44 @@ La regresion previa quedo mejor acotada:
 - estaba en el carril de señales de `waitLoop()`, donde la extension legacy materializaba `DbusSignal` y destruia ese valor devuelto de forma inestable bajo `PHP 8.4`.
 
 El ajuste aplicado para `PHP >= 8` consume las señales entrantes dentro de `waitLoop()`, libera el `DBusMessage` en el propio metodo y evita devolver `DbusSignal` en ese carril. El runtime host de `System API` ya vuelve a publicar `wait_loop_result = true` dentro de `MaterializeNativeBusOwnership`, por lo que el ownership real de `org.w4.System1` deja de depender del workaround `deferred-legacy-one-shot`.
+
+## Actualizacion posterior: method calls reales sobre `org.w4.System1.Manager`
+
+Con la sonda viva `serve_native_dbus_method_probe.php` ejecutada en la VM moderna bajo:
+
+- `php -d extension=/home/w4live/dbus-0.1.1/modules/dbus.so /home/w4live/native-dbus-runtime-check/serve_native_dbus_method_probe.php`
+
+y con el nombre `org.w4.System1` ya visible en:
+
+- `busctl --system list`
+- `busctl --system status org.w4.System1`
+
+se contrastaron llamadas reales de cliente sobre el bus del sistema:
+
+1. `GetCapabilities`
+
+- comando:
+  - `busctl --system call org.w4.System1 /org/w4/System1 org.w4.System1.Manager GetCapabilities s dbus-probe-capabilities-2`
+- resultado:
+  - respuesta D-Bus correcta con payload JSON `system.capabilities`
+  - `provider = local-w4ctl-facade`
+  - `binding.dbus.name = org.w4.System1`
+  - `binding.dbus.interface = org.w4.System1.Manager`
+
+2. `Call(system.dbus-runtime)`
+
+- request usado:
+  - `{"api_version":"1.0","request_id":"dbus-probe-call","method":"system.dbus-runtime","params":[]}`
+- ejecucion:
+  - `php /home/w4live/native-dbus-runtime-check/call_native_dbus_runtime_via_busctl.php`
+- resultado:
+  - respuesta D-Bus correcta con payload JSON `system.dbus-runtime`
+  - `provider = local-system-api-runtime-contract`
+  - `status = ready-for-runtime-adapter`
+  - `runtime_backend.selected_backend = contract-pending`
+
+Lectura honesta de este corte:
+
+- el bridge callback ya no solo registra el objeto en el bus;
+- tambien atiende method calls reales sobre `org.w4.System1.Manager` desde un cliente externo (`busctl`) en el host homologado;
+- el hecho de que `system.dbus-runtime` siga reportando `contract-pending` en esta sonda no implica fallo de dispatch D-Bus, sino que el request se resolvio con el contrato por defecto del manager exportado, sin inyectar `W4_SYSTEM_API_RUNTIME_BACKEND=native-dbus-extension` en ese proceso de prueba.
