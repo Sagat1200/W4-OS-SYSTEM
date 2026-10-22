@@ -137,6 +137,42 @@ final class SystemApiDbusRuntimeHostCliTest extends TestCase
         }
     }
 
+    public function testStartNativeRuntimeServiceCanLaunchBackgroundProcessThroughHostScript(): void
+    {
+        $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-runtime-host-launch-' . bin2hex(random_bytes(6));
+        $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
+        $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
+        $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+
+        try {
+            $result = $this->runPhpScript([
+                $this->scriptPath(),
+                'StartNativeRuntimeService',
+            ], '', array_merge(
+                $this->readyRuntimeEnvironment(),
+                $this->nativeCompatibleBackendEnvironment($readyMarkerPath, $statusFilePath, $pidFilePath),
+                [
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE' => 'launch-process',
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_KEEPALIVE_SECONDS' => '2',
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_REQUEST_NAME_STATE' => 'owned',
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_REGISTER_OBJECT_STATE' => 'registered',
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_WAIT_LOOP_STATE' => 'running',
+                ]
+            ));
+
+            self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+            $payload = $this->decodeJson($result['stdout']);
+            self::assertSame('native-runtime-service-launch-recorded', $payload['status']);
+            self::assertTrue($payload['launched']);
+            self::assertGreaterThan(0, $payload['pid']);
+            self::assertFileExists($pidFilePath);
+            self::assertSame($payload['pid'] . "\n", file_get_contents($pidFilePath));
+        } finally {
+            $this->cleanupDirectory($baseDirectory);
+        }
+    }
+
     public function testMaterializeNativeBusOwnershipCanBeInvokedDirectlyThroughHostScript(): void
     {
         $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-runtime-host-own-' . bin2hex(random_bytes(6));

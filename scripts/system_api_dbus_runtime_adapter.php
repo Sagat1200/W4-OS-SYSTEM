@@ -65,6 +65,8 @@ try {
         'ExecuteActivation' => $adapter->executeActivation(),
         'DescribeNativeRuntimeService' => $adapter->describeNativeRuntimeService(),
         'StartNativeRuntimeService' => $adapter->startNativeRuntimeService(),
+        'ServeNativeRuntimeService' => $adapter->serveNativeRuntimeService(),
+        'serve-native-runtime-service' => $adapter->serveNativeRuntimeService(),
         'DescribeNativeRuntimeCoupling' => $adapter->describeNativeRuntimeCoupling(),
         'ObserveNativeRuntimeServiceState' => $adapter->observeNativeRuntimeServiceState(),
         'MaterializeNativeBusOwnership' => $adapter->materializeNativeBusOwnership(),
@@ -84,7 +86,16 @@ try {
         echo $output;
     }
 
-    if ($command === 'serve-dbus' || $command === 'ExecuteActivation' || $command === 'StartNativeRuntimeService' || $command === 'DescribeNativeRuntimeCoupling' || $command === 'ObserveNativeRuntimeServiceState' || $command === 'MaterializeNativeBusOwnership') {
+    if (
+        $command === 'serve-dbus'
+        || $command === 'ExecuteActivation'
+        || $command === 'StartNativeRuntimeService'
+        || $command === 'ServeNativeRuntimeService'
+        || $command === 'serve-native-runtime-service'
+        || $command === 'DescribeNativeRuntimeCoupling'
+        || $command === 'ObserveNativeRuntimeServiceState'
+        || $command === 'MaterializeNativeBusOwnership'
+    ) {
         $decodedOutput = json_decode($output, true);
         $exitCode = is_array($decodedOutput) && is_int($decodedOutput['exit_code'] ?? null)
             ? $decodedOutput['exit_code']

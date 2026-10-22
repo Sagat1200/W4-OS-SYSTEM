@@ -8,6 +8,7 @@ use W4\OS\Support\ValidationError;
 
 final class SystemApiDbusRuntimeAdapter
 {
+    private string $rootDir;
     private SystemApiDbusBridge $bridge;
     private SystemApiDbusRuntimeActivationToolkit $activationToolkit;
     private SystemApiDbusRuntimeBackendToolkit $runtimeBackend;
@@ -15,6 +16,7 @@ final class SystemApiDbusRuntimeAdapter
 
     public function __construct(string $rootDir)
     {
+        $this->rootDir = $rootDir;
         $this->bridge = new SystemApiDbusBridge($rootDir);
         $this->activationToolkit = new SystemApiDbusRuntimeActivationToolkit();
         $this->runtimeBackend = new SystemApiDbusRuntimeBackendToolkit();
@@ -115,8 +117,58 @@ final class SystemApiDbusRuntimeAdapter
 
     public function startNativeRuntimeService(): string
     {
-        $report = $this->runtimeBackend->createNativeRuntimeServiceStartupReport($this->runtimeProbe->createReport());
+        $environment = $this->captureEnvironment();
+        $runtimeDiagnosis = $this->runtimeProbe->createReport($environment);
+        $report = $this->runtimeBackend->createNativeRuntimeServiceStartupReport($runtimeDiagnosis, $environment);
         $this->runtimeBackend->persistNativeRuntimeStartupArtifacts($report);
+
+        if (
+            ($report['startup_acknowledged'] ?? false) === true
+            && $this->resolveNativeRuntimeStartupMode($environment) === 'launch-process'
+        ) {
+            $report = $this->launchNativeRuntimeServiceProcess($report, $environment);
+            $this->runtimeBackend->persistNativeRuntimeStartupArtifacts($report);
+        }
+
+        return $this->encodeJson($report);
+    }
+
+    public function serveNativeRuntimeService(): string
+    {
+        $environment = $this->captureEnvironment();
+        $runtimeDiagnosis = $this->runtimeProbe->createReport($environment);
+        $startupReport = $this->runtimeBackend->createNativeRuntimeServiceStartupReport($runtimeDiagnosis, $environment);
+
+        if (($startupReport['startup_acknowledged'] ?? false) !== true) {
+            return $this->encodeJson($startupReport);
+        }
+
+        $pid = getmypid();
+        if (!is_int($pid) || $pid <= 0) {
+            $startupReport['status'] = 'native-runtime-service-launch-failed';
+            $startupReport['exit_code'] = 1;
+            $startupReport['blocking_reason'] = 'native-runtime-service-pid-unavailable';
+            $startupReport['next_action'] = 'inspect-native-runtime-service-report';
+
+            return $this->encodeJson($startupReport);
+        }
+
+        $startupReport['status'] = 'native-runtime-service-launch-recorded';
+        $startupReport['ownership_state'] = 'pending-bus-name-ownership';
+        $startupReport['blocking_reason'] = 'native-runtime-bus-ownership-pending';
+        $startupReport['next_action'] = 'observe-native-runtime-service-state';
+        $startupReport['launch_mode'] = 'background-process';
+        $startupReport['launched'] = true;
+        $startupReport['pid'] = $pid;
+        $this->runtimeBackend->persistNativeRuntimeStartupArtifacts($startupReport);
+
+        $report = $this->runtimeBackend->createNativeBusOwnershipReport($runtimeDiagnosis, $environment);
+        $this->runtimeBackend->persistNativeRuntimeOwnershipArtifacts($report);
+
+        $keepAliveSeconds = $this->resolveNativeRuntimeKeepAliveSeconds($environment);
+        if ($keepAliveSeconds > 0) {
+            sleep($keepAliveSeconds);
+        }
 
         return $this->encodeJson($report);
     }
@@ -214,6 +266,7 @@ final class SystemApiDbusRuntimeAdapter
             'ExecuteActivation' => $this->executeActivation(),
             'DescribeNativeRuntimeService' => $this->describeNativeRuntimeService(),
             'StartNativeRuntimeService' => $this->startNativeRuntimeService(),
+            'ServeNativeRuntimeService' => $this->serveNativeRuntimeService(),
             'DescribeNativeRuntimeCoupling' => $this->describeNativeRuntimeCoupling(),
             'ObserveNativeRuntimeServiceState' => $this->observeNativeRuntimeServiceState(),
             'MaterializeNativeBusOwnership' => $this->materializeNativeBusOwnership(),
@@ -422,6 +475,167 @@ final class SystemApiDbusRuntimeAdapter
             'stderr' => is_string($stderr) ? $stderr : '',
             'payload' => $payload,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     * @param array<string, string> $environment
+     * @return array<string, mixed>
+     */
+    private function launchNativeRuntimeServiceProcess(array $report, array $environment): array
+    {
+        $serviceDefinition = is_array($report['service_definition'] ?? null) ? $report['service_definition'] : [];
+        $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
+        $pidFilePath = is_string($artifacts['pid_file_path'] ?? null) && trim((string) $artifacts['pid_file_path']) !== ''
+            ? trim((string) $artifacts['pid_file_path'])
+            : null;
+        $launched = $this->launchDetachedNativeRuntimeServiceProcess();
+        $pid = $pidFilePath !== null ? $this->waitForNativeRuntimePid($pidFilePath) : null;
+        if (!$launched || $pid === null) {
+            $report['status'] = 'native-runtime-service-launch-failed';
+            $report['exit_code'] = 1;
+            $report['ownership_state'] = 'startup-recorded-no-process';
+            $report['blocking_reason'] = 'native-runtime-service-launch-failed';
+            $report['next_action'] = 'inspect-native-runtime-service-report';
+            $report['launch_mode'] = 'background-process';
+            $report['launched'] = false;
+
+            return $report;
+        }
+
+        $report['status'] = 'native-runtime-service-launch-recorded';
+        $report['ownership_state'] = 'pending-bus-name-ownership';
+        $report['blocking_reason'] = 'native-runtime-bus-ownership-pending';
+        $report['next_action'] = 'observe-native-runtime-service-state';
+        $report['launch_mode'] = 'background-process';
+        $report['launched'] = true;
+        $report['pid'] = $pid;
+
+        return $report;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function launchDetachedNativeRuntimeServiceProcess(): bool
+    {
+        $scriptPath = $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'system_api_dbus_runtime_adapter.php';
+        if (!is_file($scriptPath)) {
+            return false;
+        }
+
+        return PHP_OS_FAMILY === 'Windows'
+            ? $this->launchDetachedNativeRuntimeServiceProcessOnWindows($scriptPath)
+            : $this->launchDetachedNativeRuntimeServiceProcessOnUnix($scriptPath);
+    }
+
+    private function launchDetachedNativeRuntimeServiceProcessOnUnix(string $scriptPath): bool
+    {
+        $command = sprintf(
+            'cd %s && nohup %s %s %s >/dev/null 2>&1 &',
+            escapeshellarg($this->rootDir),
+            escapeshellarg(PHP_BINARY),
+            escapeshellarg($scriptPath),
+            escapeshellarg('serve-native-runtime-service')
+        );
+
+        shell_exec('sh -c ' . escapeshellarg($command));
+
+        return true;
+    }
+
+    private function launchDetachedNativeRuntimeServiceProcessOnWindows(string $scriptPath): bool
+    {
+        $command = $this->resolveWindowsCmdBinary()
+            . ' /c "cd /d '
+            . $this->quoteCmdLiteral($this->rootDir)
+            . ' && start "" /B '
+            . $this->quoteCmdLiteral(PHP_BINARY)
+            . ' '
+            . $this->quoteCmdLiteral($scriptPath)
+            . ' serve-native-runtime-service >NUL 2>NUL"';
+
+        shell_exec($command);
+
+        return true;
+    }
+
+    private function quoteCmdLiteral(string $value): string
+    {
+        return '"' . str_replace('"', '""', $value) . '"';
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeStartupMode(array $environment): string
+    {
+        $mode = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE'] ?? 'bootstrap-contract';
+
+        return is_string($mode) && trim($mode) === 'launch-process'
+            ? 'launch-process'
+            : 'bootstrap-contract';
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeKeepAliveSeconds(array $environment): int
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_KEEPALIVE_SECONDS'] ?? null;
+        if (!is_string($value) || preg_match('/^\d+$/', trim($value)) !== 1) {
+            return 0;
+        }
+
+        $seconds = (int) trim($value);
+
+        return $seconds > 0 ? min($seconds, 30) : 0;
+    }
+
+    private function resolveWindowsCmdBinary(): string
+    {
+        $roots = [];
+        $systemRoot = getenv('SystemRoot');
+        if (is_string($systemRoot) && trim($systemRoot) !== '') {
+            $roots[] = trim($systemRoot);
+        }
+
+        $windir = getenv('WINDIR');
+        if (is_string($windir) && trim($windir) !== '') {
+            $roots[] = trim($windir);
+        }
+
+        $roots[] = 'C:\\WINDOWS';
+        $roots[] = 'C:\\Windows';
+
+        foreach (array_unique($roots) as $root) {
+            $candidate = rtrim($root, "\\/") . DIRECTORY_SEPARATOR . 'System32' . DIRECTORY_SEPARATOR . 'cmd.exe';
+            if (is_file($candidate)) {
+                return $this->quoteCmdLiteral($candidate);
+            }
+        }
+
+        return 'cmd.exe';
+    }
+
+    private function waitForNativeRuntimePid(string $pidFilePath): ?int
+    {
+        for ($attempt = 0; $attempt < 20; $attempt++) {
+            if (is_file($pidFilePath)) {
+                $raw = file_get_contents($pidFilePath);
+                $trimmed = is_string($raw) ? trim($raw) : '';
+                if ($trimmed !== '' && preg_match('/^\d+$/', $trimmed) === 1) {
+                    $pid = (int) $trimmed;
+                    if ($pid > 0) {
+                        return $pid;
+                    }
+                }
+            }
+
+            usleep(50000);
+        }
+
+        return null;
     }
 
     /**

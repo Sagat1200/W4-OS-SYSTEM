@@ -446,7 +446,8 @@ final class SystemApiDbusRuntimeBackendToolkit
         }
 
         if ($pidFilePath !== null) {
-            $this->writeArtifactFile($pidFilePath, "0\n");
+            $pid = is_int($report['pid'] ?? null) ? $report['pid'] : 0;
+            $this->writeArtifactFile($pidFilePath, sprintf("%d\n", $pid));
         }
     }
 
