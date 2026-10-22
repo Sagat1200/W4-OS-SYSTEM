@@ -229,3 +229,31 @@ El contrato local queda endurecido a partir de este hallazgo:
 - el siguiente paso sugerido tras un bootstrap exitoso ya no es observar pasivamente, sino `launch-native-runtime-service`.
 
 La alineacion de regresion se cerro localmente en PHPUnit sobre backend, adapter, launcher, host, binding generation y CLI, evitando volver a aceptar `pid = 0` como si representara un runtime nativo realmente activo.
+
+## Actualizacion posterior: carril `launch-process` preparado, pero guest sin transporte util
+
+El adapter local ya suma un carril `launch-process` para que `StartNativeRuntimeService` pueda disparar un hijo real `serve-native-runtime-service` y persistir `pid > 0` sin volver a confundir bootstrap con proceso vivo. El siguiente contraste natural era medir ese carril sobre la VM homologada `W4-OS-Server-DbusModern`.
+
+En este corte se logro:
+
+- arrancar la VM desde host con `VBoxManage startvm "W4-OS-Server-DbusModern" --type headless`;
+- confirmar que sigue configurado el port forwarding `guestssh` sobre `127.0.0.1:2240 -> 22`;
+- verificar que la VM publica Guest Additions visibles (`Additions run level: 1`).
+
+El bloqueo real quedo del lado del guest:
+
+- `Paramiko` no pudo completar handshake SSH porque el invitado no entrego banner en `127.0.0.1:2240`;
+- `VBoxManage guestcontrol ... run` tampoco quedo utilizable, devolviendo `The guest execution service is not ready (yet)`.
+
+Lectura honesta:
+
+- el nuevo carril `launch-process` ya quedo implementado y cubierto localmente;
+- la validacion homologada sobre Linux real sigue pendiente por indisponibilidad del transporte del invitado, no por una regresion detectada del adapter;
+- para evitar improvisacion cuando vuelva el acceso, se dejo preparado el probe remoto `runtime-check/check_native_dbus_launch_process.php`.
+
+Ese probe esta pensado para ejecutarse dentro de la VM y concentrar en una sola corrida:
+
+- `StartNativeRuntimeService` con `W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE=launch-process`;
+- `ObserveNativeRuntimeServiceState`;
+- lectura de artefactos (`ready`, `status`, `pid`);
+- contraste complementario con `busctl --system status org.w4.System1` y `GetCapabilities`.
