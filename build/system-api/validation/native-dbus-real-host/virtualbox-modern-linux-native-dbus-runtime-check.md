@@ -257,3 +257,26 @@ Ese probe esta pensado para ejecutarse dentro de la VM y concentrar en una sola 
 - `ObserveNativeRuntimeServiceState`;
 - lectura de artefactos (`ready`, `status`, `pid`);
 - contraste complementario con `busctl --system status org.w4.System1` y `GetCapabilities`.
+
+## Actualizacion posterior: la sonda homologada ya corre en tty y revela modulo faltante
+
+Se recupero una via de ejecucion util dentro del guest sin depender de SSH:
+
+- la VM confirma `sshd` escuchando en `0.0.0.0:22`, pero el forwarding NAT sigue sin entregar banner;
+- se corrigio ademas el hostname activo de `w4-server-lvie` a `w4-server`, eliminando la deriva mas visible respecto de `/etc/hosts`;
+- como fallback de transporte se monto el workspace del host dentro del guest mediante shared folders transitorios `vboxsf`.
+
+Con ese carril, `check_native_dbus_launch_process.php` ya pudo ejecutarse directamente desde la tty del guest usando el repo montado.
+
+El resultado cambia el foco del bloqueo:
+
+- la sonda ya arranca y devuelve JSON estructurado en la propia VM;
+- el corte ya no falla por transporte ni por `launch-process`;
+- la salida actual marca `ok = false` con `error = dbus-module-missing`;
+- el path esperado por la sonda, `/home/w4live/dbus-0.1.1/modules/dbus.so`, no existe en esta live.
+
+Lectura honesta del nuevo estado:
+
+- el carril homologado ya esta instrumentado y puede correrse dentro de la VM aun cuando SSH siga roto;
+- el siguiente bloqueo operativo real es rehidratar o recompilar el modulo `dbus.so` en el guest moderno;
+- una vez presente el modulo, la misma sonda ya queda lista para reintentar `StartNativeRuntimeService`, `ObserveNativeRuntimeServiceState` y el contraste con `busctl`.

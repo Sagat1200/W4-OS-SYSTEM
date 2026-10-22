@@ -2,11 +2,18 @@
 
 declare(strict_types=1);
 
-$rootDir = '/home/w4live/w4-os-system';
-$phpBinary = '/usr/bin/php';
-$dbusModule = '/home/w4live/dbus-0.1.1/modules/dbus.so';
-$adapterScript = $rootDir . '/scripts/system_api_dbus_runtime_adapter.php';
-$artifactsDir = '/home/w4live/native-dbus-launch-process-artifacts';
+$environment = getenv();
+
+$rootDir = resolveStringOverride($environment, 'W4_SYSTEM_API_REMOTE_ROOT_DIR')
+    ?? '/home/w4live/w4-os-system';
+$phpBinary = resolveStringOverride($environment, 'W4_SYSTEM_API_REMOTE_PHP_BINARY')
+    ?? '/usr/bin/php';
+$dbusModule = resolveStringOverride($environment, 'W4_SYSTEM_API_REMOTE_DBUS_MODULE')
+    ?? '/home/w4live/dbus-0.1.1/modules/dbus.so';
+$adapterScript = resolveStringOverride($environment, 'W4_SYSTEM_API_REMOTE_ADAPTER_SCRIPT')
+    ?? ($rootDir . '/scripts/system_api_dbus_runtime_adapter.php');
+$artifactsDir = resolveStringOverride($environment, 'W4_SYSTEM_API_REMOTE_ARTIFACTS_DIR')
+    ?? '/home/w4live/native-dbus-launch-process-artifacts';
 $readyMarkerPath = $artifactsDir . '/w4-system-api-native-runtime.ready';
 $statusFilePath = $artifactsDir . '/w4-system-api-native-runtime-status.json';
 $pidFilePath = $artifactsDir . '/w4-system-api-native-runtime.pid';
@@ -16,7 +23,7 @@ $pidFilePath = $artifactsDir . '/w4-system-api-native-runtime.pid';
 @unlink($statusFilePath);
 @unlink($pidFilePath);
 
-$environment = array_merge(getenv(), [
+$environment = array_merge($environment, [
     'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
     'W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE' => 'launch-process',
     'W4_SYSTEM_API_NATIVE_RUNTIME_KEEPALIVE_SECONDS' => '12',
@@ -208,4 +215,14 @@ function readOptionalJsonFile(string $path): ?array
 function printJson(array $data): void
 {
     fwrite(STDOUT, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+}
+
+/**
+ * @param array<string, string> $environment
+ */
+function resolveStringOverride(array $environment, string $key): ?string
+{
+    $value = $environment[$key] ?? null;
+
+    return is_string($value) && trim($value) !== '' ? trim($value) : null;
 }
