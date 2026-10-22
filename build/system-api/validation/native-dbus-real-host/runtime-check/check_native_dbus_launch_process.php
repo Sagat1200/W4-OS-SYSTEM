@@ -13,12 +13,14 @@ $dbusModule = resolveStringOverride($environment, 'W4_SYSTEM_API_REMOTE_DBUS_MOD
 $adapterScript = resolveStringOverride($environment, 'W4_SYSTEM_API_REMOTE_ADAPTER_SCRIPT')
     ?? ($rootDir . '/scripts/system_api_dbus_runtime_adapter.php');
 $artifactsDir = resolveStringOverride($environment, 'W4_SYSTEM_API_REMOTE_ARTIFACTS_DIR')
-    ?? '/home/w4live/native-dbus-launch-process-artifacts';
+    ?? ($rootDir . '/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/launch-process');
+$reportFilePath = $artifactsDir . '/check-native-dbus-launch-process.json';
 $readyMarkerPath = $artifactsDir . '/w4-system-api-native-runtime.ready';
 $statusFilePath = $artifactsDir . '/w4-system-api-native-runtime-status.json';
 $pidFilePath = $artifactsDir . '/w4-system-api-native-runtime.pid';
 
 @mkdir($artifactsDir, 0777, true);
+@unlink($reportFilePath);
 @unlink($readyMarkerPath);
 @unlink($statusFilePath);
 @unlink($pidFilePath);
@@ -27,6 +29,7 @@ $environment = array_merge($environment, [
     'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
     'W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE' => 'launch-process',
     'W4_SYSTEM_API_NATIVE_RUNTIME_KEEPALIVE_SECONDS' => '12',
+    'W4_SYSTEM_API_NATIVE_RUNTIME_EXTENSION_PATH' => $dbusModule,
     'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
     'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
     'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
@@ -88,14 +91,32 @@ $observationPayload = is_array($result['observation']) ? $result['observation'] 
 $pidRaw = is_string($result['artifacts']['pid_file'] ?? null) ? trim($result['artifacts']['pid_file']) : '';
 $pid = preg_match('/^\d+$/', $pidRaw) === 1 ? (int) $pidRaw : 0;
 
-$result['ok'] = ($start['exit_code'] ?? 1) === 0
+$result['process_status'] = $pid > 0
+    ? runShellCommand(sprintf('ps -p %d -o pid=,ppid=,stat=,cmd=', $pid))
+    : null;
+
+usleep(1500000);
+
+$delayedObserve = runProcess(
+    [$phpBinary, '-d', 'extension=' . $dbusModule, $adapterScript, 'ObserveNativeRuntimeServiceState'],
+    $rootDir,
+    $environment
+);
+$result['delayed_observation'] = decodeJsonPayload($delayedObserve);
+$result['delayed_observation_process'] = summarizeProcess($delayedObserve);
+
+$result['launch_ok'] = ($start['exit_code'] ?? 1) === 0
     && ($startPayload['status'] ?? null) === 'native-runtime-service-launch-recorded'
     && $pid > 0
     && in_array($observationPayload['status'] ?? null, [
         'native-runtime-service-observed-active',
         'native-runtime-service-observed-pending-ownership',
     ], true);
+$result['service_reachable_ok'] = (($result['busctl_status']['exit_code'] ?? 1) === 0)
+    && (($result['busctl_capabilities']['exit_code'] ?? 1) === 0);
+$result['ok'] = $result['launch_ok'] && $result['service_reachable_ok'];
 
+writeJsonFile($reportFilePath, $result);
 printJson($result);
 exit($result['ok'] ? 0 : 1);
 
@@ -215,6 +236,14 @@ function readOptionalJsonFile(string $path): ?array
 function printJson(array $data): void
 {
     fwrite(STDOUT, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+}
+
+/**
+ * @param array<string, mixed> $data
+ */
+function writeJsonFile(string $path, array $data): void
+{
+    file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
 }
 
 /**

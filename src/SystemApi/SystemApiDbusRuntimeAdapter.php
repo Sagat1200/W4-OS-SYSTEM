@@ -127,7 +127,9 @@ final class SystemApiDbusRuntimeAdapter
             && $this->resolveNativeRuntimeStartupMode($environment) === 'launch-process'
         ) {
             $report = $this->launchNativeRuntimeServiceProcess($report, $environment);
-            $this->runtimeBackend->persistNativeRuntimeStartupArtifacts($report);
+            if (($report['launched'] ?? false) !== true) {
+                $this->runtimeBackend->persistNativeRuntimeStartupArtifacts($report);
+            }
         }
 
         return $this->encodeJson($report);
@@ -489,7 +491,7 @@ final class SystemApiDbusRuntimeAdapter
         $pidFilePath = is_string($artifacts['pid_file_path'] ?? null) && trim((string) $artifacts['pid_file_path']) !== ''
             ? trim((string) $artifacts['pid_file_path'])
             : null;
-        $launched = $this->launchDetachedNativeRuntimeServiceProcess();
+        $launched = $this->launchDetachedNativeRuntimeServiceProcess($environment);
         $pid = $pidFilePath !== null ? $this->waitForNativeRuntimePid($pidFilePath) : null;
         if (!$launched || $pid === null) {
             $report['status'] = 'native-runtime-service-launch-failed';
@@ -517,7 +519,7 @@ final class SystemApiDbusRuntimeAdapter
     /**
      * @param array<string, string> $environment
      */
-    private function launchDetachedNativeRuntimeServiceProcess(): bool
+    private function launchDetachedNativeRuntimeServiceProcess(array $environment): bool
     {
         $scriptPath = $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'system_api_dbus_runtime_adapter.php';
         if (!is_file($scriptPath)) {
@@ -525,18 +527,25 @@ final class SystemApiDbusRuntimeAdapter
         }
 
         return PHP_OS_FAMILY === 'Windows'
-            ? $this->launchDetachedNativeRuntimeServiceProcessOnWindows($scriptPath)
-            : $this->launchDetachedNativeRuntimeServiceProcessOnUnix($scriptPath);
+            ? $this->launchDetachedNativeRuntimeServiceProcessOnWindows($scriptPath, $environment)
+            : $this->launchDetachedNativeRuntimeServiceProcessOnUnix($scriptPath, $environment);
     }
 
-    private function launchDetachedNativeRuntimeServiceProcessOnUnix(string $scriptPath): bool
+    /**
+     * @param array<string, string> $environment
+     */
+    private function launchDetachedNativeRuntimeServiceProcessOnUnix(string $scriptPath, array $environment): bool
     {
-        $command = sprintf(
-            'cd %s && nohup %s %s %s >/dev/null 2>&1 &',
-            escapeshellarg($this->rootDir),
+        $phpArguments = [
             escapeshellarg(PHP_BINARY),
+            ...$this->resolveNativeRuntimeDetachedPhpArguments($environment, static fn (string $argument): string => escapeshellarg($argument)),
             escapeshellarg($scriptPath),
-            escapeshellarg('serve-native-runtime-service')
+            escapeshellarg('serve-native-runtime-service'),
+        ];
+        $command = sprintf(
+            'cd %s && nohup %s >/dev/null 2>&1 &',
+            escapeshellarg($this->rootDir),
+            implode(' ', $phpArguments)
         );
 
         shell_exec('sh -c ' . escapeshellarg($command));
@@ -544,20 +553,65 @@ final class SystemApiDbusRuntimeAdapter
         return true;
     }
 
-    private function launchDetachedNativeRuntimeServiceProcessOnWindows(string $scriptPath): bool
+    /**
+     * @param array<string, string> $environment
+     */
+    private function launchDetachedNativeRuntimeServiceProcessOnWindows(string $scriptPath, array $environment): bool
     {
+        $phpCommand = array_merge(
+            [$this->quoteCmdLiteral(PHP_BINARY)],
+            $this->resolveNativeRuntimeDetachedPhpArguments($environment, fn (string $argument): string => $this->quoteCmdLiteral($argument)),
+            [
+                $this->quoteCmdLiteral($scriptPath),
+                'serve-native-runtime-service',
+            ]
+        );
         $command = $this->resolveWindowsCmdBinary()
             . ' /c "cd /d '
             . $this->quoteCmdLiteral($this->rootDir)
             . ' && start "" /B '
-            . $this->quoteCmdLiteral(PHP_BINARY)
-            . ' '
-            . $this->quoteCmdLiteral($scriptPath)
-            . ' serve-native-runtime-service >NUL 2>NUL"';
+            . implode(' ', $phpCommand)
+            . ' >NUL 2>NUL"';
 
         shell_exec($command);
 
         return true;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     * @param callable(string): string $quoteArgument
+     * @return list<string>
+     */
+    private function resolveNativeRuntimeDetachedPhpArguments(array $environment, callable $quoteArgument): array
+    {
+        $extensionPath = $this->resolveNativeRuntimeExtensionPath($environment);
+        if ($extensionPath === null) {
+            return [];
+        }
+
+        return [
+            $quoteArgument('-d'),
+            $quoteArgument('extension=' . $extensionPath),
+        ];
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeExtensionPath(array $environment): ?string
+    {
+        foreach ([
+            'W4_SYSTEM_API_NATIVE_RUNTIME_EXTENSION_PATH',
+            'W4_SYSTEM_API_REMOTE_DBUS_MODULE',
+        ] as $key) {
+            $value = $environment[$key] ?? null;
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return null;
     }
 
     private function quoteCmdLiteral(string $value): string

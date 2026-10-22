@@ -353,9 +353,17 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             self::assertSame($payload['pid'] . "\n", file_get_contents($pidFilePath));
             self::assertFileExists($statusFilePath);
             $persistedStatus = $this->decodeJson((string) file_get_contents($statusFilePath));
-            self::assertSame('native-runtime-service-launch-recorded', $persistedStatus['status']);
-            self::assertTrue($persistedStatus['launched']);
-            self::assertSame($payload['pid'], $persistedStatus['pid']);
+            self::assertContains(
+                $persistedStatus['status'],
+                ['native-runtime-service-launch-recorded', 'native-runtime-bus-owned']
+            );
+            if (($persistedStatus['status'] ?? null) === 'native-runtime-service-launch-recorded') {
+                self::assertTrue($persistedStatus['launched']);
+                self::assertSame($payload['pid'], $persistedStatus['pid']);
+            } else {
+                self::assertSame('bus-name-owned', $persistedStatus['ownership_state']);
+                self::assertSame($payload['pid'], $persistedStatus['service_observation']['pid']);
+            }
         } finally {
             $this->cleanupDirectory($baseDirectory);
         }

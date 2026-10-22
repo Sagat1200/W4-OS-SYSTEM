@@ -280,3 +280,34 @@ Lectura honesta del nuevo estado:
 - el carril homologado ya esta instrumentado y puede correrse dentro de la VM aun cuando SSH siga roto;
 - el siguiente bloqueo operativo real es rehidratar o recompilar el modulo `dbus.so` en el guest moderno;
 - una vez presente el modulo, la misma sonda ya queda lista para reintentar `StartNativeRuntimeService`, `ObserveNativeRuntimeServiceState` y el contraste con `busctl`.
+
+## Actualizacion posterior: `launch-process` homologado ya deja PID real y el bloqueo vuelve a `requestName()`
+
+El modulo `dbus.so` ya fue rehidratado dentro de la live y el aislamiento siguiente se hizo en dos capas:
+
+- `run_serve_native_runtime_service_in_guest.sh` se ajusto para dejar `stdout`, `stderr`, `exit_code` y artefactos del runtime dentro del repo compartido (`runtime-check/guest-artifacts/direct-serve`);
+- ese runner directo confirmo `pid > 0`, `constructor_mode = bus-system-constructor` y un fallo real del ownership nativo en `Dbus::requestName(): Not Primary Owner (-1)`.
+
+Ese contraste dejo claro que el siguiente fallo del carril `launch-process` ya no era del servicio nativo, sino del propio relanzamiento desacoplado:
+
+- el hijo se reejecutaba sin preservar `-d extension=/home/w4live/dbus-0.1.1/modules/dbus.so`;
+- y el padre reescribia luego los artefactos de `startup`, ocultando el estado de ownership que el hijo ya habia materializado.
+
+Con ambos cortes corregidos en el adapter y en la sonda homologada:
+
+- `SystemApiDbusRuntimeAdapter` ya propaga `W4_SYSTEM_API_NATIVE_RUNTIME_EXTENSION_PATH`/`W4_SYSTEM_API_REMOTE_DBUS_MODULE` al hijo `serve-native-runtime-service`;
+- el padre deja de pisar los artefactos del hijo cuando el launch ya quedo materializado;
+- `check_native_dbus_launch_process.php` ahora escribe su reporte consolidado en `runtime-check/guest-artifacts/launch-process`, distingue `launch_ok` de `service_reachable_ok` y captura tambien `ps`, `delayed_observation` y los contrasts de `busctl`.
+
+Resultado homologado actual sobre `W4-OS-Server-DbusModern`:
+
+- `StartNativeRuntimeService` devuelve `status = native-runtime-service-launch-recorded`, `launched = true`, `launch_mode = background-process` y `pid > 0`;
+- la sonda ya deja `launch_ok = true`;
+- el artefacto final `w4-system-api-native-runtime-status.json` vuelve a reflejar el bloqueo real del host y ya no queda congelado en `startup`: `status = native-runtime-bus-ownership-failed`, `ownership_state = native-runtime-ownership-failed`, `constructor_mode = bus-system-constructor`, `error_message = "Dbus::requestName(): Not Primary Owner (-1)\n"`;
+- `busctl --system status org.w4.System1` y `GetCapabilities` siguen fallando en esta live, por lo que `service_reachable_ok = false`.
+
+Lectura honesta del estado:
+
+- el carril homologado `launch-process` ya quedo reparado y produce un hijo real con PID positivo en la VM moderna;
+- el bloqueo autentico restante ya no es `spawn`, ni `dbus.so` ausente, ni artefactos inconsistentes;
+- el siguiente trabajo util vuelve a ser explicar por que esta live concreta falla `requestName()` sobre `BUS_SYSTEM` con `Not Primary Owner (-1)`.
