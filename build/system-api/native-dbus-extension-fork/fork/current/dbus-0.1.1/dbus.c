@@ -265,11 +265,11 @@ typedef struct _php_dbus_object_path_obj php_dbus_object_path_obj;
 typedef struct _php_dbus_data_array php_dbus_data_array;
 
 struct _php_dbus_obj {
-	zend_object     std;
 	DBusConnection *con;
         int             owns_private_connection;
 	int             useIntrospection;
 	HashTable       objects; /* A hash with all the registered objects that can be called */
+        zend_object     std;
 };
 
 struct _php_dbus_object_obj {
@@ -626,7 +626,13 @@ static void dbus_register_classes(TSRMLS_D)
 static inline zend_object* dbus_object_new_dbus_ex(zend_class_entry *class_type, php_dbus_obj **ptr TSRMLS_DC)
 {
         php_dbus_obj *intern;
-        DBUS_ZEND_OBJECT_INIT_RETURN(intern, class_type, dbus);
+        DBUS_ZEND_OBJECT_ALLOC(intern, class_type);
+        zend_object_std_init(&intern->std, class_type);
+        if (getenv("W4_DBUS_SKIP_OBJECT_PROPERTIES_INIT") == NULL) {
+                DBUS_ZEND_OBJECT_PROPERTIES_INIT(intern, class_type);
+        }
+        DBUS_ZEND_OBJECT_SET_HANDLERS(intern, dbus);
+        return &intern->std;
 }
 
 static zend_object* dbus_object_new_dbus(zend_class_entry *class_type TSRMLS_DC)
@@ -991,6 +997,26 @@ static int php_dbus_should_use_private_connection(void)
         return 1;
 }
 
+static int php_dbus_should_skip_objects_hash_init(void)
+{
+        const char *value = getenv("W4_DBUS_SKIP_OBJECTS_HASH_INIT");
+
+        if (value == NULL || value[0] == '\0') {
+                return 0;
+        }
+
+        if (
+                strcmp(value, "1") == 0 ||
+                strcmp(value, "true") == 0 ||
+                strcmp(value, "yes") == 0 ||
+                strcmp(value, "on") == 0
+        ) {
+                return 1;
+        }
+
+        return 0;
+}
+
 static int dbus_initialize(php_dbus_obj *dbusobj, int type, int introspect TSRMLS_DC)
 {
 	DBusError err;
@@ -1014,7 +1040,9 @@ static int dbus_initialize(php_dbus_obj *dbusobj, int type, int introspect TSRML
 	dbusobj->con = con;
         dbusobj->owns_private_connection = (con != NULL && use_private_connection) ? 1 : 0;
 	dbusobj->useIntrospection = introspect;
-    zend_hash_init(&dbusobj->objects, 16, NULL, NULL, 0);
+        if (!php_dbus_should_skip_objects_hash_init()) {
+                zend_hash_init(&dbusobj->objects, 16, NULL, NULL, 0);
+        }
 
 	return 1;
 }

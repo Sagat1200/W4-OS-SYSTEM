@@ -23,9 +23,9 @@
             "stderr": ""
         },
         "connection_then_realpath_noop_file": {
-            "exit_code": 6,
-            "stdout": "",
-            "stderr": "zend_mm_heap corrupted"
+            "exit_code": 0,
+            "stdout": "{\n    \"scenario\": \"connection_then_realpath_noop_file\",\n    \"connection_class\": \"Dbus\",\n    \"noop_file_path\": \"/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\",\n    \"resolved_path\": \"/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\"\n}",
+            "stderr": ""
         },
         "connection_then_file_exists_noop_file": {
             "exit_code": 0,
@@ -33,19 +33,19 @@
             "stderr": ""
         },
         "connection_then_require_noop": {
-            "exit_code": 6,
-            "stdout": "",
-            "stderr": "zend_mm_heap corrupted"
+            "exit_code": 0,
+            "stdout": "{\n    \"scenario\": \"connection_then_require_noop\",\n    \"connection_class\": \"Dbus\",\n    \"noop_required\": true\n}",
+            "stderr": ""
         },
         "connection_then_require_autoload": {
-            "exit_code": 6,
-            "stdout": "",
-            "stderr": "zend_mm_heap corrupted"
+            "exit_code": 0,
+            "stdout": "{\n    \"scenario\": \"connection_then_require_autoload\",\n    \"connection_class\": \"Dbus\",\n    \"autoload_loaded\": true\n}",
+            "stderr": ""
         },
         "connection_then_exported_object": {
-            "exit_code": 6,
-            "stdout": "",
-            "stderr": "zend_mm_heap corrupted"
+            "exit_code": 0,
+            "stdout": "{\n    \"scenario\": \"connection_then_exported_object\",\n    \"connection_class\": \"Dbus\",\n    \"exported_object_class\": \"W4\\\\OS\\\\SystemApi\\\\NativeDbusExtensionRuntimeObject\",\n    \"binding_status\": \"native-runtime-object-exported\"\n}",
+            "stderr": ""
         },
         "autoload_then_request_name_then_scalar_allocation": {
             "exit_code": 0,
@@ -68,9 +68,9 @@
             "stderr": ""
         },
         "request_name_then_realpath_noop_file": {
-            "exit_code": 6,
-            "stdout": "",
-            "stderr": "zend_mm_heap corrupted"
+            "exit_code": 0,
+            "stdout": "{\n    \"scenario\": \"request_name_then_realpath_noop_file\",\n    \"request_name_result\": 1,\n    \"noop_file_path\": \"/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\",\n    \"resolved_path\": \"/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\"\n}",
+            "stderr": ""
         },
         "request_name_then_file_exists_noop_file": {
             "exit_code": 0,
@@ -78,19 +78,19 @@
             "stderr": ""
         },
         "request_name_then_require_noop": {
-            "exit_code": 6,
-            "stdout": "",
-            "stderr": "zend_mm_heap corrupted"
+            "exit_code": 0,
+            "stdout": "{\n    \"scenario\": \"request_name_then_require_noop\",\n    \"request_name_result\": 1,\n    \"noop_required\": true\n}",
+            "stderr": ""
         },
         "request_name_then_require_autoload": {
-            "exit_code": 6,
-            "stdout": "",
-            "stderr": "zend_mm_heap corrupted"
+            "exit_code": 0,
+            "stdout": "{\n    \"scenario\": \"request_name_then_require_autoload\",\n    \"request_name_result\": 1,\n    \"autoload_loaded\": true\n}",
+            "stderr": ""
         },
         "request_name_then_exported_object": {
-            "exit_code": 6,
-            "stdout": "",
-            "stderr": "zend_mm_heap corrupted"
+            "exit_code": 0,
+            "stdout": "{\n    \"scenario\": \"request_name_then_exported_object\",\n    \"request_name_result\": 1,\n    \"exported_object_class\": \"W4\\\\OS\\\\SystemApi\\\\NativeDbusExtensionRuntimeObject\",\n    \"binding_status\": \"native-runtime-object-exported\"\n}",
+            "stderr": ""
         }
     }
 }

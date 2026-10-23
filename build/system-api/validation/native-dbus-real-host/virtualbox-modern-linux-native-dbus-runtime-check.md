@@ -523,3 +523,34 @@ Lectura actualizada:
 - el bug ya no parece explicarse solo por haber migrado a `dbus_bus_get_private()`;
 - tampoco por `dbus_connection_set_exit_on_disconnect(FALSE)`, porque en el carril `shared` ese detalle deja de aplicar y el crash visible igual persiste;
 - el siguiente corte util vuelve a quedar dentro del estado que el constructor de `Dbus` deja en memoria del runtime PHP, no solo en la eleccion `shared/private` de la conexion libdbus.
+
+## Actualizacion posterior: el layout de `php_dbus_obj` era el fix real
+
+El contraste siguiente cerro el problema de forma mucho mas concreta que los toggles previos.
+
+Hallazgo fino:
+
+- saltar `zend_hash_init(&dbusobj->objects, ...)` limpiaba el crash de `realpath()` y tambien el carril `requestName() + require`
+- saltar `object_properties_init()` no lo limpiaba
+- cambiar `shared/private` tampoco lo movia
+
+Esa forma del fallo apuntaba ya no a libdbus, sino al layout del objeto `Dbus` en el binding PHP. `php_dbus_obj` seguia declarando `zend_object std` al principio del struct, y el fork activo se corrigio moviendo `std` al final de `php_dbus_obj`.
+
+Rerun homologado despues del fix:
+
+- recompilacion y rehidratacion del modulo con `runtime-check/rehydrate_dbus_module_in_guest.sh`
+- `sudo -S php /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/probe_native_dbus_heap_after_request_name.php`
+- `sudo -S php /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_launch_process.php`
+
+Resultado real:
+
+- `probe_native_dbus_heap_after_request_name.php` ya cierra `ok = true`
+- pasan en verde `connection_then_realpath_noop_file`, `connection_then_require_noop`, `request_name_then_realpath_noop_file`, `request_name_then_require_noop`, `request_name_then_require_autoload` y `request_name_then_exported_object`
+- `check_native_dbus_launch_process.php` mantiene `launch_ok = true` y `service_reachable_ok = true`
+- `busctl --system status` y `GetCapabilities` siguen cerrando en verde en el carril end-to-end
+
+Lectura actualizada:
+
+- el crash visible ya no queda abierto en el carril minimo ni en el carril homologado `launch-process`;
+- la causa mas probable del bug estaba en el layout del objeto `Dbus` para PHP 8.x, no en `dbus_bus_get_private()` ni en `requestName()` como tal;
+- la deuda siguiente ya no es “seguir buscando el heap corrupt”, sino endurecer el fork y decidir si el mismo ajuste de layout debe extenderse preventivamente a otros wrappers del modulo.
