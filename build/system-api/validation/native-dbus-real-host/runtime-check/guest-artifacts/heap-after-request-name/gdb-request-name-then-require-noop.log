@@ -22,11 +22,11 @@ warning: 44	./nptl/pthread_kill.c: No such file or directory
 #14 0x0000555555816360 in php_execute_script_ex ()
 #15 0x00005555559865a2 in ?? ()
 #16 0x000055555568e6b4 in ?? ()
-#17 0x00007ffff72c9ca8 in __libc_start_call_main (main=main@entry=0x55555568e3a0, argc=argc@entry=5, argv=argv@entry=0x7fffffffe318) at ../sysdeps/nptl/libc_start_call_main.h:58
-#18 0x00007ffff72c9d65 in __libc_start_main_impl (main=0x55555568e3a0, argc=5, argv=0x7fffffffe318, init=<optimized out>, fini=<optimized out>, rtld_fini=<optimized out>, stack_end=0x7fffffffe308) at ../csu/libc-start.c:360
+#17 0x00007ffff72c9ca8 in __libc_start_call_main (main=main@entry=0x55555568e3a0, argc=argc@entry=5, argv=argv@entry=0x7fffffffeaa8) at ../sysdeps/nptl/libc_start_call_main.h:58
+#18 0x00007ffff72c9d65 in __libc_start_main_impl (main=0x55555568e3a0, argc=5, argv=0x7fffffffeaa8, init=<optimized out>, fini=<optimized out>, rtld_fini=<optimized out>, stack_end=0x7fffffffea98) at ../csu/libc-start.c:360
 #19 0x000055555568fab1 in _start ()
 A debugging session is active.
 
-	Inferior 1 [process 18546] will be killed.
+	Inferior 1 [process 19987] will be killed.
 
 Quit anyway? (y or n) [answered Y; input not from terminal]

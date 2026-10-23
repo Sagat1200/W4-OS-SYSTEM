@@ -464,3 +464,39 @@ Lectura actualizada de esta regresion:
 - el patrón bueno ya queda confirmado por una sonda canonica ejecutada en el host homologado, no solo por probes manuales separados;
 - el modo `preload-first` no falla "antes de arrancar", sino despues de exponer ownership y justo al primer method call real;
 - el siguiente trabajo útil vuelve a ser instrumentar la deuda del heap post-`requestName()` usando esta matriz como guardrail de regresión.
+
+## Actualizacion posterior: el trigger visible baja de `require` a `tsrm_realpath()` incluso sin `requestName()`
+
+Sobre el mismo host homologado se amplio `probe_native_dbus_heap_after_request_name.php` con cuatro escenarios nuevos:
+
+- `connection_then_realpath_noop_file`
+- `connection_then_file_exists_noop_file`
+- `request_name_then_realpath_noop_file`
+- `request_name_then_file_exists_noop_file`
+
+Todos usan el mismo payload `runtime-check/noop_require_after_request_name.php`, pero sin compilarlo necesariamente.
+
+Resultado homologado del rerun:
+
+- `connection_then_realpath_noop_file`: aborta con `zend_mm_heap corrupted`
+- `request_name_then_realpath_noop_file`: aborta con `zend_mm_heap corrupted`
+- `connection_then_file_exists_noop_file`: cierra en verde
+- `request_name_then_file_exists_noop_file`: cierra en verde
+
+Eso cambia la lectura del bug:
+
+- ya no hace falta llegar a `requestName()` para reproducir la corrupcion visible;
+- tampoco hace falta compilar otro archivo con `require_once`;
+- basta entrar en la ruta de normalizacion `realpath()` de PHP despues de abrir `Dbus`.
+
+La traza fresca de `gdb` para el escenario `connection_then_realpath_noop_file` confirma ademas el mismo carril nativo observado antes:
+
+- `virtual_file_ex()`
+- `tsrm_realpath()`
+- `zend_mm_heap corrupted`
+
+Lectura actualizada:
+
+- el fork sigue afectando memoria que PHP usa al resolver rutas reales del filesystem;
+- `file_exists()` sobrevive, asi que el daño visible no es "cualquier I/O de path", sino algo mas fino ligado a `realpath`/normalizacion canonica;
+- el siguiente corte util ya no es hablar solo de "primer require posterior a requestName()", sino instrumentar por que abrir `Dbus` ya deja inestable el carril `tsrm_realpath()` del runtime PHP.

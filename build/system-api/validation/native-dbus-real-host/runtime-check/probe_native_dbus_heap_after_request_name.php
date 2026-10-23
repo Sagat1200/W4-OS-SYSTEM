@@ -40,6 +40,8 @@ $scenarios = [
     'request_name_only',
     'exported_object_only',
     'connection_then_scalar_allocation',
+    'connection_then_realpath_noop_file',
+    'connection_then_file_exists_noop_file',
     'connection_then_require_noop',
     'connection_then_require_autoload',
     'connection_then_exported_object',
@@ -47,6 +49,8 @@ $scenarios = [
     'exported_object_then_request_name_then_scalar_allocation',
     'request_name_then_scalar_allocation',
     'request_name_then_gc_collect',
+    'request_name_then_realpath_noop_file',
+    'request_name_then_file_exists_noop_file',
     'request_name_then_require_noop',
     'request_name_then_require_autoload',
     'request_name_then_exported_object',
@@ -150,11 +154,41 @@ function executeScenario(?string $scenario, array $environment): void
             ]);
             return;
 
+        case 'connection_then_realpath_noop_file':
+            $connection = instantiateSystemBusConnection();
+            writeScenarioPhaseMarker($environment, $scenario, 'after-connection');
+            $noopFilePath = resolveNoopRequirePath($rootDir);
+            writeScenarioPhaseMarker($environment, $scenario, 'before-realpath-noop-file');
+            $resolvedPath = realpath($noopFilePath);
+            writeScenarioPhaseMarker($environment, $scenario, 'after-realpath-noop-file');
+            printJson([
+                'scenario' => $scenario,
+                'connection_class' => $connection::class,
+                'noop_file_path' => $noopFilePath,
+                'resolved_path' => $resolvedPath === false ? false : $resolvedPath,
+            ]);
+            return;
+
+        case 'connection_then_file_exists_noop_file':
+            $connection = instantiateSystemBusConnection();
+            writeScenarioPhaseMarker($environment, $scenario, 'after-connection');
+            $noopFilePath = resolveNoopRequirePath($rootDir);
+            writeScenarioPhaseMarker($environment, $scenario, 'before-file-exists-noop-file');
+            $exists = file_exists($noopFilePath);
+            writeScenarioPhaseMarker($environment, $scenario, 'after-file-exists-noop-file');
+            printJson([
+                'scenario' => $scenario,
+                'connection_class' => $connection::class,
+                'noop_file_path' => $noopFilePath,
+                'file_exists' => $exists,
+            ]);
+            return;
+
         case 'connection_then_require_noop':
             $connection = instantiateSystemBusConnection();
             writeScenarioPhaseMarker($environment, $scenario, 'after-connection');
             writeScenarioPhaseMarker($environment, $scenario, 'before-require-noop');
-            require_once $rootDir . '/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php';
+            require_once resolveNoopRequirePath($rootDir);
             writeScenarioPhaseMarker($environment, $scenario, 'after-require-noop');
             printJson([
                 'scenario' => $scenario,
@@ -278,13 +312,47 @@ function executeScenario(?string $scenario, array $environment): void
             ]);
             return;
 
+        case 'request_name_then_realpath_noop_file':
+            $connection = instantiateSystemBusConnection();
+            writeScenarioPhaseMarker($environment, $scenario, 'before-request-name');
+            $requestNameResult = $connection->requestName('org.w4.System1');
+            writeScenarioPhaseMarker($environment, $scenario, 'after-request-name');
+            $noopFilePath = resolveNoopRequirePath($rootDir);
+            writeScenarioPhaseMarker($environment, $scenario, 'before-realpath-noop-file');
+            $resolvedPath = realpath($noopFilePath);
+            writeScenarioPhaseMarker($environment, $scenario, 'after-realpath-noop-file');
+            printJson([
+                'scenario' => $scenario,
+                'request_name_result' => normalizeValue($requestNameResult),
+                'noop_file_path' => $noopFilePath,
+                'resolved_path' => $resolvedPath === false ? false : $resolvedPath,
+            ]);
+            return;
+
+        case 'request_name_then_file_exists_noop_file':
+            $connection = instantiateSystemBusConnection();
+            writeScenarioPhaseMarker($environment, $scenario, 'before-request-name');
+            $requestNameResult = $connection->requestName('org.w4.System1');
+            writeScenarioPhaseMarker($environment, $scenario, 'after-request-name');
+            $noopFilePath = resolveNoopRequirePath($rootDir);
+            writeScenarioPhaseMarker($environment, $scenario, 'before-file-exists-noop-file');
+            $exists = file_exists($noopFilePath);
+            writeScenarioPhaseMarker($environment, $scenario, 'after-file-exists-noop-file');
+            printJson([
+                'scenario' => $scenario,
+                'request_name_result' => normalizeValue($requestNameResult),
+                'noop_file_path' => $noopFilePath,
+                'file_exists' => $exists,
+            ]);
+            return;
+
         case 'request_name_then_require_noop':
             $connection = instantiateSystemBusConnection();
             writeScenarioPhaseMarker($environment, $scenario, 'before-request-name');
             $requestNameResult = $connection->requestName('org.w4.System1');
             writeScenarioPhaseMarker($environment, $scenario, 'after-request-name');
             writeScenarioPhaseMarker($environment, $scenario, 'before-require-noop');
-            require_once $rootDir . '/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php';
+            require_once resolveNoopRequirePath($rootDir);
             writeScenarioPhaseMarker($environment, $scenario, 'after-require-noop');
             printJson([
                 'scenario' => $scenario,
@@ -436,6 +504,11 @@ function instantiateSystemBusConnection(): object
 function requireAutoload(string $rootDir): void
 {
     require_once $rootDir . '/vendor/autoload.php';
+}
+
+function resolveNoopRequirePath(string $rootDir): string
+{
+    return $rootDir . '/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php';
 }
 
 /**
