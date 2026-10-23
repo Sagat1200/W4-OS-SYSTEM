@@ -128,6 +128,29 @@ Resultado persistido en `guest-artifacts/wait-loop-signal-contract/check-native-
 
 El rerun primero dejo visible una deuda menor pero real del wrapper saliente: `DbusSignal::send()` estaba enviando la señal correctamente, pero el metodo no devolvia exito explicito y el probe observaba `send_signal = null`. El fork activo ya normaliza ese retorno a `true/false`, se recompilo y rehidrato en la misma VM, y el segundo rerun homologado ya deja cerrado tambien ese punto sin mover el contrato verde de `waitLoop()`.
 
+## Actualizacion posterior: el contrato de senales sube a smoke permanente liviano del runtime-check
+
+Para no dejar el contrato de senales y la smoke de wrappers como probes separados, el repo suma `build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_runtime_smoke.php`, un agregador liviano que ejecuta sobre el mismo `dbus.so` persistente:
+
+- `check_native_dbus_wrapper_smoke.php`
+- `check_native_dbus_wait_loop_signal_contract.php`
+
+Rerun homologado ejecutado en `W4-OS-Server-DbusModern`:
+
+- `sudo -S php -d extension=/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/dbus-module/dbus.so /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_runtime_smoke.php`
+
+Resultado consolidado persistido en `guest-artifacts/runtime-smoke/check-native-dbus-runtime-smoke.json`:
+
+- `ok = true`
+- `checks.wrapper_smoke.exit_code = 0`
+- `checks.wait_loop_signal_contract.exit_code = 0`
+
+Lectura actualizada:
+
+- la smoke de wrappers y el contrato de senales quedan promovidos a un smoke permanente de bajo costo dentro del `runtime-check`
+- el rerun homologado ya no depende de recordar probes sueltos: el artefacto `runtime-smoke` resume ambos carriles verdes sobre la misma VM
+- lo siguiente util ya no es consolidar cobertura basica del binding, sino decidir si hace falta ampliar este smoke liviano con algun carril adicional o dejarlo estable como baseline rapido
+
 ## Actualizacion posterior: method calls reales sobre `org.w4.System1.Manager`
 
 Con la sonda viva `serve_native_dbus_method_probe.php` ejecutada en la VM moderna bajo:

@@ -1,0 +1,86 @@
+diff --git a/build/system-api/native-dbus-extension-fork/fork/current/dbus-0.1.1/dbus.c b/build/system-api/native-dbus-extension-fork/fork/current/dbus-0.1.1/dbus.c
+--- a/build/system-api/native-dbus-extension-fork/fork/current/dbus-0.1.1/dbus.c
++++ b/build/system-api/native-dbus-extension-fork/fork/current/dbus-0.1.1/dbus.c
+@@
+ struct _php_dbus_obj {
+-    zend_object     std;
+     DBusConnection *con;
+     int             owns_private_connection;
+     int             useIntrospection;
+     HashTable       objects; /* A hash with all the registered objects that can be called */
++    zend_object     std;
+ };
+@@
+ struct _php_dbus_object_obj {
+-    zend_object      std;
+     php_dbus_obj    *dbus;
+     char            *destination;
+     char            *path;
+     char            *interface;
+     xmlDocPtr        introspect_xml_doc;
+     xmlNode         *introspect_xml;
++    zend_object      std;
+ };
+@@
+ struct _php_dbus_signal_obj {
+-    zend_object      std;
+     php_dbus_obj    *dbus;
+     DBusMessage     *msg;
+     char            *object;
+     char            *interface;
+     char            *signal;
+     int              direction;
++    zend_object      std;
+ };
+@@
+ struct _php_dbus_array_obj {
+-    zend_object      std;
+     long             type;
+     char            *signature;
+     zval            *elements;
++    zend_object      std;
+ };
+@@
+ struct _php_dbus_dict_obj {
+-    zend_object      std;
+     long             type;
+     char            *signature;
+     zval            *elements;
++    zend_object      std;
+ };
+@@
+ struct _php_dbus_variant_obj {
+-    zend_object      std;
+     zval            *data;
+     char            *signature;
++    zend_object      std;
+ };
+@@
+ struct _php_dbus_set_obj {
+-    zend_object      std;
+     int              element_count;
+     zval           **elements;
++    zend_object      std;
+ };
+@@
+ struct _php_dbus_struct_obj {
+-    zend_object      std;
+     zval            *elements;
++    zend_object      std;
+ };
+@@
+ struct _php_dbus_object_path_obj {
+-    zend_object      std;
+     char            *path;
++    zend_object      std;
+ };
+@@
+ #define PHP_DBUS_SETUP_TYPE_OBJ(t,dt) \
+     zend_class_entry *dbus_ce_dbus_##t; \
+     static zend_object_handlers dbus_object_handlers_dbus_##t; \
+     typedef struct _php_dbus_##t##_obj php_dbus_##t##_obj; \
+     struct _php_dbus_##t##_obj { \
+-            zend_object      std; \
+             dt               data; \
++            zend_object      std; \
+     };

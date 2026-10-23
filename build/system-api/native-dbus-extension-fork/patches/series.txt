@@ -12,3 +12,4 @@
 0012-php84-add-missing-arginfo-declarations.patch
 0013-php84-wrapper-destructor-ownership-hardening.patch
 0014-php84-dbus-signal-send-return-contract.patch
+0015-php84-zend-object-layout-hardening.patch
