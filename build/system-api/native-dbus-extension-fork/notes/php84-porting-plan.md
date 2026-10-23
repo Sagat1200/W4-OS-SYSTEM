@@ -86,7 +86,7 @@
 3. Convertir el fix de layout Zend y los arreglos de destructores de wrappers en patch formal del fork, dejando claro que ambos forman parte del mismo cierre de compatibilidad `PHP 8.4`.
 4. Los toggles experimentales (`W4_DBUS_CONNECTION_MODE`, `W4_DBUS_SKIP_OBJECTS_HASH_INIT`, `W4_DBUS_SKIP_OBJECT_PROPERTIES_INIT`) se conservan como instrumentacion de laboratorio para futuros contrastes del fork. No forman parte del contrato normal del runtime ni del carril homologado verde; quedan retenidos solo como knobs de diagnostico controlado.
 5. Evaluar si la smoke dedicada de wrappers ya tiene profundidad suficiente o si conviene sumar algun escenario adicional de roundtrip/marshaling sin volver a mezclarla con el runtime end-to-end.
-6. Decidir si conviene limpiar ya el warning legacy de `AC_PROG_LIBTOOL` o dejarlo explicitamente como deuda no bloqueante del fork transitorio.
+6. El warning legacy `AC_PROG_LIBTOOL is obsolete` queda explicitamente clasificado como deuda no bloqueante del scaffolding que materializa `phpize`. La evidencia actual lo ubica en `configure.ac:154` generado durante el build, no en un archivo versionado propio del fork, asi que no se persigue como fix inmediato dentro del source activo de la extension.
 7. Revisar si el carril de señales que hoy devolvemos como `true` en `PHP >= 8` merece un contrato mas expresivo o si basta documentarlo como ajuste transitorio del fork para V1.
 
 ## Execution Loop
