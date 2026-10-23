@@ -17,6 +17,36 @@
             "stdout": "{\n    \"scenario\": \"exported_object_only\",\n    \"exported_object_class\": \"W4\\\\OS\\\\SystemApi\\\\NativeDbusExtensionRuntimeObject\",\n    \"binding_status\": \"native-runtime-object-exported\"\n}",
             "stderr": ""
         },
+        "connection_then_scalar_allocation": {
+            "exit_code": 0,
+            "stdout": "{\n    \"scenario\": \"connection_then_scalar_allocation\",\n    \"connection_class\": \"Dbus\",\n    \"probe_array\": {\n        \"alpha\": \"beta\",\n        \"gamma\": 42,\n        \"delta\": true\n    }\n}",
+            "stderr": ""
+        },
+        "connection_then_require_noop": {
+            "exit_code": 6,
+            "stdout": "",
+            "stderr": "zend_mm_heap corrupted"
+        },
+        "connection_then_require_autoload": {
+            "exit_code": 6,
+            "stdout": "",
+            "stderr": "zend_mm_heap corrupted"
+        },
+        "connection_then_exported_object": {
+            "exit_code": 6,
+            "stdout": "",
+            "stderr": "zend_mm_heap corrupted"
+        },
+        "autoload_then_request_name_then_scalar_allocation": {
+            "exit_code": 0,
+            "stdout": "{\n    \"scenario\": \"autoload_then_request_name_then_scalar_allocation\",\n    \"request_name_result\": 1,\n    \"probe_array\": {\n        \"alpha\": \"beta\",\n        \"gamma\": 42,\n        \"delta\": true\n    }\n}",
+            "stderr": ""
+        },
+        "exported_object_then_request_name_then_scalar_allocation": {
+            "exit_code": 0,
+            "stdout": "{\n    \"scenario\": \"exported_object_then_request_name_then_scalar_allocation\",\n    \"request_name_result\": 1,\n    \"exported_object_class\": \"W4\\\\OS\\\\SystemApi\\\\NativeDbusExtensionRuntimeObject\",\n    \"binding_status\": \"native-runtime-object-exported\",\n    \"probe_array\": {\n        \"alpha\": \"beta\",\n        \"gamma\": 42,\n        \"delta\": true\n    }\n}",
+            "stderr": ""
+        },
         "request_name_then_scalar_allocation": {
             "exit_code": 0,
             "stdout": "{\n    \"scenario\": \"request_name_then_scalar_allocation\",\n    \"request_name_result\": 1,\n    \"probe_array\": {\n        \"alpha\": \"beta\",\n        \"gamma\": 42,\n        \"delta\": true\n    }\n}",

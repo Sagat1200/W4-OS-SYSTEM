@@ -1,0 +1,32 @@
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+zend_mm_heap corrupted
+
+Program received signal SIGABRT, Aborted.
+__pthread_kill_implementation (threadid=<optimized out>, signo=signo@entry=6, no_tid=no_tid@entry=0) at ./nptl/pthread_kill.c:44
+warning: 44	./nptl/pthread_kill.c: No such file or directory
+#0  __pthread_kill_implementation (threadid=<optimized out>, signo=signo@entry=6, no_tid=no_tid@entry=0) at ./nptl/pthread_kill.c:44
+#1  0x00007ffff733473f in __pthread_kill_internal (threadid=<optimized out>, signo=6) at ./nptl/pthread_kill.c:89
+#2  0x00007ffff72dfc42 in __GI_raise (sig=sig@entry=6) at ../sysdeps/posix/raise.c:26
+#3  0x00007ffff72c84ac in __GI_abort () at ./stdlib/abort.c:77
+#4  0x000055555566a27d in ?? ()
+#5  0x000055555566a4c7 in ?? ()
+#6  0x000055555597eef1 in virtual_file_ex ()
+#7  0x0000555555980108 in tsrm_realpath ()
+#8  0x0000555555810e8b in ?? ()
+#9  0x00005555558dedbc in ?? ()
+#10 0x00005555558eb112 in ?? ()
+#11 0x000055555591ad0f in execute_ex ()
+#12 0x0000555555918a45 in zend_execute ()
+#13 0x0000555555984814 in zend_execute_script ()
+#14 0x0000555555816360 in php_execute_script_ex ()
+#15 0x00005555559865a2 in ?? ()
+#16 0x000055555568e6b4 in ?? ()
+#17 0x00007ffff72c9ca8 in __libc_start_call_main (main=main@entry=0x55555568e3a0, argc=argc@entry=5, argv=argv@entry=0x7fffffffe318) at ../sysdeps/nptl/libc_start_call_main.h:58
+#18 0x00007ffff72c9d65 in __libc_start_main_impl (main=0x55555568e3a0, argc=5, argv=0x7fffffffe318, init=<optimized out>, fini=<optimized out>, rtld_fini=<optimized out>, stack_end=0x7fffffffe308) at ../csu/libc-start.c:360
+#19 0x000055555568fab1 in _start ()
+A debugging session is active.
+
+	Inferior 1 [process 18546] will be killed.
+
+Quit anyway? (y or n) [answered Y; input not from terminal]

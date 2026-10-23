@@ -380,3 +380,26 @@ Lectura operativa nueva:
 - tampoco es un problema generico de cualquier trabajo PHP posterior, porque asignaciones y `gc_collect_cycles()` sobreviven;
 - el heap sigue quedando dañado por `requestName()`, pero ese daño se revela especificamente al entrar en el primer `require`/compilacion de otro archivo PHP;
 - la siguiente investigacion util ya no es seguir tocando policy, `registerObject()` ni el tipo de conexion, sino revisar que ownership interno deja `requestName()` sobre estructuras Zend/libdbus que el motor vuelve a tocar al incluir otro script.
+
+## Actualizacion posterior: el falso positivo de observacion en `launch-process` queda corregido en codigo y pendiente de rerun homologado
+
+Al releer el consolidado `guest-artifacts/launch-process/check-native-dbus-launch-process.json` quedo claro que el `ok = false` ya no estaba alineado solo con el crash de heap original. El propio reporte mostraba:
+
+- `busctl_status.stderr = "Failed to get credentials: No such device or address"`;
+- `busctl_capabilities.stderr = "Failed to activate service 'org.w4.System1': timed out ..."`;
+- `ObserveNativeRuntimeServiceState` seguia considerando `observed = true` aunque el chequeo dependia solo de artefactos (`ready`, `status`, `pid`) y no de liveness real del proceso.
+
+La causa operativa que queda documentada en repo es doble:
+
+- `NativeDbusExtensionOwnershipDriver` trataba `waitLoop()` como un one-shot sin timeout efectivo, de modo que el hijo del `launch-process` podia registrar ownership/artefactos pero no quedarse despachando method calls durante la ventana en que `busctl` lo contrastaba.
+- `SystemApiDbusRuntimeBackendToolkit` tomaba cualquier PID positivo persistido como si siguiera vivo, aunque el proceso ya hubiera salido y el name del bus ya no estuviera atendiendo.
+
+Correccion aplicada en codigo local:
+
+- `src/SystemApi/NativeDbusExtensionOwnershipDriver.php` ahora normaliza `waitLoop(250)` y lo repite durante `W4_SYSTEM_API_NATIVE_RUNTIME_KEEPALIVE_SECONDS`, dejando un `service_loop` explicito en el driver y manteniendo dispatch userland real mientras corre el probe homologado.
+- `src/SystemApi/SystemApiDbusRuntimeBackendToolkit.php` ahora resuelve `is_running` sobre el PID observado y solo acepta `native-runtime-service-observed-active` cuando el proceso sigue vivo de verdad.
+
+Estado honesto de este corte:
+
+- `php -l src/SystemApi/NativeDbusExtensionOwnershipDriver.php` y `php -l src/SystemApi/SystemApiDbusRuntimeBackendToolkit.php` cierran en verde.
+- Todavia falta rerunear `check_native_dbus_launch_process.php` dentro de `W4-OS-Server-DbusModern` para confirmar que el fix mueve `service_reachable_ok` a `true` y no solo corrige la lectura local del lifecycle.

@@ -31,6 +31,12 @@ final class NativeDbusExtensionOwnershipDriver
         }
 
         try {
+            [
+                'exported_object' => $exportedObject,
+                'register_object_handoff' => $registerObjectHandoff,
+                'callback_class' => $registerObjectCallbackClass,
+            ] =
+                $this->preparePhpSideRuntimeArtifacts($serviceDefinition, $environment);
             [$connection, $constructorMode] = $this->instantiateConnection($runtimeClassName);
         } catch (Throwable $exception) {
             return $this->failedCoupling(
@@ -50,28 +56,19 @@ final class NativeDbusExtensionOwnershipDriver
         ];
 
         try {
-            $exportedObject = new NativeDbusExtensionRuntimeObject(
-                $serviceDefinition,
-                $this->resolveRuntimeRootDir($environment)
-            );
-            $registerObjectHandoff = $exportedObject->createRegisterObjectHandoffPayload();
-            $legacyRegisterObjectCallbackClass = $this->prepareLegacyRegisterObjectCallbackClass(
-                $connection,
-                $exportedObject
-            );
             $requestNameSignature = $this->createRequestNameSignatureReport($connection);
             $requestNameInvocationPlan = $this->createRequestNameInvocationPlan($connection, $serviceDefinition);
             $registerObjectSignature = $this->createRegisterObjectSignatureReport(
                 $connection,
                 $registerObjectHandoff,
-                $legacyRegisterObjectCallbackClass
+                $registerObjectCallbackClass
             );
             $registerObjectInvocationPlan = $this->createRegisterObjectInvocationPlan(
                 $connection,
                 $serviceDefinition,
                 $exportedObject,
                 $registerObjectHandoff,
-                $legacyRegisterObjectCallbackClass
+                $registerObjectCallbackClass
             );
             $waitLoopSignature = $this->createWaitLoopSignatureReport($connection);
             $waitLoopInvocationPlan = $this->createWaitLoopInvocationPlan($connection);
@@ -84,7 +81,7 @@ final class NativeDbusExtensionOwnershipDriver
 
         $driver['exported_object_class'] = NativeDbusExtensionRuntimeObject::class;
         $driver['register_object_handoff_channels'] = array_keys($registerObjectHandoff['channels'] ?? []);
-        $driver['register_object_callback_class'] = $legacyRegisterObjectCallbackClass;
+        $driver['register_object_callback_class'] = $registerObjectCallbackClass;
         $driver['request_name_signature'] = $requestNameSignature;
         $driver['request_name_invocation_plan'] = $requestNameInvocationPlan['report'];
         $driver['register_object_signature'] = $registerObjectSignature;
@@ -144,6 +141,14 @@ final class NativeDbusExtensionOwnershipDriver
         }
 
         try {
+            $this->writePhaseMarker($environment, 'before-exported-object');
+            [
+                'exported_object' => $exportedObject,
+                'register_object_handoff' => $registerObjectHandoff,
+                'callback_class' => $registerObjectCallbackClass,
+            ] =
+                $this->preparePhpSideRuntimeArtifacts($serviceDefinition, $environment);
+            $this->writePhaseMarker($environment, 'after-exported-object');
             [$connection, $constructorMode] = $this->instantiateConnection($runtimeClassName);
         } catch (Throwable $exception) {
             return $this->failedLifecycle(
@@ -164,8 +169,24 @@ final class NativeDbusExtensionOwnershipDriver
         $this->writePhaseMarker($environment, 'constructor-ready');
 
         try {
+            $this->writePhaseMarker($environment, 'after-register-object-handoff');
+            $this->writePhaseMarker($environment, 'after-register-object-callback-bridge');
             $requestNameSignature = $this->createRequestNameSignatureReport($connection);
             $requestNameInvocationPlan = $this->createRequestNameInvocationPlan($connection, $serviceDefinition);
+            $registerObjectSignature = $this->createRegisterObjectSignatureReport(
+                $connection,
+                $registerObjectHandoff,
+                $registerObjectCallbackClass
+            );
+            $this->writePhaseMarker($environment, 'after-register-object-signature');
+            $registerObjectInvocationPlan = $this->createRegisterObjectInvocationPlan(
+                $connection,
+                $serviceDefinition,
+                $exportedObject,
+                $registerObjectHandoff,
+                $registerObjectCallbackClass
+            );
+            $this->writePhaseMarker($environment, 'after-register-object-invocation-plan');
             $this->writePhaseMarker($environment, 'before-request-name');
             $requestNameResult = $this->invokeRequestName($connection, $requestNameInvocationPlan['arguments']);
             if ($requestNameResult === false) {
@@ -176,12 +197,22 @@ final class NativeDbusExtensionOwnershipDriver
                         'request_name_signature' => $requestNameSignature,
                         'request_name_invocation_plan' => $requestNameInvocationPlan['report'],
                         'request_name_result' => false,
+                        'exported_object_class' => NativeDbusExtensionRuntimeObject::class,
+                        'register_object_handoff_channels' => array_keys($registerObjectHandoff['channels'] ?? []),
+                        'register_object_callback_class' => $registerObjectCallbackClass,
+                        'register_object_signature' => $registerObjectSignature,
+                        'register_object_invocation_plan' => $registerObjectInvocationPlan['report'],
                     ]
                 );
             }
+            $driver['exported_object_class'] = NativeDbusExtensionRuntimeObject::class;
+            $driver['register_object_handoff_channels'] = array_keys($registerObjectHandoff['channels'] ?? []);
+            $driver['register_object_callback_class'] = $registerObjectCallbackClass;
             $driver['request_name_signature'] = $requestNameSignature;
             $driver['request_name_invocation_plan'] = $requestNameInvocationPlan['report'];
             $driver['request_name_result'] = $this->normalizeResultValue($requestNameResult);
+            $driver['register_object_signature'] = $registerObjectSignature;
+            $driver['register_object_invocation_plan'] = $registerObjectInvocationPlan['report'];
             $this->writePhaseMarker($environment, 'after-request-name');
         } catch (Throwable $exception) {
             $this->writePhaseMarker($environment, 'request-name-exception');
@@ -190,39 +221,14 @@ final class NativeDbusExtensionOwnershipDriver
                 $driver + [
                     'request_name_signature' => $requestNameSignature ?? null,
                     'request_name_invocation_plan' => $requestNameInvocationPlan['report'] ?? null,
+                    'register_object_signature' => $registerObjectSignature ?? null,
+                    'register_object_invocation_plan' => $registerObjectInvocationPlan['report'] ?? null,
                     'error_message' => $exception->getMessage(),
                 ]
             );
         }
 
         try {
-            $this->writePhaseMarker($environment, 'before-exported-object');
-            $exportedObject = new NativeDbusExtensionRuntimeObject(
-                $serviceDefinition,
-                $this->resolveRuntimeRootDir($environment)
-            );
-            $this->writePhaseMarker($environment, 'after-exported-object');
-            $registerObjectHandoff = $exportedObject->createRegisterObjectHandoffPayload();
-            $this->writePhaseMarker($environment, 'after-register-object-handoff');
-            $legacyRegisterObjectCallbackClass = $this->prepareLegacyRegisterObjectCallbackClass(
-                $connection,
-                $exportedObject
-            );
-            $this->writePhaseMarker($environment, 'after-register-object-callback-bridge');
-            $registerObjectSignature = $this->createRegisterObjectSignatureReport(
-                $connection,
-                $registerObjectHandoff,
-                $legacyRegisterObjectCallbackClass
-            );
-            $this->writePhaseMarker($environment, 'after-register-object-signature');
-            $registerObjectInvocationPlan = $this->createRegisterObjectInvocationPlan(
-                $connection,
-                $serviceDefinition,
-                $exportedObject,
-                $registerObjectHandoff,
-                $legacyRegisterObjectCallbackClass
-            );
-            $this->writePhaseMarker($environment, 'after-register-object-invocation-plan');
             $this->writePhaseMarker($environment, 'before-register-object');
             $registerObjectResult = $this->invokeRegisterObject($connection, $registerObjectInvocationPlan['arguments']);
             if ($registerObjectResult === false) {
@@ -236,7 +242,7 @@ final class NativeDbusExtensionOwnershipDriver
                     'driver' => $driver + [
                         'exported_object_class' => NativeDbusExtensionRuntimeObject::class,
                         'register_object_handoff_channels' => array_keys($registerObjectHandoff['channels'] ?? []),
-                        'register_object_callback_class' => $legacyRegisterObjectCallbackClass,
+                            'register_object_callback_class' => $registerObjectCallbackClass,
                         'register_object_signature' => $registerObjectSignature,
                         'register_object_invocation_plan' => $registerObjectInvocationPlan['report'],
                         'register_object_result' => false,
@@ -245,7 +251,7 @@ final class NativeDbusExtensionOwnershipDriver
             }
             $driver['exported_object_class'] = NativeDbusExtensionRuntimeObject::class;
             $driver['register_object_handoff_channels'] = array_keys($registerObjectHandoff['channels'] ?? []);
-            $driver['register_object_callback_class'] = $legacyRegisterObjectCallbackClass;
+            $driver['register_object_callback_class'] = $registerObjectCallbackClass;
             $driver['register_object_signature'] = $registerObjectSignature;
             $driver['register_object_invocation_plan'] = $registerObjectInvocationPlan['report'];
             $driver['register_object_result'] = $this->normalizeResultValue($registerObjectResult);
@@ -266,8 +272,13 @@ final class NativeDbusExtensionOwnershipDriver
             $waitLoopSignature = $this->createWaitLoopSignatureReport($connection);
             $waitLoopInvocationPlan = $this->createWaitLoopInvocationPlan($connection);
             $this->writePhaseMarker($environment, 'before-wait-loop');
-            $waitLoopResult = $this->invokeWaitLoop($connection, $waitLoopInvocationPlan['arguments']);
-            if ($waitLoopResult === false) {
+            $waitLoopExecution = $this->maintainNativeRuntimeServiceLoop(
+                $connection,
+                $waitLoopInvocationPlan['arguments'],
+                $environment
+            );
+            $waitLoopResult = $waitLoopExecution['result'];
+            if (($waitLoopExecution['ok'] ?? false) !== true) {
                 $this->writePhaseMarker($environment, 'wait-loop-failed');
                 return [
                     'request_name_state' => 'owned',
@@ -285,6 +296,11 @@ final class NativeDbusExtensionOwnershipDriver
             $driver['wait_loop_signature'] = $waitLoopSignature;
             $driver['wait_loop_invocation_plan'] = $waitLoopInvocationPlan['report'];
             $driver['wait_loop_result'] = $this->normalizeResultValue($waitLoopResult);
+            $driver['service_loop'] = [
+                'loop_mode' => $waitLoopExecution['loop_mode'] ?? 'single-dispatch',
+                'iterations' => $waitLoopExecution['iterations'] ?? 1,
+                'timeout_ms' => $waitLoopExecution['timeout_ms'] ?? 250,
+            ];
             $this->writePhaseMarker($environment, 'after-wait-loop');
         } catch (Throwable $exception) {
             $this->writePhaseMarker($environment, 'wait-loop-exception');
@@ -355,6 +371,27 @@ final class NativeDbusExtensionOwnershipDriver
         }
 
         return dirname(__DIR__, 2);
+    }
+
+    /**
+     * @param array<string, mixed> $serviceDefinition
+     * @param array<string, string> $environment
+     * @return array{exported_object: NativeDbusExtensionRuntimeObject, register_object_handoff: array<string, mixed>, callback_class: string}
+     */
+    private function preparePhpSideRuntimeArtifacts(array $serviceDefinition, array $environment): array
+    {
+        $exportedObject = new NativeDbusExtensionRuntimeObject(
+            $serviceDefinition,
+            $this->resolveRuntimeRootDir($environment)
+        );
+
+        $callbackClass = NativeDbusExtensionCallbackBridge::prime($exportedObject);
+
+        return [
+            'exported_object' => $exportedObject,
+            'register_object_handoff' => $exportedObject->createRegisterObjectHandoffPayload(),
+            'callback_class' => $callbackClass,
+        ];
     }
 
     /**
@@ -752,7 +789,8 @@ final class NativeDbusExtensionOwnershipDriver
                 $parameter,
                 $serviceDefinition,
                 $exportedObject,
-                $registerObjectHandoff
+                $registerObjectHandoff,
+                $legacyCallbackClass
             );
             $arguments[] = $value;
             $valueSummary = $this->summarizeInvocationValue($value, $classification['resolved_channel']);
@@ -802,6 +840,91 @@ final class NativeDbusExtensionOwnershipDriver
         }
 
         return $method->invokeArgs($connection, $arguments);
+    }
+
+    /**
+     * @param list<mixed> $arguments
+     * @param array<string, string> $environment
+     * @return array{ok: bool, result: mixed, iterations: int, timeout_ms: int, loop_mode: string}
+     */
+    private function maintainNativeRuntimeServiceLoop(
+        object $connection,
+        array $arguments,
+        array $environment
+    ): array {
+        $effectiveArguments = $this->normalizeWaitLoopArguments($arguments);
+        $timeoutMs = $this->resolveWaitLoopTimeoutMilliseconds($effectiveArguments);
+        $keepAliveSeconds = $this->resolveNativeRuntimeKeepAliveSeconds($environment);
+        $iterations = $keepAliveSeconds > 0
+            ? max(1, (int) ceil(($keepAliveSeconds * 1000) / max(1, $timeoutMs)))
+            : 1;
+        $result = null;
+
+        $this->writePhaseMarker($environment, 'wait-loop-running');
+
+        for ($iteration = 1; $iteration <= $iterations; $iteration++) {
+            $result = $this->invokeWaitLoop($connection, $effectiveArguments);
+            if ($result === false) {
+                return [
+                    'ok' => false,
+                    'result' => $result,
+                    'iterations' => $iteration,
+                    'timeout_ms' => $timeoutMs,
+                    'loop_mode' => $iterations > 1 ? 'bounded-service-loop' : 'single-dispatch',
+                ];
+            }
+        }
+
+        return [
+            'ok' => true,
+            'result' => $result,
+            'iterations' => $iterations,
+            'timeout_ms' => $timeoutMs,
+            'loop_mode' => $iterations > 1 ? 'bounded-service-loop' : 'single-dispatch',
+        ];
+    }
+
+    /**
+     * @param list<mixed> $arguments
+     * @return list<mixed>
+     */
+    private function normalizeWaitLoopArguments(array $arguments): array
+    {
+        if ($arguments !== []) {
+            return $arguments;
+        }
+
+        return [250];
+    }
+
+    /**
+     * @param list<mixed> $arguments
+     */
+    private function resolveWaitLoopTimeoutMilliseconds(array $arguments): int
+    {
+        $candidate = $arguments[0] ?? null;
+        if (is_int($candidate) && $candidate > 0) {
+            return $candidate;
+        }
+
+        if (is_numeric($candidate) && (int) $candidate > 0) {
+            return (int) $candidate;
+        }
+
+        return 250;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeKeepAliveSeconds(array $environment): int
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_KEEPALIVE_SECONDS'] ?? null;
+        if (!is_string($value) || preg_match('/^\d+$/', trim($value)) !== 1) {
+            return 0;
+        }
+
+        return max(0, (int) trim($value));
     }
 
     /**
@@ -892,6 +1015,29 @@ final class NativeDbusExtensionOwnershipDriver
             ];
         }
 
+        if ($method->getNumberOfParameters() >= 1) {
+            $parameter = $method->getParameters()[0];
+
+            return [
+                'arguments' => [250],
+                'report' => [
+                    'method_name' => 'waitLoop',
+                    'parameter_count' => $method->getNumberOfParameters(),
+                    'effective_parameter_count' => 1,
+                    'signature_source' => 'reflection',
+                    'legacy_fallback_applied' => false,
+                    'parameter_bindings' => [[
+                        'position' => 0,
+                        'name' => $parameter->getName(),
+                        'resolved_channel' => 'timeout_ms',
+                        'resolution_source' => 'runtime-service-loop-default',
+                        'value_kind' => 'integer',
+                        'value_preview' => 250,
+                    ]],
+                ],
+            ];
+        }
+
         return [
             'arguments' => [],
             'report' => [
@@ -912,13 +1058,18 @@ final class NativeDbusExtensionOwnershipDriver
         ReflectionParameter $parameter,
         array $serviceDefinition,
         NativeDbusExtensionRuntimeObject $exportedObject,
-        array $registerObjectHandoff
+        array $registerObjectHandoff,
+        ?string $callbackClass = null
     ): mixed {
         $classification = $this->classifyRegisterObjectParameter($parameter);
         $parameterType = $parameter->getType();
 
         if ($classification['resolved_channel'] === 'exported_object') {
             return $exportedObject;
+        }
+
+        if ($classification['resolved_channel'] === 'callback_class') {
+            return $callbackClass ?? NativeDbusExtensionCallbackBridge::prime($exportedObject);
         }
 
         if ($classification['resolved_channel'] === 'introspection_xml') {
@@ -1020,6 +1171,17 @@ final class NativeDbusExtensionOwnershipDriver
                     'compatible' => true,
                 ];
             }
+        }
+
+        if (
+            str_contains($parameterName, 'callback')
+            || str_contains($parameterName, 'class')
+        ) {
+            return [
+                'resolved_channel' => 'callback_class',
+                'resolution_source' => 'parameter-name-handoff',
+                'compatible' => true,
+            ];
         }
 
         if (

@@ -136,7 +136,7 @@ final class SystemApiDbusRuntimeBackendToolkit
         $startupReport = is_array($statusFile['payload'] ?? null) ? $statusFile['payload'] : null;
         $startupAcknowledged = ($startupReport['startup_acknowledged'] ?? false) === true;
         $pid = is_int($pidFile['pid'] ?? null) ? $pidFile['pid'] : null;
-        $pidIndicatesRunningProcess = is_int($pid) && $pid > 0;
+        $pidIndicatesRunningProcess = ($pidFile['is_running'] ?? false) === true;
         $artifactsObserved = ($readyMarker['exists'] ?? false) === true
             && ($statusFile['exists'] ?? false) === true
             && ($pidFile['exists'] ?? false) === true;
@@ -1172,13 +1172,62 @@ final class SystemApiDbusRuntimeBackendToolkit
         $pid = is_string($trimmed) && preg_match('/^-?\d+$/', $trimmed) === 1
             ? (int) $trimmed
             : null;
+        $isRunning = is_int($pid) && $pid > 0
+            ? $this->isProcessRunning($pid)
+            : false;
 
         return [
             'path' => $path,
             'exists' => $path !== null && is_file($path),
             'pid' => $pid,
             'raw_value' => $trimmed,
+            'is_running' => $isRunning,
         ];
+    }
+
+    private function isProcessRunning(int $pid): bool
+    {
+        if ($pid <= 0) {
+            return false;
+        }
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            $output = [];
+            $exitCode = 1;
+            @exec(sprintf('tasklist /FI "PID eq %d" /FO CSV /NH 2>NUL', $pid), $output, $exitCode);
+
+            if ($exitCode !== 0) {
+                return false;
+            }
+
+            foreach ($output as $line) {
+                if (is_string($line) && str_contains($line, sprintf(',"%d"', $pid))) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (function_exists('posix_kill') && @posix_kill($pid, 0)) {
+            return true;
+        }
+
+        $output = [];
+        $exitCode = 1;
+        @exec(sprintf('ps -p %d -o pid=', $pid), $output, $exitCode);
+
+        if ($exitCode !== 0) {
+            return false;
+        }
+
+        foreach ($output as $line) {
+            if (trim((string) $line) === (string) $pid) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function readArtifactFile(?string $path): ?string

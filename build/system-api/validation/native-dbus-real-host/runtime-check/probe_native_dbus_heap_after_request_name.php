@@ -39,6 +39,12 @@ if (!is_file($dbusModule)) {
 $scenarios = [
     'request_name_only',
     'exported_object_only',
+    'connection_then_scalar_allocation',
+    'connection_then_require_noop',
+    'connection_then_require_autoload',
+    'connection_then_exported_object',
+    'autoload_then_request_name_then_scalar_allocation',
+    'exported_object_then_request_name_then_scalar_allocation',
     'request_name_then_scalar_allocation',
     'request_name_then_gc_collect',
     'request_name_then_require_noop',
@@ -125,6 +131,118 @@ function executeScenario(?string $scenario, array $environment): void
                 'scenario' => $scenario,
                 'exported_object_class' => $exportedObject::class,
                 'binding_status' => $exportedObject->BindingStatus,
+            ]);
+            return;
+
+        case 'connection_then_scalar_allocation':
+            $connection = instantiateSystemBusConnection();
+            writeScenarioPhaseMarker($environment, $scenario, 'after-connection');
+            $probeArray = [
+                'alpha' => 'beta',
+                'gamma' => 42,
+                'delta' => true,
+            ];
+            writeScenarioPhaseMarker($environment, $scenario, 'after-scalar-allocation');
+            printJson([
+                'scenario' => $scenario,
+                'connection_class' => $connection::class,
+                'probe_array' => $probeArray,
+            ]);
+            return;
+
+        case 'connection_then_require_noop':
+            $connection = instantiateSystemBusConnection();
+            writeScenarioPhaseMarker($environment, $scenario, 'after-connection');
+            writeScenarioPhaseMarker($environment, $scenario, 'before-require-noop');
+            require_once $rootDir . '/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php';
+            writeScenarioPhaseMarker($environment, $scenario, 'after-require-noop');
+            printJson([
+                'scenario' => $scenario,
+                'connection_class' => $connection::class,
+                'noop_required' => true,
+            ]);
+            return;
+
+        case 'connection_then_require_autoload':
+            $connection = instantiateSystemBusConnection();
+            writeScenarioPhaseMarker($environment, $scenario, 'after-connection');
+            writeScenarioPhaseMarker($environment, $scenario, 'before-require-autoload');
+            requireAutoload($rootDir);
+            writeScenarioPhaseMarker($environment, $scenario, 'after-require-autoload');
+            printJson([
+                'scenario' => $scenario,
+                'connection_class' => $connection::class,
+                'autoload_loaded' => class_exists(\W4\OS\SystemApi\NativeDbusExtensionRuntimeObject::class),
+            ]);
+            return;
+
+        case 'connection_then_exported_object':
+            $connection = instantiateSystemBusConnection();
+            writeScenarioPhaseMarker($environment, $scenario, 'after-connection');
+            writeScenarioPhaseMarker($environment, $scenario, 'before-require-autoload');
+            requireAutoload($rootDir);
+            writeScenarioPhaseMarker($environment, $scenario, 'after-require-autoload');
+            writeScenarioPhaseMarker($environment, $scenario, 'before-exported-object');
+            $exportedObject = new \W4\OS\SystemApi\NativeDbusExtensionRuntimeObject(
+                defaultServiceDefinition(),
+                $rootDir
+            );
+            writeScenarioPhaseMarker($environment, $scenario, 'after-exported-object');
+            printJson([
+                'scenario' => $scenario,
+                'connection_class' => $connection::class,
+                'exported_object_class' => $exportedObject::class,
+                'binding_status' => $exportedObject->BindingStatus,
+            ]);
+            return;
+
+        case 'autoload_then_request_name_then_scalar_allocation':
+            writeScenarioPhaseMarker($environment, $scenario, 'before-require-autoload');
+            requireAutoload($rootDir);
+            writeScenarioPhaseMarker($environment, $scenario, 'after-require-autoload');
+            $connection = instantiateSystemBusConnection();
+            writeScenarioPhaseMarker($environment, $scenario, 'before-request-name');
+            $requestNameResult = $connection->requestName('org.w4.System1');
+            writeScenarioPhaseMarker($environment, $scenario, 'after-request-name');
+            $probeArray = [
+                'alpha' => 'beta',
+                'gamma' => 42,
+                'delta' => true,
+            ];
+            writeScenarioPhaseMarker($environment, $scenario, 'after-scalar-allocation');
+            printJson([
+                'scenario' => $scenario,
+                'request_name_result' => normalizeValue($requestNameResult),
+                'probe_array' => $probeArray,
+            ]);
+            return;
+
+        case 'exported_object_then_request_name_then_scalar_allocation':
+            writeScenarioPhaseMarker($environment, $scenario, 'before-require-autoload');
+            requireAutoload($rootDir);
+            writeScenarioPhaseMarker($environment, $scenario, 'after-require-autoload');
+            writeScenarioPhaseMarker($environment, $scenario, 'before-exported-object');
+            $exportedObject = new \W4\OS\SystemApi\NativeDbusExtensionRuntimeObject(
+                defaultServiceDefinition(),
+                $rootDir
+            );
+            writeScenarioPhaseMarker($environment, $scenario, 'after-exported-object');
+            $connection = instantiateSystemBusConnection();
+            writeScenarioPhaseMarker($environment, $scenario, 'before-request-name');
+            $requestNameResult = $connection->requestName('org.w4.System1');
+            writeScenarioPhaseMarker($environment, $scenario, 'after-request-name');
+            $probeArray = [
+                'alpha' => 'beta',
+                'gamma' => 42,
+                'delta' => true,
+            ];
+            writeScenarioPhaseMarker($environment, $scenario, 'after-scalar-allocation');
+            printJson([
+                'scenario' => $scenario,
+                'request_name_result' => normalizeValue($requestNameResult),
+                'exported_object_class' => $exportedObject::class,
+                'binding_status' => $exportedObject->BindingStatus,
+                'probe_array' => $probeArray,
             ]);
             return;
 
