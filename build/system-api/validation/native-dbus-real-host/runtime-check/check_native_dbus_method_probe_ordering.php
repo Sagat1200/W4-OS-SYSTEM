@@ -298,7 +298,7 @@ function orderingExpectation(string $mode): array
 {
     return match ($mode) {
         'preload-first' => [
-            'ready' => false,
+            'ready' => true,
             'service_reachable_ok' => false,
         ],
         'preload-object-only' => [

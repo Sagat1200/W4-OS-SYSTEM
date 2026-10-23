@@ -443,3 +443,24 @@ Lectura actualizada:
 - el orden que sobrevive en real es: precarga de clases, conexion D-Bus, `requestName()`, runtime object + bridge, `registerObject()`, `waitLoop()`.
 
 Para conservar esta regresion como contraste reproducible y no solo como memoria del rerun, el workspace suma ahora la sonda matriz `runtime-check/check_native_dbus_method_probe_ordering.php`. Ese script relanza los tres modos de ordering (`preload-first`, `preload-object-only`, `preload-classes-only`), contrasta `busctl --system status org.w4.System1` y `GetCapabilities`, y evalua si cada modo cumple la expectativa correcta. Las tres sondas vivas originales quedan como apoyo de aislamiento manual; la referencia canonica para futuros reruns de ordering pasa a ser la matriz.
+
+La corrida homologada de esa matriz ya quedo ejecutada con:
+
+- `sudo -S php /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_method_probe_ordering.php`
+
+y deja su reporte consolidado en:
+
+- `runtime-check/guest-artifacts/method-probe-ordering/check-native-dbus-method-probe-ordering.json`
+
+Resultado real de la matriz:
+
+- `ok = true`
+- `preload-first`: `ready = true`, `service_reachable_ok = false`, `busctl --system status` ve el owner real, pero `GetCapabilities` lo derriba con `Message recipient disconnected from message bus without replying` y el proceso termina en `zend_mm_heap corrupted`
+- `preload-object-only`: `ready = false`, `service_reachable_ok = false`, el proceso aborta antes de publicar el artefacto de ready
+- `preload-classes-only`: `ready = true`, `service_reachable_ok = true`, `busctl --system status` y `GetCapabilities` cierran en verde y el loop se mantiene vivo hasta que la propia matriz deja el `stop-file`
+
+Lectura actualizada de esta regresion:
+
+- el patrón bueno ya queda confirmado por una sonda canonica ejecutada en el host homologado, no solo por probes manuales separados;
+- el modo `preload-first` no falla "antes de arrancar", sino despues de exponer ownership y justo al primer method call real;
+- el siguiente trabajo útil vuelve a ser instrumentar la deuda del heap post-`requestName()` usando esta matriz como guardrail de regresión.
