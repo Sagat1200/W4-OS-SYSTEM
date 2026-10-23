@@ -554,3 +554,35 @@ Lectura actualizada:
 - el crash visible ya no queda abierto en el carril minimo ni en el carril homologado `launch-process`;
 - la causa mas probable del bug estaba en el layout del objeto `Dbus` para PHP 8.x, no en `dbus_bus_get_private()` ni en `requestName()` como tal;
 - la deuda siguiente ya no es “seguir buscando el heap corrupt”, sino endurecer el fork y decidir si el mismo ajuste de layout debe extenderse preventivamente a otros wrappers del modulo.
+
+## Actualizacion posterior: el endurecimiento del layout ya cubre todos los wrappers del modulo
+
+Sobre el mismo fork se extendio el patron `zend_object std` al final del struct a:
+
+- `DbusObject`
+- `DbusSignal`
+- `DbusArray`
+- `DbusDict`
+- `DbusVariant`
+- `DbusSet`
+- `DbusStruct`
+- `DbusObjectPath`
+- wrappers escalares definidos por `PHP_DBUS_SETUP_TYPE_OBJ(...)`
+
+Rerun homologado posterior:
+
+- recompilacion y rehidratacion del modulo con `runtime-check/rehydrate_dbus_module_in_guest.sh`
+- `sudo -S php /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/probe_native_dbus_heap_after_request_name.php`
+- `sudo -S php /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_launch_process.php`
+
+Resultado real:
+
+- el modulo recompila limpio y se vuelve a publicar como `guest-artifacts/dbus-module/dbus.so`
+- `probe_native_dbus_heap_after_request_name.php` sigue cerrando `ok = true`
+- `check_native_dbus_launch_process.php` sigue cerrando `launch_ok = true` y `service_reachable_ok = true`
+
+Lectura actualizada:
+
+- el endurecimiento general no introdujo regresiones visibles en el carril homologado real;
+- el fix de layout deja de ser un parche solo para `Dbus` y pasa a ser la regla base del fork para wrappers Zend en PHP 8.4;
+- la deuda que queda ya no es de heap visible, sino de cobertura dedicada para wrappers que hoy no pasan por el runtime real.

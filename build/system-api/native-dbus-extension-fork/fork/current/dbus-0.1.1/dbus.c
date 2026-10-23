@@ -273,62 +273,62 @@ struct _php_dbus_obj {
 };
 
 struct _php_dbus_object_obj {
-	zend_object      std;
 	php_dbus_obj    *dbus;
 	char            *destination;
 	char            *path;
 	char            *interface;
 	xmlDocPtr        introspect_xml_doc;
-    xmlNode         *introspect_xml;
+        xmlNode         *introspect_xml;
+        zend_object      std;
 };
 
 #define PHP_DBUS_SIGNAL_IN  1
 #define PHP_DBUS_SIGNAL_OUT 2
 
 struct _php_dbus_signal_obj {
-	zend_object      std;
 	php_dbus_obj    *dbus;
 	DBusMessage     *msg;
 	char            *object;
 	char            *interface;
 	char            *signal;
 	int              direction;
+        zend_object      std;
 };
 
 struct _php_dbus_array_obj {
-	zend_object      std;
 	long             type;
 	char            *signature;
 	zval            *elements;
+        zend_object      std;
 };
 
 struct _php_dbus_dict_obj {
-	zend_object      std;
 	long             type;
 	char            *signature;
 	zval            *elements;
+        zend_object      std;
 };
 
 struct _php_dbus_variant_obj {
-	zend_object      std;
 	zval            *data;
         char            *signature;
+        zend_object      std;
 };
 
 struct _php_dbus_set_obj {
-	zend_object      std;
 	int              element_count;
 	zval           **elements;
+        zend_object      std;
 };
 
 struct _php_dbus_struct_obj {
-	zend_object      std;
 	zval            *elements;
+        zend_object      std;
 };
 
 struct _php_dbus_object_path_obj {
-	zend_object      std;
 	char            *path;
+        zend_object      std;
 };
 
 #define PHP_DBUS_SETUP_TYPE_OBJ(t,dt) \
@@ -336,8 +336,8 @@ struct _php_dbus_object_path_obj {
 	static zend_object_handlers dbus_object_handlers_dbus_##t; \
 	typedef struct _php_dbus_##t##_obj php_dbus_##t##_obj; \
 	struct _php_dbus_##t##_obj { \
-		zend_object      std; \
 		dt               data; \
+                zend_object      std; \
 	};
 
 PHP_DBUS_SETUP_TYPE_OBJ(byte,unsigned char);
