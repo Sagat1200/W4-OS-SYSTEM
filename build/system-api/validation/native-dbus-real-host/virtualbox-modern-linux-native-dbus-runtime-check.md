@@ -108,6 +108,13 @@ La regresion previa quedo mejor acotada:
 
 El ajuste aplicado para `PHP >= 8` consume las señales entrantes dentro de `waitLoop()`, libera el `DBusMessage` en el propio metodo y evita devolver `DbusSignal` en ese carril. El runtime host de `System API` ya vuelve a publicar `wait_loop_result = true` dentro de `MaterializeNativeBusOwnership`, por lo que el ownership real de `org.w4.System1` deja de depender del workaround `deferred-legacy-one-shot`.
 
+El workspace suma ahora tambien `build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_wait_loop_signal_contract.php`, una sonda dedicada para volver ese comportamiento un contrato repetible y no solo una lectura indirecta del runtime host. La sonda abre receptor y emisor sobre `BUS_SYSTEM`, registra una `watch` real, emite una señal real y verifica que `waitLoop(250)` responda segun el contrato esperado por version:
+
+- en `PHP >= 8`, la senal entrante debe normalizarse a `true`
+- en ramas legacy, el carril historico seguiria materializando `DbusSignal`
+
+En este corte la sonda queda incorporada al repo y validada con `php -l`; el rerun homologado en `W4-OS-Server-DbusModern` queda como siguiente paso util para persistir `guest-artifacts/wait-loop-signal-contract/check-native-dbus-wait-loop-signal-contract.json`.
+
 ## Actualizacion posterior: method calls reales sobre `org.w4.System1.Manager`
 
 Con la sonda viva `serve_native_dbus_method_probe.php` ejecutada en la VM moderna bajo:
