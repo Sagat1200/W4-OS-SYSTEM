@@ -84,7 +84,7 @@
 1. Decidir si conviene elevar la sonda viva `serve_native_dbus_method_probe.php` a un smoke permanente del fork/runner o si basta mantenerla como evidencia de validacion real.
 2. Mantener `check_native_dbus_method_probe_ordering.php` como regresion canonica del ordering y reutilizar las tres sondas originales solo cuando haga falta aislar un modo puntual o capturar un crash mas crudo.
 3. Convertir el fix de layout Zend y los arreglos de destructores de wrappers en patch formal del fork, dejando claro que ambos forman parte del mismo cierre de compatibilidad `PHP 8.4`.
-4. Decidir si conviene eliminar o conservar como knobs de laboratorio los toggles experimentales (`W4_DBUS_CONNECTION_MODE`, `W4_DBUS_SKIP_OBJECTS_HASH_INIT`, `W4_DBUS_SKIP_OBJECT_PROPERTIES_INIT`) ahora que el fix real del layout ya quedo validado.
+4. Los toggles experimentales (`W4_DBUS_CONNECTION_MODE`, `W4_DBUS_SKIP_OBJECTS_HASH_INIT`, `W4_DBUS_SKIP_OBJECT_PROPERTIES_INIT`) se conservan como instrumentacion de laboratorio para futuros contrastes del fork. No forman parte del contrato normal del runtime ni del carril homologado verde; quedan retenidos solo como knobs de diagnostico controlado.
 5. Evaluar si la smoke dedicada de wrappers ya tiene profundidad suficiente o si conviene sumar algun escenario adicional de roundtrip/marshaling sin volver a mezclarla con el runtime end-to-end.
 6. Decidir si conviene limpiar ya el warning legacy de `AC_PROG_LIBTOOL` o dejarlo explicitamente como deuda no bloqueante del fork transitorio.
 7. Revisar si el carril de señales que hoy devolvemos como `true` en `PHP >= 8` merece un contrato mas expresivo o si basta documentarlo como ajuste transitorio del fork para V1.

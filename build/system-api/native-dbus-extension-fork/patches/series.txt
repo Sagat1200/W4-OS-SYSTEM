@@ -10,3 +10,4 @@
 0010-php84-append-parameters-hash-iteration-cleanup.patch
 0011-php84-wait-loop-signal-shutdown-stabilization.patch
 0012-php84-add-missing-arginfo-declarations.patch
+0013-php84-wrapper-destructor-ownership-hardening.patch
