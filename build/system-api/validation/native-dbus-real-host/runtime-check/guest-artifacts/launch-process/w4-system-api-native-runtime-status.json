@@ -456,15 +456,16 @@
                     "next_action": "observe-native-runtime-service-state",
                     "launch_mode": "background-process",
                     "launched": true,
-                    "pid": 19138
+                    "pid": 19602
                 },
                 "parse_error": null
             },
             "pid_file": {
                 "path": "/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/launch-process/w4-system-api-native-runtime.pid",
                 "exists": true,
-                "pid": 19138,
-                "raw_value": "19138"
+                "pid": 19602,
+                "raw_value": "19602",
+                "is_running": true
             }
         },
         "startup_report": {
@@ -619,9 +620,9 @@
             "next_action": "observe-native-runtime-service-state",
             "launch_mode": "background-process",
             "launched": true,
-            "pid": 19138
+            "pid": 19602
         },
-        "pid": 19138,
+        "pid": 19602,
         "blocking_reason": "native-runtime-bus-ownership-pending",
         "next_action": "materialize-native-bus-ownership"
     },
@@ -631,16 +632,6 @@
         "driver_class": "W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver",
         "runtime_class_name": "Dbus",
         "constructor_mode": "bus-system-constructor",
-        "exported_object_class": "W4\\OS\\SystemApi\\NativeDbusExtensionRuntimeObject",
-        "register_object_handoff_channels": [
-            "object_path",
-            "interface",
-            "introspection_xml",
-            "definition",
-            "methods",
-            "properties"
-        ],
-        "register_object_callback_class": "W4\\OS\\SystemApi\\NativeDbusExtensionCallbackBridge",
         "request_name_signature": {
             "method_name": "requestName",
             "parameter_count": 1,
@@ -680,6 +671,16 @@
             ]
         },
         "request_name_result": 1,
+        "exported_object_class": "W4\\OS\\SystemApi\\NativeDbusExtensionRuntimeObject",
+        "register_object_handoff_channels": [
+            "object_path",
+            "interface",
+            "introspection_xml",
+            "definition",
+            "methods",
+            "properties"
+        ],
+        "register_object_callback_class": "W4\\OS\\SystemApi\\NativeDbusExtensionCallbackBridge",
         "register_object_signature": {
             "method_name": "registerObject",
             "parameter_count": 3,
@@ -784,12 +785,26 @@
         "wait_loop_invocation_plan": {
             "method_name": "waitLoop",
             "parameter_count": 1,
-            "effective_parameter_count": 0,
+            "effective_parameter_count": 1,
             "signature_source": "reflection",
             "legacy_fallback_applied": false,
-            "parameter_bindings": []
+            "parameter_bindings": [
+                {
+                    "position": 0,
+                    "name": "timeout",
+                    "resolved_channel": "timeout_ms",
+                    "resolution_source": "runtime-service-loop-default",
+                    "value_kind": "integer",
+                    "value_preview": 250
+                }
+            ]
         },
-        "wait_loop_result": true,
+        "wait_loop_result": null,
+        "service_loop": {
+            "loop_mode": "bounded-service-loop",
+            "iterations": 48,
+            "timeout_ms": 250
+        },
         "bootstrap_path": null,
         "class_name": "W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver",
         "available": true

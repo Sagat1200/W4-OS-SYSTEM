@@ -31,13 +31,14 @@ final class NativeDbusExtensionOwnershipDriver
         }
 
         try {
+            $this->preloadPhpRuntimeClasses();
+            [$connection, $constructorMode] = $this->instantiateConnection($runtimeClassName);
             [
                 'exported_object' => $exportedObject,
                 'register_object_handoff' => $registerObjectHandoff,
                 'callback_class' => $registerObjectCallbackClass,
             ] =
-                $this->preparePhpSideRuntimeArtifacts($serviceDefinition, $environment);
-            [$connection, $constructorMode] = $this->instantiateConnection($runtimeClassName);
+                $this->createPhpSideRuntimeArtifacts($serviceDefinition, $environment);
         } catch (Throwable $exception) {
             return $this->failedCoupling(
                 'native-dbus-extension-constructor-failed',
@@ -141,14 +142,9 @@ final class NativeDbusExtensionOwnershipDriver
         }
 
         try {
-            $this->writePhaseMarker($environment, 'before-exported-object');
-            [
-                'exported_object' => $exportedObject,
-                'register_object_handoff' => $registerObjectHandoff,
-                'callback_class' => $registerObjectCallbackClass,
-            ] =
-                $this->preparePhpSideRuntimeArtifacts($serviceDefinition, $environment);
-            $this->writePhaseMarker($environment, 'after-exported-object');
+            $this->writePhaseMarker($environment, 'before-php-runtime-class-preload');
+            $this->preloadPhpRuntimeClasses();
+            $this->writePhaseMarker($environment, 'after-php-runtime-class-preload');
             [$connection, $constructorMode] = $this->instantiateConnection($runtimeClassName);
         } catch (Throwable $exception) {
             return $this->failedLifecycle(
@@ -169,10 +165,47 @@ final class NativeDbusExtensionOwnershipDriver
         $this->writePhaseMarker($environment, 'constructor-ready');
 
         try {
-            $this->writePhaseMarker($environment, 'after-register-object-handoff');
-            $this->writePhaseMarker($environment, 'after-register-object-callback-bridge');
             $requestNameSignature = $this->createRequestNameSignatureReport($connection);
             $requestNameInvocationPlan = $this->createRequestNameInvocationPlan($connection, $serviceDefinition);
+            $this->writePhaseMarker($environment, 'before-request-name');
+            $requestNameResult = $this->invokeRequestName($connection, $requestNameInvocationPlan['arguments']);
+            if ($requestNameResult === false) {
+                $this->writePhaseMarker($environment, 'request-name-failed');
+                return $this->failedLifecycle(
+                    'native-dbus-extension-request-name-failed',
+                    $driver + [
+                        'request_name_signature' => $requestNameSignature,
+                        'request_name_invocation_plan' => $requestNameInvocationPlan['report'],
+                        'request_name_result' => false,
+                    ]
+                );
+            }
+            $driver['request_name_signature'] = $requestNameSignature;
+            $driver['request_name_invocation_plan'] = $requestNameInvocationPlan['report'];
+            $driver['request_name_result'] = $this->normalizeResultValue($requestNameResult);
+            $this->writePhaseMarker($environment, 'after-request-name');
+        } catch (Throwable $exception) {
+            $this->writePhaseMarker($environment, 'request-name-exception');
+            return $this->failedLifecycle(
+                'native-dbus-extension-request-name-failed',
+                $driver + [
+                    'request_name_signature' => $requestNameSignature ?? null,
+                    'request_name_invocation_plan' => $requestNameInvocationPlan['report'] ?? null,
+                    'error_message' => $exception->getMessage(),
+                ]
+            );
+        }
+
+        try {
+            $this->writePhaseMarker($environment, 'before-exported-object');
+            [
+                'exported_object' => $exportedObject,
+                'register_object_handoff' => $registerObjectHandoff,
+                'callback_class' => $registerObjectCallbackClass,
+            ] = $this->createPhpSideRuntimeArtifacts($serviceDefinition, $environment);
+            $this->writePhaseMarker($environment, 'after-exported-object');
+            $this->writePhaseMarker($environment, 'after-register-object-handoff');
+            $this->writePhaseMarker($environment, 'after-register-object-callback-bridge');
             $registerObjectSignature = $this->createRegisterObjectSignatureReport(
                 $connection,
                 $registerObjectHandoff,
@@ -187,48 +220,6 @@ final class NativeDbusExtensionOwnershipDriver
                 $registerObjectCallbackClass
             );
             $this->writePhaseMarker($environment, 'after-register-object-invocation-plan');
-            $this->writePhaseMarker($environment, 'before-request-name');
-            $requestNameResult = $this->invokeRequestName($connection, $requestNameInvocationPlan['arguments']);
-            if ($requestNameResult === false) {
-                $this->writePhaseMarker($environment, 'request-name-failed');
-                return $this->failedLifecycle(
-                    'native-dbus-extension-request-name-failed',
-                    $driver + [
-                        'request_name_signature' => $requestNameSignature,
-                        'request_name_invocation_plan' => $requestNameInvocationPlan['report'],
-                        'request_name_result' => false,
-                        'exported_object_class' => NativeDbusExtensionRuntimeObject::class,
-                        'register_object_handoff_channels' => array_keys($registerObjectHandoff['channels'] ?? []),
-                        'register_object_callback_class' => $registerObjectCallbackClass,
-                        'register_object_signature' => $registerObjectSignature,
-                        'register_object_invocation_plan' => $registerObjectInvocationPlan['report'],
-                    ]
-                );
-            }
-            $driver['exported_object_class'] = NativeDbusExtensionRuntimeObject::class;
-            $driver['register_object_handoff_channels'] = array_keys($registerObjectHandoff['channels'] ?? []);
-            $driver['register_object_callback_class'] = $registerObjectCallbackClass;
-            $driver['request_name_signature'] = $requestNameSignature;
-            $driver['request_name_invocation_plan'] = $requestNameInvocationPlan['report'];
-            $driver['request_name_result'] = $this->normalizeResultValue($requestNameResult);
-            $driver['register_object_signature'] = $registerObjectSignature;
-            $driver['register_object_invocation_plan'] = $registerObjectInvocationPlan['report'];
-            $this->writePhaseMarker($environment, 'after-request-name');
-        } catch (Throwable $exception) {
-            $this->writePhaseMarker($environment, 'request-name-exception');
-            return $this->failedLifecycle(
-                'native-dbus-extension-request-name-failed',
-                $driver + [
-                    'request_name_signature' => $requestNameSignature ?? null,
-                    'request_name_invocation_plan' => $requestNameInvocationPlan['report'] ?? null,
-                    'register_object_signature' => $registerObjectSignature ?? null,
-                    'register_object_invocation_plan' => $registerObjectInvocationPlan['report'] ?? null,
-                    'error_message' => $exception->getMessage(),
-                ]
-            );
-        }
-
-        try {
             $this->writePhaseMarker($environment, 'before-register-object');
             $registerObjectResult = $this->invokeRegisterObject($connection, $registerObjectInvocationPlan['arguments']);
             if ($registerObjectResult === false) {
@@ -374,11 +365,29 @@ final class NativeDbusExtensionOwnershipDriver
     }
 
     /**
+     * Warm the runtime classes before opening the native D-Bus connection.
+     */
+    private function preloadPhpRuntimeClasses(): void
+    {
+        foreach ([
+            NativeDbusExtensionRuntimeObject::class,
+            NativeDbusExtensionCallbackBridge::class,
+            SystemApiManager::class,
+            SystemApiToolkit::class,
+            SystemApiDbusRuntimeProbeToolkit::class,
+            SystemApiDbusRuntimeActivationToolkit::class,
+            SystemApiDbusRuntimeBackendToolkit::class,
+        ] as $className) {
+            class_exists($className);
+        }
+    }
+
+    /**
      * @param array<string, mixed> $serviceDefinition
      * @param array<string, string> $environment
      * @return array{exported_object: NativeDbusExtensionRuntimeObject, register_object_handoff: array<string, mixed>, callback_class: string}
      */
-    private function preparePhpSideRuntimeArtifacts(array $serviceDefinition, array $environment): array
+    private function createPhpSideRuntimeArtifacts(array $serviceDefinition, array $environment): array
     {
         $exportedObject = new NativeDbusExtensionRuntimeObject(
             $serviceDefinition,

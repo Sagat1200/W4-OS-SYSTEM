@@ -403,3 +403,43 @@ Estado honesto de este corte:
 
 - `php -l src/SystemApi/NativeDbusExtensionOwnershipDriver.php` y `php -l src/SystemApi/SystemApiDbusRuntimeBackendToolkit.php` cierran en verde.
 - Todavia falta rerunear `check_native_dbus_launch_process.php` dentro de `W4-OS-Server-DbusModern` para confirmar que el fix mueve `service_reachable_ok` a `true` y no solo corrige la lectura local del lifecycle.
+
+## Actualizacion posterior: `launch-process` ya queda cerrado end-to-end en la VM homologada
+
+Se recupero primero el transporte de laboratorio contra la live con el helper canonico `scripts/enable_live_ssh_in_virtualbox.php`, y desde ahi se reejecuto `check_native_dbus_launch_process.php` dentro de `W4-OS-Server-DbusModern`.
+
+El primer rerun despues del fix de lifecycle ya no fallaba por timeout de activacion: el reporte mostraba al hijo real visible desde `busctl --system status org.w4.System1`, pero `busctl --system call ... GetCapabilities ...` todavia lo hacia caer con `Message recipient disconnected from message bus without replying`. Para separar ese ultimo bloqueo se agregaron tres sondas vivas:
+
+- `serve_native_dbus_method_probe_preload_first.php`
+- `serve_native_dbus_method_probe_preload_object_only.php`
+- `serve_native_dbus_method_probe_preload_classes_only.php`
+
+La evidencia homologada fue consistente:
+
+- precargar el `runtimeObject` completo antes de abrir `Dbus` vuelve a abortar con `zend_mm_heap corrupted`;
+- precargar solo clases (`class_exists(...)`) antes del constructor nativo mantiene el servicio vivo;
+- con ese orden, `GetCapabilities` vuelve a responder por `busctl` en verde.
+
+Sobre esa lectura, `NativeDbusExtensionOwnershipDriver` se reajusto para:
+
+- calentar clases del lado PHP antes de `new Dbus(...)`;
+- ejecutar `requestName()` con la conexion ya abierta;
+- crear `NativeDbusExtensionRuntimeObject` y primar `NativeDbusExtensionCallbackBridge` solo despues de `requestName()`;
+- continuar luego con `registerObject()` y el loop sostenido.
+
+Resultado homologado final del rerun:
+
+- `launch_ok = true`
+- `service_reachable_ok = true`
+- `busctl_status.exit_code = 0`
+- `busctl_capabilities.exit_code = 0`
+- `delayed_observation.status = native-runtime-service-observed-pending-ownership`
+- `process_status.exit_code = 0`
+
+Lectura actualizada:
+
+- el carril `launch-process` ya queda cerrado de punta a punta en la VM moderna;
+- el problema real del orden de carga no era "precargar PHP" en abstracto, sino instanciar el `runtimeObject` demasiado pronto;
+- el orden que sobrevive en real es: precarga de clases, conexion D-Bus, `requestName()`, runtime object + bridge, `registerObject()`, `waitLoop()`.
+
+Para conservar esta regresion como contraste reproducible y no solo como memoria del rerun, el workspace suma ahora la sonda matriz `runtime-check/check_native_dbus_method_probe_ordering.php`. Ese script relanza los tres modos de ordering (`preload-first`, `preload-object-only`, `preload-classes-only`), contrasta `busctl --system status org.w4.System1` y `GetCapabilities`, y evalua si cada modo cumple la expectativa correcta. Las tres sondas vivas originales quedan como apoyo de aislamiento manual; la referencia canonica para futuros reruns de ordering pasa a ser la matriz.
