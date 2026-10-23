@@ -353,3 +353,30 @@ Lectura actualizada:
 - el objeto PHP `NativeDbusExtensionRuntimeObject` no es el disparador primario;
 - la policy del bus ya no es el bloqueo;
 - el daño de heap lo introduce el propio `requestName()` del fork nativo cuando la policy ya permite adquirir `org.w4.System1`.
+
+## Actualizacion posterior: `requestName()` puro ya queda estable, pero el heap sigue rompiendose al primer `require`
+
+Sobre el mismo fork activo se probaron tres cortes adicionales:
+
+- `Dbus::requestName()` ya devuelve explicitamente el `reply` `uint32` y maneja `DBusError` de forma estable;
+- se intento tambien cambiar el constructor a conexion privada (`dbus_bus_get_private()`) y reemplazar `dbus_bus_request_name()` por una method call manual `org.freedesktop.DBus.RequestName`;
+- ninguno de esos dos ultimos experimentos movio el crash de la combinacion posterior.
+
+El probe refinado `probe_native_dbus_heap_after_request_name.php` ya deja ahora este mapa:
+
+- `request_name_only` cierra en verde con `request_name_result = 1`;
+- `request_name_then_scalar_allocation` cierra en verde;
+- `request_name_then_gc_collect` cierra en verde;
+- `request_name_then_require_noop`, `request_name_then_require_autoload` y `request_name_then_exported_object` abortan con `zend_mm_heap corrupted`.
+
+Los marcadores `guest-artifacts/heap-after-request-name/scenario-phases/*.phase` dejan ademas que el proceso cae en:
+
+- `before-require-noop`;
+- `before-require-autoload`.
+
+Lectura operativa nueva:
+
+- el caso minimo de `requestName()` puro ya no es el que aborta;
+- tampoco es un problema generico de cualquier trabajo PHP posterior, porque asignaciones y `gc_collect_cycles()` sobreviven;
+- el heap sigue quedando dañado por `requestName()`, pero ese daño se revela especificamente al entrar en el primer `require`/compilacion de otro archivo PHP;
+- la siguiente investigacion util ya no es seguir tocando policy, `registerObject()` ni el tipo de conexion, sino revisar que ownership interno deja `requestName()` sobre estructuras Zend/libdbus que el motor vuelve a tocar al incluir otro script.

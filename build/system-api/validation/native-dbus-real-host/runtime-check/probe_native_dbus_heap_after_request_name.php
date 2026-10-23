@@ -39,6 +39,10 @@ if (!is_file($dbusModule)) {
 $scenarios = [
     'request_name_only',
     'exported_object_only',
+    'request_name_then_scalar_allocation',
+    'request_name_then_gc_collect',
+    'request_name_then_require_noop',
+    'request_name_then_require_autoload',
     'request_name_then_exported_object',
 ];
 
@@ -93,11 +97,14 @@ function executeScenario(?string $scenario, array $environment): void
 
     $rootDir = resolveStringOverride($environment, 'W4_SYSTEM_API_REMOTE_ROOT_DIR')
         ?? '/home/w4live/w4-os-system';
+    writeScenarioPhaseMarker($environment, $scenario, 'start');
 
     switch ($scenario) {
         case 'request_name_only':
             $connection = instantiateSystemBusConnection();
+            writeScenarioPhaseMarker($environment, $scenario, 'before-request-name');
             $result = $connection->requestName('org.w4.System1');
+            writeScenarioPhaseMarker($environment, $scenario, 'after-request-name');
             printJson([
                 'scenario' => $scenario,
                 'request_name_result' => normalizeValue($result),
@@ -105,11 +112,15 @@ function executeScenario(?string $scenario, array $environment): void
             return;
 
         case 'exported_object_only':
+            writeScenarioPhaseMarker($environment, $scenario, 'before-require-autoload');
             requireAutoload($rootDir);
+            writeScenarioPhaseMarker($environment, $scenario, 'after-require-autoload');
+            writeScenarioPhaseMarker($environment, $scenario, 'before-exported-object');
             $exportedObject = new \W4\OS\SystemApi\NativeDbusExtensionRuntimeObject(
                 defaultServiceDefinition(),
                 $rootDir
             );
+            writeScenarioPhaseMarker($environment, $scenario, 'after-exported-object');
             printJson([
                 'scenario' => $scenario,
                 'exported_object_class' => $exportedObject::class,
@@ -117,14 +128,82 @@ function executeScenario(?string $scenario, array $environment): void
             ]);
             return;
 
+        case 'request_name_then_scalar_allocation':
+            $connection = instantiateSystemBusConnection();
+            writeScenarioPhaseMarker($environment, $scenario, 'before-request-name');
+            $requestNameResult = $connection->requestName('org.w4.System1');
+            writeScenarioPhaseMarker($environment, $scenario, 'after-request-name');
+            $probeArray = [
+                'alpha' => 'beta',
+                'gamma' => 42,
+                'delta' => true,
+            ];
+            writeScenarioPhaseMarker($environment, $scenario, 'after-scalar-allocation');
+            printJson([
+                'scenario' => $scenario,
+                'request_name_result' => normalizeValue($requestNameResult),
+                'probe_array' => $probeArray,
+            ]);
+            return;
+
+        case 'request_name_then_gc_collect':
+            $connection = instantiateSystemBusConnection();
+            writeScenarioPhaseMarker($environment, $scenario, 'before-request-name');
+            $requestNameResult = $connection->requestName('org.w4.System1');
+            writeScenarioPhaseMarker($environment, $scenario, 'after-request-name');
+            $cycles = gc_collect_cycles();
+            writeScenarioPhaseMarker($environment, $scenario, 'after-gc-collect');
+            printJson([
+                'scenario' => $scenario,
+                'request_name_result' => normalizeValue($requestNameResult),
+                'collected_cycles' => $cycles,
+            ]);
+            return;
+
+        case 'request_name_then_require_noop':
+            $connection = instantiateSystemBusConnection();
+            writeScenarioPhaseMarker($environment, $scenario, 'before-request-name');
+            $requestNameResult = $connection->requestName('org.w4.System1');
+            writeScenarioPhaseMarker($environment, $scenario, 'after-request-name');
+            writeScenarioPhaseMarker($environment, $scenario, 'before-require-noop');
+            require_once $rootDir . '/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php';
+            writeScenarioPhaseMarker($environment, $scenario, 'after-require-noop');
+            printJson([
+                'scenario' => $scenario,
+                'request_name_result' => normalizeValue($requestNameResult),
+                'noop_required' => true,
+            ]);
+            return;
+
+        case 'request_name_then_require_autoload':
+            $connection = instantiateSystemBusConnection();
+            writeScenarioPhaseMarker($environment, $scenario, 'before-request-name');
+            $requestNameResult = $connection->requestName('org.w4.System1');
+            writeScenarioPhaseMarker($environment, $scenario, 'after-request-name');
+            writeScenarioPhaseMarker($environment, $scenario, 'before-require-autoload');
+            requireAutoload($rootDir);
+            writeScenarioPhaseMarker($environment, $scenario, 'after-require-autoload');
+            printJson([
+                'scenario' => $scenario,
+                'request_name_result' => normalizeValue($requestNameResult),
+                'autoload_loaded' => class_exists(\W4\OS\SystemApi\NativeDbusExtensionRuntimeObject::class),
+            ]);
+            return;
+
         case 'request_name_then_exported_object':
             $connection = instantiateSystemBusConnection();
+            writeScenarioPhaseMarker($environment, $scenario, 'before-request-name');
             $requestNameResult = $connection->requestName('org.w4.System1');
+            writeScenarioPhaseMarker($environment, $scenario, 'after-request-name');
+            writeScenarioPhaseMarker($environment, $scenario, 'before-require-autoload');
             requireAutoload($rootDir);
+            writeScenarioPhaseMarker($environment, $scenario, 'after-require-autoload');
+            writeScenarioPhaseMarker($environment, $scenario, 'before-exported-object');
             $exportedObject = new \W4\OS\SystemApi\NativeDbusExtensionRuntimeObject(
                 defaultServiceDefinition(),
                 $rootDir
             );
+            writeScenarioPhaseMarker($environment, $scenario, 'after-exported-object');
             printJson([
                 'scenario' => $scenario,
                 'request_name_result' => normalizeValue($requestNameResult),
@@ -158,7 +237,10 @@ function runScenarioSubprocess(
             '--scenario=' . $scenario,
         ],
         $rootDir,
-        $environment
+        array_merge($environment, [
+            'W4_SYSTEM_API_SCENARIO_ARTIFACTS_DIR' => $environment['W4_SYSTEM_API_REMOTE_ARTIFACTS_DIR']
+                ?? ($rootDir . '/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/heap-after-request-name'),
+        ])
     );
 
     return [
@@ -166,6 +248,21 @@ function runScenarioSubprocess(
         'stdout' => trim((string) ($process['stdout'] ?? '')),
         'stderr' => trim((string) ($process['stderr'] ?? '')),
     ];
+}
+
+/**
+ * @param array<string, string> $environment
+ */
+function writeScenarioPhaseMarker(array $environment, string $scenario, string $phase): void
+{
+    $baseDir = resolveStringOverride($environment, 'W4_SYSTEM_API_SCENARIO_ARTIFACTS_DIR');
+    if ($baseDir === null) {
+        return;
+    }
+
+    $phaseDir = $baseDir . '/scenario-phases';
+    @mkdir($phaseDir, 0777, true);
+    @file_put_contents($phaseDir . '/' . $scenario . '.phase', $phase . PHP_EOL);
 }
 
 /**

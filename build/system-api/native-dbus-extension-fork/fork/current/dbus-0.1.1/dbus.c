@@ -267,6 +267,7 @@ typedef struct _php_dbus_data_array php_dbus_data_array;
 struct _php_dbus_obj {
 	zend_object     std;
 	DBusConnection *con;
+        int             owns_private_connection;
 	int             useIntrospection;
 	HashTable       objects; /* A hash with all the registered objects that can be called */
 };
@@ -668,6 +669,9 @@ static void dbus_object_free_storage_dbus(void *object TSRMLS_DC)
         php_dbus_obj *intern = DBUS_GET_OBJECT(php_dbus_obj, object);
 
         if (intern->con) {
+                if (intern->owns_private_connection) {
+                        dbus_connection_close(intern->con);
+                }
                 dbus_connection_unref(intern->con);
         }
 
@@ -974,12 +978,16 @@ static int dbus_initialize(php_dbus_obj *dbusobj, int type, int introspect TSRML
 	DBusConnection *con;
 	dbus_error_init(&err);
 
-	con = dbus_bus_get(type, &err);
+        con = dbus_bus_get_private(type, &err);
 	if (dbus_error_is_set(&err)) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Connection Error (%s)\n", err.message);
 		dbus_error_free(&err);
 	}
+        if (con != NULL) {
+                dbus_connection_set_exit_on_disconnect(con, FALSE);
+        }
 	dbusobj->con = con;
+        dbusobj->owns_private_connection = con != NULL ? 1 : 0;
 	dbusobj->useIntrospection = introspect;
     zend_hash_init(&dbusobj->objects, 16, NULL, NULL, 0);
 
@@ -1306,12 +1314,15 @@ PHP_METHOD(Dbus, requestName)
 {
 	zval *object;
 	DBusError err;
-	int ret;
+        DBusMessage *msg;
+        DBusMessage *reply = NULL;
+        DBusMessageIter iter;
+        dbus_uint32_t flags = DBUS_NAME_FLAG_REPLACE_EXISTING;
+        dbus_uint32_t ret = 0;
 	char* name;
-   size_t name_len;
+        size_t name_len;
 	php_dbus_obj *dbus;
 
-	dbus_set_error_handling(EH_THROW, NULL TSRMLS_CC);
 	if (FAILURE == zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
 		"Os", &object, dbus_ce_dbus, &name, &name_len)) {
 		RETURN_FALSE;
@@ -1320,12 +1331,62 @@ PHP_METHOD(Dbus, requestName)
         dbus = DBUS_ZVAL_GET_OBJECT(php_dbus_obj, object);
 	dbus_error_init(&err);
 
-	/* request our name on the bus and check for errors */
-	ret = dbus_bus_request_name(dbus->con, name, DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
+        msg = dbus_message_new_method_call(
+                DBUS_SERVICE_DBUS,
+                DBUS_PATH_DBUS,
+                DBUS_INTERFACE_DBUS,
+                "RequestName"
+        );
+        if (msg == NULL) {
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to allocate RequestName message.");
+                RETURN_FALSE;
+        }
+
+        dbus_message_iter_init_append(msg, &iter);
+        if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &name)) {
+                dbus_message_unref(msg);
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to append RequestName bus name.");
+                RETURN_FALSE;
+        }
+        if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_UINT32, &flags)) {
+                dbus_message_unref(msg);
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to append RequestName flags.");
+                RETURN_FALSE;
+        }
+
+        reply = dbus_connection_send_with_reply_and_block(dbus->con, msg, -1, &err);
+        dbus_connection_flush(dbus->con);
+        dbus_message_unref(msg);
+
+        if (dbus_error_is_set(&err)) {
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Request Name Error (%s)\n", err.message);
+                dbus_error_free(&err);
+                if (reply != NULL) {
+                        dbus_message_unref(reply);
+                }
+                RETURN_FALSE;
+        }
+
+        if (reply == NULL) {
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Request Name returned no reply.");
+                RETURN_FALSE;
+        }
+
+        if (!dbus_message_get_args(reply, &err, DBUS_TYPE_UINT32, &ret, DBUS_TYPE_INVALID)) {
+                php_error_docref(NULL TSRMLS_CC, E_WARNING, "Request Name Reply Error (%s)\n", err.message);
+                dbus_error_free(&err);
+                dbus_message_unref(reply);
+                RETURN_FALSE;
+        }
+
+        dbus_message_unref(reply);
+
 	if (DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER != ret) { 
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Not Primary Owner (%d)\n", ret);
+                RETURN_LONG(ret);
 	}
-	dbus_set_error_handling(EH_NORMAL, NULL TSRMLS_CC);
+
+        RETURN_LONG(ret);
 }
 /* }}} */
 

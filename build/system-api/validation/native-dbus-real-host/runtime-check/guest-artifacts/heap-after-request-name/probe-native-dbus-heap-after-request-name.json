@@ -8,14 +8,34 @@
     "ok": true,
     "scenarios": {
         "request_name_only": {
-            "exit_code": 6,
-            "stdout": "",
-            "stderr": "zend_mm_heap corrupted"
+            "exit_code": 0,
+            "stdout": "{\n    \"scenario\": \"request_name_only\",\n    \"request_name_result\": 1\n}",
+            "stderr": ""
         },
         "exported_object_only": {
             "exit_code": 0,
             "stdout": "{\n    \"scenario\": \"exported_object_only\",\n    \"exported_object_class\": \"W4\\\\OS\\\\SystemApi\\\\NativeDbusExtensionRuntimeObject\",\n    \"binding_status\": \"native-runtime-object-exported\"\n}",
             "stderr": ""
+        },
+        "request_name_then_scalar_allocation": {
+            "exit_code": 0,
+            "stdout": "{\n    \"scenario\": \"request_name_then_scalar_allocation\",\n    \"request_name_result\": 1,\n    \"probe_array\": {\n        \"alpha\": \"beta\",\n        \"gamma\": 42,\n        \"delta\": true\n    }\n}",
+            "stderr": ""
+        },
+        "request_name_then_gc_collect": {
+            "exit_code": 0,
+            "stdout": "{\n    \"scenario\": \"request_name_then_gc_collect\",\n    \"request_name_result\": 1,\n    \"collected_cycles\": 0\n}",
+            "stderr": ""
+        },
+        "request_name_then_require_noop": {
+            "exit_code": 6,
+            "stdout": "",
+            "stderr": "zend_mm_heap corrupted"
+        },
+        "request_name_then_require_autoload": {
+            "exit_code": 6,
+            "stdout": "",
+            "stderr": "zend_mm_heap corrupted"
         },
         "request_name_then_exported_object": {
             "exit_code": 6,
