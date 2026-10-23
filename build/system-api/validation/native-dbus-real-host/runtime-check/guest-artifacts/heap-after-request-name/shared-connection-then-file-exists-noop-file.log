@@ -1,0 +1,6 @@
+{
+    "scenario": "connection_then_file_exists_noop_file",
+    "connection_class": "Dbus",
+    "noop_file_path": "/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php",
+    "file_exists": true
+}

@@ -500,3 +500,26 @@ Lectura actualizada:
 - el fork sigue afectando memoria que PHP usa al resolver rutas reales del filesystem;
 - `file_exists()` sobrevive, asi que el daño visible no es "cualquier I/O de path", sino algo mas fino ligado a `realpath`/normalizacion canonica;
 - el siguiente corte util ya no es hablar solo de "primer require posterior a requestName()", sino instrumentar por que abrir `Dbus` ya deja inestable el carril `tsrm_realpath()` del runtime PHP.
+
+## Actualizacion posterior: el contraste `shared` vs `private` no mueve el crash de `realpath()`
+
+Para cerrar la duda mas directa del constructor nativo, el fork activo de `dbus.c` ya acepta `W4_DBUS_CONNECTION_MODE=shared` y deja el modo actual `private` como default. Eso permitio recompilar el mismo modulo y contrastar, sobre la VM homologada, la ruta `dbus_bus_get()` (shared, mas cercana al upstream) contra `dbus_bus_get_private()` sin tocar el resto del probe.
+
+Contraste homologado ejecutado:
+
+- recompilacion y rehidratacion del modulo con `runtime-check/rehydrate_dbus_module_in_guest.sh`
+- `env W4_DBUS_CONNECTION_MODE=shared php -d extension=... probe_native_dbus_heap_after_request_name.php --scenario=connection_then_realpath_noop_file`
+- `env W4_DBUS_CONNECTION_MODE=shared php -d extension=... probe_native_dbus_heap_after_request_name.php --scenario=connection_then_file_exists_noop_file`
+- `env W4_DBUS_CONNECTION_MODE=shared ... run_request_name_require_noop_under_gdb.sh` con `connection_then_realpath_noop_file`
+
+Resultado real:
+
+- `shared-connection-then-realpath-noop-file.log`: sigue abortando con `zend_mm_heap corrupted`
+- `shared-connection-then-file-exists-noop-file.log`: sigue cerrando limpio
+- `gdb-shared-connection-then-realpath-noop-file.log`: vuelve a caer en `virtual_file_ex()` / `tsrm_realpath()` antes del `SIGABRT`
+
+Lectura actualizada:
+
+- el bug ya no parece explicarse solo por haber migrado a `dbus_bus_get_private()`;
+- tampoco por `dbus_connection_set_exit_on_disconnect(FALSE)`, porque en el carril `shared` ese detalle deja de aplicar y el crash visible igual persiste;
+- el siguiente corte util vuelve a quedar dentro del estado que el constructor de `Dbus` deja en memoria del runtime PHP, no solo en la eleccion `shared/private` de la conexion libdbus.

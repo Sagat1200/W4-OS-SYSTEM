@@ -972,22 +972,47 @@ void dbus_registered_object_dtor(void *ptr)
 {
 }
 
+static int php_dbus_should_use_private_connection(void)
+{
+        const char *mode = getenv("W4_DBUS_CONNECTION_MODE");
+
+        if (mode == NULL || mode[0] == '\0') {
+                return 1;
+        }
+
+        if (
+                strcmp(mode, "shared") == 0 ||
+                strcmp(mode, "bus-get") == 0 ||
+                strcmp(mode, "public") == 0
+        ) {
+                return 0;
+        }
+
+        return 1;
+}
+
 static int dbus_initialize(php_dbus_obj *dbusobj, int type, int introspect TSRMLS_DC)
 {
 	DBusError err;
 	DBusConnection *con;
+        int use_private_connection;
 	dbus_error_init(&err);
 
-        con = dbus_bus_get_private(type, &err);
+        use_private_connection = php_dbus_should_use_private_connection();
+        if (use_private_connection) {
+                con = dbus_bus_get_private(type, &err);
+        } else {
+                con = dbus_bus_get(type, &err);
+        }
 	if (dbus_error_is_set(&err)) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Connection Error (%s)\n", err.message);
 		dbus_error_free(&err);
 	}
-        if (con != NULL) {
+        if (con != NULL && use_private_connection) {
                 dbus_connection_set_exit_on_disconnect(con, FALSE);
         }
 	dbusobj->con = con;
-        dbusobj->owns_private_connection = con != NULL ? 1 : 0;
+        dbusobj->owns_private_connection = (con != NULL && use_private_connection) ? 1 : 0;
 	dbusobj->useIntrospection = introspect;
     zend_hash_init(&dbusobj->objects, 16, NULL, NULL, 0);
 
