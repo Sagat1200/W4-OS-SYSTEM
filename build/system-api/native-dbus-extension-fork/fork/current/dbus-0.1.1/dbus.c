@@ -2258,6 +2258,7 @@ PHP_METHOD(DbusSignal, send)
 	DBusMessageIter dbus_args;
 	int i;
 	dbus_uint32_t serial = 0;
+   int send_ok = 1;
 
 	dbus_set_error_handling(EH_THROW, NULL TSRMLS_CC);
         signal_obj = DBUS_ZVAL_GET_OBJECT(php_dbus_signal_obj, getThis());
@@ -2270,7 +2271,7 @@ PHP_METHOD(DbusSignal, send)
         data = (zval *) safe_emalloc(elements, sizeof(zval), 1);
 	if (FAILURE == zend_get_parameters_array_ex(elements, data)) {
 		efree(data);
-		return;
+           RETURN_FALSE;
 	}
 
 	data_array.count = 0;
@@ -2288,6 +2289,7 @@ PHP_METHOD(DbusSignal, send)
 	if (!dbus_connection_send(signal_obj->dbus->con, signal_obj->msg, &serial)) {
 		dbus_message_unref(signal_obj->msg);
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Out of memory.");
+           send_ok = 0;
 	}
 	dbus_connection_flush(signal_obj->dbus->con);
 
@@ -2298,6 +2300,10 @@ PHP_METHOD(DbusSignal, send)
 	efree(data);
 
 	dbus_set_error_handling(EH_NORMAL, NULL TSRMLS_CC);
+   if (send_ok) {
+           RETURN_TRUE;
+   }
+   RETURN_FALSE;
 }
 
 static int dbus_array_initialize(php_dbus_array_obj *dbusobj, long type, zval *elements, char *signature TSRMLS_DC)

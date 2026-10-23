@@ -113,7 +113,20 @@ El workspace suma ahora tambien `build/system-api/validation/native-dbus-real-ho
 - en `PHP >= 8`, la senal entrante debe normalizarse a `true`
 - en ramas legacy, el carril historico seguiria materializando `DbusSignal`
 
-En este corte la sonda queda incorporada al repo y validada con `php -l`; el rerun homologado en `W4-OS-Server-DbusModern` queda como siguiente paso util para persistir `guest-artifacts/wait-loop-signal-contract/check-native-dbus-wait-loop-signal-contract.json`.
+Rerun homologado ejecutado en `W4-OS-Server-DbusModern`:
+
+- `sudo -S php -d extension=/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/dbus-module/dbus.so /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_wait_loop_signal_contract.php`
+
+Resultado persistido en `guest-artifacts/wait-loop-signal-contract/check-native-dbus-wait-loop-signal-contract.json`:
+
+- `add_watch = true`
+- `send_signal = true`
+- `wait_loop_type = boolean`
+- `wait_loop_value = true`
+- `contract_state = incoming-signal-normalized-to-true`
+- `ok = true`
+
+El rerun primero dejo visible una deuda menor pero real del wrapper saliente: `DbusSignal::send()` estaba enviando la señal correctamente, pero el metodo no devolvia exito explicito y el probe observaba `send_signal = null`. El fork activo ya normaliza ese retorno a `true/false`, se recompilo y rehidrato en la misma VM, y el segundo rerun homologado ya deja cerrado tambien ese punto sin mover el contrato verde de `waitLoop()`.
 
 ## Actualizacion posterior: method calls reales sobre `org.w4.System1.Manager`
 

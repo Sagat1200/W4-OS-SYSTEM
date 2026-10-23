@@ -1,0 +1,36 @@
+diff --git a/build/system-api/native-dbus-extension-fork/fork/current/dbus-0.1.1/dbus.c b/build/system-api/native-dbus-extension-fork/fork/current/dbus-0.1.1/dbus.c
+--- a/build/system-api/native-dbus-extension-fork/fork/current/dbus-0.1.1/dbus.c
++++ b/build/system-api/native-dbus-extension-fork/fork/current/dbus-0.1.1/dbus.c
+@@
+ PHP_METHOD(DbusSignal, send)
+ {
+         zval *data = NULL;
+    int     elements = ZEND_NUM_ARGS();
+    php_dbus_data_array data_array;
+    php_dbus_signal_obj *signal_obj;
+    DBusMessageIter dbus_args;
+    int i;
+    dbus_uint32_t serial = 0;
++   int send_ok = 1;
+@@
+    if (FAILURE == zend_get_parameters_array_ex(elements, data)) {
+            efree(data);
+-           return;
++           RETURN_FALSE;
+    }
+@@
+    /* send the message and flush the connection */
+    if (!dbus_connection_send(signal_obj->dbus->con, signal_obj->msg, &serial)) {
+            dbus_message_unref(signal_obj->msg);
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "Out of memory.");
++           send_ok = 0;
+    }
+    dbus_connection_flush(signal_obj->dbus->con);
+@@
+ 
+    dbus_set_error_handling(EH_NORMAL, NULL TSRMLS_CC);
++   if (send_ok) {
++           RETURN_TRUE;
++   }
++   RETURN_FALSE;
+ }
