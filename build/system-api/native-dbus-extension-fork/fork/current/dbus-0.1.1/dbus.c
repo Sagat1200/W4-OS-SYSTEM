@@ -735,7 +735,9 @@ static void dbus_object_free_storage_dbus_signal(void *object TSRMLS_DC)
 {
         php_dbus_signal_obj *intern = DBUS_GET_OBJECT(php_dbus_signal_obj, object);
 
-        dbus_message_unref(intern->msg);
+        if (intern->msg) {
+                dbus_message_unref(intern->msg);
+        }
 
         if (intern->interface) {
                 efree(intern->interface);
@@ -769,13 +771,8 @@ static void dbus_object_free_storage_dbus_array(void *object TSRMLS_DC)
                 efree(intern->signature);
         }
 
-        zval *arr = intern->elements;
-
         if (intern->elements) {
-                if (Z_DELREF_P(arr) == 0) {
-                        zend_array_destroy(Z_ARRVAL_P(arr));
-                }
-                efree(intern->elements);
+                zval_ptr_dtor(intern->elements);
         }
 
         zend_object_std_dtor(&intern->std);
@@ -801,13 +798,8 @@ static void dbus_object_free_storage_dbus_dict(void *object TSRMLS_DC)
                 efree(intern->signature);
         }
 
-        zval *arr = intern->elements;
-
         if (intern->elements) {
-                if (Z_DELREF_P(arr) == 0) {
-                        zend_array_destroy(Z_ARRVAL_P(arr));
-                }
-                efree(intern->elements);
+                zval_ptr_dtor(intern->elements);
         }
 
         zend_object_std_dtor(&intern->std);
@@ -835,7 +827,6 @@ static void dbus_object_free_storage_dbus_variant(void *object TSRMLS_DC)
 
         if (intern->data) {
                 zval_ptr_dtor(intern->data);
-                efree(intern->data);
         }
 
         zend_object_std_dtor(&intern->std);
@@ -888,12 +879,8 @@ static void dbus_object_free_storage_dbus_struct(void *object TSRMLS_DC)
 {
         php_dbus_struct_obj *intern = DBUS_GET_OBJECT(php_dbus_struct_obj, object);
 
-        zval *arr = intern->elements;
         if (intern->elements) {
-                if (Z_DELREF_P(arr) == 0) {
-                        zend_array_destroy(Z_ARRVAL_P(arr));
-                }
-                efree(intern->elements);
+                zval_ptr_dtor(intern->elements);
         }
 
         zend_object_std_dtor(&intern->std);

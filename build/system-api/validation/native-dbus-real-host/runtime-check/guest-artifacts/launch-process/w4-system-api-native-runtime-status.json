@@ -456,15 +456,15 @@
                     "next_action": "observe-native-runtime-service-state",
                     "launch_mode": "background-process",
                     "launched": true,
-                    "pid": 30873
+                    "pid": 33253
                 },
                 "parse_error": null
             },
             "pid_file": {
                 "path": "/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/launch-process/w4-system-api-native-runtime.pid",
                 "exists": true,
-                "pid": 30873,
-                "raw_value": "30873",
+                "pid": 33253,
+                "raw_value": "33253",
                 "is_running": true
             }
         },
@@ -620,9 +620,9 @@
             "next_action": "observe-native-runtime-service-state",
             "launch_mode": "background-process",
             "launched": true,
-            "pid": 30873
+            "pid": 33253
         },
-        "pid": 30873,
+        "pid": 33253,
         "blocking_reason": "native-runtime-bus-ownership-pending",
         "next_action": "materialize-native-bus-ownership"
     },

@@ -586,3 +586,53 @@ Lectura actualizada:
 - el endurecimiento general no introdujo regresiones visibles en el carril homologado real;
 - el fix de layout deja de ser un parche solo para `Dbus` y pasa a ser la regla base del fork para wrappers Zend en PHP 8.4;
 - la deuda que queda ya no es de heap visible, sino de cobertura dedicada para wrappers que hoy no pasan por el runtime real.
+
+## Actualizacion posterior: la smoke dedicada de wrappers queda verde y cierra deuda nativa real de destructores
+
+Para no dejar la cobertura de wrappers colgando del runtime real, el repo suma ahora `build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_wrapper_smoke.php`, una smoke suite dedicada que relanza en subprocess escenarios para:
+
+- proxy `DbusObject` via `createProxy()`
+- `DbusSignal`
+- `DbusArray`
+- `DbusDict`
+- `DbusVariant`
+- `DbusSet`
+- `DbusStruct`
+- `DbusObjectPath`
+- wrappers escalares
+- un bundle mixto de lifecycle/GC
+
+Primer rerun homologado:
+
+- `sudo -S php /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_wrapper_smoke.php`
+
+Hallazgos reales del primer corte:
+
+- `DbusObject::__construct()` es privado, asi que la smoke se corrigio para validar ese contrato por `Reflection` y usar `createProxy()` en lugar de construccion global invalida
+- `DbusSignal` abortaba al destruir porque hacia `dbus_message_unref()` sobre `NULL`
+- `DbusArray`, `DbusDict`, `DbusVariant` y `DbusStruct` todavia mezclaban ownership manual de `zval` y dejaban `zend_mm_heap corrupted`
+- el escenario `nested_wrappers_bundle` pedia una simplificacion para medir lifecycle/destruccion sin sobrecargarlo con introspeccion profunda ya cubierta por los casos individuales
+
+Corte aplicado en el fork:
+
+- guardia `if (intern->msg)` antes de `dbus_message_unref()` en `DbusSignal`
+- reemplazo del manejo manual de refs por `zval_ptr_dtor(...)` en destructores de `DbusArray`, `DbusDict`, `DbusVariant` y `DbusStruct`
+- ajuste de la smoke para tratar `DbusObject` como wrapper de factory y no como constructor publico
+- simplificacion del bundle mixto para medir creacion, destruccion y GC sin ruido de script
+
+Rerun homologado final:
+
+- `guest-artifacts/wrapper-smoke/check-native-dbus-wrapper-smoke.json` ya cierra `ok = true`
+- pasan los escenarios de proxy, signal, colecciones, variant, object-path, escalares y bundle mixto
+- el modulo recompilado sigue publicandose como `guest-artifacts/dbus-module/dbus.so`
+
+Guardrails revalidados despues del mismo rebuild:
+
+- `probe_native_dbus_heap_after_request_name.php` vuelve a cerrar `ok = true`
+- `check_native_dbus_launch_process.php` mantiene `launch_ok = true` y `service_reachable_ok = true`
+
+Lectura actualizada:
+
+- la deuda de cobertura dedicada para wrappers ya queda cerrada con evidencia homologada propia
+- ademas del layout Zend, el fork tambien necesitaba correcciones reales de destructor/ownership en wrappers que no estaban siendo recorridos por el carril principal del runtime
+- el carril minimo del heap, el carril `launch-process` y la nueva smoke de wrappers quedan simultaneamente verdes sobre la misma VM homologada
