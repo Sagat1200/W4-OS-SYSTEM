@@ -1,0 +1,26 @@
+{
+    "api_version": "1.0",
+    "kind": "native-dbus-heap-after-request-name-probe",
+    "root_dir": "/home/w4live/w4-os-system",
+    "php_binary": "/usr/bin/php",
+    "dbus_module": "/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/dbus-module/dbus.so",
+    "artifacts_dir": "/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/heap-after-request-name",
+    "ok": true,
+    "scenarios": {
+        "request_name_only": {
+            "exit_code": 6,
+            "stdout": "",
+            "stderr": "zend_mm_heap corrupted"
+        },
+        "exported_object_only": {
+            "exit_code": 0,
+            "stdout": "{\n    \"scenario\": \"exported_object_only\",\n    \"exported_object_class\": \"W4\\\\OS\\\\SystemApi\\\\NativeDbusExtensionRuntimeObject\",\n    \"binding_status\": \"native-runtime-object-exported\"\n}",
+            "stderr": ""
+        },
+        "request_name_then_exported_object": {
+            "exit_code": 6,
+            "stdout": "",
+            "stderr": "zend_mm_heap corrupted"
+        }
+    }
+}

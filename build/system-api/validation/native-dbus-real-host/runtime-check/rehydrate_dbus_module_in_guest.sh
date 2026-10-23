@@ -4,7 +4,9 @@ set -euo pipefail
 ROOT_DIR="${W4_SYSTEM_API_REMOTE_ROOT_DIR:-/home/w4live/w4-os-system}"
 SOURCE_DIR="${W4_SYSTEM_API_DBUS_FORK_SOURCE_DIR:-$ROOT_DIR/build/system-api/native-dbus-extension-fork/fork/current/dbus-0.1.1}"
 TARGET_DIR="${W4_SYSTEM_API_DBUS_FORK_TARGET_DIR:-/home/w4live/dbus-0.1.1}"
-OUTPUT_PATH="${W4_SYSTEM_API_REMOTE_DBUS_MODULE:-$TARGET_DIR/modules/dbus.so}"
+DEFAULT_OUTPUT_PATH="$ROOT_DIR/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/dbus-module/dbus.so"
+OUTPUT_PATH="${W4_SYSTEM_API_REMOTE_DBUS_MODULE:-$DEFAULT_OUTPUT_PATH}"
+BUILT_MODULE_PATH="$TARGET_DIR/modules/dbus.so"
 APT_PACKAGES=(
   php8.4-dev
   build-essential
@@ -33,10 +35,13 @@ phpize
 ./configure
 make -j"$(nproc)"
 
-if [[ ! -f "$OUTPUT_PATH" ]]; then
+if [[ ! -f "$BUILT_MODULE_PATH" ]]; then
   printf '{\n  "ok": false,\n  "error": "dbus-module-build-missing-output",\n  "output_path": "%s"\n}\n' "$OUTPUT_PATH"
   exit 1
 fi
+
+mkdir -p "$(dirname "$OUTPUT_PATH")"
+cp "$BUILT_MODULE_PATH" "$OUTPUT_PATH"
 
 php -d "extension=$OUTPUT_PATH" -m >/tmp/w4-dbus-module-check.stdout 2>/tmp/w4-dbus-module-check.stderr || true
 

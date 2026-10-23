@@ -8,8 +8,7 @@ $rootDir = resolveStringOverride($environment, 'W4_SYSTEM_API_REMOTE_ROOT_DIR')
     ?? '/home/w4live/w4-os-system';
 $phpBinary = resolveStringOverride($environment, 'W4_SYSTEM_API_REMOTE_PHP_BINARY')
     ?? '/usr/bin/php';
-$dbusModule = resolveStringOverride($environment, 'W4_SYSTEM_API_REMOTE_DBUS_MODULE')
-    ?? '/home/w4live/dbus-0.1.1/modules/dbus.so';
+$dbusModule = resolveDbusModulePath($environment, $rootDir);
 $adapterScript = resolveStringOverride($environment, 'W4_SYSTEM_API_REMOTE_ADAPTER_SCRIPT')
     ?? ($rootDir . '/scripts/system_api_dbus_runtime_adapter.php');
 $artifactsDir = resolveStringOverride($environment, 'W4_SYSTEM_API_REMOTE_ARTIFACTS_DIR')
@@ -18,12 +17,14 @@ $reportFilePath = $artifactsDir . '/check-native-dbus-launch-process.json';
 $readyMarkerPath = $artifactsDir . '/w4-system-api-native-runtime.ready';
 $statusFilePath = $artifactsDir . '/w4-system-api-native-runtime-status.json';
 $pidFilePath = $artifactsDir . '/w4-system-api-native-runtime.pid';
+$phaseMarkerPath = $artifactsDir . '/w4-system-api-native-runtime.phase';
 
 @mkdir($artifactsDir, 0777, true);
 @unlink($reportFilePath);
 @unlink($readyMarkerPath);
 @unlink($statusFilePath);
 @unlink($pidFilePath);
+@unlink($phaseMarkerPath);
 
 $environment = array_merge($environment, [
     'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
@@ -33,6 +34,7 @@ $environment = array_merge($environment, [
     'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
     'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
     'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+    'W4_SYSTEM_API_NATIVE_RUNTIME_PHASE_MARKER_FILE' => $phaseMarkerPath,
 ]);
 
 $result = [
@@ -79,6 +81,7 @@ $result['artifacts'] = [
     'ready_marker' => readOptionalFile($readyMarkerPath),
     'status_file' => readOptionalJsonFile($statusFilePath),
     'pid_file' => readOptionalFile($pidFilePath),
+    'phase_marker' => readOptionalFile($phaseMarkerPath),
 ];
 
 $result['busctl_status'] = runShellCommand('busctl --system status org.w4.System1');
@@ -254,4 +257,20 @@ function resolveStringOverride(array $environment, string $key): ?string
     $value = $environment[$key] ?? null;
 
     return is_string($value) && trim($value) !== '' ? trim($value) : null;
+}
+
+function resolveDbusModulePath(array $environment, string $rootDir): string
+{
+    $override = resolveStringOverride($environment, 'W4_SYSTEM_API_REMOTE_DBUS_MODULE');
+    if ($override !== null) {
+        return $override;
+    }
+
+    $sharedArtifactPath = $rootDir
+        . '/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/dbus-module/dbus.so';
+    if (is_file($sharedArtifactPath)) {
+        return $sharedArtifactPath;
+    }
+
+    return '/home/w4live/dbus-0.1.1/modules/dbus.so';
 }

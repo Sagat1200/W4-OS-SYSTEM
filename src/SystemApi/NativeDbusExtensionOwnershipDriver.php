@@ -161,12 +161,15 @@ final class NativeDbusExtensionOwnershipDriver
             'runtime_class_name' => $runtimeClassName,
             'constructor_mode' => $constructorMode,
         ];
+        $this->writePhaseMarker($environment, 'constructor-ready');
 
         try {
             $requestNameSignature = $this->createRequestNameSignatureReport($connection);
             $requestNameInvocationPlan = $this->createRequestNameInvocationPlan($connection, $serviceDefinition);
+            $this->writePhaseMarker($environment, 'before-request-name');
             $requestNameResult = $this->invokeRequestName($connection, $requestNameInvocationPlan['arguments']);
             if ($requestNameResult === false) {
+                $this->writePhaseMarker($environment, 'request-name-failed');
                 return $this->failedLifecycle(
                     'native-dbus-extension-request-name-failed',
                     $driver + [
@@ -179,7 +182,9 @@ final class NativeDbusExtensionOwnershipDriver
             $driver['request_name_signature'] = $requestNameSignature;
             $driver['request_name_invocation_plan'] = $requestNameInvocationPlan['report'];
             $driver['request_name_result'] = $this->normalizeResultValue($requestNameResult);
+            $this->writePhaseMarker($environment, 'after-request-name');
         } catch (Throwable $exception) {
+            $this->writePhaseMarker($environment, 'request-name-exception');
             return $this->failedLifecycle(
                 'native-dbus-extension-request-name-failed',
                 $driver + [
@@ -191,20 +196,25 @@ final class NativeDbusExtensionOwnershipDriver
         }
 
         try {
+            $this->writePhaseMarker($environment, 'before-exported-object');
             $exportedObject = new NativeDbusExtensionRuntimeObject(
                 $serviceDefinition,
                 $this->resolveRuntimeRootDir($environment)
             );
+            $this->writePhaseMarker($environment, 'after-exported-object');
             $registerObjectHandoff = $exportedObject->createRegisterObjectHandoffPayload();
+            $this->writePhaseMarker($environment, 'after-register-object-handoff');
             $legacyRegisterObjectCallbackClass = $this->prepareLegacyRegisterObjectCallbackClass(
                 $connection,
                 $exportedObject
             );
+            $this->writePhaseMarker($environment, 'after-register-object-callback-bridge');
             $registerObjectSignature = $this->createRegisterObjectSignatureReport(
                 $connection,
                 $registerObjectHandoff,
                 $legacyRegisterObjectCallbackClass
             );
+            $this->writePhaseMarker($environment, 'after-register-object-signature');
             $registerObjectInvocationPlan = $this->createRegisterObjectInvocationPlan(
                 $connection,
                 $serviceDefinition,
@@ -212,8 +222,11 @@ final class NativeDbusExtensionOwnershipDriver
                 $registerObjectHandoff,
                 $legacyRegisterObjectCallbackClass
             );
+            $this->writePhaseMarker($environment, 'after-register-object-invocation-plan');
+            $this->writePhaseMarker($environment, 'before-register-object');
             $registerObjectResult = $this->invokeRegisterObject($connection, $registerObjectInvocationPlan['arguments']);
             if ($registerObjectResult === false) {
+                $this->writePhaseMarker($environment, 'register-object-failed');
                 return [
                     'request_name_state' => 'owned',
                     'register_object_state' => 'failed',
@@ -236,7 +249,9 @@ final class NativeDbusExtensionOwnershipDriver
             $driver['register_object_signature'] = $registerObjectSignature;
             $driver['register_object_invocation_plan'] = $registerObjectInvocationPlan['report'];
             $driver['register_object_result'] = $this->normalizeResultValue($registerObjectResult);
+            $this->writePhaseMarker($environment, 'after-register-object');
         } catch (Throwable $exception) {
+            $this->writePhaseMarker($environment, 'register-object-exception');
             return [
                 'request_name_state' => 'owned',
                 'register_object_state' => 'failed',
@@ -250,8 +265,10 @@ final class NativeDbusExtensionOwnershipDriver
         try {
             $waitLoopSignature = $this->createWaitLoopSignatureReport($connection);
             $waitLoopInvocationPlan = $this->createWaitLoopInvocationPlan($connection);
+            $this->writePhaseMarker($environment, 'before-wait-loop');
             $waitLoopResult = $this->invokeWaitLoop($connection, $waitLoopInvocationPlan['arguments']);
             if ($waitLoopResult === false) {
+                $this->writePhaseMarker($environment, 'wait-loop-failed');
                 return [
                     'request_name_state' => 'owned',
                     'register_object_state' => 'registered',
@@ -268,7 +285,9 @@ final class NativeDbusExtensionOwnershipDriver
             $driver['wait_loop_signature'] = $waitLoopSignature;
             $driver['wait_loop_invocation_plan'] = $waitLoopInvocationPlan['report'];
             $driver['wait_loop_result'] = $this->normalizeResultValue($waitLoopResult);
+            $this->writePhaseMarker($environment, 'after-wait-loop');
         } catch (Throwable $exception) {
+            $this->writePhaseMarker($environment, 'wait-loop-exception');
             return [
                 'request_name_state' => 'owned',
                 'register_object_state' => 'registered',
@@ -290,6 +309,19 @@ final class NativeDbusExtensionOwnershipDriver
             'driver_status' => 'ownership-materialized',
             'driver' => $driver,
         ];
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function writePhaseMarker(array $environment, string $phase): void
+    {
+        $path = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_PHASE_MARKER_FILE'] ?? null;
+        if (!is_string($path) || trim($path) === '') {
+            return;
+        }
+
+        @file_put_contents(trim($path), $phase . PHP_EOL);
     }
 
     private function resolveRuntimeClassName(array $serviceDefinition, array $environment): ?string

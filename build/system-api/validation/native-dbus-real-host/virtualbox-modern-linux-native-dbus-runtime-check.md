@@ -311,3 +311,45 @@ Lectura honesta del estado:
 - el carril homologado `launch-process` ya quedo reparado y produce un hijo real con PID positivo en la VM moderna;
 - el bloqueo autentico restante ya no es `spawn`, ni `dbus.so` ausente, ni artefactos inconsistentes;
 - el siguiente trabajo util vuelve a ser explicar por que esta live concreta falla `requestName()` sobre `BUS_SYSTEM` con `Not Primary Owner (-1)`.
+
+## Actualizacion posterior: policy aplicada en la live, `RequestName` verde con `busctl` y crash nativo tras `requestName()`
+
+Tras apagar y volver a arrancar la live se comprobo otra deuda operativa: el modulo recompilado en `/home/w4live/dbus-0.1.1` no sobrevive al reinicio, asi que la rehidratacion se corrigio para dejar el artefacto persistente en el repo compartido (`runtime-check/guest-artifacts/dbus-module/dbus.so`). Tanto la sonda homologada como el runner directo ya priorizan ese `.so` persistente.
+
+Con el modulo estable en el repo, se ejecuto una nueva cadena de aislamiento:
+
+- `inspect_busctl_request_name_in_guest.sh` se corrio como `root` real (`uid=0(root)`), y aun asi `busctl RequestName org.w4.System1` devolvio `Access denied`;
+- la causa ya no era el fork, sino que la live no tenia aplicada la policy D-Bus del proyecto;
+- se aplico sobre `/` el bundle real `system-api-dbus-binding-bundle` del repo y se reinicio `dbus`;
+- despues de eso, `busctl RequestName` paso a cerrar en verde (`exit_code = 0`, `stdout = "u 1"`), confirmando que el permiso de `own="org.w4.System1"` ya estaba activo.
+
+Una vez resuelto el problema de policy:
+
+- `check_native_dbus_launch_process.php` sigue materializando `launch-recorded`, `launched = true` y `pid > 0`;
+- pero el hijo sigue muriendo antes de hacerse visible para `busctl`;
+- `run_serve_native_runtime_service_in_guest.sh` deja ahora el fallo real en primer plano: `exit_code = 134` y `stderr = "zend_mm_heap corrupted"`.
+
+Para separar el punto exacto del crash, `NativeDbusExtensionOwnershipDriver` recibio un marcador de fase persistente (`W4_SYSTEM_API_NATIVE_RUNTIME_PHASE_MARKER_FILE`). El rerun directo deja:
+
+- `phase = after-request-name` con traza gruesa;
+- `phase = before-exported-object` con traza fina.
+
+Lectura operativa actual:
+
+- el problema de `policy` del system bus ya quedo cerrado en esta live;
+- `requestName()` ya no es el bloqueo visible de permisos;
+- la corrupcion de heap aparece inmediatamente despues de `requestName()` y se manifiesta al entrar en el siguiente bloque PHP asociado al objeto exportado / preparacion de `registerObject()`;
+- el siguiente trabajo util ya no es seguir tocando el bus, sino construir un probe minimo del fork que compare `requestName()` solo contra `requestName() + NativeDbusExtensionRuntimeObject` y luego `registerObject()`.
+
+Ese probe minimo ya se corrio en la misma live:
+
+- `probe_native_dbus_heap_after_request_name.php` ejecuta subprocesos separados con el mismo `dbus.so` persistente;
+- `request_name_only` ya aborta con `zend_mm_heap corrupted`;
+- `exported_object_only` cierra limpio;
+- `request_name_then_exported_object` vuelve a abortar igual que el caso minimo.
+
+Lectura actualizada:
+
+- el objeto PHP `NativeDbusExtensionRuntimeObject` no es el disparador primario;
+- la policy del bus ya no es el bloqueo;
+- el daño de heap lo introduce el propio `requestName()` del fork nativo cuando la policy ya permite adquirir `org.w4.System1`.
