@@ -723,3 +723,42 @@ Lectura actualizada:
 
 - el runner host-side pesado ya no solo automatiza la ejecucion; tambien vuelve a reflejar un baseline completamente verde en la live homologada
 - el ajuste del ordering ya no se trata como una hipotesis ni como un parche cosmetico de la sonda, sino como una realineacion del contrato canonico con el comportamiento realmente observado y revalidado
+
+## Actualizacion posterior: `Call(system.dbus-runtime)` ya sube a smoke permanente del baseline rapido
+
+El siguiente hueco que seguia cubierto solo por la sonda viva historica ya queda materializado como probe reutilizable dentro del repo.
+
+Nuevo script agregado:
+
+- `build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_runtime_call_smoke.php`
+
+La sonda levanta el manager nativo sobre `org.w4.System1`, fuerza `W4_SYSTEM_API_RUNTIME_BACKEND=native-dbus-extension`, ejecuta `busctl --system call org.w4.System1 /org/w4/System1 org.w4.System1.Manager Call s <request_json>` con `method = system.dbus-runtime` y valida que la respuesta JSON deje:
+
+- `provider = local-system-api-runtime-contract`
+- `runtime_backend.selected_backend = native-dbus-extension`
+- `runtime_backend.status = native-runtime-backend-materialized`
+- `runtime_backend.materialized = true`
+- `native_runtime_service.status = native-runtime-service-ready-to-start`
+
+Ademas, la sonda exige que el proceso servido siga vivo despues del call y cierre limpio al recibir el `stop-file`.
+
+Estado actualizado de este corte:
+
+- `php -l build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_runtime_call_smoke.php` ya cierra en verde
+- `php -l build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_runtime_smoke.php` ya cierra en verde con la integracion del cuarto check
+- el primer rerun host-side del baseline rapido detecto un bug real del propio wrapper `scripts/run_native_dbus_runtime_smoke_via_live_vm.php`: seguia aceptando cualquier `guest-artifacts/runtime-smoke/check-native-dbus-runtime-smoke.json` ya existente y por eso devolvia un resumen viejo con solo tres checks
+- el runner ya queda corregido con `waitForArtifactAfter(...)`, obligando a leer un artefacto fresco por timestamp antes de resumirlo
+- tras ese fix, el rerun real sobre `W4-OS-Server-DbusModern` vuelve a cerrar:
+  - `status = completed`
+  - `prepare_result.status = prepared`
+  - `runtime_smoke.ok = true`
+  - `checks.wrapper_smoke.exit_code = 0`
+  - `checks.wait_loop_signal_contract.exit_code = 0`
+  - `checks.method_roundtrip_smoke.exit_code = 0`
+  - `checks.runtime_call_smoke.exit_code = 0`
+
+Lectura actualizada:
+
+- el baseline rapido ya no depende solo de `GetCapabilities` para cubrir method calls reales sobre el manager exportado
+- la seleccion efectiva del backend nativo dentro de `system.dbus-runtime` ya queda fijada tambien dentro del smoke permanente y no solo como evidencia historica de la sonda viva manual
+- el runner host-side rapido vuelve a reflejar de forma honesta la ultima corrida real de la live, en lugar de poder resumir artefactos viejos

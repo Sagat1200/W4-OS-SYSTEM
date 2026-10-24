@@ -36,6 +36,7 @@ $checks = [
     'wrapper_smoke' => $rootDir . '/build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_wrapper_smoke.php',
     'wait_loop_signal_contract' => $rootDir . '/build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_wait_loop_signal_contract.php',
     'method_roundtrip_smoke' => $rootDir . '/build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_method_roundtrip_smoke.php',
+    'runtime_call_smoke' => $rootDir . '/build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_runtime_call_smoke.php',
 ];
 
 $result['checks'] = [];

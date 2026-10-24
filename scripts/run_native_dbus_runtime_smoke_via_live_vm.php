@@ -125,13 +125,19 @@ function readJsonFile(string $path): ?array
     return is_array($decoded) ? $decoded : null;
 }
 
-function waitForArtifact(string $path, int $timeoutSeconds): ?array
+function waitForArtifactAfter(string $path, int $timeoutSeconds, int $previousTimestamp): ?array
 {
     $elapsed = 0;
     while ($elapsed <= $timeoutSeconds) {
-        $decoded = readJsonFile($path);
-        if (is_array($decoded)) {
-            return $decoded;
+        clearstatcache(true, $path);
+        if (is_file($path)) {
+            $mtime = filemtime($path);
+            if (is_int($mtime) && $mtime >= $previousTimestamp) {
+                $decoded = readJsonFile($path);
+                if (is_array($decoded)) {
+                    return $decoded;
+                }
+            }
         }
 
         sleep(1);
@@ -308,8 +314,9 @@ try {
         throw new RuntimeException('El helper de preparacion no devolvio JSON valido');
     }
 
+    $artifactTimestamp = time();
     sendVBoxText($vboxManage, $vmName, $smokeCommand);
-    $artifact = waitForArtifact($artifactHostPath, $smokeWaitSeconds);
+    $artifact = waitForArtifactAfter($artifactHostPath, $smokeWaitSeconds, $artifactTimestamp);
     if (!is_array($artifact)) {
         throw new RuntimeException(sprintf('No se pudo leer el artefacto del runtime smoke: %s', $artifactHostPath));
     }
