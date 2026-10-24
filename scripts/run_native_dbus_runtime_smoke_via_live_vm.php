@@ -94,6 +94,16 @@ function sendVBoxText(string $vboxManage, string $vmName, string $text): void
     sendVBoxCommand([$vboxManage, 'controlvm', $vmName, 'keyboardputscancode', 'e0', '1c', 'e0', '9c']);
 }
 
+function nowMonotonicNs(): int
+{
+    return hrtime(true);
+}
+
+function elapsedSecondsFrom(int $startedAtNs): float
+{
+    return round((nowMonotonicNs() - $startedAtNs) / 1_000_000_000, 3);
+}
+
 /**
  * @param array<string, mixed> $payload
  */
@@ -187,6 +197,7 @@ function buildArtifactSummary(array $artifact): array
 
 try {
     $arguments = $argv ?? [];
+    $runStartedAtNs = nowMonotonicNs();
 
     $vmName = null;
     $repoHostPath = dirname(__DIR__);
@@ -338,6 +349,7 @@ try {
     );
 
     $payload = [
+        'started_at' => gmdate('c'),
         'vm_name' => $vmName,
         'repo_host_path' => $repoHostPath,
         'mount_point' => $mountPoint,
@@ -366,15 +378,21 @@ try {
         exit(0);
     }
 
+    $prepareStartedAtNs = nowMonotonicNs();
     $prepareOutput = runProcess($prepareCommand);
     $prepareResult = json_decode($prepareOutput, true);
     if (!is_array($prepareResult)) {
         throw new RuntimeException('El helper de preparacion no devolvio JSON valido');
     }
+    $payload['prepare_elapsed_seconds'] = elapsedSecondsFrom($prepareStartedAtNs);
 
+    $attemptStartedAtNs = nowMonotonicNs();
     sendVBoxText($vboxManage, $vmName, $smokeCommand);
     $artifact = waitForArtifactRunId($artifactHostPath, $smokeWaitSeconds, $runId);
+    $payload['attempts'][0]['elapsed_seconds'] = elapsedSecondsFrom($attemptStartedAtNs);
+    $payload['attempts'][0]['artifact_found'] = is_array($artifact);
     if (!is_array($artifact) && $vmRecoveryEnabled) {
+        $recoveryStartedAtNs = nowMonotonicNs();
         $recoveryOutput = runProcess($recoveryCommand);
         $recoveryResult = json_decode($recoveryOutput, true);
         if (!is_array($recoveryResult)) {
@@ -383,7 +401,9 @@ try {
 
         $payload['recovery_attempted'] = true;
         $payload['recovery_result'] = $recoveryResult;
+        $payload['recovery_elapsed_seconds'] = elapsedSecondsFrom($recoveryStartedAtNs);
 
+        $prepareStartedAtNs = nowMonotonicNs();
         $prepareOutput = runProcess($prepareCommand);
         $prepareResult = json_decode($prepareOutput, true);
         if (!is_array($prepareResult)) {
@@ -391,6 +411,7 @@ try {
         }
 
         $payload['prepare_result_after_recovery'] = $prepareResult;
+        $payload['prepare_elapsed_seconds_after_recovery'] = elapsedSecondsFrom($prepareStartedAtNs);
 
         $runId = sprintf('runtime-smoke-%s', bin2hex(random_bytes(8)));
         $smokeCommand = buildRuntimeSmokeCommand(
@@ -405,8 +426,11 @@ try {
             'reason' => 'artifact-timeout-after-first-attempt',
         ];
 
+        $attemptStartedAtNs = nowMonotonicNs();
         sendVBoxText($vboxManage, $vmName, $smokeCommand);
         $artifact = waitForArtifactRunId($artifactHostPath, $smokeWaitSeconds, $runId);
+        $payload['attempts'][1]['elapsed_seconds'] = elapsedSecondsFrom($attemptStartedAtNs);
+        $payload['attempts'][1]['artifact_found'] = is_array($artifact);
     }
 
     if (!is_array($artifact)) {
@@ -416,6 +440,7 @@ try {
     $payload['status'] = 'completed';
     $payload['prepare_result'] = $prepareResult;
     $payload['runtime_smoke'] = buildArtifactSummary($artifact);
+    $payload['elapsed_seconds_total'] = elapsedSecondsFrom($runStartedAtNs);
     printJson($payload);
 } catch (Throwable $exception) {
     fwrite(STDERR, 'ERROR: ' . $exception->getMessage() . PHP_EOL);
