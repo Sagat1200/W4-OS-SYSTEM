@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.329 | 2026-10-24 | Activa | `System API` ya expone `operations.get` y persiste operaciones locales consultables para `packages.apply` y mutaciones basicas de servicios |
 | TECH | TECH-1.328 | 2026-10-24 | Activa | `System API` ya expone `packages.plan` y `packages.apply` con plan canonico, `plan_hash`, validacion de `conffile_policy` y apply estructurado sobre `apt-get` |
 | TECH | TECH-1.327 | 2026-10-24 | Activa | `System API` ya expone tambien mutaciones basicas de servicios (`start/stop/restart/enable/disable`) sobre `systemctl` con reporte estructurado y fallback honesto `NOT_SUPPORTED` |
 | TECH | TECH-1.326 | 2026-10-24 | Activa | `System API` ya expone lecturas publicas read-only para paquetes (`packages.search/info/list_installed`) y servicios (`services.list/status`) con fallback honesto `NOT_SUPPORTED` |

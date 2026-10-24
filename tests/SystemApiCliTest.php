@@ -76,6 +76,7 @@ final class SystemApiCliTest extends TestCase
         self::assertContains('packages.list_installed', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('packages.plan', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('packages.apply', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('operations.get', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('services.list', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('services.status', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('services.start', array_column($payload['result']['data']['methods'], 'name'));
@@ -103,6 +104,7 @@ final class SystemApiCliTest extends TestCase
         self::assertFalse($methodsByName['packages.list_installed']['mutates_state']);
         self::assertFalse($methodsByName['packages.plan']['mutates_state']);
         self::assertTrue($methodsByName['packages.apply']['mutates_state']);
+        self::assertFalse($methodsByName['operations.get']['mutates_state']);
         self::assertFalse($methodsByName['services.list']['mutates_state']);
         self::assertFalse($methodsByName['services.status']['mutates_state']);
         self::assertTrue($methodsByName['services.start']['mutates_state']);
@@ -434,6 +436,140 @@ final class SystemApiCliTest extends TestCase
         self::assertNull($payload['result']);
         self::assertSame('CONFLICT', $payload['error']['code']);
         self::assertStringContainsString('plan_id o plan_hash', $payload['error']['message']);
+    }
+
+    public function testOperationsGetReturnsPersistedPackageOperation(): void
+    {
+        $planPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'system-api-package-plan-op-get-' . bin2hex(random_bytes(6)) . '.json';
+
+        try {
+            $plan = [
+                'kind' => 'package-plan',
+                'status' => 'ok',
+                'backend' => 'apt-get',
+                'action' => 'install',
+                'plan_id' => 'pkg-plan-op-get-001',
+                'actor_scope' => 'local-system-api',
+                'catalog_revision' => 'catalog-op-get-001',
+                'created_at' => '2026-10-24T12:00:00Z',
+                'expires_at' => '2026-10-24T12:05:00Z',
+                'requested_packages' => [
+                    [
+                        'name' => 'php8.4-cli',
+                        'architecture' => 'amd64',
+                        'requested_version' => null,
+                        'origin' => null,
+                        'installed_version' => null,
+                        'candidate_version' => '8.4.4-1',
+                    ],
+                ],
+                'installs' => [
+                    [
+                        'name' => 'php8.4-cli',
+                        'architecture' => 'amd64',
+                        'installed_version' => null,
+                        'target_version' => '8.4.4-1',
+                    ],
+                ],
+                'upgrades' => [],
+                'removals' => [],
+                'download_bytes' => 131072,
+                'extra_disk_bytes' => 524288,
+                'conffile_policy' => 'keep-local',
+                'protected_packages' => [],
+                'reboot_estimate' => 'none',
+                'summary' => [
+                    'requested' => 1,
+                    'installs' => 1,
+                    'upgrades' => 0,
+                    'removals' => 0,
+                ],
+            ];
+            $plan['plan_hash'] = sha1(json_encode($plan, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+            file_put_contents($planPath, json_encode($plan, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+
+            $applyRequest = [
+                'api_version' => '1.0',
+                'request_id' => 'req-packages-apply-op-get-001',
+                'method' => 'packages.apply',
+                'params' => [
+                    'plan_id' => 'pkg-plan-op-get-001',
+                    'plan_hash' => $plan['plan_hash'],
+                    'idempotency_key' => 'pkg-intent-op-get-001',
+                    'plan_path' => $planPath,
+                ],
+            ];
+
+            $applyResult = $this->runPhpScript([
+                $this->scriptPath(),
+                '--request-json',
+                json_encode($applyRequest, JSON_THROW_ON_ERROR),
+            ], [
+                'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+                'W4_SYSTEM_API_PACKAGES_APPLY_EXIT_CODE' => '0',
+                'W4_SYSTEM_API_PACKAGES_APPLY_STDOUT' => 'Packages applied',
+            ]);
+
+            self::assertSame(0, $applyResult['exitCode'], $applyResult['stderr']);
+            $applyPayload = $this->decodeJson($applyResult['stdout']);
+            $operationId = $applyPayload['result']['operation_id'];
+            self::assertIsString($operationId);
+
+            $getRequest = [
+                'api_version' => '1.0',
+                'request_id' => 'req-operations-get-001',
+                'method' => 'operations.get',
+                'params' => [
+                    'operation_id' => $operationId,
+                ],
+            ];
+
+            $getResult = $this->runPhpScript([
+                $this->scriptPath(),
+                '--request-json',
+                json_encode($getRequest, JSON_THROW_ON_ERROR),
+            ]);
+
+            self::assertSame(0, $getResult['exitCode'], $getResult['stderr']);
+
+            $payload = $this->decodeJson($getResult['stdout']);
+            self::assertNull($payload['error']);
+            self::assertSame('operations.get', $payload['result']['method']);
+            self::assertSame('system-api-operation', $payload['result']['resource']['kind']);
+            self::assertSame($operationId, $payload['result']['data']['operation_id']);
+            self::assertSame('packages.apply', $payload['result']['data']['method']);
+            self::assertSame('succeeded', $payload['result']['data']['state']);
+            self::assertSame('pkg-plan-op-get-001', $payload['result']['data']['result']['plan_id']);
+        } finally {
+            if (is_file($planPath)) {
+                unlink($planPath);
+            }
+        }
+    }
+
+    public function testOperationsGetReturnsNotFoundForUnknownOperation(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-operations-get-missing-001',
+            'method' => 'operations.get',
+            'params' => [
+                'operation_id' => 'non-existent-operation-001',
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['result']);
+        self::assertSame('NOT_FOUND', $payload['error']['code']);
+        self::assertStringContainsString('Operacion no encontrada', $payload['error']['message']);
     }
 
     public function testServicesListMethodReturnsServicesFromFixture(): void

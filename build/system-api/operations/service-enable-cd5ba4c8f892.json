@@ -1,0 +1,44 @@
+{
+    "kind": "system-api-operation",
+    "operation_id": "service-enable-cd5ba4c8f892",
+    "method": "services.enable",
+    "resource": {
+        "kind": "service-operation",
+        "id": "ssh.service"
+    },
+    "state": "succeeded",
+    "status": "ok",
+    "cancel_requested": false,
+    "cancelable": false,
+    "progress": {
+        "percent": 100,
+        "current_step": "observe-service-state"
+    },
+    "result": {
+        "kind": "system-api-service-operation",
+        "status": "ok",
+        "backend": "systemctl",
+        "action": "enable",
+        "unit": "ssh.service",
+        "operation_id": "service-enable-cd5ba4c8f892",
+        "state": "succeeded",
+        "command": "systemctl enable ssh.service",
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "",
+        "service": {
+            "unit": "ssh.service",
+            "description": "OpenBSD Secure Shell server",
+            "load_state": "loaded",
+            "active_state": "active",
+            "sub_state": "running",
+            "unit_file_state": "enabled",
+            "fragment_path": "/lib/systemd/system/ssh.service"
+        },
+        "next_action": "observe-service-state"
+    },
+    "error": null,
+    "created_at": "2026-10-24T06:08:16+00:00",
+    "observed_at": "2026-10-24T06:08:16+00:00",
+    "completed_at": "2026-10-24T06:08:16+00:00"
+}

@@ -190,6 +190,59 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertSame('succeeded', $payload['result']['data']['state']);
     }
 
+    public function testCallDispatchesOperationsGet(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'manager-services-restart-001',
+            'method' => 'services.restart',
+            'params' => [
+                'unit' => 'ssh.service',
+            ],
+        ];
+
+        $operationResult = $this->runPhpScript([
+            $this->scriptPath(),
+            'call',
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_SERVICES_RESTART_EXIT_CODE' => '0',
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $operationResult['exitCode'], $operationResult['stderr']);
+        $operationPayload = $this->decodeJson($operationResult['stdout']);
+        $operationId = $operationPayload['result']['operation_id'];
+        self::assertIsString($operationId);
+
+        $getRequest = [
+            'api_version' => '1.0',
+            'request_id' => 'manager-operations-get-001',
+            'method' => 'operations.get',
+            'params' => [
+                'operation_id' => $operationId,
+            ],
+        ];
+
+        $getResult = $this->runPhpScript([
+            $this->scriptPath(),
+            'call',
+            '--request-json',
+            json_encode($getRequest, JSON_THROW_ON_ERROR),
+        ]);
+
+        self::assertSame(0, $getResult['exitCode'], $getResult['stderr']);
+
+        $payload = $this->decodeJson($getResult['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('operations.get', $payload['result']['method']);
+        self::assertSame('system-api-operation', $payload['result']['resource']['kind']);
+        self::assertSame('services.restart', $payload['result']['data']['method']);
+        self::assertSame('succeeded', $payload['result']['data']['state']);
+    }
+
     public function testCallReturnsProtocolErrorForInvalidJson(): void
     {
         $result = $this->runPhpScript([
