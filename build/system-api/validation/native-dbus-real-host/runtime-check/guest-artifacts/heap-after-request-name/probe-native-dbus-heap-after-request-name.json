@@ -9,8 +9,8 @@
     "scenarios": {
         "request_name_only": {
             "exit_code": 0,
-            "stdout": "{\n    \"scenario\": \"request_name_only\",\n    \"request_name_result\": false\n}",
-            "stderr": "PHP Warning:  Dbus::requestName(): Request Name Error (Connection \":1.13\" is not allowed to own the service \"org.w4.System1\" due to security policies in the configuration file)\n in /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/probe_native_dbus_heap_after_request_name.php on line 116"
+            "stdout": "{\n    \"scenario\": \"request_name_only\",\n    \"request_name_result\": 1\n}",
+            "stderr": ""
         },
         "exported_object_only": {
             "exit_code": 0,
@@ -49,48 +49,48 @@
         },
         "autoload_then_request_name_then_scalar_allocation": {
             "exit_code": 0,
-            "stdout": "{\n    \"scenario\": \"autoload_then_request_name_then_scalar_allocation\",\n    \"request_name_result\": false,\n    \"probe_array\": {\n        \"alpha\": \"beta\",\n        \"gamma\": 42,\n        \"delta\": true\n    }\n}",
-            "stderr": "PHP Warning:  Dbus::requestName(): Request Name Error (Connection \":1.20\" is not allowed to own the service \"org.w4.System1\" due to security policies in the configuration file)\n in /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/probe_native_dbus_heap_after_request_name.php on line 239"
+            "stdout": "{\n    \"scenario\": \"autoload_then_request_name_then_scalar_allocation\",\n    \"request_name_result\": 1,\n    \"probe_array\": {\n        \"alpha\": \"beta\",\n        \"gamma\": 42,\n        \"delta\": true\n    }\n}",
+            "stderr": ""
         },
         "exported_object_then_request_name_then_scalar_allocation": {
             "exit_code": 0,
-            "stdout": "{\n    \"scenario\": \"exported_object_then_request_name_then_scalar_allocation\",\n    \"request_name_result\": false,\n    \"exported_object_class\": \"W4\\\\OS\\\\SystemApi\\\\NativeDbusExtensionRuntimeObject\",\n    \"binding_status\": \"native-runtime-object-exported\",\n    \"probe_array\": {\n        \"alpha\": \"beta\",\n        \"gamma\": 42,\n        \"delta\": true\n    }\n}",
-            "stderr": "PHP Warning:  Dbus::requestName(): Request Name Error (Connection \":1.21\" is not allowed to own the service \"org.w4.System1\" due to security policies in the configuration file)\n in /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/probe_native_dbus_heap_after_request_name.php on line 266"
+            "stdout": "{\n    \"scenario\": \"exported_object_then_request_name_then_scalar_allocation\",\n    \"request_name_result\": 1,\n    \"exported_object_class\": \"W4\\\\OS\\\\SystemApi\\\\NativeDbusExtensionRuntimeObject\",\n    \"binding_status\": \"native-runtime-object-exported\",\n    \"probe_array\": {\n        \"alpha\": \"beta\",\n        \"gamma\": 42,\n        \"delta\": true\n    }\n}",
+            "stderr": ""
         },
         "request_name_then_scalar_allocation": {
             "exit_code": 0,
-            "stdout": "{\n    \"scenario\": \"request_name_then_scalar_allocation\",\n    \"request_name_result\": false,\n    \"probe_array\": {\n        \"alpha\": \"beta\",\n        \"gamma\": 42,\n        \"delta\": true\n    }\n}",
-            "stderr": "PHP Warning:  Dbus::requestName(): Request Name Error (Connection \":1.22\" is not allowed to own the service \"org.w4.System1\" due to security policies in the configuration file)\n in /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/probe_native_dbus_heap_after_request_name.php on line 286"
+            "stdout": "{\n    \"scenario\": \"request_name_then_scalar_allocation\",\n    \"request_name_result\": 1,\n    \"probe_array\": {\n        \"alpha\": \"beta\",\n        \"gamma\": 42,\n        \"delta\": true\n    }\n}",
+            "stderr": ""
         },
         "request_name_then_gc_collect": {
             "exit_code": 0,
-            "stdout": "{\n    \"scenario\": \"request_name_then_gc_collect\",\n    \"request_name_result\": false,\n    \"collected_cycles\": 0\n}",
-            "stderr": "PHP Warning:  Dbus::requestName(): Request Name Error (Connection \":1.23\" is not allowed to own the service \"org.w4.System1\" due to security policies in the configuration file)\n in /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/probe_native_dbus_heap_after_request_name.php on line 304"
+            "stdout": "{\n    \"scenario\": \"request_name_then_gc_collect\",\n    \"request_name_result\": 1,\n    \"collected_cycles\": 0\n}",
+            "stderr": ""
         },
         "request_name_then_realpath_noop_file": {
             "exit_code": 0,
-            "stdout": "{\n    \"scenario\": \"request_name_then_realpath_noop_file\",\n    \"request_name_result\": false,\n    \"noop_file_path\": \"/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\",\n    \"resolved_path\": \"/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\"\n}",
-            "stderr": "PHP Warning:  Dbus::requestName(): Request Name Error (Connection \":1.24\" is not allowed to own the service \"org.w4.System1\" due to security policies in the configuration file)\n in /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/probe_native_dbus_heap_after_request_name.php on line 318"
+            "stdout": "{\n    \"scenario\": \"request_name_then_realpath_noop_file\",\n    \"request_name_result\": 1,\n    \"noop_file_path\": \"/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\",\n    \"resolved_path\": \"/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\"\n}",
+            "stderr": ""
         },
         "request_name_then_file_exists_noop_file": {
             "exit_code": 0,
-            "stdout": "{\n    \"scenario\": \"request_name_then_file_exists_noop_file\",\n    \"request_name_result\": false,\n    \"noop_file_path\": \"/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\",\n    \"file_exists\": true\n}",
-            "stderr": "PHP Warning:  Dbus::requestName(): Request Name Error (Connection \":1.25\" is not allowed to own the service \"org.w4.System1\" due to security policies in the configuration file)\n in /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/probe_native_dbus_heap_after_request_name.php on line 335"
+            "stdout": "{\n    \"scenario\": \"request_name_then_file_exists_noop_file\",\n    \"request_name_result\": 1,\n    \"noop_file_path\": \"/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\",\n    \"file_exists\": true\n}",
+            "stderr": ""
         },
         "request_name_then_require_noop": {
             "exit_code": 0,
-            "stdout": "{\n    \"scenario\": \"request_name_then_require_noop\",\n    \"request_name_result\": false,\n    \"noop_required\": true\n}",
-            "stderr": "PHP Warning:  Dbus::requestName(): Request Name Error (Connection \":1.26\" is not allowed to own the service \"org.w4.System1\" due to security policies in the configuration file)\n in /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/probe_native_dbus_heap_after_request_name.php on line 352"
+            "stdout": "{\n    \"scenario\": \"request_name_then_require_noop\",\n    \"request_name_result\": 1,\n    \"noop_required\": true\n}",
+            "stderr": ""
         },
         "request_name_then_require_autoload": {
             "exit_code": 0,
-            "stdout": "{\n    \"scenario\": \"request_name_then_require_autoload\",\n    \"request_name_result\": false,\n    \"autoload_loaded\": true\n}",
-            "stderr": "PHP Warning:  Dbus::requestName(): Request Name Error (Connection \":1.27\" is not allowed to own the service \"org.w4.System1\" due to security policies in the configuration file)\n in /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/probe_native_dbus_heap_after_request_name.php on line 367"
+            "stdout": "{\n    \"scenario\": \"request_name_then_require_autoload\",\n    \"request_name_result\": 1,\n    \"autoload_loaded\": true\n}",
+            "stderr": ""
         },
         "request_name_then_exported_object": {
             "exit_code": 0,
-            "stdout": "{\n    \"scenario\": \"request_name_then_exported_object\",\n    \"request_name_result\": false,\n    \"exported_object_class\": \"W4\\\\OS\\\\SystemApi\\\\NativeDbusExtensionRuntimeObject\",\n    \"binding_status\": \"native-runtime-object-exported\"\n}",
-            "stderr": "PHP Warning:  Dbus::requestName(): Request Name Error (Connection \":1.28\" is not allowed to own the service \"org.w4.System1\" due to security policies in the configuration file)\n in /mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/probe_native_dbus_heap_after_request_name.php on line 382"
+            "stdout": "{\n    \"scenario\": \"request_name_then_exported_object\",\n    \"request_name_result\": 1,\n    \"exported_object_class\": \"W4\\\\OS\\\\SystemApi\\\\NativeDbusExtensionRuntimeObject\",\n    \"binding_status\": \"native-runtime-object-exported\"\n}",
+            "stderr": ""
         }
     }
 }

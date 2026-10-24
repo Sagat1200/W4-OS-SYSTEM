@@ -938,3 +938,45 @@ Lectura actualizada:
 - la recuperacion de la live ya no depende de una maniobra manual previa
 - el fallback sigue siendo visible y desactivable; no queda escondido dentro de una caja negra
 - el carril pesado ya demuestra en evidencia homologada que la recuperacion automatica absorbe una degradacion real de la sesion headless y devuelve el laboratorio a verde
+
+## Actualizacion posterior: el carril pesado ya reduce la frecuencia del fallback ajustando su espera por ordering
+
+La evidencia de la corrida anterior dejaba dos lecturas distintas:
+
+- el fallback automatico funciona y esta bien integrado
+- pero el artefacto final de `check_native_dbus_method_probe_ordering.php` no apuntaba a un probe realmente lento, sino a un margen de espera demasiado agresivo para la entrega del JSON bajo la sesion headless real
+
+Se hizo primero una corrida de control sin fallback:
+
+- `php scripts/run_native_dbus_heavy_validation_via_live_vm.php --vm-name W4-OS-Server-DbusModern --skip-vm-recovery --ordering-wait-seconds 75`
+
+Resultado:
+
+- `status = completed`
+- `launch_process.ok = true`
+- `method_probe_ordering.ok = true`
+- `heap_after_request_name.ok = true`
+
+Con esa evidencia, el runner ya fija:
+
+- `ordering_wait_seconds = 75`
+
+como valor por defecto en:
+
+- `scripts/run_native_dbus_heavy_validation_via_live_vm.php`
+
+Rerun homologado con defaults:
+
+- `php scripts/run_native_dbus_heavy_validation_via_live_vm.php --vm-name W4-OS-Server-DbusModern`
+- resultado:
+  - `status = completed`
+  - `launch_process.ok = true`
+  - `method_probe_ordering.ok = true`
+  - `heap_after_request_name.ok = true`
+  - sin `recovery_attempted`
+
+Lectura actualizada:
+
+- el fallback automatico sigue siendo necesario cuando la sesion headless se degrada de verdad
+- pero deja de activarse por una expectativa operativa demasiado corta del ordering lane
+- el carril pesado vuelve a quedar verde por defecto con un timeout mas realista y menos propenso a ruido operacional

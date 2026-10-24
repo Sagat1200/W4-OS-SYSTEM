@@ -224,7 +224,7 @@ try {
     $bindingTarget = '/';
     $prepareWaitMs = 1800;
     $launchWaitSeconds = 25;
-    $orderingWaitSeconds = 40;
+    $orderingWaitSeconds = 75;
     $heapWaitSeconds = 40;
     $vmRecoveryEnabled = true;
     $recoveryWaitSeconds = 90;
