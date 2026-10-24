@@ -796,3 +796,40 @@ Lectura actualizada:
 - el contrato de ejecucion de los runners ya queda saneado en codigo
 - el siguiente trabajo util ya no es seguir tocando `runtime_smoke` ni el fork DBus, sino recuperar un transporte confiable hacia la live para volver a homologar el baseline
 - para ese siguiente corte, el repo ya deja listo `scripts/run_native_dbus_wrapper_smoke_via_paramiko.php` como carril alternativo una vez que la live vuelva a exponer SSH valido
+
+## Actualizacion posterior: reset de la live y revalidacion homologada otra vez en verde
+
+Ese bloqueo operativo ya queda absorbido en la propia `W4-OS-Server-DbusModern`.
+
+Un `VBoxManage controlvm W4-OS-Server-DbusModern reset` devolvio una TTY limpia y funcional. La diferencia observable fue inmediata:
+
+- la pantalla vuelve a mostrar login automatico + prompt limpio
+- la consola ya vuelve a aceptar comandos inyectados
+- el problema restante deja de apuntar al binding y queda explicado por el estado roto previo de la sesion headless
+
+Con la live recuperada, el carril liviano ya vuelve a cerrar en verde real:
+
+- `php scripts/run_native_dbus_runtime_smoke_via_live_vm.php --vm-name W4-OS-Server-DbusModern --smoke-wait-seconds 120`
+- resultado:
+  - `status = completed`
+  - `prepare_result.status = prepared`
+  - `runtime_smoke.ok = true`
+  - `checks.wrapper_smoke.exit_code = 0`
+  - `checks.wait_loop_signal_contract.exit_code = 0`
+  - `checks.method_roundtrip_smoke.exit_code = 0`
+  - `checks.runtime_call_smoke.exit_code = 0`
+
+Sobre la misma live, el carril pesado tambien vuelve a cerrar completamente en verde:
+
+- `php scripts/run_native_dbus_heavy_validation_via_live_vm.php --vm-name W4-OS-Server-DbusModern`
+- resultado:
+  - `status = completed`
+  - `launch_process.ok = true`
+  - `method_probe_ordering.ok = true`
+  - `heap_after_request_name.ok = true`
+
+Lectura actualizada:
+
+- la correccion de `sudo env ...` en los runners ya no queda solo como fix teorico en codigo: vuelve a estar homologada en ejecucion real
+- el baseline rapido y el carril pesado regresan a verde sobre la live moderna
+- el helper `scripts/run_native_dbus_wrapper_smoke_via_paramiko.php` queda disponible como carril alternativo, pero ya no es el desbloqueo inmediato necesario para seguir validando
