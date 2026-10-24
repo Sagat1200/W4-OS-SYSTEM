@@ -80,6 +80,35 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertSame('local-system-api-runtime-contract', $payload['result']['resource']['provider']);
     }
 
+    public function testCallDispatchesPackagesSearch(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'manager-packages-search-001',
+            'method' => 'packages.search',
+            'params' => [
+                'query' => 'php',
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'call',
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_PACKAGES_SEARCH_OUTPUT' => "php8.4-cli - command-line interpreter for the PHP scripting language\n",
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('packages.search', $payload['result']['method']);
+        self::assertSame('package-search-result', $payload['result']['resource']['kind']);
+        self::assertSame('php8.4-cli', $payload['result']['data']['items'][0]['name']);
+    }
+
     public function testCallReturnsProtocolErrorForInvalidJson(): void
     {
         $result = $this->runPhpScript([
@@ -150,7 +179,7 @@ final class SystemApiManagerCliTest extends TestCase
      * @param list<string> $command
      * @return array{exitCode:int,stdout:string,stderr:string}
      */
-    private function runPhpScript(array $command): array
+    private function runPhpScript(array $command, array $environment = []): array
     {
         array_unshift($command, PHP_BINARY);
 
@@ -160,7 +189,8 @@ final class SystemApiManagerCliTest extends TestCase
             2 => ['pipe', 'w'],
         ];
 
-        $process = proc_open($command, $descriptorSpec, $pipes, dirname(__DIR__));
+        $processEnvironment = array_merge($_ENV, $environment);
+        $process = proc_open($command, $descriptorSpec, $pipes, dirname(__DIR__), $processEnvironment);
         self::assertIsResource($process, 'No se pudo ejecutar system_api_manager.php');
 
         fclose($pipes[0]);

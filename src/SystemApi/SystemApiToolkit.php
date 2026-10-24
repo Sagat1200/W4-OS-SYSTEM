@@ -18,6 +18,8 @@ final class SystemApiToolkit
     private SystemApiDbusRuntimeProbeToolkit $dbusRuntimeProbe;
     private SystemApiDbusRuntimeActivationToolkit $dbusRuntimeActivation;
     private SystemApiDbusRuntimeBackendToolkit $dbusRuntimeBackend;
+    private SystemApiPackagesToolkit $packages;
+    private SystemApiServicesToolkit $services;
 
     public function __construct(string $rootDir)
     {
@@ -25,6 +27,8 @@ final class SystemApiToolkit
         $this->dbusRuntimeProbe = new SystemApiDbusRuntimeProbeToolkit();
         $this->dbusRuntimeActivation = new SystemApiDbusRuntimeActivationToolkit();
         $this->dbusRuntimeBackend = new SystemApiDbusRuntimeBackendToolkit();
+        $this->packages = new SystemApiPackagesToolkit();
+        $this->services = new SystemApiServicesToolkit();
     }
 
     /**
@@ -210,6 +214,36 @@ final class SystemApiToolkit
                     'mutates_state' => false,
                 ],
                 [
+                    'name' => 'packages.search',
+                    'resource_kind' => 'package-search-result',
+                    'mutates_state' => false,
+                    'params' => ['query'],
+                ],
+                [
+                    'name' => 'packages.info',
+                    'resource_kind' => 'package',
+                    'mutates_state' => false,
+                    'params' => ['name', 'architecture?'],
+                ],
+                [
+                    'name' => 'packages.list_installed',
+                    'resource_kind' => 'package-installed-collection',
+                    'mutates_state' => false,
+                    'params' => ['limit?'],
+                ],
+                [
+                    'name' => 'services.list',
+                    'resource_kind' => 'service-collection',
+                    'mutates_state' => false,
+                    'params' => ['unit?'],
+                ],
+                [
+                    'name' => 'services.status',
+                    'resource_kind' => 'service-status',
+                    'mutates_state' => false,
+                    'params' => ['unit'],
+                ],
+                [
                     'name' => 'system.dbus-runtime',
                     'resource_kind' => 'system-api-dbus-runtime-diagnosis',
                     'mutates_state' => false,
@@ -310,6 +344,65 @@ final class SystemApiToolkit
 
         if ($method === 'system.capabilities') {
             return $this->createCapabilitiesResponse($requestId);
+        }
+
+        if ($method === 'packages.search') {
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'packages.search',
+                resourceKind: 'package-search-result',
+                resourceId: $this->requireString($params, 'query'),
+                data: $this->packages->search($this->requireString($params, 'query')),
+                provider: 'local-system-api-packages-contract'
+            );
+        }
+
+        if ($method === 'packages.info') {
+            $name = $this->requireString($params, 'name');
+
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'packages.info',
+                resourceKind: 'package',
+                resourceId: $name,
+                data: $this->packages->info($name, $this->optionalString($params, 'architecture')),
+                provider: 'local-system-api-packages-contract'
+            );
+        }
+
+        if ($method === 'packages.list_installed') {
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'packages.list_installed',
+                resourceKind: 'package-installed-collection',
+                resourceId: 'installed-packages',
+                data: $this->packages->listInstalled($this->optionalPositiveInt($params, 'limit')),
+                provider: 'local-system-api-packages-contract'
+            );
+        }
+
+        if ($method === 'services.list') {
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'services.list',
+                resourceKind: 'service-collection',
+                resourceId: 'system-services',
+                data: $this->services->list($this->optionalString($params, 'unit')),
+                provider: 'local-system-api-services-contract'
+            );
+        }
+
+        if ($method === 'services.status') {
+            $unit = $this->requireString($params, 'unit');
+
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'services.status',
+                resourceKind: 'service-status',
+                resourceId: $unit,
+                data: $this->services->status($unit),
+                provider: 'local-system-api-services-contract'
+            );
         }
 
         if ($method === 'system.dbus-runtime') {
@@ -584,6 +677,23 @@ final class SystemApiToolkit
         }
 
         return trim($value);
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     */
+    private function optionalPositiveInt(array $params, string $field): ?int
+    {
+        $value = $params[$field] ?? null;
+        if ($value === null) {
+            return null;
+        }
+
+        if (!is_int($value) || $value <= 0) {
+            throw new ValidationError(sprintf('params.%s debe ser un entero positivo cuando se usa', $field));
+        }
+
+        return $value;
     }
 
     /**

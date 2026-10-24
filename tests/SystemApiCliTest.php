@@ -71,6 +71,11 @@ final class SystemApiCliTest extends TestCase
         self::assertContains('ExecuteActivation', $payload['result']['data']['binding']['local_runtime_adapter']['commands']);
         self::assertContains('DescribeLaunchPlan', $payload['result']['data']['binding']['local_runtime_launcher']['commands']);
         self::assertContains('profiles.list', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('packages.search', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('packages.info', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('packages.list_installed', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('services.list', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('services.status', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-activation', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-native-service', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-native-startup', array_column($payload['result']['data']['methods'], 'name'));
@@ -86,10 +91,197 @@ final class SystemApiCliTest extends TestCase
             }
         }
         self::assertFalse($methodsByName['system.dbus-native-service']['mutates_state']);
+        self::assertFalse($methodsByName['packages.search']['mutates_state']);
+        self::assertFalse($methodsByName['packages.info']['mutates_state']);
+        self::assertFalse($methodsByName['packages.list_installed']['mutates_state']);
+        self::assertFalse($methodsByName['services.list']['mutates_state']);
+        self::assertFalse($methodsByName['services.status']['mutates_state']);
         self::assertTrue($methodsByName['system.dbus-native-startup']['mutates_state']);
         self::assertFalse($methodsByName['system.dbus-native-observation']['mutates_state']);
         self::assertFalse($methodsByName['system.dbus-native-coupling']['mutates_state']);
         self::assertTrue($methodsByName['system.dbus-native-ownership']['mutates_state']);
+    }
+
+    public function testPackagesSearchMethodReturnsSearchResultsFromFixture(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-packages-search-001',
+            'method' => 'packages.search',
+            'params' => [
+                'query' => 'php',
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_PACKAGES_SEARCH_OUTPUT' => "php8.4-cli - command-line interpreter for the PHP scripting language\nphp8.4-dev - files for PHP module development\n",
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('packages.search', $payload['result']['method']);
+        self::assertSame('package-search-result', $payload['result']['resource']['kind']);
+        self::assertSame('local-system-api-packages-contract', $payload['result']['resource']['provider']);
+        self::assertSame('system-api-packages-search', $payload['result']['data']['kind']);
+        self::assertSame('php', $payload['result']['data']['query']);
+        self::assertCount(2, $payload['result']['data']['items']);
+        self::assertSame('php8.4-cli', $payload['result']['data']['items'][0]['name']);
+    }
+
+    public function testPackagesInfoMethodReturnsPackageInfoFromFixtures(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-packages-info-001',
+            'method' => 'packages.info',
+            'params' => [
+                'name' => 'php8.4-cli',
+                'architecture' => 'amd64',
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_PACKAGES_INFO_SHOW_OUTPUT' => "Package: php8.4-cli\nArchitecture: amd64\nVersion: 8.4.3-1\nSource: php8.4\nDescription: command-line interpreter for PHP\n command line runtime\nHomepage: https://www.php.net/\n",
+            'W4_SYSTEM_API_PACKAGES_INFO_POLICY_OUTPUT' => "php8.4-cli:\n  Installed: 8.4.3-1\n  Candidate: 8.4.4-1\n",
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('packages.info', $payload['result']['method']);
+        self::assertSame('package', $payload['result']['resource']['kind']);
+        self::assertSame('system-api-package-info', $payload['result']['data']['kind']);
+        self::assertSame('ok', $payload['result']['data']['status']);
+        self::assertSame('php8.4-cli', $payload['result']['data']['package']['name']);
+        self::assertSame('amd64', $payload['result']['data']['package']['architecture']);
+        self::assertSame('8.4.3-1', $payload['result']['data']['package']['installed_version']);
+        self::assertSame('8.4.4-1', $payload['result']['data']['package']['candidate_version']);
+    }
+
+    public function testPackagesListInstalledMethodReturnsInstalledPackagesFromFixture(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-packages-list-001',
+            'method' => 'packages.list_installed',
+            'params' => [
+                'limit' => 1,
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_PACKAGES_LIST_INSTALLED_OUTPUT' => "bash\tamd64\t5.2.15-2\tii \nphp8.4-cli\tamd64\t8.4.3-1\tii \n",
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('packages.list_installed', $payload['result']['method']);
+        self::assertSame('package-installed-collection', $payload['result']['resource']['kind']);
+        self::assertSame('system-api-packages-installed-list', $payload['result']['data']['kind']);
+        self::assertSame(1, $payload['result']['data']['count']);
+        self::assertSame('bash', $payload['result']['data']['items'][0]['name']);
+    }
+
+    public function testServicesListMethodReturnsServicesFromFixture(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-services-list-001',
+            'method' => 'services.list',
+            'params' => [],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_SERVICES_LIST_OUTPUT' => "ssh.service enabled enabled\nw4-system-api.service enabled enabled\n",
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('services.list', $payload['result']['method']);
+        self::assertSame('service-collection', $payload['result']['resource']['kind']);
+        self::assertSame('system-api-services-list', $payload['result']['data']['kind']);
+        self::assertCount(2, $payload['result']['data']['items']);
+        self::assertSame('ssh.service', $payload['result']['data']['items'][0]['unit']);
+    }
+
+    public function testServicesStatusMethodReturnsServiceStatusFromFixture(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-services-status-001',
+            'method' => 'services.status',
+            'params' => [
+                'unit' => 'ssh.service',
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('services.status', $payload['result']['method']);
+        self::assertSame('service-status', $payload['result']['resource']['kind']);
+        self::assertSame('system-api-service-status', $payload['result']['data']['kind']);
+        self::assertSame('active', $payload['result']['data']['service']['active_state']);
+        self::assertSame('enabled', $payload['result']['data']['service']['unit_file_state']);
+    }
+
+    public function testPackagesSearchReturnsNotSupportedWhenBackendIsUnavailable(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-packages-search-unsupported-001',
+            'method' => 'packages.search',
+            'params' => [
+                'query' => 'php',
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Windows',
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['result']);
+        self::assertSame('NOT_SUPPORTED', $payload['error']['code']);
+        self::assertStringContainsString('packages.search', $payload['error']['message']);
     }
 
     public function testDbusRuntimeMethodReturnsRuntimeDiagnosis(): void
