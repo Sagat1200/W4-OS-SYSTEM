@@ -94,6 +94,16 @@ function sendVBoxText(string $vboxManage, string $vmName, string $text): void
     sendVBoxCommand([$vboxManage, 'controlvm', $vmName, 'keyboardputscancode', 'e0', '1c', 'e0', '9c']);
 }
 
+function nowMonotonicNs(): int
+{
+    return hrtime(true);
+}
+
+function elapsedSecondsFrom(int $startedAtNs): float
+{
+    return round((nowMonotonicNs() - $startedAtNs) / 1_000_000_000, 3);
+}
+
 /**
  * @param array<string, mixed> $payload
  */
@@ -216,6 +226,7 @@ function summarizeHeapProbe(array $artifact): array
 
 try {
     $arguments = $argv ?? [];
+    $runStartedAtNs = nowMonotonicNs();
 
     $vmName = null;
     $repoHostPath = dirname(__DIR__);
@@ -409,6 +420,7 @@ try {
     ];
 
     $payload = [
+        'started_at' => gmdate('c'),
         'vm_name' => $vmName,
         'repo_host_path' => $repoHostPath,
         'mount_point' => $mountPoint,
@@ -437,40 +449,65 @@ try {
         exit(0);
     }
 
+    $prepareStartedAtNs = nowMonotonicNs();
     $prepareOutput = runProcess($prepareCommand);
     $prepareResult = decodeJsonObject($prepareOutput, 'El helper de preparacion no devolvio JSON valido');
 
     $payload['prepare_result'] = $prepareResult;
+    $payload['prepare_elapsed_seconds'] = elapsedSecondsFrom($prepareStartedAtNs);
     $payload['results'] = [];
     $recoveryAttempted = false;
 
     foreach ($probes as $label => $probe) {
+        $probeStartedAtNs = nowMonotonicNs();
+        $probeTelemetry = [
+            'wait_seconds' => $probe['wait_seconds'],
+            'attempts' => [],
+        ];
         $artifactPath = $probe['artifact_host_path'];
         clearstatcache(true, $artifactPath);
         $previousTimestamp = is_file($artifactPath) && is_int(filemtime($artifactPath))
             ? (int) filemtime($artifactPath) + 1
             : time();
 
+        $attemptStartedAtNs = nowMonotonicNs();
         sendVBoxText($vboxManage, $vmName, $probe['command']);
         $artifact = waitForArtifactAfter($artifactPath, $probe['wait_seconds'], $previousTimestamp);
+        $probeTelemetry['attempts'][] = [
+            'kind' => 'initial',
+            'elapsed_seconds' => elapsedSecondsFrom($attemptStartedAtNs),
+            'artifact_found' => is_array($artifact),
+        ];
         if (!is_array($artifact) && $vmRecoveryEnabled && !$recoveryAttempted) {
             $recoveryAttempted = true;
+            $probeTelemetry['recovery_used'] = true;
+
+            $recoveryStartedAtNs = nowMonotonicNs();
             $recoveryOutput = runProcess($recoveryCommand);
             $recoveryResult = decodeJsonObject($recoveryOutput, 'El helper de recuperacion no devolvio JSON valido');
             $payload['recovery_attempted'] = true;
             $payload['recovery_result'] = $recoveryResult;
+            $payload['recovery_elapsed_seconds'] = elapsedSecondsFrom($recoveryStartedAtNs);
 
+            $prepareAfterRecoveryStartedAtNs = nowMonotonicNs();
             $prepareOutput = runProcess($prepareCommand);
             $prepareResult = decodeJsonObject($prepareOutput, 'El helper de preparacion no devolvio JSON valido tras la recuperacion');
             $payload['prepare_result_after_recovery'] = $prepareResult;
+            $payload['prepare_elapsed_seconds_after_recovery'] = elapsedSecondsFrom($prepareAfterRecoveryStartedAtNs);
 
             clearstatcache(true, $artifactPath);
             $previousTimestamp = is_file($artifactPath) && is_int(filemtime($artifactPath))
                 ? (int) filemtime($artifactPath) + 1
                 : time();
 
+            $attemptStartedAtNs = nowMonotonicNs();
             sendVBoxText($vboxManage, $vmName, $probe['command']);
             $artifact = waitForArtifactAfter($artifactPath, $probe['wait_seconds'], $previousTimestamp);
+            $probeTelemetry['attempts'][] = [
+                'kind' => 'after_recovery',
+                'elapsed_seconds' => elapsedSecondsFrom($attemptStartedAtNs),
+                'artifact_found' => is_array($artifact),
+            ];
         }
 
         if (!is_array($artifact)) {
@@ -479,9 +516,13 @@ try {
 
         $summaryCallback = $probe['summary_callback'];
         $payload['results'][$label] = $summaryCallback($artifact);
+        $probeTelemetry['elapsed_seconds_total'] = elapsedSecondsFrom($probeStartedAtNs);
+        $probeTelemetry['recovery_used'] = $probeTelemetry['recovery_used'] ?? false;
+        $payload['results'][$label]['timing'] = $probeTelemetry;
     }
 
     $payload['status'] = 'completed';
+    $payload['elapsed_seconds_total'] = elapsedSecondsFrom($runStartedAtNs);
     printJson($payload);
 } catch (Throwable $exception) {
     fwrite(STDERR, 'ERROR: ' . $exception->getMessage() . PHP_EOL);

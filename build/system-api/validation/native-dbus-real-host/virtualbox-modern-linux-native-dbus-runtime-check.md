@@ -980,3 +980,52 @@ Lectura actualizada:
 - el fallback automatico sigue siendo necesario cuando la sesion headless se degrada de verdad
 - pero deja de activarse por una expectativa operativa demasiado corta del ordering lane
 - el carril pesado vuelve a quedar verde por defecto con un timeout mas realista y menos propenso a ruido operacional
+
+## Actualizacion posterior: el carril pesado ya expone telemetria real por probe
+
+El siguiente refinamiento deja de mover tiempo de espera a ciegas y añade observabilidad directamente al runner:
+
+- `scripts/run_native_dbus_heavy_validation_via_live_vm.php`
+
+Nuevos campos del JSON:
+
+- `started_at`
+- `prepare_elapsed_seconds`
+- `elapsed_seconds_total`
+- `results.<probe>.timing.wait_seconds`
+- `results.<probe>.timing.elapsed_seconds_total`
+- `results.<probe>.timing.recovery_used`
+- `results.<probe>.timing.attempts[]`
+
+La primera corrida con telemetria encontro un miss transitorio:
+
+- `heap_after_request_name` no materializo artefacto fresco en esa ejecucion
+
+Eso no se tomo como cambio contractual del probe; se hizo un rerun inmediato sobre la misma live homologada:
+
+- `php scripts/run_native_dbus_heavy_validation_via_live_vm.php --vm-name W4-OS-Server-DbusModern`
+
+Resultado homologado del rerun:
+
+- `status = completed`
+- sin `recovery_attempted`
+- `prepare_elapsed_seconds = 17.061`
+- `elapsed_seconds_total = 60.496`
+
+Tiempos observados por probe:
+
+- `launch_process`
+  - `elapsed_seconds_total = 14.001`
+  - intento inicial con artefacto en `13.999s`
+- `method_probe_ordering`
+  - `elapsed_seconds_total = 16.190`
+  - intento inicial con artefacto en `16.189s`
+- `heap_after_request_name`
+  - `elapsed_seconds_total = 13.242`
+  - intento inicial con artefacto en `13.242s`
+
+Lectura actualizada:
+
+- el runner pesado ya no solo dice verde o rojo; ahora deja tambien duracion observada por tramo
+- el miss inicial de `heap_after_request_name` queda clasificado como transitorio mientras no reaparezca en corridas sucesivas
+- los siguientes ajustes de timeout ya pueden salir de datos del laboratorio en vez de intuicion operativa
