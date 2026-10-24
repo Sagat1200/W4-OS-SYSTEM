@@ -232,6 +232,18 @@ final class SystemApiToolkit
                     'params' => ['limit?'],
                 ],
                 [
+                    'name' => 'packages.plan',
+                    'resource_kind' => 'package-plan',
+                    'mutates_state' => false,
+                    'params' => ['action', 'selection', 'conffile_policy', 'output_path?'],
+                ],
+                [
+                    'name' => 'packages.apply',
+                    'resource_kind' => 'package-operation',
+                    'mutates_state' => true,
+                    'params' => ['plan_id', 'plan_hash', 'idempotency_key', 'plan?', 'plan_path?'],
+                ],
+                [
                     'name' => 'services.list',
                     'resource_kind' => 'service-collection',
                     'mutates_state' => false,
@@ -407,6 +419,43 @@ final class SystemApiToolkit
                 resourceKind: 'package-installed-collection',
                 resourceId: 'installed-packages',
                 data: $this->packages->listInstalled($this->optionalPositiveInt($params, 'limit')),
+                provider: 'local-system-api-packages-contract'
+            );
+        }
+
+        if ($method === 'packages.plan') {
+            $plan = $this->packages->plan(
+                $this->requireString($params, 'action'),
+                $this->requireObjectList($params, 'selection'),
+                $this->requireString($params, 'conffile_policy'),
+                $this->optionalString($params, 'output_path')
+            );
+
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'packages.plan',
+                resourceKind: 'package-plan',
+                resourceId: is_string($plan['plan_id'] ?? null) ? $plan['plan_id'] : null,
+                data: $plan,
+                provider: 'local-system-api-packages-contract'
+            );
+        }
+
+        if ($method === 'packages.apply') {
+            $operation = $this->packages->apply(
+                $this->requireString($params, 'plan_id'),
+                $this->requireString($params, 'plan_hash'),
+                $this->requireString($params, 'idempotency_key'),
+                $this->optionalObject($params, 'plan'),
+                $this->optionalString($params, 'plan_path')
+            );
+
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'packages.apply',
+                resourceKind: 'package-operation',
+                resourceId: is_string($operation['operation_id'] ?? null) ? $operation['operation_id'] : null,
+                data: $operation,
                 provider: 'local-system-api-packages-contract'
             );
         }
@@ -681,7 +730,7 @@ final class SystemApiToolkit
             'api_version' => self::API_VERSION,
             'request_id' => $requestId,
             'result' => [
-                'operation_id' => null,
+                'operation_id' => is_string($data['operation_id'] ?? null) ? $data['operation_id'] : null,
                 'method' => $method,
                 'resource' => [
                     'id' => $resourceId,
@@ -782,6 +831,44 @@ final class SystemApiToolkit
     }
 
     /**
+     * @param array<string, mixed> $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function requireObjectList(array $params, string $field): array
+    {
+        $value = $params[$field] ?? null;
+        if (!is_array($value) || $value === [] || array_is_list($value) === false) {
+            throw new ValidationError(sprintf('params.%s debe ser una lista no vacia', $field));
+        }
+
+        foreach ($value as $index => $item) {
+            if (!is_array($item)) {
+                throw new ValidationError(sprintf('params.%s[%d] debe ser un objeto', $field, $index));
+            }
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>|null
+     */
+    private function optionalObject(array $params, string $field): ?array
+    {
+        $value = $params[$field] ?? null;
+        if ($value === null) {
+            return null;
+        }
+
+        if (!is_array($value)) {
+            throw new ValidationError(sprintf('params.%s debe ser un objeto JSON cuando se usa', $field));
+        }
+
+        return $value;
+    }
+
+    /**
      * @param array<string, ?string> $options
      * @return array<string, string>
      */
@@ -831,6 +918,14 @@ final class SystemApiToolkit
     {
         if (str_starts_with($exception->getMessage(), 'Metodo no soportado:')) {
             return 'NOT_SUPPORTED';
+        }
+
+        if (str_starts_with($exception->getMessage(), 'Conflicto:')) {
+            return 'CONFLICT';
+        }
+
+        if (str_starts_with($exception->getMessage(), 'Backend no disponible:')) {
+            return 'BACKEND_UNAVAILABLE';
         }
 
         return 'VALIDATION_ERROR';

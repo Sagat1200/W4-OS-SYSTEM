@@ -165,13 +165,23 @@ Eso la conecta con el resto del producto y no la deja como una API aislada del s
 
 ### 4.10 Superficie de paquetes
 
-La `System API` ya expone un primer frente read-only para paquetes del host cuando el entorno es compatible:
+La `System API` ya expone un primer frente operativo de paquetes del host cuando el entorno es compatible:
 
 - `packages.search`
 - `packages.info`
 - `packages.list_installed`
+- `packages.plan`
+- `packages.apply`
 
-Ese frente reutiliza el backend real del sistema (`apt-cache` y `dpkg-query`) cuando esta disponible y, cuando no lo esta, devuelve `NOT_SUPPORTED` de forma honesta en lugar de fingir inventario o metadata.
+La capa de lectura reutiliza el backend real del sistema (`apt-cache` y `dpkg-query`) cuando esta disponible y, cuando no lo esta, devuelve `NOT_SUPPORTED` de forma honesta en lugar de fingir inventario o metadata.
+
+Para el carril mutante, la API ya puede:
+
+- construir un plan canonico con `plan_id`, `plan_hash`, seleccion y `conffile_policy`,
+- persistir opcionalmente ese plan a disco para reutilizarlo entre llamadas,
+- y ejecutar `packages.apply` validando que `plan_id` y `plan_hash` coincidan con el plan suministrado.
+
+Lo que sigue pendiente para cerrar V1 en este dominio no es la existencia del contrato, sino endurecer el ledger durable de `idempotency_key`, la reconciliacion posterior y la evidencia end-to-end sobre un host Linux real.
 
 ### 4.11 Superficie de servicios
 
@@ -250,6 +260,6 @@ La direccion oficial post-V1 es que la `System API` deje de apoyarse estructural
 
 La `System API` es la API local de administracion y control de `W4 OS`.
 
-Su funcion es exponer capacidades del sistema como contratos programaticos reutilizables, especialmente en la vertical D-Bus nativa. Ya cubre diagnostico, activacion, servicio, startup, observacion, coupling y ownership, y suma un primer catalogo operativo para paquetes y servicios del host. Con ello actua como la base del control plane local del sistema.
+Su funcion es exponer capacidades del sistema como contratos programaticos reutilizables, especialmente en la vertical D-Bus nativa. Ya cubre diagnostico, activacion, servicio, startup, observacion, coupling y ownership, y suma un primer catalogo operativo para paquetes y servicios del host, incluyendo `plan/apply` de paquetes y mutaciones basicas de servicios. Con ello actua como la base del control plane local del sistema.
 
 Para el cierre V1, esa base sigue en PHP y puede apoyarse temporalmente en un fork o patch de `pecl/DBus`. Una vez validada la V1 de las ediciones del sistema, la direccion oficial del proyecto es migrar la `System API` y la base Linux estructural hacia Rust.

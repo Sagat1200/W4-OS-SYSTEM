@@ -74,6 +74,8 @@ final class SystemApiCliTest extends TestCase
         self::assertContains('packages.search', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('packages.info', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('packages.list_installed', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('packages.plan', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('packages.apply', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('services.list', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('services.status', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('services.start', array_column($payload['result']['data']['methods'], 'name'));
@@ -99,6 +101,8 @@ final class SystemApiCliTest extends TestCase
         self::assertFalse($methodsByName['packages.search']['mutates_state']);
         self::assertFalse($methodsByName['packages.info']['mutates_state']);
         self::assertFalse($methodsByName['packages.list_installed']['mutates_state']);
+        self::assertFalse($methodsByName['packages.plan']['mutates_state']);
+        self::assertTrue($methodsByName['packages.apply']['mutates_state']);
         self::assertFalse($methodsByName['services.list']['mutates_state']);
         self::assertFalse($methodsByName['services.status']['mutates_state']);
         self::assertTrue($methodsByName['services.start']['mutates_state']);
@@ -207,6 +211,229 @@ final class SystemApiCliTest extends TestCase
         self::assertSame('system-api-packages-installed-list', $payload['result']['data']['kind']);
         self::assertSame(1, $payload['result']['data']['count']);
         self::assertSame('bash', $payload['result']['data']['items'][0]['name']);
+    }
+
+    public function testPackagesPlanWritesCanonicalPlanFromFixture(): void
+    {
+        $outputPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'system-api-package-plan-' . bin2hex(random_bytes(6)) . '.json';
+
+        try {
+            $request = [
+                'api_version' => '1.0',
+                'request_id' => 'req-packages-plan-001',
+                'method' => 'packages.plan',
+                'params' => [
+                    'action' => 'install',
+                    'selection' => [
+                        ['name' => 'php8.4-cli', 'architecture' => 'amd64'],
+                    ],
+                    'conffile_policy' => 'keep-local',
+                    'output_path' => $outputPath,
+                ],
+            ];
+
+            $fixturePlan = [
+                'kind' => 'package-plan',
+                'status' => 'ok',
+                'backend' => 'apt-get',
+                'action' => 'install',
+                'plan_id' => 'pkg-plan-fixed-001',
+                'actor_scope' => 'local-system-api',
+                'catalog_revision' => 'catalog-fixed-001',
+                'created_at' => '2026-10-24T12:00:00Z',
+                'expires_at' => '2026-10-24T12:05:00Z',
+                'requested_packages' => [
+                    [
+                        'name' => 'php8.4-cli',
+                        'architecture' => 'amd64',
+                        'requested_version' => null,
+                        'origin' => null,
+                        'installed_version' => null,
+                        'candidate_version' => '8.4.4-1',
+                    ],
+                ],
+                'installs' => [
+                    [
+                        'name' => 'php8.4-cli',
+                        'architecture' => 'amd64',
+                        'installed_version' => null,
+                        'target_version' => '8.4.4-1',
+                    ],
+                ],
+                'upgrades' => [],
+                'removals' => [],
+                'download_bytes' => 131072,
+                'extra_disk_bytes' => 524288,
+                'conffile_policy' => 'keep-local',
+                'protected_packages' => [],
+                'reboot_estimate' => 'none',
+                'summary' => [
+                    'requested' => 1,
+                    'installs' => 1,
+                    'upgrades' => 0,
+                    'removals' => 0,
+                ],
+            ];
+
+            $result = $this->runPhpScript([
+                $this->scriptPath(),
+                '--request-json',
+                json_encode($request, JSON_THROW_ON_ERROR),
+            ], [
+                'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+                'W4_SYSTEM_API_PACKAGES_PLAN_JSON' => json_encode($fixturePlan, JSON_THROW_ON_ERROR),
+            ]);
+
+            self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+            $payload = $this->decodeJson($result['stdout']);
+            self::assertNull($payload['error']);
+            self::assertSame('packages.plan', $payload['result']['method']);
+            self::assertSame('package-plan', $payload['result']['resource']['kind']);
+            self::assertSame('packages:plan', $payload['result']['data']['command']);
+            self::assertSame('pkg-plan-fixed-001', $payload['result']['data']['plan_id']);
+            self::assertSame($this->normalizePath($outputPath), $payload['result']['data']['output_path']);
+            self::assertArrayHasKey('plan_hash', $payload['result']['data']);
+
+            $plan = $this->decodeJsonFile($outputPath);
+            self::assertSame('package-plan', $plan['kind']);
+            self::assertSame('pkg-plan-fixed-001', $plan['plan_id']);
+            self::assertSame($payload['result']['data']['plan_hash'], $plan['plan_hash']);
+        } finally {
+            if (is_file($outputPath)) {
+                unlink($outputPath);
+            }
+        }
+    }
+
+    public function testPackagesApplyConsumesPlanFileAndReturnsOperationReport(): void
+    {
+        $planPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'system-api-package-plan-apply-' . bin2hex(random_bytes(6)) . '.json';
+
+        try {
+            $plan = [
+                'kind' => 'package-plan',
+                'status' => 'ok',
+                'backend' => 'apt-get',
+                'action' => 'install',
+                'plan_id' => 'pkg-plan-apply-001',
+                'actor_scope' => 'local-system-api',
+                'catalog_revision' => 'catalog-apply-001',
+                'created_at' => '2026-10-24T12:00:00Z',
+                'expires_at' => '2026-10-24T12:05:00Z',
+                'requested_packages' => [
+                    [
+                        'name' => 'php8.4-cli',
+                        'architecture' => 'amd64',
+                        'requested_version' => null,
+                        'origin' => null,
+                        'installed_version' => null,
+                        'candidate_version' => '8.4.4-1',
+                    ],
+                ],
+                'installs' => [
+                    [
+                        'name' => 'php8.4-cli',
+                        'architecture' => 'amd64',
+                        'installed_version' => null,
+                        'target_version' => '8.4.4-1',
+                    ],
+                ],
+                'upgrades' => [],
+                'removals' => [],
+                'download_bytes' => 131072,
+                'extra_disk_bytes' => 524288,
+                'conffile_policy' => 'keep-local',
+                'protected_packages' => [],
+                'reboot_estimate' => 'none',
+                'summary' => [
+                    'requested' => 1,
+                    'installs' => 1,
+                    'upgrades' => 0,
+                    'removals' => 0,
+                ],
+            ];
+            $plan['plan_hash'] = sha1(json_encode($plan, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+            file_put_contents($planPath, json_encode($plan, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+
+            $request = [
+                'api_version' => '1.0',
+                'request_id' => 'req-packages-apply-001',
+                'method' => 'packages.apply',
+                'params' => [
+                    'plan_id' => 'pkg-plan-apply-001',
+                    'plan_hash' => $plan['plan_hash'],
+                    'idempotency_key' => 'pkg-intent-001',
+                    'plan_path' => $planPath,
+                ],
+            ];
+
+            $result = $this->runPhpScript([
+                $this->scriptPath(),
+                '--request-json',
+                json_encode($request, JSON_THROW_ON_ERROR),
+            ], [
+                'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+                'W4_SYSTEM_API_PACKAGES_APPLY_EXIT_CODE' => '0',
+                'W4_SYSTEM_API_PACKAGES_APPLY_STDOUT' => 'Packages applied',
+                'W4_SYSTEM_API_PACKAGES_APPLY_STDERR' => '',
+            ]);
+
+            self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+            $payload = $this->decodeJson($result['stdout']);
+            self::assertNull($payload['error']);
+            self::assertSame('packages.apply', $payload['result']['method']);
+            self::assertSame('package-operation', $payload['result']['resource']['kind']);
+            self::assertSame('system-api-package-operation', $payload['result']['data']['kind']);
+            self::assertSame('ok', $payload['result']['data']['status']);
+            self::assertSame('succeeded', $payload['result']['data']['state']);
+            self::assertSame('pkg-plan-apply-001', $payload['result']['data']['plan_id']);
+            self::assertSame('pkg-op-' . substr(sha1('pkg-intent-001|' . $plan['plan_hash']), 0, 12), $payload['result']['operation_id']);
+        } finally {
+            if (is_file($planPath)) {
+                unlink($planPath);
+            }
+        }
+    }
+
+    public function testPackagesApplyReturnsConflictWhenPlanHashDoesNotMatch(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-packages-apply-conflict-001',
+            'method' => 'packages.apply',
+            'params' => [
+                'plan_id' => 'pkg-plan-conflict-001',
+                'plan_hash' => 'wrong-hash',
+                'idempotency_key' => 'pkg-intent-conflict-001',
+                'plan' => [
+                    'kind' => 'package-plan',
+                    'status' => 'ok',
+                    'backend' => 'apt-get',
+                    'action' => 'install',
+                    'plan_id' => 'pkg-plan-conflict-001',
+                    'plan_hash' => 'another-hash',
+                    'requested_packages' => [
+                        ['name' => 'php8.4-cli'],
+                    ],
+                    'conffile_policy' => 'keep-local',
+                ],
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['result']);
+        self::assertSame('CONFLICT', $payload['error']['code']);
+        self::assertStringContainsString('plan_id o plan_hash', $payload['error']['message']);
     }
 
     public function testServicesListMethodReturnsServicesFromFixture(): void

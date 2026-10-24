@@ -109,6 +109,55 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertSame('php8.4-cli', $payload['result']['data']['items'][0]['name']);
     }
 
+    public function testCallDispatchesPackagesPlan(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'manager-packages-plan-001',
+            'method' => 'packages.plan',
+            'params' => [
+                'action' => 'install',
+                'selection' => [
+                    ['name' => 'php8.4-cli', 'architecture' => 'amd64'],
+                ],
+                'conffile_policy' => 'keep-local',
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'call',
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_PACKAGES_PLAN_JSON' => json_encode([
+                'kind' => 'package-plan',
+                'status' => 'ok',
+                'backend' => 'apt-get',
+                'action' => 'install',
+                'plan_id' => 'manager-pkg-plan-001',
+                'requested_packages' => [
+                    ['name' => 'php8.4-cli', 'architecture' => 'amd64'],
+                ],
+                'installs' => [
+                    ['name' => 'php8.4-cli', 'architecture' => 'amd64', 'installed_version' => null, 'target_version' => '8.4.4-1'],
+                ],
+                'upgrades' => [],
+                'removals' => [],
+                'conffile_policy' => 'keep-local',
+            ], JSON_THROW_ON_ERROR),
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('packages.plan', $payload['result']['method']);
+        self::assertSame('package-plan', $payload['result']['resource']['kind']);
+        self::assertSame('manager-pkg-plan-001', $payload['result']['data']['plan_id']);
+    }
+
     public function testCallDispatchesServicesEnable(): void
     {
         $request = [
