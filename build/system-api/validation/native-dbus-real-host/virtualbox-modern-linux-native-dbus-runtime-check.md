@@ -1029,3 +1029,46 @@ Lectura actualizada:
 - el runner pesado ya no solo dice verde o rojo; ahora deja tambien duracion observada por tramo
 - el miss inicial de `heap_after_request_name` queda clasificado como transitorio mientras no reaparezca en corridas sucesivas
 - los siguientes ajustes de timeout ya pueden salir de datos del laboratorio en vez de intuicion operativa
+
+## Actualizacion posterior: el runner liviano ya expone la misma clase de telemetria operativa
+
+El siguiente refinamiento alinea la lectura del baseline rapido con la del carril pesado:
+
+- `scripts/run_native_dbus_runtime_smoke_via_live_vm.php`
+
+Nuevos campos del JSON:
+
+- `started_at`
+- `prepare_elapsed_seconds`
+- `elapsed_seconds_total`
+- `attempts[].elapsed_seconds`
+- `attempts[].artifact_found`
+
+El contrato funcional se mantiene igual:
+
+- `runtime_smoke.ok`
+- checks internos del agregador
+- fallback opcional de recuperacion
+
+Validacion homologada:
+
+- `php -l scripts/run_native_dbus_runtime_smoke_via_live_vm.php`
+- `php scripts/run_native_dbus_runtime_smoke_via_live_vm.php --vm-name W4-OS-Server-DbusModern --smoke-wait-seconds 120`
+
+Resultado:
+
+- `status = completed`
+- `runtime_smoke.ok = true`
+- `wrapper_smoke = 0`
+- `wait_loop_signal_contract = 0`
+- `method_roundtrip_smoke = 0`
+- `runtime_call_smoke = 0`
+- `prepare_elapsed_seconds = 17.810`
+- intento inicial con artefacto en `15.623s`
+- `elapsed_seconds_total = 33.437`
+
+Lectura actualizada:
+
+- baseline rapido y carril pesado ya exponen telemetria compatible
+- el laboratorio ya puede comparar tiempo de preparacion, tiempo de entrega del artefacto y tiempo total sin cambiar de modelo mental entre runners
+- el siguiente ajuste operativo puede apoyarse en una sola lectura para ambos carriles
