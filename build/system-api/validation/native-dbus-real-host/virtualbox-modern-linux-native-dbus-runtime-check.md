@@ -762,3 +762,4 @@ Lectura actualizada:
 - el baseline rapido ya no depende solo de `GetCapabilities` para cubrir method calls reales sobre el manager exportado
 - la seleccion efectiva del backend nativo dentro de `system.dbus-runtime` ya queda fijada tambien dentro del smoke permanente y no solo como evidencia historica de la sonda viva manual
 - el runner host-side rapido vuelve a reflejar de forma honesta la ultima corrida real de la live, en lugar de poder resumir artefactos viejos
+- el refinamiento siguiente deja ademas el mismo criterio de frescura que el carril pesado: `scripts/run_native_dbus_runtime_smoke_via_live_vm.php` ya usa el `filemtime()` previo del artefacto consolidado (`mtime + 1`) en lugar de un umbral generico basado en `time()`, y un nuevo rerun real sobre `W4-OS-Server-DbusModern` mantiene `runtime_smoke.ok = true` con los cuatro checks en `exit_code = 0`

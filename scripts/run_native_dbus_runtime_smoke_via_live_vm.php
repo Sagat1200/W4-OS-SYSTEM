@@ -314,9 +314,12 @@ try {
         throw new RuntimeException('El helper de preparacion no devolvio JSON valido');
     }
 
-    $artifactTimestamp = time();
+    clearstatcache(true, $artifactHostPath);
+    $previousTimestamp = is_file($artifactHostPath) && is_int(filemtime($artifactHostPath))
+        ? (int) filemtime($artifactHostPath) + 1
+        : time();
     sendVBoxText($vboxManage, $vmName, $smokeCommand);
-    $artifact = waitForArtifactAfter($artifactHostPath, $smokeWaitSeconds, $artifactTimestamp);
+    $artifact = waitForArtifactAfter($artifactHostPath, $smokeWaitSeconds, $previousTimestamp);
     if (!is_array($artifact)) {
         throw new RuntimeException(sprintf('No se pudo leer el artefacto del runtime smoke: %s', $artifactHostPath));
     }
