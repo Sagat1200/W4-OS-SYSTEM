@@ -11,6 +11,46 @@ final class SystemApiServicesToolkit
     /**
      * @return array<string, mixed>
      */
+    public function start(string $unit): array
+    {
+        return $this->runAction('start', $unit);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function stop(string $unit): array
+    {
+        return $this->runAction('stop', $unit);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function restart(string $unit): array
+    {
+        return $this->runAction('restart', $unit);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function enable(string $unit): array
+    {
+        return $this->runAction('enable', $unit);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function disable(string $unit): array
+    {
+        return $this->runAction('disable', $unit);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     public function list(?string $unit = null): array
     {
         $output = $this->resolveListOutput();
@@ -102,6 +142,62 @@ final class SystemApiServicesToolkit
         return $result['stdout'];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    private function runAction(string $action, string $unit): array
+    {
+        $this->assertLinuxCommandSupport(sprintf('services.%s', $action), 'systemctl');
+        $result = $this->resolveActionExecutionResult($action, $unit);
+        $statusReport = $this->status($unit);
+        $operationId = sprintf('service-%s-%s', $action, substr(sha1($unit . '|' . $action), 0, 12));
+        $succeeded = ($result['exit_code'] ?? 1) === 0;
+
+        return [
+            'kind' => 'system-api-service-operation',
+            'status' => $succeeded ? 'ok' : 'failed',
+            'backend' => 'systemctl',
+            'action' => $action,
+            'unit' => $unit,
+            'operation_id' => $operationId,
+            'state' => $succeeded ? 'succeeded' : 'failed',
+            'command' => sprintf('systemctl %s %s', $action, $unit),
+            'exit_code' => $result['exit_code'],
+            'stdout' => $result['stdout'],
+            'stderr' => $result['stderr'],
+            'service' => $statusReport['service'] ?? ['unit' => $unit],
+            'next_action' => $succeeded ? 'observe-service-state' : 'inspect-service-state',
+        ];
+    }
+
+    /**
+     * @return array{stdout:string,stderr:string,exit_code:int}
+     */
+    private function resolveActionExecutionResult(string $action, string $unit): array
+    {
+        $prefix = strtoupper(str_replace('-', '_', $action));
+        $stdoutFixture = getenv(sprintf('W4_SYSTEM_API_SERVICES_%s_STDOUT', $prefix));
+        $stderrFixture = getenv(sprintf('W4_SYSTEM_API_SERVICES_%s_STDERR', $prefix));
+        $exitCodeFixture = getenv(sprintf('W4_SYSTEM_API_SERVICES_%s_EXIT_CODE', $prefix));
+
+        if (is_string($stdoutFixture) || is_string($stderrFixture) || is_string($exitCodeFixture)) {
+            return [
+                'stdout' => is_string($stdoutFixture) ? $stdoutFixture : '',
+                'stderr' => is_string($stderrFixture) ? $stderrFixture : '',
+                'exit_code' => is_string($exitCodeFixture) && preg_match('/^-?\d+$/', $exitCodeFixture) === 1
+                    ? (int) $exitCodeFixture
+                    : 0,
+            ];
+        }
+
+        return $this->runLinuxCommand([
+            'systemctl',
+            $action,
+            $unit,
+            '--no-pager',
+        ], allowFailure: true);
+    }
+
     private function resolveStatusOutput(string $unit): string
     {
         $fixture = getenv('W4_SYSTEM_API_SERVICES_STATUS_OUTPUT');
@@ -167,9 +263,42 @@ final class SystemApiServicesToolkit
 
     private function commandExists(string $command): bool
     {
+        if ($command === 'systemctl' && $this->hasSystemctlFixtureOverrides()) {
+            return true;
+        }
+
         $result = $this->runLinuxCommand(['sh', '-lc', sprintf('command -v %s', escapeshellarg($command))], allowFailure: true);
 
         return $result['exit_code'] === 0 && trim($result['stdout']) !== '';
+    }
+
+    private function hasSystemctlFixtureOverrides(): bool
+    {
+        foreach ([
+            'W4_SYSTEM_API_SERVICES_LIST_OUTPUT',
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT',
+            'W4_SYSTEM_API_SERVICES_START_EXIT_CODE',
+            'W4_SYSTEM_API_SERVICES_START_STDOUT',
+            'W4_SYSTEM_API_SERVICES_START_STDERR',
+            'W4_SYSTEM_API_SERVICES_STOP_EXIT_CODE',
+            'W4_SYSTEM_API_SERVICES_STOP_STDOUT',
+            'W4_SYSTEM_API_SERVICES_STOP_STDERR',
+            'W4_SYSTEM_API_SERVICES_RESTART_EXIT_CODE',
+            'W4_SYSTEM_API_SERVICES_RESTART_STDOUT',
+            'W4_SYSTEM_API_SERVICES_RESTART_STDERR',
+            'W4_SYSTEM_API_SERVICES_ENABLE_EXIT_CODE',
+            'W4_SYSTEM_API_SERVICES_ENABLE_STDOUT',
+            'W4_SYSTEM_API_SERVICES_ENABLE_STDERR',
+            'W4_SYSTEM_API_SERVICES_DISABLE_EXIT_CODE',
+            'W4_SYSTEM_API_SERVICES_DISABLE_STDOUT',
+            'W4_SYSTEM_API_SERVICES_DISABLE_STDERR',
+        ] as $key) {
+            if (getenv($key) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

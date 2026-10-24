@@ -76,6 +76,11 @@ final class SystemApiCliTest extends TestCase
         self::assertContains('packages.list_installed', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('services.list', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('services.status', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('services.start', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('services.stop', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('services.restart', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('services.enable', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('services.disable', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-activation', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-native-service', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('system.dbus-native-startup', array_column($payload['result']['data']['methods'], 'name'));
@@ -96,6 +101,11 @@ final class SystemApiCliTest extends TestCase
         self::assertFalse($methodsByName['packages.list_installed']['mutates_state']);
         self::assertFalse($methodsByName['services.list']['mutates_state']);
         self::assertFalse($methodsByName['services.status']['mutates_state']);
+        self::assertTrue($methodsByName['services.start']['mutates_state']);
+        self::assertTrue($methodsByName['services.stop']['mutates_state']);
+        self::assertTrue($methodsByName['services.restart']['mutates_state']);
+        self::assertTrue($methodsByName['services.enable']['mutates_state']);
+        self::assertTrue($methodsByName['services.disable']['mutates_state']);
         self::assertTrue($methodsByName['system.dbus-native-startup']['mutates_state']);
         self::assertFalse($methodsByName['system.dbus-native-observation']['mutates_state']);
         self::assertFalse($methodsByName['system.dbus-native-coupling']['mutates_state']);
@@ -255,6 +265,104 @@ final class SystemApiCliTest extends TestCase
         self::assertSame('system-api-service-status', $payload['result']['data']['kind']);
         self::assertSame('active', $payload['result']['data']['service']['active_state']);
         self::assertSame('enabled', $payload['result']['data']['service']['unit_file_state']);
+    }
+
+    public function testServicesRestartMethodReturnsSucceededOperationReport(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-services-restart-001',
+            'method' => 'services.restart',
+            'params' => [
+                'unit' => 'ssh.service',
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_SERVICES_RESTART_EXIT_CODE' => '0',
+            'W4_SYSTEM_API_SERVICES_RESTART_STDOUT' => '',
+            'W4_SYSTEM_API_SERVICES_RESTART_STDERR' => '',
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('services.restart', $payload['result']['method']);
+        self::assertSame('service-operation', $payload['result']['resource']['kind']);
+        self::assertSame('system-api-service-operation', $payload['result']['data']['kind']);
+        self::assertSame('ok', $payload['result']['data']['status']);
+        self::assertSame('succeeded', $payload['result']['data']['state']);
+        self::assertSame('restart', $payload['result']['data']['action']);
+        self::assertSame('observe-service-state', $payload['result']['data']['next_action']);
+        self::assertSame('active', $payload['result']['data']['service']['active_state']);
+    }
+
+    public function testServicesDisableMethodReturnsFailedOperationReport(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-services-disable-001',
+            'method' => 'services.disable',
+            'params' => [
+                'unit' => 'ssh.service',
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_SERVICES_DISABLE_EXIT_CODE' => '1',
+            'W4_SYSTEM_API_SERVICES_DISABLE_STDERR' => 'Access denied',
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('services.disable', $payload['result']['method']);
+        self::assertSame('failed', $payload['result']['data']['status']);
+        self::assertSame('failed', $payload['result']['data']['state']);
+        self::assertSame('inspect-service-state', $payload['result']['data']['next_action']);
+        self::assertSame(1, $payload['result']['data']['exit_code']);
+        self::assertSame('Access denied', $payload['result']['data']['stderr']);
+    }
+
+    public function testServicesStartReturnsNotSupportedWhenBackendIsUnavailable(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-services-start-unsupported-001',
+            'method' => 'services.start',
+            'params' => [
+                'unit' => 'ssh.service',
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Windows',
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['result']);
+        self::assertSame('NOT_SUPPORTED', $payload['error']['code']);
+        self::assertStringContainsString('services.start', $payload['error']['message']);
     }
 
     public function testPackagesSearchReturnsNotSupportedWhenBackendIsUnavailable(): void

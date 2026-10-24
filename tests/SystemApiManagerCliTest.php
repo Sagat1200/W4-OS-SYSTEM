@@ -109,6 +109,38 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertSame('php8.4-cli', $payload['result']['data']['items'][0]['name']);
     }
 
+    public function testCallDispatchesServicesEnable(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'manager-services-enable-001',
+            'method' => 'services.enable',
+            'params' => [
+                'unit' => 'ssh.service',
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'call',
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_SERVICES_ENABLE_EXIT_CODE' => '0',
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('services.enable', $payload['result']['method']);
+        self::assertSame('service-operation', $payload['result']['resource']['kind']);
+        self::assertSame('enable', $payload['result']['data']['action']);
+        self::assertSame('succeeded', $payload['result']['data']['state']);
+    }
+
     public function testCallReturnsProtocolErrorForInvalidJson(): void
     {
         $result = $this->runPhpScript([

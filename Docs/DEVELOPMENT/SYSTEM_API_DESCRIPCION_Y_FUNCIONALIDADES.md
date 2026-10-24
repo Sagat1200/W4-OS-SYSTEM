@@ -175,12 +175,17 @@ Ese frente reutiliza el backend real del sistema (`apt-cache` y `dpkg-query`) cu
 
 ### 4.11 Superficie de servicios
 
-La `System API` ya expone tambien un primer frente read-only de servicios del host:
+La `System API` ya expone un frente operativo inicial de servicios del host:
 
 - `services.list`
 - `services.status`
+- `services.start`
+- `services.stop`
+- `services.restart`
+- `services.enable`
+- `services.disable`
 
-En esta etapa la lectura se apoya en `systemctl`, con degradacion honesta a `NOT_SUPPORTED` fuera de Linux o cuando el backend requerido no existe en el host. Las mutaciones (`start/stop/restart/enable/disable`) siguen siendo deuda pendiente del catalogo V1.
+En esta etapa la lectura y las mutaciones basicas se apoyan en `systemctl`, con degradacion honesta a `NOT_SUPPORTED` fuera de Linux o cuando el backend requerido no existe en el host. Lo que sigue pendiente para cerrar V1 no es la existencia del dominio, sino endurecer idempotencia, revisionado y validacion end-to-end sobre hosts Linux reales.
 
 ## 5. Componentes principales de la vertical
 
@@ -245,6 +250,6 @@ La direccion oficial post-V1 es que la `System API` deje de apoyarse estructural
 
 La `System API` es la API local de administracion y control de `W4 OS`.
 
-Su funcion es exponer capacidades del sistema como contratos programaticos reutilizables, especialmente en la vertical D-Bus nativa. Ya cubre diagnostico, activacion, servicio, startup, observacion, coupling y ownership, y suma un primer catalogo read-only para paquetes y servicios del host. Con ello actua como la base del control plane local del sistema.
+Su funcion es exponer capacidades del sistema como contratos programaticos reutilizables, especialmente en la vertical D-Bus nativa. Ya cubre diagnostico, activacion, servicio, startup, observacion, coupling y ownership, y suma un primer catalogo operativo para paquetes y servicios del host. Con ello actua como la base del control plane local del sistema.
 
 Para el cierre V1, esa base sigue en PHP y puede apoyarse temporalmente en un fork o patch de `pecl/DBus`. Una vez validada la V1 de las ediciones del sistema, la direccion oficial del proyecto es migrar la `System API` y la base Linux estructural hacia Rust.

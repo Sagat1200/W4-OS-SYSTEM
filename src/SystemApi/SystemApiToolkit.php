@@ -244,6 +244,36 @@ final class SystemApiToolkit
                     'params' => ['unit'],
                 ],
                 [
+                    'name' => 'services.start',
+                    'resource_kind' => 'service-operation',
+                    'mutates_state' => true,
+                    'params' => ['unit'],
+                ],
+                [
+                    'name' => 'services.stop',
+                    'resource_kind' => 'service-operation',
+                    'mutates_state' => true,
+                    'params' => ['unit'],
+                ],
+                [
+                    'name' => 'services.restart',
+                    'resource_kind' => 'service-operation',
+                    'mutates_state' => true,
+                    'params' => ['unit'],
+                ],
+                [
+                    'name' => 'services.enable',
+                    'resource_kind' => 'service-operation',
+                    'mutates_state' => true,
+                    'params' => ['unit'],
+                ],
+                [
+                    'name' => 'services.disable',
+                    'resource_kind' => 'service-operation',
+                    'mutates_state' => true,
+                    'params' => ['unit'],
+                ],
+                [
                     'name' => 'system.dbus-runtime',
                     'resource_kind' => 'system-api-dbus-runtime-diagnosis',
                     'mutates_state' => false,
@@ -401,6 +431,61 @@ final class SystemApiToolkit
                 resourceKind: 'service-status',
                 resourceId: $unit,
                 data: $this->services->status($unit),
+                provider: 'local-system-api-services-contract'
+            );
+        }
+
+        if ($method === 'services.start') {
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'services.start',
+                resourceKind: 'service-operation',
+                resourceId: $this->requireString($params, 'unit'),
+                data: $this->services->start($this->requireString($params, 'unit')),
+                provider: 'local-system-api-services-contract'
+            );
+        }
+
+        if ($method === 'services.stop') {
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'services.stop',
+                resourceKind: 'service-operation',
+                resourceId: $this->requireString($params, 'unit'),
+                data: $this->services->stop($this->requireString($params, 'unit')),
+                provider: 'local-system-api-services-contract'
+            );
+        }
+
+        if ($method === 'services.restart') {
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'services.restart',
+                resourceKind: 'service-operation',
+                resourceId: $this->requireString($params, 'unit'),
+                data: $this->services->restart($this->requireString($params, 'unit')),
+                provider: 'local-system-api-services-contract'
+            );
+        }
+
+        if ($method === 'services.enable') {
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'services.enable',
+                resourceKind: 'service-operation',
+                resourceId: $this->requireString($params, 'unit'),
+                data: $this->services->enable($this->requireString($params, 'unit')),
+                provider: 'local-system-api-services-contract'
+            );
+        }
+
+        if ($method === 'services.disable') {
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'services.disable',
+                resourceKind: 'service-operation',
+                resourceId: $this->requireString($params, 'unit'),
+                data: $this->services->disable($this->requireString($params, 'unit')),
                 provider: 'local-system-api-services-contract'
             );
         }

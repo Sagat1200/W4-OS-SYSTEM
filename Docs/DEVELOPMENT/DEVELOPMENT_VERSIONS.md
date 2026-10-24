@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.327 | 2026-10-24 | Activa | `System API` ya expone tambien mutaciones basicas de servicios (`start/stop/restart/enable/disable`) sobre `systemctl` con reporte estructurado y fallback honesto `NOT_SUPPORTED` |
 | TECH | TECH-1.326 | 2026-10-24 | Activa | `System API` ya expone lecturas publicas read-only para paquetes (`packages.search/info/list_installed`) y servicios (`services.list/status`) con fallback honesto `NOT_SUPPORTED` |
 | TECH | TECH-1.325 | 2026-10-24 | Activa | El runner liviano DBus baja su espera por defecto a 30s y sigue cerrando en verde sin recovery |
 | TECH | TECH-1.324 | 2026-10-24 | Activa | El runner liviano DBus ya expone telemetria de preparacion, intento y duracion total igual que el carril pesado |
