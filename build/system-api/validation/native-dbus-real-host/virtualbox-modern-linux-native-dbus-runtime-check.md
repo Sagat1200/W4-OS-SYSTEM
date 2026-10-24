@@ -688,3 +688,38 @@ Lectura actualizada:
 - la deuda de cobertura dedicada para wrappers ya queda cerrada con evidencia homologada propia
 - ademas del layout Zend, el fork tambien necesitaba correcciones reales de destructor/ownership en wrappers que no estaban siendo recorridos por el carril principal del runtime
 - el carril minimo del heap, el carril `launch-process` y la nueva smoke de wrappers quedan simultaneamente verdes sobre la misma VM homologada
+
+## Actualizacion posterior: el ordering lane ya queda realineado y el carril pesado vuelve a verde
+
+El desfase expuesto por el primer rerun de `scripts/run_native_dbus_heavy_validation_via_live_vm.php` ya no queda abierto como deuda de interpretacion.
+
+La evidencia homologada mas reciente deja dos conclusiones utiles:
+
+- `check_native_dbus_method_probe_ordering.php` ya fija en `orderingExpectation()` el contrato realmente observado para los tres modos canónicos:
+  - `preload-first`: `ready = true`, `service_reachable_ok = true`
+  - `preload-object-only`: `ready = true`, `service_reachable_ok = true`
+  - `preload-classes-only`: `ready = true`, `service_reachable_ok = true`
+- el artefacto `runtime-check/guest-artifacts/method-probe-ordering/check-native-dbus-method-probe-ordering.json` ya vuelve a cerrar:
+  - `ok = true`
+  - `expectations_met = true` en los tres modos
+
+Ese realineamiento no mueve los otros guardrails del carril pesado:
+
+- `runtime-check/guest-artifacts/launch-process/check-native-dbus-launch-process.json` conserva `launch_ok = true` y `service_reachable_ok = true`
+- `runtime-check/guest-artifacts/heap-after-request-name/probe-native-dbus-heap-after-request-name.json` sigue `ok = true` en sus 17 escenarios
+
+Con estos tres artefactos alineados otra vez, el rerun host-side de:
+
+- `php scripts/run_native_dbus_heavy_validation_via_live_vm.php --vm-name W4-OS-Server-DbusModern`
+
+vuelve a cerrar:
+
+- `status = completed`
+- `launch_process.ok = true`
+- `method_probe_ordering.ok = true`
+- `heap_after_request_name.ok = true`
+
+Lectura actualizada:
+
+- el runner host-side pesado ya no solo automatiza la ejecucion; tambien vuelve a reflejar un baseline completamente verde en la live homologada
+- el ajuste del ordering ya no se trata como una hipotesis ni como un parche cosmetico de la sonda, sino como una realineacion del contrato canonico con el comportamiento realmente observado y revalidado

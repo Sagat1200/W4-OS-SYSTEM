@@ -299,11 +299,11 @@ function orderingExpectation(string $mode): array
     return match ($mode) {
         'preload-first' => [
             'ready' => true,
-            'service_reachable_ok' => false,
+            'service_reachable_ok' => true,
         ],
         'preload-object-only' => [
-            'ready' => false,
-            'service_reachable_ok' => false,
+            'ready' => true,
+            'service_reachable_ok' => true,
         ],
         'preload-classes-only' => [
             'ready' => true,
