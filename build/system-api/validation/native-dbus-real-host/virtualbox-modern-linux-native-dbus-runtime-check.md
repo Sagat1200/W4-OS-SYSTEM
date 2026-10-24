@@ -1072,3 +1072,48 @@ Lectura actualizada:
 - baseline rapido y carril pesado ya exponen telemetria compatible
 - el laboratorio ya puede comparar tiempo de preparacion, tiempo de entrega del artefacto y tiempo total sin cambiar de modelo mental entre runners
 - el siguiente ajuste operativo puede apoyarse en una sola lectura para ambos carriles
+
+## Actualizacion posterior: el baseline rapido ya baja su espera por defecto a 30s
+
+Con la telemetria del runner liviano ya visible, el siguiente paso fue dejar de cargar un timeout heredado de `120s` que no reflejaba la latencia real observada.
+
+Pruebas de control sin fallback:
+
+- `php scripts/run_native_dbus_runtime_smoke_via_live_vm.php --vm-name W4-OS-Server-DbusModern --skip-vm-recovery --smoke-wait-seconds 35`
+- `php scripts/run_native_dbus_runtime_smoke_via_live_vm.php --vm-name W4-OS-Server-DbusModern --skip-vm-recovery --smoke-wait-seconds 30`
+
+Ambas corridas cerraron:
+
+- `status = completed`
+- `runtime_smoke.ok = true`
+- `wrapper_smoke = 0`
+- `wait_loop_signal_contract = 0`
+- `method_roundtrip_smoke = 0`
+- `runtime_call_smoke = 0`
+
+Con esa evidencia, el runner ya fija:
+
+- `smoke_wait_seconds = 30`
+
+como valor por defecto en:
+
+- `scripts/run_native_dbus_runtime_smoke_via_live_vm.php`
+
+Rerun homologado con defaults:
+
+- `php scripts/run_native_dbus_runtime_smoke_via_live_vm.php --vm-name W4-OS-Server-DbusModern`
+
+Resultado:
+
+- `status = completed`
+- `runtime_smoke.ok = true`
+- `prepare_elapsed_seconds = 17.242`
+- intento inicial con artefacto en `16.577s`
+- `elapsed_seconds_total = 33.821`
+- sin `recovery_attempted`
+
+Lectura actualizada:
+
+- el baseline rapido deja de arrastrar un timeout sobredimensionado
+- `30s` sigue dejando margen real frente a la latencia observada del artefacto
+- el fallback permanece como red de seguridad y el override manual sigue disponible para sesiones de laboratorio mas lentas

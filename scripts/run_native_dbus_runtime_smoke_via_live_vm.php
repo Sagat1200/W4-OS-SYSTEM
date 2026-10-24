@@ -205,7 +205,7 @@ try {
     $mountPoint = '/mnt/w4repo';
     $bindingTarget = '/';
     $prepareWaitMs = 1800;
-    $smokeWaitSeconds = 45;
+    $smokeWaitSeconds = 30;
     $vmRecoveryEnabled = true;
     $recoveryWaitSeconds = 90;
     $recoverySettleSeconds = 25;
