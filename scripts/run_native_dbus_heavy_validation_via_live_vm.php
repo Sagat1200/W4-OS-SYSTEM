@@ -314,7 +314,7 @@ try {
     $probes = [
         'launch_process' => [
             'command' => sprintf(
-                'sudo W4_SYSTEM_API_REMOTE_ROOT_DIR=%1$s W4_SYSTEM_API_REMOTE_DBUS_MODULE=%2$s php -d extension=%2$s %3$s',
+                'sudo env W4_SYSTEM_API_REMOTE_ROOT_DIR=%1$s W4_SYSTEM_API_REMOTE_DBUS_MODULE=%2$s php -d extension=%2$s %3$s',
                 $mountPoint,
                 $dbusModuleGuestPath,
                 $launchScriptGuestPath
@@ -328,7 +328,7 @@ try {
         ],
         'method_probe_ordering' => [
             'command' => sprintf(
-                'sudo W4_SYSTEM_API_REMOTE_ROOT_DIR=%1$s W4_SYSTEM_API_REMOTE_DBUS_MODULE=%2$s php -d extension=%2$s %3$s',
+                'sudo env W4_SYSTEM_API_REMOTE_ROOT_DIR=%1$s W4_SYSTEM_API_REMOTE_DBUS_MODULE=%2$s php -d extension=%2$s %3$s',
                 $mountPoint,
                 $dbusModuleGuestPath,
                 $orderingScriptGuestPath
@@ -342,7 +342,7 @@ try {
         ],
         'heap_after_request_name' => [
             'command' => sprintf(
-                'sudo W4_SYSTEM_API_REMOTE_ROOT_DIR=%1$s W4_SYSTEM_API_REMOTE_DBUS_MODULE=%2$s php -d extension=%2$s %3$s',
+                'sudo env W4_SYSTEM_API_REMOTE_ROOT_DIR=%1$s W4_SYSTEM_API_REMOTE_DBUS_MODULE=%2$s php -d extension=%2$s %3$s',
                 $mountPoint,
                 $dbusModuleGuestPath,
                 $heapScriptGuestPath

@@ -763,3 +763,36 @@ Lectura actualizada:
 - la seleccion efectiva del backend nativo dentro de `system.dbus-runtime` ya queda fijada tambien dentro del smoke permanente y no solo como evidencia historica de la sonda viva manual
 - el runner host-side rapido vuelve a reflejar de forma honesta la ultima corrida real de la live, en lugar de poder resumir artefactos viejos
 - el refinamiento siguiente deja ademas el mismo criterio de frescura que el carril pesado: `scripts/run_native_dbus_runtime_smoke_via_live_vm.php` ya usa el `filemtime()` previo del artefacto consolidado (`mtime + 1`) en lugar de un umbral generico basado en `time()`, y un nuevo rerun real sobre `W4-OS-Server-DbusModern` mantiene `runtime_smoke.ok = true` con los cuatro checks en `exit_code = 0`
+
+## Actualizacion posterior: el contrato `sudo env` ya queda corregido y el bloqueo real se mueve a transporte de la live
+
+El siguiente atasco ya no vino del binding ni del propio smoke, sino del modo en que los runners host-side estaban disparando comandos dentro de la live.
+
+La captura de la TTY de `W4-OS-Server-DbusModern` deja visible el problema:
+
+- `scripts/run_native_dbus_runtime_smoke_via_live_vm.php` y `scripts/run_native_dbus_heavy_validation_via_live_vm.php` estaban inyectando `sudo W4_SYSTEM_API_REMOTE_ROOT_DIR=... php ...`
+- esa forma es invalida para `sudo`: no exporta las variables de entorno ni ejecuta el comando esperado
+
+Sobre esa lectura, ambos runners ya quedan corregidos a:
+
+- `sudo env W4_SYSTEM_API_REMOTE_ROOT_DIR=... W4_SYSTEM_API_REMOTE_DBUS_MODULE=... php ...`
+
+El runner liviano conserva ademas la identificacion por `run_id` para no depender solo de timestamps del artefacto consolidado.
+
+Estado honesto despues del fix:
+
+- `php -l scripts/run_native_dbus_runtime_smoke_via_live_vm.php` cierra en verde
+- `php -l scripts/run_native_dbus_heavy_validation_via_live_vm.php` cierra en verde
+- el rerun homologado todavia no puede cerrarse porque el bloqueo util ya no es de codigo sino de transporte/ejecucion en la live
+
+Evidencia del bloqueo actual:
+
+- la consola inyectada por `keyboardputstring` ya no ejecuta ni un `echo` corto sobre el repo compartido
+- los forwards `127.0.0.1:2222`, `:2224` y `:2240` aceptan TCP pero no entregan banner SSH
+- `VBoxManage guestcontrol ... run --username w4live ...` responde `The guest execution service is not ready (yet)`
+
+Lectura actualizada:
+
+- el contrato de ejecucion de los runners ya queda saneado en codigo
+- el siguiente trabajo util ya no es seguir tocando `runtime_smoke` ni el fork DBus, sino recuperar un transporte confiable hacia la live para volver a homologar el baseline
+- para ese siguiente corte, el repo ya deja listo `scripts/run_native_dbus_wrapper_smoke_via_paramiko.php` como carril alternativo una vez que la live vuelva a exponer SSH valido

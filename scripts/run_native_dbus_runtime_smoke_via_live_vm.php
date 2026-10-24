@@ -277,7 +277,7 @@ try {
 
     $runId = sprintf('runtime-smoke-%s', bin2hex(random_bytes(8)));
     $smokeCommand = sprintf(
-        'sudo W4_SYSTEM_API_REMOTE_ROOT_DIR=%1$s W4_SYSTEM_API_REMOTE_DBUS_MODULE=%2$s W4_SYSTEM_API_RUNTIME_SMOKE_RUN_ID=%3$s php -d extension=%2$s %4$s',
+        'sudo env W4_SYSTEM_API_REMOTE_ROOT_DIR=%1$s W4_SYSTEM_API_REMOTE_DBUS_MODULE=%2$s W4_SYSTEM_API_RUNTIME_SMOKE_RUN_ID=%3$s php -d extension=%2$s %4$s',
         $mountPoint,
         $dbusModuleGuestPath,
         $runId,
