@@ -141,6 +141,21 @@ function waitForArtifactRunId(string $path, int $timeoutSeconds, string $runId):
     return null;
 }
 
+function buildRuntimeSmokeCommand(
+    string $mountPoint,
+    string $dbusModuleGuestPath,
+    string $runtimeSmokeScriptGuestPath,
+    string $runId
+): string {
+    return sprintf(
+        'sudo env W4_SYSTEM_API_REMOTE_ROOT_DIR=%1$s W4_SYSTEM_API_REMOTE_DBUS_MODULE=%2$s W4_SYSTEM_API_RUNTIME_SMOKE_RUN_ID=%3$s php -d extension=%2$s %4$s',
+        $mountPoint,
+        $dbusModuleGuestPath,
+        $runId,
+        $runtimeSmokeScriptGuestPath
+    );
+}
+
 /**
  * @param array<string, mixed> $artifact
  * @return array<string, mixed>
@@ -180,6 +195,9 @@ try {
     $bindingTarget = '/';
     $prepareWaitMs = 1800;
     $smokeWaitSeconds = 45;
+    $vmRecoveryEnabled = true;
+    $recoveryWaitSeconds = 90;
+    $recoverySettleSeconds = 25;
     $checkOnly = false;
 
     for ($index = 1, $count = count($arguments); $index < $count; $index++) {
@@ -187,6 +205,11 @@ try {
 
         if ($argument === '--check-only') {
             $checkOnly = true;
+            continue;
+        }
+
+        if ($argument === '--skip-vm-recovery') {
+            $vmRecoveryEnabled = false;
             continue;
         }
 
@@ -225,6 +248,14 @@ try {
                 $smokeWaitSeconds = (int) $value;
                 break;
 
+            case '--recovery-wait-seconds':
+                $recoveryWaitSeconds = (int) $value;
+                break;
+
+            case '--recovery-settle-seconds':
+                $recoverySettleSeconds = (int) $value;
+                break;
+
             default:
                 throw new RuntimeException(sprintf('Argumento no reconocido: %s', $argument));
         }
@@ -242,6 +273,14 @@ try {
         throw new RuntimeException('--smoke-wait-seconds debe ser mayor que cero');
     }
 
+    if ($recoveryWaitSeconds < 1) {
+        throw new RuntimeException('--recovery-wait-seconds debe ser mayor que cero');
+    }
+
+    if ($recoverySettleSeconds < 0) {
+        throw new RuntimeException('--recovery-settle-seconds no puede ser negativo');
+    }
+
     $repoHostPath = rtrim($repoHostPath, "\\/\t\n\r\0\x0B");
     if ($repoHostPath === '' || !is_dir($repoHostPath)) {
         throw new RuntimeException(sprintf('Ruta de repo invalida: %s', $repoHostPath));
@@ -250,8 +289,12 @@ try {
     $phpBinary = findPhpBinary();
     $vboxManage = findVBoxManagePath();
     $prepareScriptPath = $repoHostPath . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'prepare_native_dbus_live_vm.php';
+    $recoveryScriptPath = $repoHostPath . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'recover_virtualbox_live_vm.php';
     if (!is_file($prepareScriptPath)) {
         throw new RuntimeException(sprintf('No se encontro el helper de preparacion: %s', $prepareScriptPath));
+    }
+    if (!is_file($recoveryScriptPath)) {
+        throw new RuntimeException(sprintf('No se encontro el helper de recuperacion: %s', $recoveryScriptPath));
     }
 
     $dbusModuleGuestPath = rtrim($mountPoint, '/') . '/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/dbus-module/dbus.so';
@@ -275,13 +318,23 @@ try {
         (string) $prepareWaitMs,
     ];
 
+    $recoveryCommand = [
+        $phpBinary,
+        $recoveryScriptPath,
+        '--vm-name',
+        $vmName,
+        '--wait-seconds',
+        (string) $recoveryWaitSeconds,
+        '--settle-seconds',
+        (string) $recoverySettleSeconds,
+    ];
+
     $runId = sprintf('runtime-smoke-%s', bin2hex(random_bytes(8)));
-    $smokeCommand = sprintf(
-        'sudo env W4_SYSTEM_API_REMOTE_ROOT_DIR=%1$s W4_SYSTEM_API_REMOTE_DBUS_MODULE=%2$s W4_SYSTEM_API_RUNTIME_SMOKE_RUN_ID=%3$s php -d extension=%2$s %4$s',
+    $smokeCommand = buildRuntimeSmokeCommand(
         $mountPoint,
         $dbusModuleGuestPath,
-        $runId,
-        $runtimeSmokeScriptGuestPath
+        $runtimeSmokeScriptGuestPath,
+        $runId
     );
 
     $payload = [
@@ -292,9 +345,17 @@ try {
         'binding_target' => $bindingTarget,
         'prepare_wait_ms' => $prepareWaitMs,
         'smoke_wait_seconds' => $smokeWaitSeconds,
-        'run_id' => $runId,
+        'vm_recovery_enabled' => $vmRecoveryEnabled,
+        'recovery_wait_seconds' => $recoveryWaitSeconds,
+        'recovery_settle_seconds' => $recoverySettleSeconds,
         'prepare_command' => $prepareCommand,
-        'smoke_command' => $smokeCommand,
+        'recovery_command' => $recoveryCommand,
+        'attempts' => [
+            [
+                'run_id' => $runId,
+                'smoke_command' => $smokeCommand,
+            ],
+        ],
         'artifact_host_path' => $artifactHostPath,
         'vboxmanage_path' => $vboxManage,
     ];
@@ -313,6 +374,41 @@ try {
 
     sendVBoxText($vboxManage, $vmName, $smokeCommand);
     $artifact = waitForArtifactRunId($artifactHostPath, $smokeWaitSeconds, $runId);
+    if (!is_array($artifact) && $vmRecoveryEnabled) {
+        $recoveryOutput = runProcess($recoveryCommand);
+        $recoveryResult = json_decode($recoveryOutput, true);
+        if (!is_array($recoveryResult)) {
+            throw new RuntimeException('El helper de recuperacion no devolvio JSON valido');
+        }
+
+        $payload['recovery_attempted'] = true;
+        $payload['recovery_result'] = $recoveryResult;
+
+        $prepareOutput = runProcess($prepareCommand);
+        $prepareResult = json_decode($prepareOutput, true);
+        if (!is_array($prepareResult)) {
+            throw new RuntimeException('El helper de preparacion no devolvio JSON valido tras la recuperacion');
+        }
+
+        $payload['prepare_result_after_recovery'] = $prepareResult;
+
+        $runId = sprintf('runtime-smoke-%s', bin2hex(random_bytes(8)));
+        $smokeCommand = buildRuntimeSmokeCommand(
+            $mountPoint,
+            $dbusModuleGuestPath,
+            $runtimeSmokeScriptGuestPath,
+            $runId
+        );
+        $payload['attempts'][] = [
+            'run_id' => $runId,
+            'smoke_command' => $smokeCommand,
+            'reason' => 'artifact-timeout-after-first-attempt',
+        ];
+
+        sendVBoxText($vboxManage, $vmName, $smokeCommand);
+        $artifact = waitForArtifactRunId($artifactHostPath, $smokeWaitSeconds, $runId);
+    }
+
     if (!is_array($artifact)) {
         throw new RuntimeException(sprintf('No se pudo leer el artefacto del runtime smoke: %s', $artifactHostPath));
     }

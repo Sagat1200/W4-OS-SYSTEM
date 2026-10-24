@@ -148,6 +148,19 @@ function waitForArtifactAfter(string $path, int $timeoutSeconds, int $previousTi
 }
 
 /**
+ * @return array<string, mixed>
+ */
+function decodeJsonObject(string $raw, string $errorMessage): array
+{
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) {
+        throw new RuntimeException($errorMessage);
+    }
+
+    return $decoded;
+}
+
+/**
  * @param array<string, mixed> $artifact
  * @return array<string, mixed>
  */
@@ -213,6 +226,9 @@ try {
     $launchWaitSeconds = 25;
     $orderingWaitSeconds = 40;
     $heapWaitSeconds = 40;
+    $vmRecoveryEnabled = true;
+    $recoveryWaitSeconds = 90;
+    $recoverySettleSeconds = 25;
     $checkOnly = false;
 
     for ($index = 1, $count = count($arguments); $index < $count; $index++) {
@@ -220,6 +236,11 @@ try {
 
         if ($argument === '--check-only') {
             $checkOnly = true;
+            continue;
+        }
+
+        if ($argument === '--skip-vm-recovery') {
+            $vmRecoveryEnabled = false;
             continue;
         }
 
@@ -266,6 +287,14 @@ try {
                 $heapWaitSeconds = (int) $value;
                 break;
 
+            case '--recovery-wait-seconds':
+                $recoveryWaitSeconds = (int) $value;
+                break;
+
+            case '--recovery-settle-seconds':
+                $recoverySettleSeconds = (int) $value;
+                break;
+
             default:
                 throw new RuntimeException(sprintf('Argumento no reconocido: %s', $argument));
         }
@@ -280,11 +309,23 @@ try {
         throw new RuntimeException(sprintf('Ruta de repo invalida: %s', $repoHostPath));
     }
 
+    if ($recoveryWaitSeconds < 1) {
+        throw new RuntimeException('--recovery-wait-seconds debe ser mayor que cero');
+    }
+
+    if ($recoverySettleSeconds < 0) {
+        throw new RuntimeException('--recovery-settle-seconds no puede ser negativo');
+    }
+
     $phpBinary = findPhpBinary();
     $vboxManage = findVBoxManagePath();
     $prepareScriptPath = $repoHostPath . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'prepare_native_dbus_live_vm.php';
+    $recoveryScriptPath = $repoHostPath . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'recover_virtualbox_live_vm.php';
     if (!is_file($prepareScriptPath)) {
         throw new RuntimeException(sprintf('No se encontro el helper de preparacion: %s', $prepareScriptPath));
+    }
+    if (!is_file($recoveryScriptPath)) {
+        throw new RuntimeException(sprintf('No se encontro el helper de recuperacion: %s', $recoveryScriptPath));
     }
 
     $dbusModuleGuestPath = rtrim($mountPoint, '/') . '/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/dbus-module/dbus.so';
@@ -309,6 +350,17 @@ try {
         $bindingTarget,
         '--wait-ms',
         (string) $prepareWaitMs,
+    ];
+
+    $recoveryCommand = [
+        $phpBinary,
+        $recoveryScriptPath,
+        '--vm-name',
+        $vmName,
+        '--wait-seconds',
+        (string) $recoveryWaitSeconds,
+        '--settle-seconds',
+        (string) $recoverySettleSeconds,
     ];
 
     $probes = [
@@ -363,7 +415,11 @@ try {
         'shared_folder_name' => $sharedFolderName,
         'binding_target' => $bindingTarget,
         'prepare_wait_ms' => $prepareWaitMs,
+        'vm_recovery_enabled' => $vmRecoveryEnabled,
+        'recovery_wait_seconds' => $recoveryWaitSeconds,
+        'recovery_settle_seconds' => $recoverySettleSeconds,
         'prepare_command' => $prepareCommand,
+        'recovery_command' => $recoveryCommand,
         'probes' => array_map(
             static fn (array $probe): array => [
                 'command' => $probe['command'],
@@ -382,13 +438,11 @@ try {
     }
 
     $prepareOutput = runProcess($prepareCommand);
-    $prepareResult = json_decode($prepareOutput, true);
-    if (!is_array($prepareResult)) {
-        throw new RuntimeException('El helper de preparacion no devolvio JSON valido');
-    }
+    $prepareResult = decodeJsonObject($prepareOutput, 'El helper de preparacion no devolvio JSON valido');
 
     $payload['prepare_result'] = $prepareResult;
     $payload['results'] = [];
+    $recoveryAttempted = false;
 
     foreach ($probes as $label => $probe) {
         $artifactPath = $probe['artifact_host_path'];
@@ -399,6 +453,26 @@ try {
 
         sendVBoxText($vboxManage, $vmName, $probe['command']);
         $artifact = waitForArtifactAfter($artifactPath, $probe['wait_seconds'], $previousTimestamp);
+        if (!is_array($artifact) && $vmRecoveryEnabled && !$recoveryAttempted) {
+            $recoveryAttempted = true;
+            $recoveryOutput = runProcess($recoveryCommand);
+            $recoveryResult = decodeJsonObject($recoveryOutput, 'El helper de recuperacion no devolvio JSON valido');
+            $payload['recovery_attempted'] = true;
+            $payload['recovery_result'] = $recoveryResult;
+
+            $prepareOutput = runProcess($prepareCommand);
+            $prepareResult = decodeJsonObject($prepareOutput, 'El helper de preparacion no devolvio JSON valido tras la recuperacion');
+            $payload['prepare_result_after_recovery'] = $prepareResult;
+
+            clearstatcache(true, $artifactPath);
+            $previousTimestamp = is_file($artifactPath) && is_int(filemtime($artifactPath))
+                ? (int) filemtime($artifactPath) + 1
+                : time();
+
+            sendVBoxText($vboxManage, $vmName, $probe['command']);
+            $artifact = waitForArtifactAfter($artifactPath, $probe['wait_seconds'], $previousTimestamp);
+        }
+
         if (!is_array($artifact)) {
             throw new RuntimeException(sprintf('No se pudo leer el artefacto del probe %s: %s', $label, $artifactPath));
         }

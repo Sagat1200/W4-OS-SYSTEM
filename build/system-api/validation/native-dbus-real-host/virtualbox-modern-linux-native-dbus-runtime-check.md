@@ -880,3 +880,61 @@ Lectura actualizada:
 - la recuperacion de la live deja de ser conocimiento operativo disperso y pasa a ser herramienta versionada del laboratorio
 - el helper no sustituye a los runners DBus; su valor es devolver una sesion headless util cuando la homologacion vuelve a degradarse
 - el baseline rapido y el carril pesado siguen verdes despues de una recuperacion guiada por ese helper
+
+## Actualizacion posterior: la recuperacion ya queda integrada como fallback dentro de los runners
+
+El siguiente refinamiento operativo ya no agrega una herramienta nueva, sino que inserta la recuperacion dentro del flujo normal de ejecucion host-side.
+
+Tanto:
+
+- `scripts/run_native_dbus_runtime_smoke_via_live_vm.php`
+- `scripts/run_native_dbus_heavy_validation_via_live_vm.php`
+
+ya integran un fallback opcional sobre:
+
+- `scripts/recover_virtualbox_live_vm.php`
+
+Contrato actual:
+
+- por defecto la recuperacion queda habilitada
+- ambos runners exponen en su JSON:
+  - `vm_recovery_enabled`
+  - `recovery_wait_seconds`
+  - `recovery_settle_seconds`
+  - `recovery_command`
+- ambos aceptan `--skip-vm-recovery` para desactivar el fallback cuando se quiera aislar el fallo operativo en crudo
+
+Validacion homologada:
+
+- `php -l scripts/run_native_dbus_runtime_smoke_via_live_vm.php`
+- `php -l scripts/run_native_dbus_heavy_validation_via_live_vm.php`
+
+Resultado del carril liviano:
+
+- `php scripts/run_native_dbus_runtime_smoke_via_live_vm.php --vm-name W4-OS-Server-DbusModern --smoke-wait-seconds 120`
+- cierra por la ruta normal:
+  - `status = completed`
+  - `runtime_smoke.ok = true`
+  - `wrapper_smoke = 0`
+  - `wait_loop_signal_contract = 0`
+  - `method_roundtrip_smoke = 0`
+  - `runtime_call_smoke = 0`
+
+Resultado del carril pesado:
+
+- `php scripts/run_native_dbus_heavy_validation_via_live_vm.php --vm-name W4-OS-Server-DbusModern`
+- el primer intento no consigue el artefacto fresco de `method_probe_ordering`
+- el runner ejecuta automaticamente `recover_virtualbox_live_vm.php`
+- vuelve a correr `prepare_native_dbus_live_vm.php`
+- repite el probe fallido
+- cierra finalmente:
+  - `status = completed`
+  - `launch_process.ok = true`
+  - `method_probe_ordering.ok = true`
+  - `heap_after_request_name.ok = true`
+
+Lectura actualizada:
+
+- la recuperacion de la live ya no depende de una maniobra manual previa
+- el fallback sigue siendo visible y desactivable; no queda escondido dentro de una caja negra
+- el carril pesado ya demuestra en evidencia homologada que la recuperacion automatica absorbe una degradacion real de la sesion headless y devuelve el laboratorio a verde
