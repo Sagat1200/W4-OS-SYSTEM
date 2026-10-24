@@ -456,15 +456,15 @@
                     "next_action": "observe-native-runtime-service-state",
                     "launch_mode": "background-process",
                     "launched": true,
-                    "pid": 1867
+                    "pid": 2017
                 },
                 "parse_error": null
             },
             "pid_file": {
                 "path": "/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/launch-process/w4-system-api-native-runtime.pid",
                 "exists": true,
-                "pid": 1867,
-                "raw_value": "1867",
+                "pid": 2017,
+                "raw_value": "2017",
                 "is_running": true
             }
         },
@@ -620,9 +620,9 @@
             "next_action": "observe-native-runtime-service-state",
             "launch_mode": "background-process",
             "launched": true,
-            "pid": 1867
+            "pid": 2017
         },
-        "pid": 1867,
+        "pid": 2017,
         "blocking_reason": "native-runtime-bus-ownership-pending",
         "next_action": "materialize-native-bus-ownership"
     },

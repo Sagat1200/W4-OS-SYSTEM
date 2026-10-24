@@ -833,3 +833,50 @@ Lectura actualizada:
 - la correccion de `sudo env ...` en los runners ya no queda solo como fix teorico en codigo: vuelve a estar homologada en ejecucion real
 - el baseline rapido y el carril pesado regresan a verde sobre la live moderna
 - el helper `scripts/run_native_dbus_wrapper_smoke_via_paramiko.php` queda disponible como carril alternativo, pero ya no es el desbloqueo inmediato necesario para seguir validando
+
+## Actualizacion posterior: la recuperacion de la live ya queda versionada como helper reusable
+
+El reset manual de `W4-OS-Server-DbusModern` ya habia mostrado que podia devolver una TTY util, pero esa recuperacion seguia siendo un paso operativo tacito. Ese hueco ya queda cubierto por:
+
+- `scripts/recover_virtualbox_live_vm.php`
+
+Contrato actual del helper:
+
+- valida que la VM siga corriendo
+- ejecuta `VBoxManage controlvm <vm> reset`
+- espera a que `GuestAdditionsRunLevel` vuelva a `1`
+- agrega `--settle-seconds` para dejar madurar el autologin de `tty1`
+- captura evidencia visual en `guest-artifacts/vm-recovery/post-reset-console.png`
+
+La propia validacion del helper cerro una nuance importante:
+
+- la primera version esperaba solo el reset y el retorno de Guest Additions
+- eso todavia podia dejar la consola mostrando mensajes de arranque sin prompt util
+- por eso el helper queda endurecido con el settle wait explicito
+
+Validacion homologada del helper:
+
+- `php -l scripts/recover_virtualbox_live_vm.php`
+- `php scripts/recover_virtualbox_live_vm.php --vm-name W4-OS-Server-DbusModern --wait-seconds 90 --settle-seconds 25`
+
+Tras ese reset guiado por helper:
+
+- `php scripts/run_native_dbus_runtime_smoke_via_live_vm.php --vm-name W4-OS-Server-DbusModern --smoke-wait-seconds 120`
+  - `status = completed`
+  - `runtime_smoke.ok = true`
+  - `wrapper_smoke = 0`
+  - `wait_loop_signal_contract = 0`
+  - `method_roundtrip_smoke = 0`
+  - `runtime_call_smoke = 0`
+
+- `php scripts/run_native_dbus_heavy_validation_via_live_vm.php --vm-name W4-OS-Server-DbusModern`
+  - `status = completed`
+  - `launch_process.ok = true`
+  - `method_probe_ordering.ok = true`
+  - `heap_after_request_name.ok = true`
+
+Lectura actualizada:
+
+- la recuperacion de la live deja de ser conocimiento operativo disperso y pasa a ser herramienta versionada del laboratorio
+- el helper no sustituye a los runners DBus; su valor es devolver una sesion headless util cuando la homologacion vuelve a degradarse
+- el baseline rapido y el carril pesado siguen verdes despues de una recuperacion guiada por ese helper
