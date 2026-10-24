@@ -130,10 +130,11 @@ El rerun primero dejo visible una deuda menor pero real del wrapper saliente: `D
 
 ## Actualizacion posterior: el contrato de senales sube a smoke permanente liviano del runtime-check
 
-Para no dejar el contrato de senales y la smoke de wrappers como probes separados, el repo suma `build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_runtime_smoke.php`, un agregador liviano que ejecuta sobre el mismo `dbus.so` persistente:
+Para no dejar el contrato de senales y la smoke de wrappers como probes separados, el repo suma `build/system-api/validation/native-dbus-real-host/runtime-check/check_native_dbus_runtime_smoke.php`, un agregador liviano que ahora ejecuta sobre el mismo `dbus.so` persistente:
 
 - `check_native_dbus_wrapper_smoke.php`
 - `check_native_dbus_wait_loop_signal_contract.php`
+- `check_native_dbus_method_roundtrip_smoke.php`
 
 Rerun homologado ejecutado en `W4-OS-Server-DbusModern`:
 
@@ -144,12 +145,15 @@ Resultado consolidado persistido en `guest-artifacts/runtime-smoke/check-native-
 - `ok = true`
 - `checks.wrapper_smoke.exit_code = 0`
 - `checks.wait_loop_signal_contract.exit_code = 0`
+- `checks.method_roundtrip_smoke.exit_code = 0`
 
 Lectura actualizada:
 
 - la smoke de wrappers y el contrato de senales quedan promovidos a un smoke permanente de bajo costo dentro del `runtime-check`
-- el rerun homologado ya no depende de recordar probes sueltos: el artefacto `runtime-smoke` resume ambos carriles verdes sobre la misma VM
-- lo siguiente util ya no es consolidar cobertura basica del binding, sino decidir si hace falta ampliar este smoke liviano con algun carril adicional o dejarlo estable como baseline rapido
+- el rerun homologado ya no depende de recordar probes sueltos: el artefacto `runtime-smoke` resume wrappers, señales y roundtrip real de method calls sobre la misma VM
+- la live moderna volvio a arrancar sin la policy D-Bus aplicada sobre `/`, asi que antes del rerun fue necesario reinyectar el bundle `system-api-dbus-binding-bundle/apply-binding.sh /` y reiniciar `dbus`; solo despues de eso `requestName()` recupero `request_name_result = 1`
+- `check_native_dbus_method_roundtrip_smoke.php` queda ahora como la sonda liviana de method call real: levanta un servicio minimo con el ordering sano (`preload-classes-before-connection`), ejecuta `busctl --system call ... GetCapabilities ...`, decodifica el payload JSON y verifica que el proceso siga vivo hasta el shutdown controlado
+- con este corte, el baseline rapido del binding nativo ya no solo prueba “wrappers viven” y “señales se normalizan”; tambien cubre un roundtrip real de marshaling sobre `org.w4.System1.Manager`
 
 ## Actualizacion posterior: method calls reales sobre `org.w4.System1.Manager`
 

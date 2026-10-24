@@ -1,0 +1,11 @@
+{
+    "status": "ready",
+    "probe_mode": "preload-classes-before-connection",
+    "bus_name": "org.w4.System1",
+    "object_path": "/org/w4/System1",
+    "interface": "org.w4.System1.Manager",
+    "request_name_result": 1,
+    "register_object_result": null,
+    "callback_class": "W4\\OS\\SystemApi\\NativeDbusExtensionCallbackBridge",
+    "pid": 1831
+}

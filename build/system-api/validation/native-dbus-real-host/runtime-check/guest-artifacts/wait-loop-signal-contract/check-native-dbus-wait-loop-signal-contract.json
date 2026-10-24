@@ -1,8 +1,8 @@
 {
     "api_version": "1.0",
     "kind": "native-dbus-wait-loop-signal-contract",
-    "root_dir": "/home/w4live/w4-os-system",
-    "artifacts_dir": "/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/wait-loop-signal-contract",
+    "root_dir": "/mnt/w4repo",
+    "artifacts_dir": "/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/wait-loop-signal-contract",
     "php_version_id": 80424,
     "expected_contract": "incoming-signal-normalized-to-true",
     "ok": true,

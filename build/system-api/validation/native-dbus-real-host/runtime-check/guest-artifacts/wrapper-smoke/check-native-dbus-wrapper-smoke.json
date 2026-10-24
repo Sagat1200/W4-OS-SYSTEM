@@ -1,10 +1,10 @@
 {
     "api_version": "1.0",
     "kind": "native-dbus-wrapper-smoke",
-    "root_dir": "/home/w4live/w4-os-system",
+    "root_dir": "/mnt/w4repo",
     "php_binary": "/usr/bin/php",
-    "dbus_module": "/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/dbus-module/dbus.so",
-    "artifacts_dir": "/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/wrapper-smoke",
+    "dbus_module": "/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/dbus-module/dbus.so",
+    "artifacts_dir": "/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/wrapper-smoke",
     "ok": true,
     "scenarios": {
         "proxy_direct_wrapper": {
