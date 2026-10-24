@@ -112,6 +112,14 @@ Metodo principal:
 
 Una vez iniciado el servicio, la API puede observar su estado sin tener que pasar directamente por comandos internos del adapter.
 
+Para evitar lecturas ambiguas del runtime, la observacion distingue dos planos:
+
+- `pid = 0` sigue significando que el servicio no puede considerarse vivo ni iniciado,
+- `pid > 0` persistido puede actuar como senal contractual suficiente para continuar el carril de validacion y ownership,
+- y la comprobacion de proceso realmente vivo sigue siendo una evidencia mas fuerte cuando el host puede observarla directamente.
+
+En otras palabras: la observacion no debe degradar un ownership ya validado solo porque el escenario sea sintetico o porque el proceso que materializo el contrato no siga vivo en el mismo host de prueba.
+
 Metodo principal:
 
 - `system.dbus-native-observation`
@@ -137,6 +145,8 @@ La capa mas avanzada de la vertical nativa permite intentar materializar el owne
 - si el ownership fue validado,
 - si el host sigue bloqueado,
 - o que paso concreto falta cerrar.
+
+En el modo de validacion sintetica, el ownership tambien puede materializarse cuando el `startup` ya fue aceptado y existen `phase overrides` o un driver nativo configurado, incluso si el `startup` previo persistio `pid = 0`. En ese caso, el proceso que ejecuta la materializacion debe persistir un PID positivo propio para dejar trazabilidad coherente del intento validado.
 
 Metodo principal:
 

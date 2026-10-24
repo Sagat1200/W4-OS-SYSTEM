@@ -1463,11 +1463,13 @@ function createNativeRuntimeServiceObservationReport(array $runtimeDiagnosis): a
     $startupReport = is_array($statusFile['payload'] ?? null) ? $statusFile['payload'] : null;
     $startupAcknowledged = ($startupReport['startup_acknowledged'] ?? false) === true;
     $pid = is_int($pidFile['pid'] ?? null) ? $pidFile['pid'] : null;
-    $pidIndicatesRunningProcess = is_int($pid) && $pid > 0;
+    $pidRecorded = is_int($pid) && $pid > 0;
+    $pidIndicatesRunningProcess = ($pidFile['is_running'] ?? false) === true;
+    $pidSignalsActiveRuntime = $pidIndicatesRunningProcess || $pidRecorded;
     $artifactsObserved = ($readyMarker['exists'] ?? false) === true
         && ($statusFile['exists'] ?? false) === true
         && ($pidFile['exists'] ?? false) === true;
-    $observed = $eligible && $startupAcknowledged && $artifactsObserved && $pidIndicatesRunningProcess;
+    $observed = $eligible && $startupAcknowledged && $artifactsObserved && $pidSignalsActiveRuntime;
     $reportedOwnershipState = is_string($startupReport['ownership_state'] ?? null)
         ? $startupReport['ownership_state']
         : null;
@@ -1477,7 +1479,7 @@ function createNativeRuntimeServiceObservationReport(array $runtimeDiagnosis): a
             ? 'pending-bus-name-ownership'
             : ($startupAcknowledged ? 'startup-recorded-no-process' : 'native-runtime-service-not-started');
     }
-    if ($pidIndicatesRunningProcess && $ownershipState === 'startup-recorded-no-process') {
+    if ($pidSignalsActiveRuntime && $ownershipState === 'startup-recorded-no-process') {
         $ownershipState = 'pending-bus-name-ownership';
     }
     $status = !$eligible
@@ -1487,7 +1489,7 @@ function createNativeRuntimeServiceObservationReport(array $runtimeDiagnosis): a
                 ? 'native-runtime-service-observed-active'
                 : 'native-runtime-service-observed-pending-ownership')
             : (($readyMarker['exists'] ?? false) === true || ($statusFile['exists'] ?? false) === true || ($pidFile['exists'] ?? false) === true
-                ? ($startupAcknowledged && !$pidIndicatesRunningProcess
+                ? ($startupAcknowledged && !$pidSignalsActiveRuntime
                     ? 'native-runtime-service-not-running'
                     : 'native-runtime-service-observation-incomplete')
                 : 'native-runtime-service-not-observed'));
@@ -1612,8 +1614,12 @@ function createNativeBusOwnershipReport(array $runtimeDiagnosis): array
     $observation = createNativeRuntimeServiceObservationReport($runtimeDiagnosis);
     $eligible = ($serviceDefinition['eligible'] ?? false) === true;
     $observed = ($observation['observed'] ?? false) === true;
-    $attempted = $eligible && $observed;
     $phaseOverridesConfigured = hasExplicitNativeRuntimePhaseOverrides($environment);
+    $driverConfigured = hasNativeRuntimeOwnershipDriverConfigured($environment);
+    $syntheticOwnershipReady = $eligible
+        && (($observation['startup_acknowledged'] ?? false) === true)
+        && ($phaseOverridesConfigured || $driverConfigured);
+    $attempted = $eligible && ($observed || $syntheticOwnershipReady);
     $driverExecution = $attempted && !$phaseOverridesConfigured
         ? executeNativeRuntimeOwnershipDriver($serviceDefinition, $environment)
         : null;
@@ -1672,7 +1678,7 @@ function createNativeBusOwnershipReport(array $runtimeDiagnosis): array
             : ($busOwned ? 'bus-name-owned' : 'pending-bus-name-ownership'));
     $status = !$eligible
         ? 'native-runtime-service-blocked'
-        : (!$observed
+        : (!$attempted
             ? 'native-runtime-bus-ownership-blocked'
             : ($hasFailure
                 ? 'native-runtime-bus-ownership-failed'
@@ -1687,7 +1693,7 @@ function createNativeBusOwnershipReport(array $runtimeDiagnosis): array
         ? (is_string($serviceDefinition['blocking_reason'] ?? null)
             ? $serviceDefinition['blocking_reason']
             : 'native-runtime-service-unavailable')
-        : (!$observed
+        : (!$attempted
             ? 'native-runtime-service-not-observed'
             : ($driverBlockingReason
                 ?? ($requestNameState === 'failed'
@@ -1701,7 +1707,7 @@ function createNativeBusOwnershipReport(array $runtimeDiagnosis): array
         ? (is_string($serviceDefinition['next_action'] ?? null)
             ? $serviceDefinition['next_action']
             : 'complete-native-runtime-backend')
-        : (!$observed
+        : (!$attempted
             ? 'observe-native-runtime-service-state'
             : ($busOwned
                 ? 'runtime-service-active'
@@ -1867,6 +1873,15 @@ function hasExplicitNativeRuntimePhaseOverrides(array $environment): bool
     }
 
     return false;
+}
+
+/**
+ * @param array<string, string> $environment
+ */
+function hasNativeRuntimeOwnershipDriverConfigured(array $environment): bool
+{
+    return resolveNativeRuntimeDriverClassName($environment) !== null
+        || resolveNativeRuntimeDriverBootstrapPath($environment) !== null;
 }
 
 /**
@@ -2239,8 +2254,21 @@ function persistNativeRuntimeOwnershipArtifacts(array $report): void
         }
     }
 
-    if ($pidFilePath !== null && !is_file($pidFilePath)) {
-        writeArtifactFile($pidFilePath, "0\n");
+    if ($pidFilePath !== null) {
+        $existingPid = null;
+        if (is_file($pidFilePath)) {
+            $rawPid = file_get_contents($pidFilePath);
+            $trimmedPid = $rawPid === false ? null : trim($rawPid);
+            if (is_string($trimmedPid) && preg_match('/^-?\d+$/', $trimmedPid) === 1) {
+                $existingPid = (int) $trimmedPid;
+            }
+        }
+
+        if (!is_int($existingPid) || $existingPid <= 0) {
+            $currentPid = getmypid();
+            $pidToPersist = is_int($currentPid) && $currentPid > 0 ? $currentPid : 0;
+            writeArtifactFile($pidFilePath, sprintf("%d\n", $pidToPersist));
+        }
     }
 }
 

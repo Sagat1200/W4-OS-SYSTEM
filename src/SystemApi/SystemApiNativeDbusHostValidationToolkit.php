@@ -162,7 +162,9 @@ final class SystemApiNativeDbusHostValidationToolkit
             $ownershipValidated,
             $couplingReady
         );
-        $blockingReason = !$hostCompatible
+        $blockingReason = $ownershipValidated
+            ? null
+            : (!$hostCompatible
             ? (is_string($hostCompatibility['blocking_reason'] ?? null) ? $hostCompatibility['blocking_reason'] : null)
             : ($nativeDbusExtensionBlocked
                 ? (is_string($nativeDbusExtensionInstallability['blocking_reason'] ?? null) ? $nativeDbusExtensionInstallability['blocking_reason'] : null)
@@ -171,8 +173,10 @@ final class SystemApiNativeDbusHostValidationToolkit
                 $finalObservation,
                 $steps['startup'],
                 $steps['service_definition']
-            ));
-        $nextAction = !$hostCompatible
+            )));
+        $nextAction = $ownershipValidated
+            ? 'runtime-service-active'
+            : (!$hostCompatible
             ? (is_string($hostCompatibility['next_action'] ?? null) ? $hostCompatibility['next_action'] : null)
             : ($nativeDbusExtensionBlocked
                 ? (is_string($nativeDbusExtensionInstallability['next_action'] ?? null) ? $nativeDbusExtensionInstallability['next_action'] : null)
@@ -181,7 +185,7 @@ final class SystemApiNativeDbusHostValidationToolkit
                 $finalObservation,
                 $steps['startup'],
                 $steps['service_definition']
-            ));
+            )));
         $recommendedNextActions = $this->filterDominantRecommendedNextActions(
             array_values(array_unique(array_filter(array_merge(
             is_array($hostCompatibility['recommended_next_actions'] ?? null)
