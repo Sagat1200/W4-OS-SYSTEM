@@ -152,8 +152,11 @@ Lectura actualizada:
 - la smoke de wrappers y el contrato de senales quedan promovidos a un smoke permanente de bajo costo dentro del `runtime-check`
 - el rerun homologado ya no depende de recordar probes sueltos: el artefacto `runtime-smoke` resume wrappers, señales y roundtrip real de method calls sobre la misma VM
 - la live moderna volvio a arrancar sin la policy D-Bus aplicada sobre `/`, asi que antes del rerun fue necesario reinyectar el bundle `system-api-dbus-binding-bundle/apply-binding.sh /` y reiniciar `dbus`; solo despues de eso `requestName()` recupero `request_name_result = 1`
+- esa preparacion operativa ya no queda manual: `scripts/prepare_native_dbus_live_vm.php` automatiza por tty la shared folder transitoria `w4repo`, el mount de `/mnt/w4repo`, la verificacion del bundle `apply-binding.sh` y el reinicio de `dbus`
 - `check_native_dbus_method_roundtrip_smoke.php` queda ahora como la sonda liviana de method call real: levanta un servicio minimo con el ordering sano (`preload-classes-before-connection`), ejecuta `busctl --system call ... GetCapabilities ...`, decodifica el payload JSON y verifica que el proceso siga vivo hasta el shutdown controlado
 - con este corte, el baseline rapido del binding nativo ya no solo prueba “wrappers viven” y “señales se normalizan”; tambien cubre un roundtrip real de marshaling sobre `org.w4.System1.Manager`
+- usando ese helper, un nuevo rerun homologado de `check_native_dbus_runtime_smoke.php` vuelve a dejar `ok = true` sobre la misma live preparada, confirmando que el atajo operativo ya sirve para recuperar el baseline verde sin repetir la inyeccion manual paso a paso
+- el siguiente wrapper host-side ya queda materializado en `scripts/run_native_dbus_runtime_smoke_via_live_vm.php`: una sola invocacion prepara la live, dispara el `runtime_smoke` por tty y devuelve un JSON final con `status = completed`, `prepare_result.status = prepared`, `runtime_smoke.ok = true` y los tres checks internos en `exit_code = 0`
 
 ## Actualizacion posterior: method calls reales sobre `org.w4.System1.Manager`
 
