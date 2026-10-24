@@ -179,9 +179,10 @@ Para el carril mutante, la API ya puede:
 
 - construir un plan canonico con `plan_id`, `plan_hash`, seleccion y `conffile_policy`,
 - persistir opcionalmente ese plan a disco para reutilizarlo entre llamadas,
-- y ejecutar `packages.apply` validando que `plan_id` y `plan_hash` coincidan con el plan suministrado.
+- ejecutar `packages.apply` validando que `plan_id` y `plan_hash` coincidan con el plan suministrado,
+- y reutilizar la operacion previa cuando entra el mismo `idempotency_key` con el mismo digest de intencion.
 
-Lo que sigue pendiente para cerrar V1 en este dominio no es la existencia del contrato, sino endurecer el ledger durable de `idempotency_key`, la reconciliacion posterior y la evidencia end-to-end sobre un host Linux real.
+Lo que sigue pendiente para cerrar V1 en este dominio no es la existencia del contrato, sino endurecer el ledger durable de `idempotency_key` mas alla del store local actual, la reconciliacion posterior y la evidencia end-to-end sobre un host Linux real.
 
 ### 4.11 Superficie de servicios
 
@@ -202,6 +203,7 @@ En esta etapa la lectura y las mutaciones basicas se apoyan en `systemctl`, con 
 La `System API` ya expone tambien una primera capacidad de consulta de operaciones:
 
 - `operations.get`
+- `operations.cancel`
 
 Con este corte, las mutaciones que ya generan `operation_id` en la superficie publica del sistema dejan una operacion local consultable en `build/system-api/operations/`, al menos para:
 
@@ -213,6 +215,8 @@ Con este corte, las mutaciones que ya generan `operation_id` en la superficie pu
 - `services.disable`
 
 El objetivo de este frente no es simular un scheduler complejo, sino cerrar la semantica minima de V1: una mutacion ya no devuelve un `operation_id` aislado, sino una referencia que puede reconsultarse para observar estado terminal, error saneado y resultado persistido.
+
+En este corte, `operations.cancel` es deliberadamente honesta: si una operacion ya termino o el provider no ofrece cancelacion segura, la respuesta deja `cancel_requested = false` y `cancelable = false` en lugar de fingir una cancelacion efectiva.
 
 ## 5. Componentes principales de la vertical
 

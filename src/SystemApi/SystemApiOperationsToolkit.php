@@ -9,6 +9,7 @@ use W4\OS\Support\ValidationError;
 final class SystemApiOperationsToolkit
 {
     private string $storeDir;
+    private string $ledgerDir;
 
     public function __construct(string $rootDir)
     {
@@ -16,6 +17,10 @@ final class SystemApiOperationsToolkit
             . DIRECTORY_SEPARATOR . 'build'
             . DIRECTORY_SEPARATOR . 'system-api'
             . DIRECTORY_SEPARATOR . 'operations';
+        $this->ledgerDir = rtrim($rootDir, DIRECTORY_SEPARATOR)
+            . DIRECTORY_SEPARATOR . 'build'
+            . DIRECTORY_SEPARATOR . 'system-api'
+            . DIRECTORY_SEPARATOR . 'operations-ledger';
     }
 
     /**
@@ -72,6 +77,10 @@ final class SystemApiOperationsToolkit
     public function get(string $operationId): array
     {
         $path = $this->resolveOperationPath($operationId);
+        if (!is_file($path)) {
+            throw new ValidationError(sprintf('Operacion no encontrada: %s', $operationId));
+        }
+
         $raw = file_get_contents($path);
         if (!is_string($raw)) {
             throw new ValidationError(sprintf('Operacion no encontrada: %s', $operationId));
@@ -90,6 +99,109 @@ final class SystemApiOperationsToolkit
         return $decoded;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function reuseIdempotentOperation(string $method, string $idempotencyKey, string $digest): ?array
+    {
+        $ledgerPath = $this->resolveLedgerPath($method, $idempotencyKey);
+        if (!is_file($ledgerPath)) {
+            return null;
+        }
+
+        $raw = file_get_contents($ledgerPath);
+        if (!is_string($raw)) {
+            return null;
+        }
+
+        try {
+            $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            throw new ValidationError(sprintf('Ledger invalido: %s', $exception->getMessage()));
+        }
+
+        if (!is_array($decoded)) {
+            throw new ValidationError(sprintf('Ledger invalido: %s', $ledgerPath));
+        }
+
+        $storedDigest = $decoded['digest'] ?? null;
+        $storedOperationId = $decoded['operation_id'] ?? null;
+        if (!is_string($storedDigest) || trim($storedDigest) === '' || !is_string($storedOperationId) || trim($storedOperationId) === '') {
+            throw new ValidationError(sprintf('Ledger invalido: %s', $ledgerPath));
+        }
+
+        if (trim($storedDigest) !== $digest) {
+            throw new ValidationError(sprintf('Conflicto: idempotency_key ya fue usada para %s con otro digest', $method));
+        }
+
+        return $this->get(trim($storedOperationId));
+    }
+
+    public function rememberIdempotentOperation(
+        string $method,
+        string $idempotencyKey,
+        string $digest,
+        string $operationId
+    ): void {
+        $ledgerPath = $this->resolveLedgerPath($method, $idempotencyKey);
+        $payload = [
+            'kind' => 'system-api-idempotency-ledger-entry',
+            'method' => $method,
+            'idempotency_key' => $idempotencyKey,
+            'digest' => $digest,
+            'operation_id' => $operationId,
+            'observed_at' => gmdate('c'),
+        ];
+
+        $this->writeJsonFile($ledgerPath, $payload);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function cancel(string $operationId): array
+    {
+        $operation = $this->get($operationId);
+        $state = is_string($operation['state'] ?? null) ? trim((string) $operation['state']) : 'unknown';
+        $cancelable = ($operation['cancelable'] ?? false) === true;
+        $cancelRequested = $cancelable && !in_array($state, ['succeeded', 'failed', 'partial', 'unknown', 'cancelled'], true);
+
+        $operation['cancel_requested'] = $cancelRequested;
+        $operation['observed_at'] = gmdate('c');
+
+        if ($cancelRequested) {
+            $this->writeJsonFile($this->resolveOperationPath($operationId), $operation);
+        }
+
+        return [
+            'kind' => 'system-api-operation-cancel',
+            'operation_id' => $operationId,
+            'cancel_requested' => $cancelRequested,
+            'cancelable' => $cancelable,
+            'state' => $state,
+            'status' => $cancelRequested ? 'cancel-requested' : 'not-cancelable',
+            'message' => $cancelRequested
+                ? 'Se registro la solicitud de cancelacion'
+                : 'La operacion no es cancelable de forma segura',
+        ];
+    }
+
+    public function buildIdempotencyDigest(string $method, array $payload): string
+    {
+        $encoded = json_encode(
+            [
+                'method' => $method,
+                'payload' => $payload,
+            ],
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+        );
+        if ($encoded === false) {
+            throw new ValidationError(sprintf('No se pudo serializar el digest idempotente para %s', $method));
+        }
+
+        return sha1($encoded);
+    }
+
     private function resolveOperationPath(string $operationId): string
     {
         $sanitized = preg_replace('/[^A-Za-z0-9._-]/', '-', trim($operationId));
@@ -98,6 +210,17 @@ final class SystemApiOperationsToolkit
         }
 
         return $this->storeDir . DIRECTORY_SEPARATOR . $sanitized . '.json';
+    }
+
+    private function resolveLedgerPath(string $method, string $idempotencyKey): string
+    {
+        $methodToken = preg_replace('/[^A-Za-z0-9._-]/', '-', trim($method));
+        $keyToken = preg_replace('/[^A-Za-z0-9._-]/', '-', trim($idempotencyKey));
+        if (!is_string($methodToken) || $methodToken === '' || !is_string($keyToken) || $keyToken === '') {
+            throw new ValidationError('idempotency_key invalida');
+        }
+
+        return $this->ledgerDir . DIRECTORY_SEPARATOR . $methodToken . '--' . $keyToken . '.json';
     }
 
     private function normalizeState(mixed $state): string

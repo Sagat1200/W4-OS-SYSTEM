@@ -252,6 +252,12 @@ final class SystemApiToolkit
                     'params' => ['operation_id'],
                 ],
                 [
+                    'name' => 'operations.cancel',
+                    'resource_kind' => 'system-api-operation-cancel',
+                    'mutates_state' => true,
+                    'params' => ['operation_id'],
+                ],
+                [
                     'name' => 'services.list',
                     'resource_kind' => 'service-collection',
                     'mutates_state' => false,
@@ -450,10 +456,31 @@ final class SystemApiToolkit
         }
 
         if ($method === 'packages.apply') {
+            $planId = $this->requireString($params, 'plan_id');
+            $planHash = $this->requireString($params, 'plan_hash');
+            $idempotencyKey = $this->requireString($params, 'idempotency_key');
+            $digest = $this->operations->buildIdempotencyDigest('packages.apply', [
+                'plan_id' => $planId,
+                'plan_hash' => $planHash,
+            ]);
+            $reusedOperation = $this->operations->reuseIdempotentOperation('packages.apply', $idempotencyKey, $digest);
+            if ($reusedOperation !== null) {
+                $reusedResult = is_array($reusedOperation['result'] ?? null) ? $reusedOperation['result'] : $reusedOperation;
+
+                return $this->createSuccessResponse(
+                    requestId: $requestId,
+                    method: 'packages.apply',
+                    resourceKind: 'package-operation',
+                    resourceId: is_string($reusedOperation['operation_id'] ?? null) ? $reusedOperation['operation_id'] : null,
+                    data: $reusedResult,
+                    provider: 'local-system-api-packages-contract'
+                );
+            }
+
             $operation = $this->packages->apply(
-                $this->requireString($params, 'plan_id'),
-                $this->requireString($params, 'plan_hash'),
-                $this->requireString($params, 'idempotency_key'),
+                $planId,
+                $planHash,
+                $idempotencyKey,
                 $this->optionalObject($params, 'plan'),
                 $this->optionalString($params, 'plan_path')
             );
@@ -462,6 +489,12 @@ final class SystemApiToolkit
                 'package-operation',
                 (string) ($operation['plan_id'] ?? 'package-operation'),
                 $operation
+            );
+            $this->operations->rememberIdempotentOperation(
+                'packages.apply',
+                $idempotencyKey,
+                $digest,
+                (string) ($storedOperation['operation_id'] ?? $operation['operation_id'] ?? '')
             );
 
             return $this->createSuccessResponse(
@@ -483,6 +516,19 @@ final class SystemApiToolkit
                 resourceKind: 'system-api-operation',
                 resourceId: $operationId,
                 data: $this->operations->get($operationId),
+                provider: 'local-system-api-operations-contract'
+            );
+        }
+
+        if ($method === 'operations.cancel') {
+            $operationId = $this->requireString($params, 'operation_id');
+
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'operations.cancel',
+                resourceKind: 'system-api-operation-cancel',
+                resourceId: $operationId,
+                data: $this->operations->cancel($operationId),
                 provider: 'local-system-api-operations-contract'
             );
         }

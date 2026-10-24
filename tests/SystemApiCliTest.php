@@ -77,6 +77,7 @@ final class SystemApiCliTest extends TestCase
         self::assertContains('packages.plan', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('packages.apply', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('operations.get', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('operations.cancel', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('services.list', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('services.status', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('services.start', array_column($payload['result']['data']['methods'], 'name'));
@@ -105,6 +106,7 @@ final class SystemApiCliTest extends TestCase
         self::assertFalse($methodsByName['packages.plan']['mutates_state']);
         self::assertTrue($methodsByName['packages.apply']['mutates_state']);
         self::assertFalse($methodsByName['operations.get']['mutates_state']);
+        self::assertTrue($methodsByName['operations.cancel']['mutates_state']);
         self::assertFalse($methodsByName['services.list']['mutates_state']);
         self::assertFalse($methodsByName['services.status']['mutates_state']);
         self::assertTrue($methodsByName['services.start']['mutates_state']);
@@ -570,6 +572,234 @@ final class SystemApiCliTest extends TestCase
         self::assertNull($payload['result']);
         self::assertSame('NOT_FOUND', $payload['error']['code']);
         self::assertStringContainsString('Operacion no encontrada', $payload['error']['message']);
+    }
+
+    public function testPackagesApplyReusesOperationForSameIdempotencyKeyAndDigest(): void
+    {
+        $planPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'system-api-package-plan-reuse-' . bin2hex(random_bytes(6)) . '.json';
+        $suffix = bin2hex(random_bytes(6));
+
+        try {
+            $plan = [
+                'kind' => 'package-plan',
+                'status' => 'ok',
+                'backend' => 'apt-get',
+                'action' => 'install',
+                'plan_id' => 'pkg-plan-reuse-' . $suffix,
+                'actor_scope' => 'local-system-api',
+                'catalog_revision' => 'catalog-reuse-' . $suffix,
+                'created_at' => '2026-10-24T12:00:00Z',
+                'expires_at' => '2026-10-24T12:05:00Z',
+                'requested_packages' => [
+                    [
+                        'name' => 'php8.4-cli',
+                        'architecture' => 'amd64',
+                        'requested_version' => null,
+                        'origin' => null,
+                        'installed_version' => null,
+                        'candidate_version' => '8.4.4-1',
+                    ],
+                ],
+                'installs' => [
+                    [
+                        'name' => 'php8.4-cli',
+                        'architecture' => 'amd64',
+                        'installed_version' => null,
+                        'target_version' => '8.4.4-1',
+                    ],
+                ],
+                'upgrades' => [],
+                'removals' => [],
+                'download_bytes' => 131072,
+                'extra_disk_bytes' => 524288,
+                'conffile_policy' => 'keep-local',
+                'protected_packages' => [],
+                'reboot_estimate' => 'none',
+                'summary' => [
+                    'requested' => 1,
+                    'installs' => 1,
+                    'upgrades' => 0,
+                    'removals' => 0,
+                ],
+            ];
+            $plan['plan_hash'] = sha1(json_encode($plan, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+            file_put_contents($planPath, json_encode($plan, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+
+            $request = [
+                'api_version' => '1.0',
+                'request_id' => 'req-packages-apply-reuse-' . $suffix,
+                'method' => 'packages.apply',
+                'params' => [
+                    'plan_id' => $plan['plan_id'],
+                    'plan_hash' => $plan['plan_hash'],
+                    'idempotency_key' => 'pkg-intent-reuse-' . $suffix,
+                    'plan_path' => $planPath,
+                ],
+            ];
+
+            $firstResult = $this->runPhpScript([
+                $this->scriptPath(),
+                '--request-json',
+                json_encode($request, JSON_THROW_ON_ERROR),
+            ], [
+                'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+                'W4_SYSTEM_API_PACKAGES_APPLY_EXIT_CODE' => '0',
+                'W4_SYSTEM_API_PACKAGES_APPLY_STDOUT' => 'Packages applied once',
+            ]);
+
+            self::assertSame(0, $firstResult['exitCode'], $firstResult['stderr']);
+            $firstPayload = $this->decodeJson($firstResult['stdout']);
+            self::assertNull($firstPayload['error']);
+
+            $secondResult = $this->runPhpScript([
+                $this->scriptPath(),
+                '--request-json',
+                json_encode($request, JSON_THROW_ON_ERROR),
+            ], [
+                'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+                'W4_SYSTEM_API_PACKAGES_APPLY_EXIT_CODE' => '1',
+                'W4_SYSTEM_API_PACKAGES_APPLY_STDERR' => 'No deberia ejecutarse otra vez',
+            ]);
+
+            self::assertSame(0, $secondResult['exitCode'], $secondResult['stderr']);
+            $secondPayload = $this->decodeJson($secondResult['stdout']);
+            self::assertNull($secondPayload['error']);
+            self::assertSame($firstPayload['result']['operation_id'], $secondPayload['result']['operation_id']);
+            self::assertSame('Packages applied once', $secondPayload['result']['data']['stdout']);
+            self::assertSame('succeeded', $secondPayload['result']['data']['state']);
+        } finally {
+            if (is_file($planPath)) {
+                unlink($planPath);
+            }
+        }
+    }
+
+    public function testPackagesApplyReturnsConflictWhenLedgerDigestChanges(): void
+    {
+        $suffix = bin2hex(random_bytes(6));
+        $baseRequest = [
+            'api_version' => '1.0',
+            'method' => 'packages.apply',
+        ];
+
+        $planA = [
+            'kind' => 'package-plan',
+            'status' => 'ok',
+            'backend' => 'apt-get',
+            'action' => 'install',
+            'plan_id' => 'pkg-plan-ledger-a-' . $suffix,
+            'requested_packages' => [
+                ['name' => 'php8.4-cli'],
+            ],
+            'conffile_policy' => 'keep-local',
+        ];
+        $planA['plan_hash'] = sha1(json_encode($planA, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+
+        $firstRequest = $baseRequest + [
+            'request_id' => 'req-packages-ledger-a-' . $suffix,
+            'params' => [
+                'plan_id' => $planA['plan_id'],
+                'plan_hash' => $planA['plan_hash'],
+                'idempotency_key' => 'pkg-intent-ledger-' . $suffix,
+                'plan' => $planA,
+            ],
+        ];
+
+        $firstResult = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($firstRequest, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_PACKAGES_APPLY_EXIT_CODE' => '0',
+            'W4_SYSTEM_API_PACKAGES_APPLY_STDOUT' => 'Packages applied',
+        ]);
+
+        self::assertSame(0, $firstResult['exitCode'], $firstResult['stderr']);
+        $firstPayload = $this->decodeJson($firstResult['stdout']);
+        self::assertNull($firstPayload['error']);
+
+        $planB = $planA;
+        $planB['plan_id'] = 'pkg-plan-ledger-b-' . $suffix;
+        $planB['requested_packages'] = [
+            ['name' => 'php8.4-fpm'],
+        ];
+        unset($planB['plan_hash']);
+        $planB['plan_hash'] = sha1(json_encode($planB, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+
+        $secondRequest = $baseRequest + [
+            'request_id' => 'req-packages-ledger-b-' . $suffix,
+            'params' => [
+                'plan_id' => $planB['plan_id'],
+                'plan_hash' => $planB['plan_hash'],
+                'idempotency_key' => 'pkg-intent-ledger-' . $suffix,
+                'plan' => $planB,
+            ],
+        ];
+
+        $secondResult = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($secondRequest, JSON_THROW_ON_ERROR),
+        ]);
+
+        self::assertSame(0, $secondResult['exitCode'], $secondResult['stderr']);
+        $secondPayload = $this->decodeJson($secondResult['stdout']);
+        self::assertNull($secondPayload['result']);
+        self::assertSame('CONFLICT', $secondPayload['error']['code']);
+        self::assertStringContainsString('idempotency_key', $secondPayload['error']['message']);
+    }
+
+    public function testOperationsCancelReturnsNotCancelableForTerminalServiceOperation(): void
+    {
+        $suffix = bin2hex(random_bytes(6));
+        $restartRequest = [
+            'api_version' => '1.0',
+            'request_id' => 'req-services-restart-cancel-' . $suffix,
+            'method' => 'services.restart',
+            'params' => [
+                'unit' => 'ssh.service',
+            ],
+        ];
+
+        $restartResult = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($restartRequest, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_SERVICES_RESTART_EXIT_CODE' => '0',
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $restartResult['exitCode'], $restartResult['stderr']);
+        $restartPayload = $this->decodeJson($restartResult['stdout']);
+        $operationId = $restartPayload['result']['operation_id'];
+        self::assertIsString($operationId);
+
+        $cancelRequest = [
+            'api_version' => '1.0',
+            'request_id' => 'req-operations-cancel-' . $suffix,
+            'method' => 'operations.cancel',
+            'params' => [
+                'operation_id' => $operationId,
+            ],
+        ];
+
+        $cancelResult = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($cancelRequest, JSON_THROW_ON_ERROR),
+        ]);
+
+        self::assertSame(0, $cancelResult['exitCode'], $cancelResult['stderr']);
+        $cancelPayload = $this->decodeJson($cancelResult['stdout']);
+        self::assertNull($cancelPayload['error']);
+        self::assertSame('operations.cancel', $cancelPayload['result']['method']);
+        self::assertSame('system-api-operation-cancel', $cancelPayload['result']['resource']['kind']);
+        self::assertFalse($cancelPayload['result']['data']['cancel_requested']);
+        self::assertFalse($cancelPayload['result']['data']['cancelable']);
+        self::assertSame('not-cancelable', $cancelPayload['result']['data']['status']);
     }
 
     public function testServicesListMethodReturnsServicesFromFixture(): void

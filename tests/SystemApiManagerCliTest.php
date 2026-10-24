@@ -243,6 +243,58 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertSame('succeeded', $payload['result']['data']['state']);
     }
 
+    public function testCallDispatchesOperationsCancel(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'manager-services-disable-001',
+            'method' => 'services.disable',
+            'params' => [
+                'unit' => 'ssh.service',
+            ],
+        ];
+
+        $operationResult = $this->runPhpScript([
+            $this->scriptPath(),
+            'call',
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_SERVICES_DISABLE_EXIT_CODE' => '0',
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=inactive\nSubState=dead\nUnitFileState=disabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $operationResult['exitCode'], $operationResult['stderr']);
+        $operationPayload = $this->decodeJson($operationResult['stdout']);
+        $operationId = $operationPayload['result']['operation_id'];
+        self::assertIsString($operationId);
+
+        $cancelRequest = [
+            'api_version' => '1.0',
+            'request_id' => 'manager-operations-cancel-001',
+            'method' => 'operations.cancel',
+            'params' => [
+                'operation_id' => $operationId,
+            ],
+        ];
+
+        $cancelResult = $this->runPhpScript([
+            $this->scriptPath(),
+            'call',
+            '--request-json',
+            json_encode($cancelRequest, JSON_THROW_ON_ERROR),
+        ]);
+
+        self::assertSame(0, $cancelResult['exitCode'], $cancelResult['stderr']);
+
+        $payload = $this->decodeJson($cancelResult['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('operations.cancel', $payload['result']['method']);
+        self::assertSame('system-api-operation-cancel', $payload['result']['resource']['kind']);
+        self::assertFalse($payload['result']['data']['cancel_requested']);
+    }
+
     public function testCallReturnsProtocolErrorForInvalidJson(): void
     {
         $result = $this->runPhpScript([

@@ -8,7 +8,7 @@
 ** Written by VirtualBox 7.2.8 (r173730)
 -->
 <VirtualBox xmlns="http://www.virtualbox.org/" version="1.19-windows">
-  <Machine uuid="{64e3dcf3-a96a-465b-a63a-7ff0c394f8f0}" name="W4-OS Home Test" OSType="Debian_64" snapshotFolder="Snapshots" lastStateChange="2026-10-16T06:23:08Z">
+  <Machine uuid="{64e3dcf3-a96a-465b-a63a-7ff0c394f8f0}" name="W4-OS Home Test" OSType="Debian_64" snapshotFolder="Snapshots" lastStateChange="2026-10-24T06:23:15Z">
     <MediaRegistry>
       <HardDisks>
         <HardDisk uuid="{56d76cba-8e49-4bbe-8b43-44262fd4c206}" location="W4-OS-Home-Test.vdi" format="VDI" type="Normal"/>
@@ -21,8 +21,8 @@
     <ExtraData>
       <ExtraDataItem name="GUI/AutoresizeGuest" value="false"/>
       <ExtraDataItem name="GUI/LastCloseAction" value="PowerOff"/>
-      <ExtraDataItem name="GUI/LastNormalWindowPosition" value="0,23,1920,1009,max"/>
-      <ExtraDataItem name="GUI/LastScaleWindowPosition" value="496,98,746,480,max"/>
+      <ExtraDataItem name="GUI/LastNormalWindowPosition" value="-1920,23,1920,1009,max"/>
+      <ExtraDataItem name="GUI/LastScaleWindowPosition" value="-1278,253,746,480,max"/>
       <ExtraDataItem name="GUI/Scale" value="true"/>
       <ExtraDataItem name="GUI/ScaleFactor" value="1"/>
     </ExtraData>
@@ -57,13 +57,11 @@
       <AudioAdapter useDefault="true" driver="WAS" enabled="true" enabledOut="true"/>
       <Clipboard/>
       <GuestProperties>
-        <GuestProperty name="/VirtualBox/GuestAdd/GuiOnFocus" value="0" timestamp="1792147926878939000" flags="TRANSIENT, RDONLYGUEST"/>
-        <GuestProperty name="/VirtualBox/HostInfo/GUI/LanguageID" value="es_ES" timestamp="1792131975801590200" flags="RDONLYGUEST"/>
-        <GuestProperty name="/VirtualBox/HostInfo/VBoxRev" value="173730" timestamp="1792131788527285402" flags="TRANSIENT, RDONLYGUEST"/>
-        <GuestProperty name="/VirtualBox/HostInfo/VBoxVer" value="7.2.8" timestamp="1792131788527285400" flags="TRANSIENT, RDONLYGUEST"/>
-        <GuestProperty name="/VirtualBox/HostInfo/VBoxVerExt" value="7.2.8" timestamp="1792131788527285401" flags="TRANSIENT, RDONLYGUEST"/>
-        <GuestProperty name="/VirtualBox/VMInfo/ResetCounter" value="2" timestamp="1792134780770510700" flags="TRANSIENT, RDONLYGUEST"/>
-        <GuestProperty name="/VirtualBox/VMInfo/ResumeCounter" value="1" timestamp="1792134780698248800" flags="TRANSIENT, RDONLYGUEST"/>
+        <GuestProperty name="/VirtualBox/GuestAdd/GuiOnFocus" value="1" timestamp="1792823082769630700" flags="TRANSIENT, RDONLYGUEST"/>
+        <GuestProperty name="/VirtualBox/HostInfo/GUI/LanguageID" value="en_US" timestamp="1792823087554988000" flags="RDONLYGUEST"/>
+        <GuestProperty name="/VirtualBox/HostInfo/VBoxRev" value="173730" timestamp="1792822995436653702" flags="TRANSIENT, RDONLYGUEST"/>
+        <GuestProperty name="/VirtualBox/HostInfo/VBoxVer" value="7.2.8" timestamp="1792822995436653700" flags="TRANSIENT, RDONLYGUEST"/>
+        <GuestProperty name="/VirtualBox/HostInfo/VBoxVerExt" value="7.2.8" timestamp="1792822995436653701" flags="TRANSIENT, RDONLYGUEST"/>
       </GuestProperties>
       <StorageControllers>
         <StorageController name="IDE" type="PIIX4" PortCount="2" useHostIOCache="true" Bootable="true">
