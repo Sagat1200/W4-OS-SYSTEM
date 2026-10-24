@@ -157,6 +157,8 @@ Lectura actualizada:
 - con este corte, el baseline rapido del binding nativo ya no solo prueba “wrappers viven” y “señales se normalizan”; tambien cubre un roundtrip real de marshaling sobre `org.w4.System1.Manager`
 - usando ese helper, un nuevo rerun homologado de `check_native_dbus_runtime_smoke.php` vuelve a dejar `ok = true` sobre la misma live preparada, confirmando que el atajo operativo ya sirve para recuperar el baseline verde sin repetir la inyeccion manual paso a paso
 - el siguiente wrapper host-side ya queda materializado en `scripts/run_native_dbus_runtime_smoke_via_live_vm.php`: una sola invocacion prepara la live, dispara el `runtime_smoke` por tty y devuelve un JSON final con `status = completed`, `prepare_result.status = prepared`, `runtime_smoke.ok = true` y los tres checks internos en `exit_code = 0`
+- el carril pesado ya tiene runner equivalente en `scripts/run_native_dbus_heavy_validation_via_live_vm.php`: prepara la live y luego orquesta `check_native_dbus_launch_process.php`, `check_native_dbus_method_probe_ordering.php` y `probe_native_dbus_heap_after_request_name.php` leyendo cada artefacto desde el repo compartido
+- la primera ejecucion real del runner pesado no quedo completamente verde: `launch_process.ok = true` y `heap_after_request_name.ok = true`, pero `method_probe_ordering.ok = false` porque `preload-first` y `preload-object-only` ahora dejan `ready = true` y `service_reachable_ok = true`, contradiciendo la expectativa historica modelada en la sonda; `preload-classes-only` se mantiene verde
 
 ## Actualizacion posterior: method calls reales sobre `org.w4.System1.Manager`
 

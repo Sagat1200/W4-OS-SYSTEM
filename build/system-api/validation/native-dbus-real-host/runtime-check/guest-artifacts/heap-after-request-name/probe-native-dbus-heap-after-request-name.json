@@ -1,10 +1,10 @@
 {
     "api_version": "1.0",
     "kind": "native-dbus-heap-after-request-name-probe",
-    "root_dir": "/home/w4live/w4-os-system",
+    "root_dir": "/mnt/w4repo",
     "php_binary": "/usr/bin/php",
-    "dbus_module": "/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/dbus-module/dbus.so",
-    "artifacts_dir": "/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/heap-after-request-name",
+    "dbus_module": "/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/dbus-module/dbus.so",
+    "artifacts_dir": "/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/guest-artifacts/heap-after-request-name",
     "ok": true,
     "scenarios": {
         "request_name_only": {
@@ -24,12 +24,12 @@
         },
         "connection_then_realpath_noop_file": {
             "exit_code": 0,
-            "stdout": "{\n    \"scenario\": \"connection_then_realpath_noop_file\",\n    \"connection_class\": \"Dbus\",\n    \"noop_file_path\": \"/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\",\n    \"resolved_path\": \"/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\"\n}",
+            "stdout": "{\n    \"scenario\": \"connection_then_realpath_noop_file\",\n    \"connection_class\": \"Dbus\",\n    \"noop_file_path\": \"/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\",\n    \"resolved_path\": \"/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\"\n}",
             "stderr": ""
         },
         "connection_then_file_exists_noop_file": {
             "exit_code": 0,
-            "stdout": "{\n    \"scenario\": \"connection_then_file_exists_noop_file\",\n    \"connection_class\": \"Dbus\",\n    \"noop_file_path\": \"/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\",\n    \"file_exists\": true\n}",
+            "stdout": "{\n    \"scenario\": \"connection_then_file_exists_noop_file\",\n    \"connection_class\": \"Dbus\",\n    \"noop_file_path\": \"/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\",\n    \"file_exists\": true\n}",
             "stderr": ""
         },
         "connection_then_require_noop": {
@@ -69,12 +69,12 @@
         },
         "request_name_then_realpath_noop_file": {
             "exit_code": 0,
-            "stdout": "{\n    \"scenario\": \"request_name_then_realpath_noop_file\",\n    \"request_name_result\": 1,\n    \"noop_file_path\": \"/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\",\n    \"resolved_path\": \"/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\"\n}",
+            "stdout": "{\n    \"scenario\": \"request_name_then_realpath_noop_file\",\n    \"request_name_result\": 1,\n    \"noop_file_path\": \"/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\",\n    \"resolved_path\": \"/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\"\n}",
             "stderr": ""
         },
         "request_name_then_file_exists_noop_file": {
             "exit_code": 0,
-            "stdout": "{\n    \"scenario\": \"request_name_then_file_exists_noop_file\",\n    \"request_name_result\": 1,\n    \"noop_file_path\": \"/home/w4live/w4-os-system/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\",\n    \"file_exists\": true\n}",
+            "stdout": "{\n    \"scenario\": \"request_name_then_file_exists_noop_file\",\n    \"request_name_result\": 1,\n    \"noop_file_path\": \"/mnt/w4repo/build/system-api/validation/native-dbus-real-host/runtime-check/noop_require_after_request_name.php\",\n    \"file_exists\": true\n}",
             "stderr": ""
         },
         "request_name_then_require_noop": {
