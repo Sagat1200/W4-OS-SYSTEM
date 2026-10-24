@@ -125,19 +125,13 @@ function readJsonFile(string $path): ?array
     return is_array($decoded) ? $decoded : null;
 }
 
-function waitForArtifactAfter(string $path, int $timeoutSeconds, int $previousTimestamp): ?array
+function waitForArtifactRunId(string $path, int $timeoutSeconds, string $runId): ?array
 {
     $elapsed = 0;
     while ($elapsed <= $timeoutSeconds) {
-        clearstatcache(true, $path);
-        if (is_file($path)) {
-            $mtime = filemtime($path);
-            if (is_int($mtime) && $mtime >= $previousTimestamp) {
-                $decoded = readJsonFile($path);
-                if (is_array($decoded)) {
-                    return $decoded;
-                }
-            }
+        $decoded = readJsonFile($path);
+        if (is_array($decoded) && (($decoded['run_id'] ?? null) === $runId)) {
+            return $decoded;
         }
 
         sleep(1);
@@ -281,10 +275,12 @@ try {
         (string) $prepareWaitMs,
     ];
 
+    $runId = sprintf('runtime-smoke-%s', bin2hex(random_bytes(8)));
     $smokeCommand = sprintf(
-        'sudo W4_SYSTEM_API_REMOTE_ROOT_DIR=%1$s W4_SYSTEM_API_REMOTE_DBUS_MODULE=%2$s php -d extension=%2$s %3$s',
+        'sudo W4_SYSTEM_API_REMOTE_ROOT_DIR=%1$s W4_SYSTEM_API_REMOTE_DBUS_MODULE=%2$s W4_SYSTEM_API_RUNTIME_SMOKE_RUN_ID=%3$s php -d extension=%2$s %4$s',
         $mountPoint,
         $dbusModuleGuestPath,
+        $runId,
         $runtimeSmokeScriptGuestPath
     );
 
@@ -296,6 +292,7 @@ try {
         'binding_target' => $bindingTarget,
         'prepare_wait_ms' => $prepareWaitMs,
         'smoke_wait_seconds' => $smokeWaitSeconds,
+        'run_id' => $runId,
         'prepare_command' => $prepareCommand,
         'smoke_command' => $smokeCommand,
         'artifact_host_path' => $artifactHostPath,
@@ -314,12 +311,8 @@ try {
         throw new RuntimeException('El helper de preparacion no devolvio JSON valido');
     }
 
-    clearstatcache(true, $artifactHostPath);
-    $previousTimestamp = is_file($artifactHostPath) && is_int(filemtime($artifactHostPath))
-        ? (int) filemtime($artifactHostPath) + 1
-        : time();
     sendVBoxText($vboxManage, $vmName, $smokeCommand);
-    $artifact = waitForArtifactAfter($artifactHostPath, $smokeWaitSeconds, $previousTimestamp);
+    $artifact = waitForArtifactRunId($artifactHostPath, $smokeWaitSeconds, $runId);
     if (!is_array($artifact)) {
         throw new RuntimeException(sprintf('No se pudo leer el artefacto del runtime smoke: %s', $artifactHostPath));
     }

@@ -18,6 +18,7 @@ $reportFilePath = $artifactsDir . '/check-native-dbus-runtime-smoke.json';
 $result = [
     'api_version' => '1.0',
     'kind' => 'native-dbus-runtime-smoke',
+    'run_id' => resolveStringOverride($environment, 'W4_SYSTEM_API_RUNTIME_SMOKE_RUN_ID'),
     'root_dir' => $rootDir,
     'php_binary' => $phpBinary,
     'dbus_module' => $dbusModule,

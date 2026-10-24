@@ -72,6 +72,7 @@ foreach ($result['scenarios'] as $scenarioResult) {
 
 writeJsonFile($reportFilePath, $result);
 printJson($result);
+exit($result['ok'] ? 0 : 1);
 
 /**
  * @return array<string, string>
@@ -313,6 +314,7 @@ function executeScenario(?string $scenario, array $environment): void
                 'gc_cycles' => gc_collect_cycles(),
             ]);
             return;
+
     }
 
     throw new RuntimeException(sprintf('Unsupported scenario: %s', $scenario));
@@ -384,11 +386,13 @@ function instantiateSystemBusConnection(): Dbus
 }
 
 /**
- * @param array<string, mixed> $value
- * @return array<string, mixed>
  */
-function normalizeValue(mixed $value): mixed
+function normalizeValue($value): mixed
 {
+    if ($value === null) {
+        return null;
+    }
+
     if (is_object($value)) {
         return [
             'class' => $value::class,
