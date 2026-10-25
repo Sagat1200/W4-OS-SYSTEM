@@ -532,6 +532,7 @@ final class UpdateToolkit
             'operation_id' => $plan['operation_id'],
             'engine' => $plan['execution']['engine'],
             'generated_artifacts' => [
+                'executor.env',
                 'run-update-offline.sh',
                 'run-update-with-repo-env.sh',
                 'run-health-checks.sh',

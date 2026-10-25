@@ -1,0 +1,32 @@
+W4 OS Update Executor
+
+Archivos generados:
+- executor.env
+- run-update-offline.sh
+- run-update-with-repo-env.sh
+- run-health-checks.sh
+- reconcile-after-reboot.sh
+- reconcile-update-operation.php
+- update-executor.json
+
+Uso previsto:
+1. preparar primero el store durable con prepare_update_operation.php
+2. source executor.env antes de ejecutar los scripts del bundle
+3. copiar tambien el repositorio APT reconstruido al sistema objetivo
+4. ejecutar preferentemente run-update-with-repo-env.sh --repo-dir /ruta/al/repositorio hasta dejar la operacion en pending_health
+5. tras el reinicio, ejecutar run-health-checks.sh
+6. ejecutar reconcile-after-reboot.sh para confirmar o fallar la operacion usando el helper autocontenido del bundle
+
+Variables utiles:
+- W4_UPDATE_STORE_DIR: carpeta del store durable
+- W4_UPDATE_ENGINE_ROOT: raiz del repo cuando el bundle se mueve fuera del arbol local
+- W4_UPDATE_REPOSITORY_DIR: directorio real del repo APT copiado al sistema objetivo
+- W4_UPDATE_REPOSITORY_ENV_FILE: ruta alternativa al repo.env del repositorio copiado
+- W4_UPDATE_EXECUTE: usar 1 para habilitar apt-get y snapshot reales
+- W4_UPDATE_APPLY_MODE: estrategia de aplicacion, por ahora `live-apt`
+- W4_UPDATE_APT_SOURCE_MODE: `auto` por defecto; prioriza `W4_UPDATE_APT_SOURCE_LINE_DISTS` y cae a `W4_UPDATE_APT_SOURCE_LINE`
+- W4_UPDATE_APT_SOURCE_LINE: source line APT temporal plana para compatibilidad de laboratorio
+- W4_UPDATE_APT_SOURCE_LINE_DISTS: source line APT estilo `dists/<channel>` para el repo W4 alineado con APT real
+- W4_UPDATE_APT_SOURCE_FILE: archivo `.list` alternativo para instalar temporalmente antes de `apt-get update`
+- W4_UPDATE_FAIL_STAGE: inyeccion de fallo para laboratorio
+- W4_UPDATE_OBSERVED_STAGE: estado observado tras reinicio

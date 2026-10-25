@@ -29,6 +29,16 @@ function adaptEmbeddedStoreScript(string $script): string
     );
 }
 
+function renderExecutorEnv(): string
+{
+    return <<<'BASH'
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+export W4_UPDATE_STORE_DIR="${W4_UPDATE_STORE_DIR:-${SCRIPT_DIR}}"
+export W4_UPDATE_HEALTH_RESULT_PATH="${W4_UPDATE_HEALTH_RESULT_PATH:-${W4_UPDATE_STORE_DIR}/health-check-results.json}"
+BASH;
+}
+
 try {
     $arguments = $argv ?? [];
     $planPath = null;
@@ -81,6 +91,7 @@ try {
     $bundledReconcileOperationScript = $toolkit->renderBundledReconcileOperationScript();
 
     $manifestPath = $bundleDir . DIRECTORY_SEPARATOR . 'update-executor.json';
+    $envPath = $bundleDir . DIRECTORY_SEPARATOR . 'executor.env';
     $offlinePath = $bundleDir . DIRECTORY_SEPARATOR . 'run-update-offline.sh';
     $repoLauncherPath = $bundleDir . DIRECTORY_SEPARATOR . 'run-update-with-repo-env.sh';
     $healthCheckPath = $bundleDir . DIRECTORY_SEPARATOR . 'run-health-checks.sh';
@@ -97,6 +108,7 @@ try {
         throw new ValidationError(sprintf('No se pudo escribir %s', $manifestPath));
     }
 
+    writeTextArtifact($envPath, renderExecutorEnv());
     writeTextArtifact($offlinePath, $offlineScript);
     writeTextArtifact($repoLauncherPath, $repoLauncherScript);
     writeTextArtifact($healthCheckPath, $healthCheckScript);
@@ -107,6 +119,7 @@ try {
 W4 OS Update Executor
 
 Archivos generados:
+- executor.env
 - run-update-offline.sh
 - run-update-with-repo-env.sh
 - run-health-checks.sh
@@ -116,10 +129,11 @@ Archivos generados:
 
 Uso previsto:
 1. preparar primero el store durable con prepare_update_operation.php
-2. copiar tambien el repositorio APT reconstruido al sistema objetivo
-3. ejecutar preferentemente run-update-with-repo-env.sh --repo-dir /ruta/al/repositorio hasta dejar la operacion en pending_health
-4. tras el reinicio, ejecutar run-health-checks.sh
-5. ejecutar reconcile-after-reboot.sh para confirmar o fallar la operacion usando el helper autocontenido del bundle
+2. source executor.env antes de ejecutar los scripts del bundle
+3. copiar tambien el repositorio APT reconstruido al sistema objetivo
+4. ejecutar preferentemente run-update-with-repo-env.sh --repo-dir /ruta/al/repositorio hasta dejar la operacion en pending_health
+5. tras el reinicio, ejecutar run-health-checks.sh
+6. ejecutar reconcile-after-reboot.sh para confirmar o fallar la operacion usando el helper autocontenido del bundle
 
 Variables utiles:
 - W4_UPDATE_STORE_DIR: carpeta del store durable

@@ -220,11 +220,261 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
         self::assertSame('uploaded', $payload['upload_output']);
         self::assertSame('health-checks-ok', $payload['execution_output']);
         self::assertSame('{"status":"ok","downloaded":["operation.json","health-report.json"],"missing":[]}', $payload['download_output']);
+        self::assertSame('health', $payload['synced_artifact_validation']['validated_stage']);
+        self::assertSame('ok', $payload['synced_artifact_validation']['health_status']);
+        self::assertSame('confirmed', $payload['synced_artifact_validation']['expected_stage']);
         self::assertSame('reconcile', $payload['next_step']);
 
         $liveSshPayload = $this->decodeJson($payload['live_ssh_setup_output']);
         self::assertSame('ok', $liveSshPayload['status']);
         self::assertSame($vmName, $liveSshPayload['vm_name']);
+    }
+
+    public function testHealthStageFailsWhenSyncedHealthResultReportsFailure(): void
+    {
+        $storeDir = $this->createBundleStore('virtualbox-health-failed');
+        $this->writeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'health-check-results.json', [
+            'health_check_result_schema_version' => 1,
+            'kind' => 'health-check-results',
+            'status' => 'failed',
+            'results' => [
+                'boot-entry-present' => 'failed',
+                'dpkg-consistent' => 'ok',
+            ],
+        ]);
+
+        $vmName = 'W4-OS-Server-DbusModern';
+        $phpBinary = PHP_BINARY;
+        $uploadTreeScript = $this->scriptPath('scripts/upload_tree_via_paramiko.php');
+        $runRemoteScript = $this->scriptPath('scripts/run_remote_command_via_paramiko.php');
+        $downloadFilesScript = $this->scriptPath('scripts/download_files_via_paramiko.php');
+        $remoteBundleDir = '/home/w4live/system-api-update-bundle/' . basename($storeDir);
+        $remoteCommand = sprintf(
+            'bash -lc %s',
+            $this->quoteForBash(sprintf(
+                'cd %s && %s && source ./executor.env && %s',
+                $this->quoteForBash($remoteBundleDir),
+                'chmod +x \'./run-update-offline.sh\' \'./run-update-with-repo-env.sh\' \'./run-health-checks.sh\' \'./reconcile-after-reboot.sh\'',
+                './run-health-checks.sh'
+            ))
+        );
+
+        $fixtureMap = $this->createVmInfoFixtureMap($vmName, 'running') + [
+            $this->fixtureKey([
+                $phpBinary,
+                $uploadTreeScript,
+                '--host',
+                '127.0.0.1',
+                '--port',
+                '2244',
+                '--username',
+                'w4live',
+                '--password',
+                'fixture-live-password',
+                '--local-dir',
+                $storeDir,
+                '--remote-dir',
+                $remoteBundleDir,
+                '--replace',
+            ]) => 'uploaded',
+            $this->fixtureKey([
+                $phpBinary,
+                $runRemoteScript,
+                '--host',
+                '127.0.0.1',
+                '--port',
+                '2244',
+                '--username',
+                'w4live',
+                '--password',
+                'fixture-live-password',
+                '--command',
+                $remoteCommand,
+                '--pty',
+            ]) => 'health-checks-failed',
+            $this->fixtureKey([
+                $phpBinary,
+                $downloadFilesScript,
+                '--host',
+                '127.0.0.1',
+                '--port',
+                '2244',
+                '--username',
+                'w4live',
+                '--password',
+                'fixture-live-password',
+                '--remote-dir',
+                $remoteBundleDir,
+                '--local-dir',
+                $storeDir,
+                '--artifact',
+                'operation.json',
+                '--artifact',
+                'health-report.json',
+                '--artifact',
+                'events.ndjson',
+                '--artifact',
+                'health-check-results.json',
+                '--artifact',
+                'offline-application.json',
+                '--artifact',
+                'snapshot-manifest.json',
+                '--artifact',
+                'staging-manifest.json',
+            ]) => '{"status":"ok","downloaded":["health-check-results.json"],"missing":[]}',
+        ];
+
+        putenv('W4_SYSTEM_API_UPDATE_VM_COMMAND_MAP_JSON=' . json_encode($fixtureMap, JSON_THROW_ON_ERROR));
+
+        $result = $this->runPhpScript(
+            $this->scriptPath('scripts/run_system_api_update_bundle_via_virtualbox_vm.php'),
+            [
+                '--vm-name',
+                $vmName,
+                '--store-dir',
+                $storeDir,
+                '--ssh-port',
+                '2244',
+                '--stage',
+                'health',
+                '--password',
+                'fixture-live-password',
+            ]
+        );
+
+        self::assertSame(1, $result['exitCode']);
+        self::assertStringContainsString('boot-entry-present', $result['stderr']);
+    }
+
+    public function testReconcileStageFailsWhenSyncedArtifactsConflictWithHealthResults(): void
+    {
+        $storeDir = $this->createBundleStore('virtualbox-reconcile-mismatch');
+        $this->writeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'health-check-results.json', [
+            'health_check_result_schema_version' => 1,
+            'kind' => 'health-check-results',
+            'status' => 'failed',
+            'results' => [
+                'boot-entry-present' => 'failed',
+            ],
+        ]);
+        $this->writeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'operation.json', [
+            'update_operation_schema_version' => 1,
+            'kind' => 'update-operation',
+            'operation_id' => 'fixture-op',
+            'profile_id' => 'fixture-profile',
+            'source_version' => '1.0.0',
+            'target_version' => '1.0.1',
+            'stage' => 'confirmed',
+        ]);
+        $this->writeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'health-report.json', [
+            'health_report_schema_version' => 1,
+            'kind' => 'health-report',
+            'operation_id' => 'fixture-op',
+            'stage' => 'confirmed',
+            'status' => 'ok',
+        ]);
+
+        $vmName = 'W4-OS-Server-DbusModern';
+        $phpBinary = PHP_BINARY;
+        $uploadTreeScript = $this->scriptPath('scripts/upload_tree_via_paramiko.php');
+        $runRemoteScript = $this->scriptPath('scripts/run_remote_command_via_paramiko.php');
+        $downloadFilesScript = $this->scriptPath('scripts/download_files_via_paramiko.php');
+        $remoteBundleDir = '/home/w4live/system-api-update-bundle/' . basename($storeDir);
+        $remoteCommand = sprintf(
+            'bash -lc %s',
+            $this->quoteForBash(sprintf(
+                'cd %s && %s && source ./executor.env && %s',
+                $this->quoteForBash($remoteBundleDir),
+                'chmod +x \'./run-update-offline.sh\' \'./run-update-with-repo-env.sh\' \'./run-health-checks.sh\' \'./reconcile-after-reboot.sh\'',
+                './reconcile-after-reboot.sh'
+            ))
+        );
+
+        $fixtureMap = $this->createVmInfoFixtureMap($vmName, 'running') + [
+            $this->fixtureKey([
+                $phpBinary,
+                $uploadTreeScript,
+                '--host',
+                '127.0.0.1',
+                '--port',
+                '2244',
+                '--username',
+                'w4live',
+                '--password',
+                'fixture-live-password',
+                '--local-dir',
+                $storeDir,
+                '--remote-dir',
+                $remoteBundleDir,
+                '--replace',
+            ]) => 'uploaded',
+            $this->fixtureKey([
+                $phpBinary,
+                $runRemoteScript,
+                '--host',
+                '127.0.0.1',
+                '--port',
+                '2244',
+                '--username',
+                'w4live',
+                '--password',
+                'fixture-live-password',
+                '--command',
+                $remoteCommand,
+                '--pty',
+            ]) => 'reconciled',
+            $this->fixtureKey([
+                $phpBinary,
+                $downloadFilesScript,
+                '--host',
+                '127.0.0.1',
+                '--port',
+                '2244',
+                '--username',
+                'w4live',
+                '--password',
+                'fixture-live-password',
+                '--remote-dir',
+                $remoteBundleDir,
+                '--local-dir',
+                $storeDir,
+                '--artifact',
+                'operation.json',
+                '--artifact',
+                'health-report.json',
+                '--artifact',
+                'events.ndjson',
+                '--artifact',
+                'health-check-results.json',
+                '--artifact',
+                'offline-application.json',
+                '--artifact',
+                'snapshot-manifest.json',
+                '--artifact',
+                'staging-manifest.json',
+            ]) => '{"status":"ok","downloaded":["operation.json","health-report.json","health-check-results.json"],"missing":[]}',
+        ];
+
+        putenv('W4_SYSTEM_API_UPDATE_VM_COMMAND_MAP_JSON=' . json_encode($fixtureMap, JSON_THROW_ON_ERROR));
+
+        $result = $this->runPhpScript(
+            $this->scriptPath('scripts/run_system_api_update_bundle_via_virtualbox_vm.php'),
+            [
+                '--vm-name',
+                $vmName,
+                '--store-dir',
+                $storeDir,
+                '--ssh-port',
+                '2244',
+                '--stage',
+                'reconcile',
+                '--password',
+                'fixture-live-password',
+            ]
+        );
+
+        self::assertSame(1, $result['exitCode']);
+        self::assertStringContainsString('inconsistente', $result['stderr']);
     }
 
     private function setVmInfoFixture(string $vmName, string $state): void
@@ -271,6 +521,9 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
             'reconcile-update-operation.php' => "<?php\n",
             'update-executor.json' => "{}\n",
             'update-plan.json' => "{}\n",
+            'operation.json' => "{\n  \"update_operation_schema_version\": 1,\n  \"kind\": \"update-operation\",\n  \"operation_id\": \"fixture-op\",\n  \"profile_id\": \"fixture-profile\",\n  \"source_version\": \"1.0.0\",\n  \"target_version\": \"1.0.1\",\n  \"stage\": \"pending_health\"\n}\n",
+            'health-report.json' => "{\n  \"health_report_schema_version\": 1,\n  \"kind\": \"health-report\",\n  \"operation_id\": \"fixture-op\",\n  \"stage\": \"pending_health\",\n  \"status\": \"pending\"\n}\n",
+            'health-check-results.json' => "{\n  \"health_check_result_schema_version\": 1,\n  \"kind\": \"health-check-results\",\n  \"status\": \"ok\",\n  \"results\": {\n    \"boot-entry-present\": \"ok\"\n  }\n}\n",
         ] as $file => $contents) {
             file_put_contents($path . DIRECTORY_SEPARATOR . $file, $contents);
         }
@@ -332,10 +585,20 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
         return $payload;
     }
 
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function writeJsonFile(string $path, array $payload): void
+    {
+        $encoded = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        self::assertNotFalse(file_put_contents($path, $encoded . PHP_EOL));
+    }
+
     private function quoteForBash(string $value): string
     {
         return "'" . str_replace("'", "'\"'\"'", $value) . "'";
     }
+
 
     private function removePath(string $path): void
     {

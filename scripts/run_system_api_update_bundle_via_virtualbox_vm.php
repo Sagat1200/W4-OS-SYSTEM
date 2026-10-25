@@ -275,6 +275,136 @@ function buildRemoteStageCommand(
 }
 
 /**
+ * @return array<string, mixed>
+ */
+function decodeJsonFile(string $path, string $label): array
+{
+    $raw = file_get_contents($path);
+    if (!is_string($raw)) {
+        throw new ValidationError(sprintf('No se pudo leer %s: %s', $label, $path));
+    }
+
+    try {
+        /** @var array<string, mixed> $decoded */
+        $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('%s contiene JSON invalido: %s', $label, $exception->getMessage()));
+    }
+
+    if (!is_array($decoded)) {
+        throw new ValidationError(sprintf('%s debe contener un objeto JSON: %s', $label, $path));
+    }
+
+    return $decoded;
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function loadHealthCheckResults(string $storeDir): array
+{
+    $path = $storeDir . DIRECTORY_SEPARATOR . 'health-check-results.json';
+    if (!is_file($path)) {
+        throw new ValidationError(sprintf(
+            'El stage remoto no sincronizo health-check-results.json en %s',
+            $storeDir
+        ));
+    }
+
+    $payload = decodeJsonFile($path, 'health-check-results.json');
+    if (($payload['kind'] ?? null) !== 'health-check-results') {
+        throw new ValidationError(sprintf('health-check-results.json invalido en %s: kind no soportado', $path));
+    }
+
+    $status = $payload['status'] ?? null;
+    if (!is_string($status) || !in_array($status, ['ok', 'failed'], true)) {
+        throw new ValidationError(sprintf('health-check-results.json invalido en %s: status no soportado', $path));
+    }
+
+    if (!is_array($payload['results'] ?? null)) {
+        throw new ValidationError(sprintf('health-check-results.json invalido en %s: results debe ser un objeto', $path));
+    }
+
+    return $payload;
+}
+
+function formatFailedHealthChecks(array $healthCheckResults): string
+{
+    $results = is_array($healthCheckResults['results'] ?? null) ? $healthCheckResults['results'] : [];
+    $failed = [];
+
+    foreach ($results as $checkName => $status) {
+        if (is_string($checkName) && $status === 'failed') {
+            $failed[] = $checkName;
+        }
+    }
+
+    if ($failed === []) {
+        return 'sin detalle de checks fallidos';
+    }
+
+    sort($failed);
+
+    return implode(', ', $failed);
+}
+
+function validateSyncedArtifacts(string $storeDir, string $stage): array
+{
+    if (!in_array($stage, ['health', 'reconcile'], true)) {
+        return [
+            'validated_stage' => $stage,
+            'health_status' => null,
+            'expected_stage' => null,
+        ];
+    }
+
+    $healthCheckResults = loadHealthCheckResults($storeDir);
+    $healthStatus = (string) $healthCheckResults['status'];
+    $expectedStage = $healthStatus === 'ok' ? 'confirmed' : 'failed';
+
+    if ($stage === 'health' && $healthStatus !== 'ok') {
+        throw new ValidationError(sprintf(
+            'La validacion post-arranque fallo en la VM: %s',
+            formatFailedHealthChecks($healthCheckResults)
+        ));
+    }
+
+    if ($stage === 'reconcile') {
+        $operationPath = $storeDir . DIRECTORY_SEPARATOR . 'operation.json';
+        $healthReportPath = $storeDir . DIRECTORY_SEPARATOR . 'health-report.json';
+
+        if (!is_file($operationPath) || !is_file($healthReportPath)) {
+            throw new ValidationError(sprintf(
+                'El stage reconcile no sincronizo operation.json y health-report.json en %s',
+                $storeDir
+            ));
+        }
+
+        $operation = decodeJsonFile($operationPath, 'operation.json');
+        $healthReport = decodeJsonFile($healthReportPath, 'health-report.json');
+        $operationStage = is_string($operation['stage'] ?? null) ? trim((string) $operation['stage']) : null;
+        $healthReportStage = is_string($healthReport['stage'] ?? null) ? trim((string) $healthReport['stage']) : null;
+        $healthReportStatus = is_string($healthReport['status'] ?? null) ? trim((string) $healthReport['status']) : null;
+
+        if ($operationStage !== $expectedStage || $healthReportStage !== $expectedStage || $healthReportStatus !== $healthStatus) {
+            throw new ValidationError(sprintf(
+                'El store sincronizado quedo inconsistente: health-check-results=%s, operation.stage=%s, health-report.stage=%s, health-report.status=%s',
+                $expectedStage,
+                $operationStage ?? 'null',
+                $healthReportStage ?? 'null',
+                $healthReportStatus ?? 'null'
+            ));
+        }
+    }
+
+    return [
+        'validated_stage' => $stage,
+        'health_status' => $healthStatus,
+        'expected_stage' => $expectedStage,
+    ];
+}
+
+/**
  * @return list<string>
  */
 function artifactsToSyncBack(): array
@@ -530,12 +660,14 @@ try {
     }
 
     $downloadOutput = runChecked($downloadCommand);
+    $syncedArtifactValidation = validateSyncedArtifacts($storeDir, $stage);
 
     $payload = $readyPayload;
     $payload['status'] = 'ok';
     $payload['upload_output'] = $uploadOutput;
     $payload['execution_output'] = $executionOutput;
     $payload['download_output'] = $downloadOutput;
+    $payload['synced_artifact_validation'] = $syncedArtifactValidation;
     $payload['next_step'] = match ($stage) {
         'offline' => 'reboot-and-run-health',
         'health' => 'reconcile',
