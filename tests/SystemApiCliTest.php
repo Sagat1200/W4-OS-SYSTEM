@@ -114,6 +114,11 @@ final class SystemApiCliTest extends TestCase
         self::assertTrue($methodsByName['services.restart']['mutates_state']);
         self::assertTrue($methodsByName['services.enable']['mutates_state']);
         self::assertTrue($methodsByName['services.disable']['mutates_state']);
+        self::assertSame(['unit', 'idempotency_key?'], $methodsByName['services.start']['params']);
+        self::assertSame(['unit', 'idempotency_key?'], $methodsByName['services.stop']['params']);
+        self::assertSame(['unit', 'idempotency_key?'], $methodsByName['services.restart']['params']);
+        self::assertSame(['unit', 'idempotency_key?'], $methodsByName['services.enable']['params']);
+        self::assertSame(['unit', 'idempotency_key?'], $methodsByName['services.disable']['params']);
         self::assertTrue($methodsByName['system.dbus-native-startup']['mutates_state']);
         self::assertFalse($methodsByName['system.dbus-native-observation']['mutates_state']);
         self::assertFalse($methodsByName['system.dbus-native-coupling']['mutates_state']);
@@ -800,6 +805,103 @@ final class SystemApiCliTest extends TestCase
         self::assertFalse($cancelPayload['result']['data']['cancel_requested']);
         self::assertFalse($cancelPayload['result']['data']['cancelable']);
         self::assertSame('not-cancelable', $cancelPayload['result']['data']['status']);
+    }
+
+    public function testServicesRestartReusesOperationForSameIdempotencyKeyAndUnit(): void
+    {
+        $suffix = bin2hex(random_bytes(6));
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-services-restart-reuse-' . $suffix,
+            'method' => 'services.restart',
+            'params' => [
+                'unit' => 'ssh.service',
+                'idempotency_key' => 'svc-intent-restart-' . $suffix,
+            ],
+        ];
+
+        $firstResult = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_SERVICES_RESTART_EXIT_CODE' => '0',
+            'W4_SYSTEM_API_SERVICES_RESTART_STDOUT' => 'restart-once',
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $firstResult['exitCode'], $firstResult['stderr']);
+        $firstPayload = $this->decodeJson($firstResult['stdout']);
+        self::assertNull($firstPayload['error']);
+
+        $secondResult = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_SERVICES_RESTART_EXIT_CODE' => '1',
+            'W4_SYSTEM_API_SERVICES_RESTART_STDERR' => 'No deberia ejecutarse otra vez',
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $secondResult['exitCode'], $secondResult['stderr']);
+        $secondPayload = $this->decodeJson($secondResult['stdout']);
+        self::assertNull($secondPayload['error']);
+        self::assertSame($firstPayload['result']['operation_id'], $secondPayload['result']['operation_id']);
+        self::assertSame('restart-once', $secondPayload['result']['data']['stdout']);
+        self::assertSame('succeeded', $secondPayload['result']['data']['state']);
+    }
+
+    public function testServicesRestartReturnsConflictWhenSameIdempotencyKeyTargetsAnotherUnit(): void
+    {
+        $suffix = bin2hex(random_bytes(6));
+        $firstRequest = [
+            'api_version' => '1.0',
+            'request_id' => 'req-services-restart-ledger-a-' . $suffix,
+            'method' => 'services.restart',
+            'params' => [
+                'unit' => 'ssh.service',
+                'idempotency_key' => 'svc-intent-ledger-' . $suffix,
+            ],
+        ];
+
+        $firstResult = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($firstRequest, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_SERVICES_RESTART_EXIT_CODE' => '0',
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $firstResult['exitCode'], $firstResult['stderr']);
+        $firstPayload = $this->decodeJson($firstResult['stdout']);
+        self::assertNull($firstPayload['error']);
+
+        $secondRequest = [
+            'api_version' => '1.0',
+            'request_id' => 'req-services-restart-ledger-b-' . $suffix,
+            'method' => 'services.restart',
+            'params' => [
+                'unit' => 'cron.service',
+                'idempotency_key' => 'svc-intent-ledger-' . $suffix,
+            ],
+        ];
+
+        $secondResult = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($secondRequest, JSON_THROW_ON_ERROR),
+        ]);
+
+        self::assertSame(0, $secondResult['exitCode'], $secondResult['stderr']);
+        $secondPayload = $this->decodeJson($secondResult['stdout']);
+        self::assertNull($secondPayload['result']);
+        self::assertSame('CONFLICT', $secondPayload['error']['code']);
+        self::assertStringContainsString('idempotency_key', $secondPayload['error']['message']);
     }
 
     public function testServicesListMethodReturnsServicesFromFixture(): void

@@ -295,6 +295,53 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertFalse($payload['result']['data']['cancel_requested']);
     }
 
+    public function testCallDispatchesServicesStartWithIdempotencyKey(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'manager-services-start-idempotent-001',
+            'method' => 'services.start',
+            'params' => [
+                'unit' => 'ssh.service',
+                'idempotency_key' => 'manager-svc-start-001',
+            ],
+        ];
+
+        $firstResult = $this->runPhpScript([
+            $this->scriptPath(),
+            'call',
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_SERVICES_START_EXIT_CODE' => '0',
+            'W4_SYSTEM_API_SERVICES_START_STDOUT' => 'service started',
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $firstResult['exitCode'], $firstResult['stderr']);
+        $firstPayload = $this->decodeJson($firstResult['stdout']);
+        self::assertNull($firstPayload['error']);
+
+        $secondResult = $this->runPhpScript([
+            $this->scriptPath(),
+            'call',
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_SERVICES_START_EXIT_CODE' => '1',
+            'W4_SYSTEM_API_SERVICES_START_STDERR' => 'No deberia ejecutarse otra vez',
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $secondResult['exitCode'], $secondResult['stderr']);
+        $secondPayload = $this->decodeJson($secondResult['stdout']);
+        self::assertNull($secondPayload['error']);
+        self::assertSame($firstPayload['result']['operation_id'], $secondPayload['result']['operation_id']);
+        self::assertSame('service started', $secondPayload['result']['data']['stdout']);
+    }
+
     public function testCallReturnsProtocolErrorForInvalidJson(): void
     {
         $result = $this->runPhpScript([

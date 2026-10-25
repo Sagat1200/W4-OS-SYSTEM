@@ -1,0 +1,8 @@
+{
+    "kind": "system-api-idempotency-ledger-entry",
+    "method": "services.restart",
+    "idempotency_key": "svc-intent-ledger-43fb2d1c4542",
+    "digest": "445d58b6c57046e0087005c3f2c956cbad3e5119",
+    "operation_id": "service-restart-fc5289cc39ac",
+    "observed_at": "2026-10-25T00:13:17+00:00"
+}

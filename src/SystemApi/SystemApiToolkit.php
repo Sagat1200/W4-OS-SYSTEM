@@ -273,31 +273,31 @@ final class SystemApiToolkit
                     'name' => 'services.start',
                     'resource_kind' => 'service-operation',
                     'mutates_state' => true,
-                    'params' => ['unit'],
+                    'params' => ['unit', 'idempotency_key?'],
                 ],
                 [
                     'name' => 'services.stop',
                     'resource_kind' => 'service-operation',
                     'mutates_state' => true,
-                    'params' => ['unit'],
+                    'params' => ['unit', 'idempotency_key?'],
                 ],
                 [
                     'name' => 'services.restart',
                     'resource_kind' => 'service-operation',
                     'mutates_state' => true,
-                    'params' => ['unit'],
+                    'params' => ['unit', 'idempotency_key?'],
                 ],
                 [
                     'name' => 'services.enable',
                     'resource_kind' => 'service-operation',
                     'mutates_state' => true,
-                    'params' => ['unit'],
+                    'params' => ['unit', 'idempotency_key?'],
                 ],
                 [
                     'name' => 'services.disable',
                     'resource_kind' => 'service-operation',
                     'mutates_state' => true,
-                    'params' => ['unit'],
+                    'params' => ['unit', 'idempotency_key?'],
                 ],
                 [
                     'name' => 'system.dbus-runtime',
@@ -558,78 +558,23 @@ final class SystemApiToolkit
         }
 
         if ($method === 'services.start') {
-            $unit = $this->requireString($params, 'unit');
-            $operation = $this->services->start($unit);
-            $storedOperation = $this->operations->record('services.start', 'service-operation', $unit, $operation);
-
-            return $this->createSuccessResponse(
-                requestId: $requestId,
-                method: 'services.start',
-                resourceKind: 'service-operation',
-                resourceId: is_string($storedOperation['operation_id'] ?? null) ? $storedOperation['operation_id'] : $unit,
-                data: $operation,
-                provider: 'local-system-api-services-contract'
-            );
+            return $this->handleServiceOperation($requestId, 'services.start', $params, fn (string $unit): array => $this->services->start($unit));
         }
 
         if ($method === 'services.stop') {
-            $unit = $this->requireString($params, 'unit');
-            $operation = $this->services->stop($unit);
-            $storedOperation = $this->operations->record('services.stop', 'service-operation', $unit, $operation);
-
-            return $this->createSuccessResponse(
-                requestId: $requestId,
-                method: 'services.stop',
-                resourceKind: 'service-operation',
-                resourceId: is_string($storedOperation['operation_id'] ?? null) ? $storedOperation['operation_id'] : $unit,
-                data: $operation,
-                provider: 'local-system-api-services-contract'
-            );
+            return $this->handleServiceOperation($requestId, 'services.stop', $params, fn (string $unit): array => $this->services->stop($unit));
         }
 
         if ($method === 'services.restart') {
-            $unit = $this->requireString($params, 'unit');
-            $operation = $this->services->restart($unit);
-            $storedOperation = $this->operations->record('services.restart', 'service-operation', $unit, $operation);
-
-            return $this->createSuccessResponse(
-                requestId: $requestId,
-                method: 'services.restart',
-                resourceKind: 'service-operation',
-                resourceId: is_string($storedOperation['operation_id'] ?? null) ? $storedOperation['operation_id'] : $unit,
-                data: $operation,
-                provider: 'local-system-api-services-contract'
-            );
+            return $this->handleServiceOperation($requestId, 'services.restart', $params, fn (string $unit): array => $this->services->restart($unit));
         }
 
         if ($method === 'services.enable') {
-            $unit = $this->requireString($params, 'unit');
-            $operation = $this->services->enable($unit);
-            $storedOperation = $this->operations->record('services.enable', 'service-operation', $unit, $operation);
-
-            return $this->createSuccessResponse(
-                requestId: $requestId,
-                method: 'services.enable',
-                resourceKind: 'service-operation',
-                resourceId: is_string($storedOperation['operation_id'] ?? null) ? $storedOperation['operation_id'] : $unit,
-                data: $operation,
-                provider: 'local-system-api-services-contract'
-            );
+            return $this->handleServiceOperation($requestId, 'services.enable', $params, fn (string $unit): array => $this->services->enable($unit));
         }
 
         if ($method === 'services.disable') {
-            $unit = $this->requireString($params, 'unit');
-            $operation = $this->services->disable($unit);
-            $storedOperation = $this->operations->record('services.disable', 'service-operation', $unit, $operation);
-
-            return $this->createSuccessResponse(
-                requestId: $requestId,
-                method: 'services.disable',
-                resourceKind: 'service-operation',
-                resourceId: is_string($storedOperation['operation_id'] ?? null) ? $storedOperation['operation_id'] : $unit,
-                data: $operation,
-                provider: 'local-system-api-services-contract'
-            );
+            return $this->handleServiceOperation($requestId, 'services.disable', $params, fn (string $unit): array => $this->services->disable($unit));
         }
 
         if ($method === 'system.dbus-runtime') {
@@ -921,6 +866,59 @@ final class SystemApiToolkit
         }
 
         return $value;
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     * @param callable(string): array<string, mixed> $executor
+     * @return array<string, mixed>
+     */
+    private function handleServiceOperation(string $requestId, string $method, array $params, callable $executor): array
+    {
+        $unit = $this->requireString($params, 'unit');
+        $idempotencyKey = $this->optionalString($params, 'idempotency_key');
+
+        if ($idempotencyKey !== null) {
+            $digest = $this->operations->buildIdempotencyDigest($method, [
+                'unit' => $unit,
+            ]);
+            $reusedOperation = $this->operations->reuseIdempotentOperation($method, $idempotencyKey, $digest);
+            if ($reusedOperation !== null) {
+                $reusedResult = is_array($reusedOperation['result'] ?? null) ? $reusedOperation['result'] : $reusedOperation;
+
+                return $this->createSuccessResponse(
+                    requestId: $requestId,
+                    method: $method,
+                    resourceKind: 'service-operation',
+                    resourceId: is_string($reusedOperation['operation_id'] ?? null) ? $reusedOperation['operation_id'] : $unit,
+                    data: $reusedResult,
+                    provider: 'local-system-api-services-contract'
+                );
+            }
+        }
+
+        $operation = $executor($unit);
+        $storedOperation = $this->operations->record($method, 'service-operation', $unit, $operation);
+
+        if ($idempotencyKey !== null) {
+            $this->operations->rememberIdempotentOperation(
+                $method,
+                $idempotencyKey,
+                $this->operations->buildIdempotencyDigest($method, [
+                    'unit' => $unit,
+                ]),
+                (string) ($storedOperation['operation_id'] ?? $operation['operation_id'] ?? '')
+            );
+        }
+
+        return $this->createSuccessResponse(
+            requestId: $requestId,
+            method: $method,
+            resourceKind: 'service-operation',
+            resourceId: is_string($storedOperation['operation_id'] ?? null) ? $storedOperation['operation_id'] : $unit,
+            data: $operation,
+            provider: 'local-system-api-services-contract'
+        );
     }
 
     /**

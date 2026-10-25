@@ -198,6 +198,8 @@ La `System API` ya expone un frente operativo inicial de servicios del host:
 
 En esta etapa la lectura y las mutaciones basicas se apoyan en `systemctl`, con degradacion honesta a `NOT_SUPPORTED` fuera de Linux o cuando el backend requerido no existe en el host. Lo que sigue pendiente para cerrar V1 no es la existencia del dominio, sino endurecer idempotencia, revisionado y validacion end-to-end sobre hosts Linux reales.
 
+En el frente mutante, `services.start/stop/restart/enable/disable` ya aceptan tambien `idempotency_key` opcional. Cuando la misma clave vuelve a entrar con la misma intencion sobre la misma unidad, la API reutiliza la operacion previa; si la clave reaparece con otra unidad o con otra intencion logica, responde `CONFLICT`.
+
 ### 4.12 Operaciones consultables
 
 La `System API` ya expone tambien una primera capacidad de consulta de operaciones:
@@ -217,6 +219,8 @@ Con este corte, las mutaciones que ya generan `operation_id` en la superficie pu
 El objetivo de este frente no es simular un scheduler complejo, sino cerrar la semantica minima de V1: una mutacion ya no devuelve un `operation_id` aislado, sino una referencia que puede reconsultarse para observar estado terminal, error saneado y resultado persistido.
 
 En este corte, `operations.cancel` es deliberadamente honesta: si una operacion ya termino o el provider no ofrece cancelacion segura, la respuesta deja `cancel_requested = false` y `cancelable = false` en lugar de fingir una cancelacion efectiva.
+
+La deduplicacion basica por `idempotency_key` ya cubre tanto `packages.apply` como las mutaciones de servicios. Todavia no es un ledger distribuido ni durable a nivel de release, pero ya evita la readmision de la misma intencion dentro del store local actual.
 
 ## 5. Componentes principales de la vertical
 
