@@ -200,6 +200,8 @@ En esta etapa la lectura y las mutaciones basicas se apoyan en `systemctl`, con 
 
 En el frente mutante, `services.start/stop/restart/enable/disable` ya aceptan tambien `idempotency_key` opcional. Cuando la misma clave vuelve a entrar con la misma intencion sobre la misma unidad, la API reutiliza la operacion previa; si la clave reaparece con otra unidad o con otra intencion logica, responde `CONFLICT`.
 
+Ademas, `services.status` ya publica una `revision` observable del estado normalizado del servicio, y las mutaciones `services.*` aceptan `expected_revision` opcional. Si la revision observada antes de mutar no coincide con la esperada por el cliente, la API responde `CONFLICT` en lugar de ejecutar a ciegas sobre un estado que ya cambio.
+
 ### 4.12 Operaciones consultables
 
 La `System API` ya expone tambien una primera capacidad de consulta de operaciones:

@@ -297,13 +297,14 @@ final class SystemApiManagerCliTest extends TestCase
 
     public function testCallDispatchesServicesStartWithIdempotencyKey(): void
     {
+        $suffix = bin2hex(random_bytes(6));
         $request = [
             'api_version' => '1.0',
             'request_id' => 'manager-services-start-idempotent-001',
             'method' => 'services.start',
             'params' => [
                 'unit' => 'ssh.service',
-                'idempotency_key' => 'manager-svc-start-001',
+                'idempotency_key' => 'manager-svc-start-' . $suffix,
             ],
         ];
 
@@ -340,6 +341,60 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertNull($secondPayload['error']);
         self::assertSame($firstPayload['result']['operation_id'], $secondPayload['result']['operation_id']);
         self::assertSame('service started', $secondPayload['result']['data']['stdout']);
+    }
+
+    public function testCallDispatchesServicesRestartWithExpectedRevision(): void
+    {
+        $statusRequest = [
+            'api_version' => '1.0',
+            'request_id' => 'manager-services-status-revision-001',
+            'method' => 'services.status',
+            'params' => [
+                'unit' => 'ssh.service',
+            ],
+        ];
+
+        $statusResult = $this->runPhpScript([
+            $this->scriptPath(),
+            'call',
+            '--request-json',
+            json_encode($statusRequest, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $statusResult['exitCode'], $statusResult['stderr']);
+        $statusPayload = $this->decodeJson($statusResult['stdout']);
+        $expectedRevision = $statusPayload['result']['data']['revision'];
+        self::assertIsString($expectedRevision);
+
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'manager-services-restart-revision-001',
+            'method' => 'services.restart',
+            'params' => [
+                'unit' => 'ssh.service',
+                'expected_revision' => $expectedRevision,
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'call',
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_SERVICES_RESTART_EXIT_CODE' => '0',
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('services.restart', $payload['result']['method']);
+        self::assertSame($expectedRevision, $payload['result']['data']['expected_revision']);
+        self::assertSame($expectedRevision, $payload['result']['data']['observed_revision_before']);
     }
 
     public function testCallReturnsProtocolErrorForInvalidJson(): void

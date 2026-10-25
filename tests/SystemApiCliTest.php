@@ -114,11 +114,11 @@ final class SystemApiCliTest extends TestCase
         self::assertTrue($methodsByName['services.restart']['mutates_state']);
         self::assertTrue($methodsByName['services.enable']['mutates_state']);
         self::assertTrue($methodsByName['services.disable']['mutates_state']);
-        self::assertSame(['unit', 'idempotency_key?'], $methodsByName['services.start']['params']);
-        self::assertSame(['unit', 'idempotency_key?'], $methodsByName['services.stop']['params']);
-        self::assertSame(['unit', 'idempotency_key?'], $methodsByName['services.restart']['params']);
-        self::assertSame(['unit', 'idempotency_key?'], $methodsByName['services.enable']['params']);
-        self::assertSame(['unit', 'idempotency_key?'], $methodsByName['services.disable']['params']);
+        self::assertSame(['unit', 'expected_revision?', 'idempotency_key?'], $methodsByName['services.start']['params']);
+        self::assertSame(['unit', 'expected_revision?', 'idempotency_key?'], $methodsByName['services.stop']['params']);
+        self::assertSame(['unit', 'expected_revision?', 'idempotency_key?'], $methodsByName['services.restart']['params']);
+        self::assertSame(['unit', 'expected_revision?', 'idempotency_key?'], $methodsByName['services.enable']['params']);
+        self::assertSame(['unit', 'expected_revision?', 'idempotency_key?'], $methodsByName['services.disable']['params']);
         self::assertTrue($methodsByName['system.dbus-native-startup']['mutates_state']);
         self::assertFalse($methodsByName['system.dbus-native-observation']['mutates_state']);
         self::assertFalse($methodsByName['system.dbus-native-coupling']['mutates_state']);
@@ -854,6 +854,59 @@ final class SystemApiCliTest extends TestCase
         self::assertSame('succeeded', $secondPayload['result']['data']['state']);
     }
 
+    public function testServicesRestartAcceptsExpectedRevisionWhenItMatchesObservedState(): void
+    {
+        $statusRequest = [
+            'api_version' => '1.0',
+            'request_id' => 'req-services-status-revision-ok-001',
+            'method' => 'services.status',
+            'params' => [
+                'unit' => 'ssh.service',
+            ],
+        ];
+
+        $statusResult = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($statusRequest, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $statusResult['exitCode'], $statusResult['stderr']);
+        $statusPayload = $this->decodeJson($statusResult['stdout']);
+        $expectedRevision = $statusPayload['result']['data']['revision'];
+        self::assertIsString($expectedRevision);
+
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-services-restart-revision-ok-001',
+            'method' => 'services.restart',
+            'params' => [
+                'unit' => 'ssh.service',
+                'expected_revision' => $expectedRevision,
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_SERVICES_RESTART_EXIT_CODE' => '0',
+            'W4_SYSTEM_API_SERVICES_RESTART_STDOUT' => 'restart-with-revision',
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame($expectedRevision, $payload['result']['data']['expected_revision']);
+        self::assertSame($expectedRevision, $payload['result']['data']['observed_revision_before']);
+        self::assertSame($expectedRevision, $payload['result']['data']['observed_revision_after']);
+    }
+
     public function testServicesRestartReturnsConflictWhenSameIdempotencyKeyTargetsAnotherUnit(): void
     {
         $suffix = bin2hex(random_bytes(6));
@@ -902,6 +955,34 @@ final class SystemApiCliTest extends TestCase
         self::assertNull($secondPayload['result']);
         self::assertSame('CONFLICT', $secondPayload['error']['code']);
         self::assertStringContainsString('idempotency_key', $secondPayload['error']['message']);
+    }
+
+    public function testServicesRestartReturnsConflictWhenExpectedRevisionDoesNotMatch(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-services-restart-revision-conflict-001',
+            'method' => 'services.restart',
+            'params' => [
+                'unit' => 'ssh.service',
+                'expected_revision' => 'outdated-revision',
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_SERVICES_STATUS_OUTPUT' => "Id=ssh.service\nDescription=OpenBSD Secure Shell server\nLoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\nFragmentPath=/lib/systemd/system/ssh.service\n",
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['result']);
+        self::assertSame('CONFLICT', $payload['error']['code']);
+        self::assertStringContainsString('expected_revision', $payload['error']['message']);
     }
 
     public function testServicesListMethodReturnsServicesFromFixture(): void
@@ -958,6 +1039,8 @@ final class SystemApiCliTest extends TestCase
         self::assertSame('services.status', $payload['result']['method']);
         self::assertSame('service-status', $payload['result']['resource']['kind']);
         self::assertSame('system-api-service-status', $payload['result']['data']['kind']);
+        self::assertIsString($payload['result']['data']['revision']);
+        self::assertSame($payload['result']['data']['revision'], $payload['result']['data']['service']['revision']);
         self::assertSame('active', $payload['result']['data']['service']['active_state']);
         self::assertSame('enabled', $payload['result']['data']['service']['unit_file_state']);
     }

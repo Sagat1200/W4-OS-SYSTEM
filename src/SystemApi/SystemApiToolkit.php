@@ -273,31 +273,31 @@ final class SystemApiToolkit
                     'name' => 'services.start',
                     'resource_kind' => 'service-operation',
                     'mutates_state' => true,
-                    'params' => ['unit', 'idempotency_key?'],
+                    'params' => ['unit', 'expected_revision?', 'idempotency_key?'],
                 ],
                 [
                     'name' => 'services.stop',
                     'resource_kind' => 'service-operation',
                     'mutates_state' => true,
-                    'params' => ['unit', 'idempotency_key?'],
+                    'params' => ['unit', 'expected_revision?', 'idempotency_key?'],
                 ],
                 [
                     'name' => 'services.restart',
                     'resource_kind' => 'service-operation',
                     'mutates_state' => true,
-                    'params' => ['unit', 'idempotency_key?'],
+                    'params' => ['unit', 'expected_revision?', 'idempotency_key?'],
                 ],
                 [
                     'name' => 'services.enable',
                     'resource_kind' => 'service-operation',
                     'mutates_state' => true,
-                    'params' => ['unit', 'idempotency_key?'],
+                    'params' => ['unit', 'expected_revision?', 'idempotency_key?'],
                 ],
                 [
                     'name' => 'services.disable',
                     'resource_kind' => 'service-operation',
                     'mutates_state' => true,
-                    'params' => ['unit', 'idempotency_key?'],
+                    'params' => ['unit', 'expected_revision?', 'idempotency_key?'],
                 ],
                 [
                     'name' => 'system.dbus-runtime',
@@ -558,23 +558,23 @@ final class SystemApiToolkit
         }
 
         if ($method === 'services.start') {
-            return $this->handleServiceOperation($requestId, 'services.start', $params, fn (string $unit): array => $this->services->start($unit));
+            return $this->handleServiceOperation($requestId, 'services.start', $params, fn (string $unit, ?string $expectedRevision): array => $this->services->start($unit, $expectedRevision));
         }
 
         if ($method === 'services.stop') {
-            return $this->handleServiceOperation($requestId, 'services.stop', $params, fn (string $unit): array => $this->services->stop($unit));
+            return $this->handleServiceOperation($requestId, 'services.stop', $params, fn (string $unit, ?string $expectedRevision): array => $this->services->stop($unit, $expectedRevision));
         }
 
         if ($method === 'services.restart') {
-            return $this->handleServiceOperation($requestId, 'services.restart', $params, fn (string $unit): array => $this->services->restart($unit));
+            return $this->handleServiceOperation($requestId, 'services.restart', $params, fn (string $unit, ?string $expectedRevision): array => $this->services->restart($unit, $expectedRevision));
         }
 
         if ($method === 'services.enable') {
-            return $this->handleServiceOperation($requestId, 'services.enable', $params, fn (string $unit): array => $this->services->enable($unit));
+            return $this->handleServiceOperation($requestId, 'services.enable', $params, fn (string $unit, ?string $expectedRevision): array => $this->services->enable($unit, $expectedRevision));
         }
 
         if ($method === 'services.disable') {
-            return $this->handleServiceOperation($requestId, 'services.disable', $params, fn (string $unit): array => $this->services->disable($unit));
+            return $this->handleServiceOperation($requestId, 'services.disable', $params, fn (string $unit, ?string $expectedRevision): array => $this->services->disable($unit, $expectedRevision));
         }
 
         if ($method === 'system.dbus-runtime') {
@@ -870,17 +870,19 @@ final class SystemApiToolkit
 
     /**
      * @param array<string, mixed> $params
-     * @param callable(string): array<string, mixed> $executor
+     * @param callable(string, ?string): array<string, mixed> $executor
      * @return array<string, mixed>
      */
     private function handleServiceOperation(string $requestId, string $method, array $params, callable $executor): array
     {
         $unit = $this->requireString($params, 'unit');
+        $expectedRevision = $this->optionalString($params, 'expected_revision');
         $idempotencyKey = $this->optionalString($params, 'idempotency_key');
 
         if ($idempotencyKey !== null) {
             $digest = $this->operations->buildIdempotencyDigest($method, [
                 'unit' => $unit,
+                'expected_revision' => $expectedRevision,
             ]);
             $reusedOperation = $this->operations->reuseIdempotentOperation($method, $idempotencyKey, $digest);
             if ($reusedOperation !== null) {
@@ -897,7 +899,7 @@ final class SystemApiToolkit
             }
         }
 
-        $operation = $executor($unit);
+        $operation = $executor($unit, $expectedRevision);
         $storedOperation = $this->operations->record($method, 'service-operation', $unit, $operation);
 
         if ($idempotencyKey !== null) {
@@ -906,6 +908,7 @@ final class SystemApiToolkit
                 $idempotencyKey,
                 $this->operations->buildIdempotencyDigest($method, [
                     'unit' => $unit,
+                    'expected_revision' => $expectedRevision,
                 ]),
                 (string) ($storedOperation['operation_id'] ?? $operation['operation_id'] ?? '')
             );

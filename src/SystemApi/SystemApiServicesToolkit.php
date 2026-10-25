@@ -11,41 +11,41 @@ final class SystemApiServicesToolkit
     /**
      * @return array<string, mixed>
      */
-    public function start(string $unit): array
+    public function start(string $unit, ?string $expectedRevision = null): array
     {
-        return $this->runAction('start', $unit);
+        return $this->runAction('start', $unit, $expectedRevision);
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function stop(string $unit): array
+    public function stop(string $unit, ?string $expectedRevision = null): array
     {
-        return $this->runAction('stop', $unit);
+        return $this->runAction('stop', $unit, $expectedRevision);
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function restart(string $unit): array
+    public function restart(string $unit, ?string $expectedRevision = null): array
     {
-        return $this->runAction('restart', $unit);
+        return $this->runAction('restart', $unit, $expectedRevision);
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function enable(string $unit): array
+    public function enable(string $unit, ?string $expectedRevision = null): array
     {
-        return $this->runAction('enable', $unit);
+        return $this->runAction('enable', $unit, $expectedRevision);
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function disable(string $unit): array
+    public function disable(string $unit, ?string $expectedRevision = null): array
     {
-        return $this->runAction('disable', $unit);
+        return $this->runAction('disable', $unit, $expectedRevision);
     }
 
     /**
@@ -101,25 +101,32 @@ final class SystemApiServicesToolkit
                 'kind' => 'system-api-service-status',
                 'status' => 'service-not-found',
                 'backend' => 'systemctl',
+                'revision' => null,
                 'service' => [
                     'unit' => $unit,
+                    'revision' => null,
                 ],
             ];
         }
+
+        $service = [
+            'unit' => $properties['Id'] ?? $unit,
+            'description' => $properties['Description'] ?? null,
+            'load_state' => $properties['LoadState'] ?? null,
+            'active_state' => $properties['ActiveState'] ?? null,
+            'sub_state' => $properties['SubState'] ?? null,
+            'unit_file_state' => $properties['UnitFileState'] ?? null,
+            'fragment_path' => $properties['FragmentPath'] ?? null,
+        ];
+        $revision = $this->computeServiceRevision($service);
+        $service['revision'] = $revision;
 
         return [
             'kind' => 'system-api-service-status',
             'status' => 'ok',
             'backend' => 'systemctl',
-            'service' => [
-                'unit' => $properties['Id'] ?? $unit,
-                'description' => $properties['Description'] ?? null,
-                'load_state' => $properties['LoadState'] ?? null,
-                'active_state' => $properties['ActiveState'] ?? null,
-                'sub_state' => $properties['SubState'] ?? null,
-                'unit_file_state' => $properties['UnitFileState'] ?? null,
-                'fragment_path' => $properties['FragmentPath'] ?? null,
-            ],
+            'revision' => $revision,
+            'service' => $service,
         ];
     }
 
@@ -145,13 +152,25 @@ final class SystemApiServicesToolkit
     /**
      * @return array<string, mixed>
      */
-    private function runAction(string $action, string $unit): array
+    private function runAction(string $action, string $unit, ?string $expectedRevision = null): array
     {
         $this->assertLinuxCommandSupport(sprintf('services.%s', $action), 'systemctl');
+        $beforeStatus = $this->status($unit);
+        $observedRevisionBefore = is_string($beforeStatus['revision'] ?? null) ? $beforeStatus['revision'] : null;
+        if ($expectedRevision !== null && $observedRevisionBefore !== $expectedRevision) {
+            throw new ValidationError(sprintf(
+                'Conflicto: expected_revision no coincide para %s (esperada=%s, observada=%s)',
+                $unit,
+                $expectedRevision,
+                $observedRevisionBefore ?? 'null'
+            ));
+        }
+
         $result = $this->resolveActionExecutionResult($action, $unit);
         $statusReport = $this->status($unit);
         $operationId = sprintf('service-%s-%s', $action, substr(sha1($unit . '|' . $action), 0, 12));
         $succeeded = ($result['exit_code'] ?? 1) === 0;
+        $observedRevisionAfter = is_string($statusReport['revision'] ?? null) ? $statusReport['revision'] : null;
 
         return [
             'kind' => 'system-api-service-operation',
@@ -161,6 +180,9 @@ final class SystemApiServicesToolkit
             'unit' => $unit,
             'operation_id' => $operationId,
             'state' => $succeeded ? 'succeeded' : 'failed',
+            'expected_revision' => $expectedRevision,
+            'observed_revision_before' => $observedRevisionBefore,
+            'observed_revision_after' => $observedRevisionAfter,
             'command' => sprintf('systemctl %s %s', $action, $unit),
             'exit_code' => $result['exit_code'],
             'stdout' => $result['stdout'],
@@ -299,6 +321,28 @@ final class SystemApiServicesToolkit
         }
 
         return false;
+    }
+
+    /**
+     * @param array<string, mixed> $service
+     */
+    private function computeServiceRevision(array $service): string
+    {
+        $encoded = json_encode([
+            'unit' => $service['unit'] ?? null,
+            'description' => $service['description'] ?? null,
+            'load_state' => $service['load_state'] ?? null,
+            'active_state' => $service['active_state'] ?? null,
+            'sub_state' => $service['sub_state'] ?? null,
+            'unit_file_state' => $service['unit_file_state'] ?? null,
+            'fragment_path' => $service['fragment_path'] ?? null,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        if ($encoded === false) {
+            throw new ValidationError('No se pudo calcular la revision del servicio');
+        }
+
+        return sha1($encoded);
     }
 
     /**
