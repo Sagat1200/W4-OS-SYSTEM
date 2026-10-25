@@ -33,6 +33,7 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
     public function testCheckOnlyReturnsCanonicalReadyPayload(): void
     {
         $storeDir = $this->createBundleStore('virtualbox-ready');
+        $this->setVmInfoFixture('W4-OS-Server-DbusModern', 'poweroff');
 
         $result = $this->runPhpScript(
             $this->scriptPath('scripts/run_system_api_update_bundle_via_virtualbox_vm.php'),
@@ -46,8 +47,6 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
                 '--stage',
                 'health',
                 '--check-only',
-                '--password',
-                'fixture-password',
             ]
         );
 
@@ -57,6 +56,8 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
         self::assertSame('ready', $payload['status']);
         self::assertSame('W4-OS-Server-DbusModern', $payload['vm_name']);
         self::assertSame('C:\VBox\VBoxManage.exe', $payload['vboxmanage_path']);
+        self::assertSame('poweroff', $payload['vm_info']['state']);
+        self::assertSame('W4-OS-Server-DbusModern', $payload['vm_info']['name']);
         self::assertSame($storeDir, $payload['store_dir']);
         self::assertSame('health', $payload['stage']);
         self::assertSame(2244, $payload['ssh_port']);
@@ -89,7 +90,7 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
             ))
         );
 
-        $fixtureMap = [
+        $fixtureMap = $this->createVmInfoFixtureMap($vmName, 'running') + [
             $this->fixtureKey([
                 $phpBinary,
                 $enableLiveSshScript,
@@ -177,6 +178,7 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
         $payload = $this->decodeJson($result['stdout']);
 
         self::assertSame('ok', $payload['status']);
+        self::assertSame('running', $payload['vm_info']['state']);
         self::assertSame('health', $payload['stage']);
         self::assertSame($remoteBundleDir, $payload['remote_bundle_dir']);
         self::assertSame($remoteCommand, $payload['remote_command']);
@@ -187,6 +189,35 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
         $liveSshPayload = $this->decodeJson($payload['live_ssh_setup_output']);
         self::assertSame('ok', $liveSshPayload['status']);
         self::assertSame($vmName, $liveSshPayload['vm_name']);
+    }
+
+    private function setVmInfoFixture(string $vmName, string $state): void
+    {
+        putenv('W4_SYSTEM_API_UPDATE_VM_COMMAND_MAP_JSON=' . json_encode(
+            $this->createVmInfoFixtureMap($vmName, $state),
+            JSON_THROW_ON_ERROR
+        ));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function createVmInfoFixtureMap(string $vmName, string $state): array
+    {
+        return [
+            $this->fixtureKey([
+                'C:\VBox\VBoxManage.exe',
+                'showvminfo',
+                $vmName,
+                '--machinereadable',
+            ]) => implode("\n", [
+                sprintf('name="%s"', $vmName),
+                'UUID="fixture-vm-uuid"',
+                sprintf('VMState="%s"', $state),
+                'ostype="Debian_64"',
+                'CfgFile="C:\\VirtualBox\\' . $vmName . '.vbox"',
+            ]),
+        ];
     }
 
     private function createBundleStore(string $directoryName): string

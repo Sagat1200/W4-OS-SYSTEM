@@ -122,6 +122,41 @@ function findVBoxManagePath(): string
     throw new ValidationError('No se encontro VBoxManage.exe en este entorno Windows');
 }
 
+/**
+ * @return array<string, string|null>
+ */
+function inspectVirtualMachine(string $vboxManage, string $vmName): array
+{
+    $output = runChecked([$vboxManage, 'showvminfo', $vmName, '--machinereadable']);
+    $lines = preg_split('/\r?\n/', $output) ?: [];
+    $values = [];
+
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || !str_contains($line, '=')) {
+            continue;
+        }
+
+        [$key, $value] = explode('=', $line, 2);
+        $key = trim($key);
+        $value = trim($value);
+
+        if ($value !== '' && str_starts_with($value, '"') && str_ends_with($value, '"')) {
+            $value = substr($value, 1, -1);
+        }
+
+        $values[$key] = $value;
+    }
+
+    return [
+        'name' => $values['name'] ?? $vmName,
+        'uuid' => $values['UUID'] ?? null,
+        'state' => $values['VMState'] ?? null,
+        'ostype' => $values['ostype'] ?? null,
+        'config_file' => $values['CfgFile'] ?? null,
+    ];
+}
+
 function findPhpBinary(): string
 {
     $binary = PHP_BINARY;
@@ -345,19 +380,12 @@ try {
     $storeDir = resolveStoreDir($rootDir, $storeDir, $operationId);
     ensureBundleArtifacts($storeDir);
 
-    if ($password === null || trim($password) === '') {
-        $password = $livePassword;
-    }
-
-    if ($password === null || trim($password) === '') {
-        throw new ValidationError('Debe indicar --password o --live-password');
-    }
-
     $remoteBundleRoot = rtrim($remoteRoot, '/');
     if ($remoteBundleRoot === '') {
         throw new ValidationError('--remote-root no puede ser vacio');
     }
 
+    $vmInfo = inspectVirtualMachine($vboxManage, $vmName);
     $remoteBundleDir = $remoteBundleRoot . '/' . makeSlug(basename($storeDir));
     $enableLiveSshScript = __DIR__ . DIRECTORY_SEPARATOR . 'enable_live_ssh_in_virtualbox.php';
     $uploadTreeScript = __DIR__ . DIRECTORY_SEPARATOR . 'upload_tree_via_paramiko.php';
@@ -374,6 +402,7 @@ try {
         'status' => 'ready',
         'vm_name' => $vmName,
         'vboxmanage_path' => $vboxManage,
+        'vm_info' => $vmInfo,
         'store_dir' => $storeDir,
         'operation_id' => $operationId,
         'stage' => $stage,
@@ -393,6 +422,14 @@ try {
     if ($checkOnly) {
         printJson($readyPayload);
         exit(0);
+    }
+
+    if ($password === null || trim($password) === '') {
+        $password = $livePassword;
+    }
+
+    if ($password === null || trim($password) === '') {
+        throw new ValidationError('Debe indicar --password o --live-password');
     }
 
     $liveSshOutput = null;
