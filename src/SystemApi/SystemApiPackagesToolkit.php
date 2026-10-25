@@ -127,6 +127,7 @@ final class SystemApiPackagesToolkit
             'durable_store' => [
                 'store_dir' => $this->resolveUpdateOperationStoreDir($operationId),
                 'health_result_path' => $this->resolveUpdateOperationStoreDir($operationId) . DIRECTORY_SEPARATOR . 'health-check-results.json',
+                'executor' => $this->buildUpdateExecutorBundleDescriptor($this->resolveUpdateOperationStoreDir($operationId)),
             ],
             'post_reboot' => $postReboot,
             'coordination' => $this->buildUpdatesCoordinationContract($resolvedPlan, $succeeded, $postReboot),
@@ -215,6 +216,7 @@ final class SystemApiPackagesToolkit
             'durable_store' => [
                 'store_dir' => $storeDir,
                 'health_result_path' => $resolvedHealthResultPath,
+                'executor' => $this->buildUpdateExecutorBundleDescriptor($storeDir),
             ],
             'post_reboot' => $postReboot,
             'coordination' => $this->buildUpdatesCoordinationContract($plan, $stage !== 'failed', $postReboot),
@@ -289,6 +291,7 @@ final class SystemApiPackagesToolkit
             'durable_store' => [
                 'store_dir' => $storeDir,
                 'health_result_path' => $healthResultPath,
+                'executor' => $this->buildUpdateExecutorBundleDescriptor($storeDir),
             ],
             'post_reboot' => $postReboot,
             'coordination' => $this->buildUpdatesCoordinationContract($plan, $stage !== 'failed', $postReboot),
@@ -826,6 +829,8 @@ final class SystemApiPackagesToolkit
             $toolkit->initializeOperationStore($plan, $storeDir);
         }
 
+        $this->materializeUpdateExecutorBundle($toolkit, $plan, $storeDir);
+
         $store = $toolkit->loadOperationStore($storeDir);
         $currentStage = is_string($store['operation']['stage'] ?? null) ? trim((string) $store['operation']['stage']) : 'planned';
 
@@ -889,6 +894,65 @@ final class SystemApiPackagesToolkit
             . DIRECTORY_SEPARATOR . 'system-api'
             . DIRECTORY_SEPARATOR . 'update-operations'
             . DIRECTORY_SEPARATOR . $sanitized;
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     */
+    private function materializeUpdateExecutorBundle(UpdateToolkit $toolkit, array $plan, string $storeDir): void
+    {
+        $bundle = $this->buildUpdateExecutorBundleDescriptor($storeDir);
+
+        $this->writeTextFile($bundle['run_update_offline_path'], $toolkit->renderOfflineExecutorScript($plan, $this->rootDir));
+        $this->writeTextFile($bundle['run_update_with_repo_env_path'], $toolkit->renderRepositoryAwareLauncherScript());
+        $this->writeTextFile($bundle['run_health_checks_path'], $toolkit->renderHealthCheckScript($plan));
+        $this->writeTextFile($bundle['reconcile_after_reboot_path'], $toolkit->renderReconcileScript($plan, $this->rootDir));
+        $this->writeJsonFile($bundle['manifest_path'], $toolkit->createUpdateExecutorManifest($plan));
+        $this->writeTextFile($bundle['readme_path'], $this->renderUpdateExecutorReadme($plan, $storeDir, $bundle));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function buildUpdateExecutorBundleDescriptor(string $storeDir): array
+    {
+        return [
+            'run_update_offline_path' => $storeDir . DIRECTORY_SEPARATOR . 'run-update-offline.sh',
+            'run_update_with_repo_env_path' => $storeDir . DIRECTORY_SEPARATOR . 'run-update-with-repo-env.sh',
+            'run_health_checks_path' => $storeDir . DIRECTORY_SEPARATOR . 'run-health-checks.sh',
+            'reconcile_after_reboot_path' => $storeDir . DIRECTORY_SEPARATOR . 'reconcile-after-reboot.sh',
+            'manifest_path' => $storeDir . DIRECTORY_SEPARATOR . 'update-executor.json',
+            'readme_path' => $storeDir . DIRECTORY_SEPARATOR . 'UPDATE_EXECUTOR_README.txt',
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     * @param array<string, string> $bundle
+     */
+    private function renderUpdateExecutorReadme(array $plan, string $storeDir, array $bundle): string
+    {
+        $operationId = (string) ($plan['operation_id'] ?? 'unknown-update-operation');
+        $healthResultPath = $storeDir . DIRECTORY_SEPARATOR . 'health-check-results.json';
+
+        return implode(PHP_EOL, [
+            'W4 Update Executor Bundle',
+            '',
+            sprintf('operation_id=%s', $operationId),
+            sprintf('store_dir=%s', $storeDir),
+            '',
+            'Recommended flow:',
+            sprintf('1. Set W4_UPDATE_STORE_DIR="%s" and run "%s".', $storeDir, $bundle['run_update_offline_path']),
+            sprintf('2. After reboot, run "%s".', $bundle['run_health_checks_path']),
+            sprintf('3. Then run "%s" or call updates.reconcile with health_result_path="%s".', $bundle['reconcile_after_reboot_path'], $healthResultPath),
+            '',
+            'Main artifacts:',
+            sprintf('- update-executor.json: %s', $bundle['manifest_path']),
+            sprintf('- health-check-results.json: %s', $healthResultPath),
+            sprintf('- operation.json: %s', $storeDir . DIRECTORY_SEPARATOR . 'operation.json'),
+            sprintf('- health-report.json: %s', $storeDir . DIRECTORY_SEPARATOR . 'health-report.json'),
+            '',
+        ]);
     }
 
     /**
@@ -1497,6 +1561,16 @@ final class SystemApiPackagesToolkit
         if ($result === false) {
             throw new ValidationError(sprintf('No se pudo escribir el plan en %s', $path));
         }
+    }
+
+    private function writeTextFile(string $path, string $contents): void
+    {
+        $result = file_put_contents($path, $contents . (str_ends_with($contents, PHP_EOL) ? '' : PHP_EOL));
+        if ($result === false) {
+            throw new ValidationError(sprintf('No se pudo escribir el archivo en %s', $path));
+        }
+
+        @chmod($path, 0755);
     }
 
     /**

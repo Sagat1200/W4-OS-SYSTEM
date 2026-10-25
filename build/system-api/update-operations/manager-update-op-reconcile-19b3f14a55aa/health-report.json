@@ -1,0 +1,14 @@
+{
+    "health_report_schema_version": 1,
+    "kind": "health-report",
+    "operation_id": "manager-update-op-reconcile-19b3f14a55aa",
+    "stage": "confirmed",
+    "status": "ok",
+    "required_checks": [
+        "boot-entry-present",
+        "dpkg-consistent"
+    ],
+    "test_file_path": "\/var\/lib\/w4-update\/test-file",
+    "last_error": null,
+    "updated_at": "2026-10-25T07:12:27+00:00"
+}

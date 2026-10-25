@@ -2237,6 +2237,16 @@ final class SystemApiCliTest extends TestCase
             self::assertSame('system-updates', $payload['result']['data']['coordination']['exclusive_scope']);
             self::assertSame('single-active-operation', $payload['result']['data']['coordination']['mutating_operation_policy']);
             self::assertSame('pending_health', $payload['result']['data']['coordination']['next_stage']);
+            self::assertFileExists($payload['result']['data']['durable_store']['executor']['manifest_path']);
+            self::assertFileExists($payload['result']['data']['durable_store']['executor']['run_update_offline_path']);
+            self::assertFileExists($payload['result']['data']['durable_store']['executor']['run_health_checks_path']);
+            self::assertFileExists($payload['result']['data']['durable_store']['executor']['reconcile_after_reboot_path']);
+            self::assertFileExists($payload['result']['data']['durable_store']['executor']['readme_path']);
+            $executorManifestRaw = file_get_contents($payload['result']['data']['durable_store']['executor']['manifest_path']);
+            self::assertIsString($executorManifestRaw);
+            $executorManifest = json_decode($executorManifestRaw, true, 512, JSON_THROW_ON_ERROR);
+            self::assertSame('update-executor', $executorManifest['kind']);
+            self::assertContains('run-health-checks.sh', $executorManifest['generated_artifacts']);
             self::assertContains('update-plan.json', $payload['result']['data']['evidence']);
             self::assertContains('Una sola operacion mutante puede estar activa a la vez.', $payload['result']['data']['notes']);
             self::assertSame('apt-get -y -o APT::Color=0 install w4-recovery-tools w4-home-meta', $payload['result']['data']['command_sequence'][0]);
@@ -2689,6 +2699,7 @@ final class SystemApiCliTest extends TestCase
             self::assertSame('succeeded', $payload['result']['data']['state']);
             self::assertSame('confirmed', $payload['result']['data']['result']['stage']);
             self::assertSame('ok', $payload['result']['data']['result']['health_report']['status']);
+            self::assertFileExists($payload['result']['data']['result']['durable_store']['executor']['manifest_path']);
         } finally {
             if (is_file($planPath)) {
                 unlink($planPath);

@@ -307,6 +307,8 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertSame('pending_health', $payload['result']['data']['durable_state']['stage']);
         self::assertSame('pending_health', $payload['result']['data']['post_reboot']['pending_state']);
         self::assertSame('system-updates', $payload['result']['data']['coordination']['exclusive_scope']);
+        self::assertFileExists($payload['result']['data']['durable_store']['executor']['manifest_path']);
+        self::assertFileExists($payload['result']['data']['durable_store']['executor']['run_update_with_repo_env_path']);
     }
 
     public function testCallDispatchesUpdatesReconcile(): void
@@ -713,6 +715,7 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertSame('updates.apply', $payload['result']['data']['method']);
         self::assertSame('succeeded', $payload['result']['data']['state']);
         self::assertSame('confirmed', $payload['result']['data']['result']['stage']);
+        self::assertFileExists($payload['result']['data']['result']['durable_store']['executor']['manifest_path']);
     }
 
     public function testCallDispatchesPackagesApplyWithExpectedCatalogRevision(): void

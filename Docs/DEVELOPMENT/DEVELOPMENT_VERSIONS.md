@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.341 | 2026-10-25 | Activa | `updates.apply` ya materializa en el store durable el bundle ejecutable de updates (`run-update-offline.sh`, `run-health-checks.sh`, `reconcile-after-reboot.sh`, `update-executor.json`, `UPDATE_EXECUTOR_README.txt`) y expone esas rutas en el payload de la `System API` |
 | TECH | TECH-1.340 | 2026-10-25 | Activa | `updates.reconcile` ya puede derivar `observed_stage` desde `health-check-results.json` del store durable, publicar ese artefacto en su payload y reconciliar el tramo post-reboot sin requerir que el caller repita manualmente el stage observado |
 | TECH | TECH-1.339 | 2026-10-25 | Activa | `operations.get` ya refresca operaciones de updates desde el store durable de `update-operation`, de forma que los avances externos del tramo post-reboot se observan sin depender de una segunda llamada previa a `updates.reconcile` |
 | TECH | TECH-1.338 | 2026-10-25 | Activa | La `System API` ya expone `updates.reconcile`, persiste store durable de `update-operation` durante `updates.apply` y permite cerrar el tramo `pending_health -> confirmed/failed` reutilizando `UpdateToolkit` |

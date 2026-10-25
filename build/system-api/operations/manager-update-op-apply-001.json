@@ -19,10 +19,10 @@
         "status": "pending-reboot",
         "backend": "apt-get",
         "operation_id": "manager-update-op-apply-001",
-        "plan_hash": "70c52ad4920ccad99b76b3a27a662ed51a74097c",
-        "idempotency_key": "manager-updates-apply-a177448fc8ab",
-        "expected_catalog_revision": "manager-updates-catalog-a177448fc8ab",
-        "observed_catalog_revision": "manager-updates-catalog-a177448fc8ab",
+        "plan_hash": "3618296fcdf6537d5460fd0313d058df483fe8f0",
+        "idempotency_key": "manager-updates-apply-7056fe2c64ac",
+        "expected_catalog_revision": "manager-updates-catalog-7056fe2c64ac",
+        "observed_catalog_revision": "manager-updates-catalog-7056fe2c64ac",
         "profile_id": "w4-os-home",
         "source_version": "1.0.0-lab",
         "target_version": "1.0.1-lab",
@@ -116,7 +116,7 @@
                 "created_at": "2026-10-25T06:04:51+00:00",
                 "updated_at": "2026-10-25T06:04:51+00:00"
             },
-            "plan_hash": "70c52ad4920ccad99b76b3a27a662ed51a74097c",
+            "plan_hash": "3618296fcdf6537d5460fd0313d058df483fe8f0",
             "apply_mode": "live-apt",
             "reboot_required": true
         },
@@ -137,7 +137,15 @@
         "health_check_results": null,
         "durable_store": {
             "store_dir": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001",
-            "health_result_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001\\health-check-results.json"
+            "health_result_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001\\health-check-results.json",
+            "executor": {
+                "run_update_offline_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001\\run-update-offline.sh",
+                "run_update_with_repo_env_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001\\run-update-with-repo-env.sh",
+                "run_health_checks_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001\\run-health-checks.sh",
+                "reconcile_after_reboot_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001\\reconcile-after-reboot.sh",
+                "manifest_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001\\update-executor.json",
+                "readme_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001\\UPDATE_EXECUTOR_README.txt"
+            }
         },
         "post_reboot": {
             "pending_state": "pending_health",
@@ -161,7 +169,7 @@
         "next_action": "reboot-into-post-update-health-checks"
     },
     "error": null,
-    "created_at": "2026-10-25T06:50:58+00:00",
-    "observed_at": "2026-10-25T06:50:58+00:00",
+    "created_at": "2026-10-25T07:12:26+00:00",
+    "observed_at": "2026-10-25T07:12:26+00:00",
     "completed_at": null
 }
