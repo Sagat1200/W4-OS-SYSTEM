@@ -156,6 +156,41 @@ final class SystemApiOperationsToolkit
         $this->writeJsonFile($ledgerPath, $payload);
     }
 
+    /**
+     * @param array<string, mixed> $operation
+     * @return array<string, mixed>
+     */
+    public function refresh(string $operationId, array $operation): array
+    {
+        $storedOperation = $this->get($operationId);
+        $state = $this->normalizeState($operation['state'] ?? null);
+        $observedAt = gmdate('c');
+
+        $storedOperation['state'] = $state;
+        $storedOperation['status'] = is_string($operation['status'] ?? null)
+            ? $operation['status']
+            : ($state === 'succeeded' ? 'ok' : 'failed');
+        $storedOperation['progress'] = [
+            'percent' => $this->resolveProgressPercent($state),
+            'current_step' => is_string($operation['next_action'] ?? null) ? $operation['next_action'] : 'completed',
+        ];
+        $storedOperation['result'] = $operation;
+        $storedOperation['error'] = $state === 'failed'
+            ? [
+                'code' => 'OPERATION_FAILED',
+                'message' => $this->resolveFailureMessage($operation),
+            ]
+            : null;
+        $storedOperation['observed_at'] = $observedAt;
+        $storedOperation['completed_at'] = in_array($state, ['succeeded', 'failed', 'partial', 'unknown', 'cancelled'], true)
+            ? $observedAt
+            : null;
+
+        $this->writeJsonFile($this->resolveOperationPath($operationId), $storedOperation);
+
+        return $storedOperation;
+    }
+
     public function acquireExclusiveLock(string $scope, string $operationId): void
     {
         $lockPath = $this->resolveExclusiveLockPath($scope);

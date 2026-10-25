@@ -232,12 +232,15 @@ La `System API` ya expone tambien una primera superficie de descubrimiento de up
 - `updates.check`
 - `updates.list`
 - `updates.apply`
+- `updates.reconcile`
 
 `updates.list` publica el catalogo normalizado de paquetes actualizables sobre `apt list --upgradable`, incluyendo `catalog_revision`, versiones instalada/candidata y origen resumido. `updates.check` reutiliza ese mismo catalogo y, cuando recibe `refresh = true`, intenta refrescarlo previamente con `apt-get update`.
 
-`updates.plan` ya devuelve tambien `plan_hash` para que el cliente pueda encadenar la aplicacion sin recalcular el digest fuera del contrato. Sobre esa base, `updates.apply` ya acepta `operation_id`, `plan_hash`, `idempotency_key`, `expected_catalog_revision` opcional y un `update-plan` por objeto o por ruta. El corte operativo actual valida el `update-plan`, puede rechazar el apply si `expected_catalog_revision` no coincide con el catalogo observado en el plan, toma un lock exclusivo de admision sobre `system-updates`, ejecuta la secuencia APT basica derivada de `package_changes` y, si sale bien, deja una operacion en `needs_attention` / `pending-reboot` con `next_action = reboot-into-post-update-health-checks`, ademas de publicar `durable_state`, un contrato `post_reboot` con los health checks esperados y una coordinacion exclusiva de `system-updates` para enlazar la aplicacion con el tramo durable de reconciliacion.
+`updates.plan` ya devuelve tambien `plan_hash` para que el cliente pueda encadenar la aplicacion sin recalcular el digest fuera del contrato. Sobre esa base, `updates.apply` ya acepta `operation_id`, `plan_hash`, `idempotency_key`, `expected_catalog_revision` opcional y un `update-plan` por objeto o por ruta. El corte operativo actual valida el `update-plan`, puede rechazar el apply si `expected_catalog_revision` no coincide con el catalogo observado en el plan, toma un lock exclusivo de admision sobre `system-updates`, ejecuta la secuencia APT basica derivada de `package_changes`, inicializa un store durable de `update-operation` y, si sale bien, deja la operacion en `needs_attention` / `pending-reboot` con stage durable `pending_health` y `next_action = reboot-into-post-update-health-checks`.
 
-En esta etapa el dominio ya deja de ser solo descubrimiento y pasa a cubrir tambien el arranque de la ejecucion, su precondicion de frescura y su handoff durable inmediato. Lo pendiente para V1 es endurecer estas reglas sobre host Linux soportado con evidencia real, y despues enganchar este contrato con el coordinador completo post-reboot de update/recovery.
+Sobre ese mismo store, `updates.reconcile` ya permite observar el stage real posterior al reboot (`confirmed` o `failed`), reconciliarlo contra el estado durable y refrescar la operacion consultable por `operations.get` sin inventar un segundo pipeline paralelo. El dominio de updates ya no se queda solo en el handoff: ahora tambien publica un cierre contractual del tramo `pending_health -> confirmed/failed` reutilizando `UpdateToolkit`.
+
+En esta etapa el dominio ya deja de ser solo descubrimiento y pasa a cubrir tambien el arranque de la ejecucion, su precondicion de frescura, su handoff durable inmediato y una primera reconciliacion post-reboot. Lo pendiente para V1 es endurecer estas reglas sobre host Linux soportado con evidencia real, y despues enganchar este contrato con el coordinador completo post-reboot de update/recovery.
 
 ## 5. Componentes principales de la vertical
 

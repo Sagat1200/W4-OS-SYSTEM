@@ -9,6 +9,13 @@ use W4\OS\Update\UpdateToolkit;
 
 final class SystemApiPackagesToolkit
 {
+    private string $rootDir;
+
+    public function __construct(string $rootDir)
+    {
+        $this->rootDir = rtrim($rootDir, DIRECTORY_SEPARATOR);
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -71,12 +78,23 @@ final class SystemApiPackagesToolkit
 
         $result = $this->resolveUpdatesApplyExecutionResult($resolvedPlan);
         $succeeded = ($result['exit_code'] ?? 1) === 0;
-        $durableState = $this->buildUpdatesDurableState($resolvedPlan, $succeeded, $result);
-        $postReboot = $this->buildUpdatesPostRebootContract($resolvedPlan, $succeeded);
+        $durableStore = $this->persistUpdatesOperationStore($resolvedPlan, $succeeded, $result);
+        $durableState = is_array($durableStore['operation'] ?? null)
+            ? $this->enrichDurableUpdateOperation($resolvedPlan, $durableStore['operation'])
+            : $this->buildUpdatesDurableState($resolvedPlan, $succeeded, $result);
+        $healthReport = is_array($durableStore['health_report'] ?? null) ? $durableStore['health_report'] : null;
+        $postReboot = $this->buildUpdatesPostRebootContract($resolvedPlan, $succeeded, $durableState);
+        $stage = is_string($durableState['stage'] ?? null) ? trim((string) $durableState['stage']) : ($succeeded ? 'pending_health' : 'failed');
+        $state = $stage === 'confirmed'
+            ? 'succeeded'
+            : ($stage === 'failed' ? 'failed' : 'needs_attention');
+        $status = $stage === 'confirmed'
+            ? 'ok'
+            : ($stage === 'failed' ? 'failed' : 'pending-reboot');
 
         return [
             'kind' => 'system-api-update-operation',
-            'status' => $succeeded ? 'pending-reboot' : 'failed',
+            'status' => $status,
             'backend' => 'apt-get',
             'operation_id' => $operationId,
             'plan_hash' => $planHash,
@@ -87,8 +105,8 @@ final class SystemApiPackagesToolkit
             'source_version' => $resolvedPlan['source_version'] ?? null,
             'target_version' => $resolvedPlan['target_version'] ?? null,
             'apply_mode' => $resolvedPlan['execution']['apply_mode'] ?? null,
-            'stage' => $succeeded ? 'prepared' : 'failed',
-            'state' => $succeeded ? 'needs_attention' : 'failed',
+            'stage' => $stage,
+            'state' => $state,
             'command' => 'updates:apply',
             'command_sequence' => $this->renderCommandSequence($this->buildUpdatesApplyCommands($resolvedPlan)),
             'exit_code' => $result['exit_code'],
@@ -104,9 +122,85 @@ final class SystemApiPackagesToolkit
             'evidence' => $this->normalizeOptionalStringList($resolvedPlan['evidence'] ?? null, 'params.plan.evidence'),
             'notes' => $this->normalizeOptionalStringList($resolvedPlan['notes'] ?? null, 'params.plan.notes'),
             'durable_state' => $durableState,
+            'health_report' => $healthReport,
+            'durable_store' => [
+                'store_dir' => $this->resolveUpdateOperationStoreDir($operationId),
+            ],
             'post_reboot' => $postReboot,
             'coordination' => $this->buildUpdatesCoordinationContract($resolvedPlan, $succeeded, $postReboot),
             'next_action' => $succeeded ? 'reboot-into-post-update-health-checks' : 'inspect-update-state',
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $details
+     * @param array<string, mixed>|null $observedError
+     * @return array<string, mixed>
+     */
+    public function reconcileUpdates(
+        string $operationId,
+        string $observedStage,
+        array $details = [],
+        ?array $observedError = null
+    ): array {
+        $toolkit = new UpdateToolkit();
+        $storeDir = $this->resolveUpdateOperationStoreDir($operationId);
+        $reconciled = $toolkit->reconcileOperationStore(
+            $storeDir,
+            $observedStage,
+            'system-api-updates-reconcile',
+            $details,
+            $observedError
+        );
+        $store = $toolkit->loadOperationStore($storeDir);
+        $plan = $store['plan'];
+        $operation = $this->enrichDurableUpdateOperation($plan, $store['operation']);
+        $healthReport = $store['healthReport'];
+        $stage = is_string($operation['stage'] ?? null) ? trim((string) $operation['stage']) : 'failed';
+        $state = $stage === 'confirmed'
+            ? 'succeeded'
+            : ($stage === 'failed' ? 'failed' : 'needs_attention');
+        $status = $stage === 'confirmed'
+            ? 'ok'
+            : ($stage === 'failed' ? 'failed' : 'pending-health');
+        $postReboot = $this->buildUpdatesPostRebootContract($plan, $stage !== 'failed', $operation);
+
+        return [
+            'kind' => 'system-api-update-operation',
+            'status' => $status,
+            'backend' => 'apt-get',
+            'operation_id' => $operationId,
+            'plan_hash' => $this->computeUpdatePlanHash($plan),
+            'expected_catalog_revision' => null,
+            'observed_catalog_revision' => is_string($plan['catalog_revision'] ?? null) ? $plan['catalog_revision'] : null,
+            'profile_id' => $plan['profile_id'] ?? null,
+            'source_version' => $plan['source_version'] ?? null,
+            'target_version' => $plan['target_version'] ?? null,
+            'apply_mode' => $plan['execution']['apply_mode'] ?? null,
+            'stage' => $stage,
+            'state' => $state,
+            'command' => 'updates:reconcile',
+            'reconciled' => ($reconciled['reconciled'] ?? false) === true,
+            'observed_stage' => $observedStage,
+            'details' => $details,
+            'observed_error' => $observedError,
+            'package_changes' => $plan['package_changes'] ?? [],
+            'repository_snapshot' => $plan['repository_snapshot'] ?? [],
+            'snapshot' => is_array($plan['snapshot'] ?? null) ? $plan['snapshot'] : null,
+            'staging' => is_array($plan['staging'] ?? null) ? $plan['staging'] : null,
+            'boot_manifest' => is_array($plan['boot_manifest'] ?? null) ? $plan['boot_manifest'] : null,
+            'reboot_required' => (($plan['execution']['reboot_required'] ?? false) === true),
+            'stages' => $plan['execution']['stages'] ?? [],
+            'evidence' => $this->normalizeOptionalStringList($plan['evidence'] ?? null, 'update-plan.evidence'),
+            'notes' => $this->normalizeOptionalStringList($plan['notes'] ?? null, 'update-plan.notes'),
+            'durable_state' => $operation,
+            'health_report' => $healthReport,
+            'durable_store' => [
+                'store_dir' => $storeDir,
+            ],
+            'post_reboot' => $postReboot,
+            'coordination' => $this->buildUpdatesCoordinationContract($plan, $stage !== 'failed', $postReboot),
+            'next_action' => $stage === 'confirmed' ? 'record-update-confirmation' : ($stage === 'failed' ? 'inspect-update-state' : 'run-post-reboot-health-checks'),
         ];
     }
 
@@ -560,12 +654,16 @@ final class SystemApiPackagesToolkit
      * @param array<string, mixed> $plan
      * @return array<string, mixed>
      */
-    private function buildUpdatesPostRebootContract(array $plan, bool $succeeded): array
+    private function buildUpdatesPostRebootContract(array $plan, bool $succeeded, ?array $durableState = null): array
     {
         $manifest = $plan['health_check_manifest'] ?? null;
         if ($manifest !== null && !is_array($manifest)) {
             throw new ValidationError('params.plan.health_check_manifest debe ser un objeto');
         }
+
+        $resumeFromStage = is_string($durableState['stage'] ?? null)
+            ? trim((string) $durableState['stage'])
+            : ($succeeded ? 'pending_health' : 'failed');
 
         return [
             'pending_state' => is_string($manifest['pending_state'] ?? null) ? trim((string) $manifest['pending_state']) : 'pending_health',
@@ -573,7 +671,7 @@ final class SystemApiPackagesToolkit
             'failure_state' => is_string($manifest['failure_state'] ?? null) ? trim((string) $manifest['failure_state']) : 'failed',
             'required_checks' => $this->normalizeOptionalStringList($manifest['required'] ?? null, 'params.plan.health_check_manifest.required'),
             'test_file_path' => is_string($manifest['test_file_path'] ?? null) ? trim((string) $manifest['test_file_path']) : null,
-            'resume_from_stage' => $succeeded ? 'prepared' : 'failed',
+            'resume_from_stage' => $resumeFromStage,
             'next_action' => $succeeded ? 'run-post-reboot-health-checks' : 'inspect-update-state',
         ];
     }
@@ -585,15 +683,120 @@ final class SystemApiPackagesToolkit
      */
     private function buildUpdatesCoordinationContract(array $plan, bool $succeeded, array $postReboot): array
     {
+        $resumeFromStage = is_string($postReboot['resume_from_stage'] ?? null)
+            ? trim((string) $postReboot['resume_from_stage'])
+            : null;
+        $nextStage = 'failed';
+        if ($succeeded) {
+            if ($resumeFromStage === 'confirmed') {
+                $nextStage = 'confirmed';
+            } elseif ($resumeFromStage === 'failed') {
+                $nextStage = 'failed';
+            } else {
+                $nextStage = is_string($postReboot['pending_state'] ?? null) ? $postReboot['pending_state'] : 'pending_health';
+            }
+        }
+
         return [
             'exclusive_scope' => 'system-updates',
             'mutating_operation_policy' => 'single-active-operation',
             'busy_state' => $succeeded ? 'pending-reboot-health-reconciliation' : 'failed-before-reboot',
             'reboot_required' => (($plan['execution']['reboot_required'] ?? false) === true),
-            'next_stage' => $succeeded
-                ? (is_string($postReboot['pending_state'] ?? null) ? $postReboot['pending_state'] : 'pending_health')
-                : 'failed',
+            'next_stage' => $nextStage,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     * @param array<string, mixed> $operation
+     * @return array<string, mixed>
+     */
+    private function enrichDurableUpdateOperation(array $plan, array $operation): array
+    {
+        $operation['plan_hash'] = $this->computeUpdatePlanHash($plan);
+        $operation['apply_mode'] = is_string($plan['execution']['apply_mode'] ?? null) ? $plan['execution']['apply_mode'] : null;
+        $operation['reboot_required'] = (($plan['execution']['reboot_required'] ?? false) === true);
+
+        return $operation;
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     * @param array{stdout:string,stderr:string,exit_code:int} $result
+     * @return array{operation: array<string, mixed>, health_report: array<string, mixed>}
+     */
+    private function persistUpdatesOperationStore(array $plan, bool $succeeded, array $result): array
+    {
+        $toolkit = new UpdateToolkit();
+        $storeDir = $this->resolveUpdateOperationStoreDir((string) $plan['operation_id']);
+
+        if (!is_file($storeDir . DIRECTORY_SEPARATOR . 'update-plan.json')) {
+            $toolkit->initializeOperationStore($plan, $storeDir);
+        }
+
+        $store = $toolkit->loadOperationStore($storeDir);
+        $currentStage = is_string($store['operation']['stage'] ?? null) ? trim((string) $store['operation']['stage']) : 'planned';
+
+        if ($currentStage === 'planned') {
+            if ($succeeded) {
+                foreach (['downloading', 'ready', 'prepared', 'applying_offline', 'pending_health'] as $stage) {
+                    $toolkit->persistOperationTransition(
+                        $storeDir,
+                        $stage,
+                        'system-api-updates-apply',
+                        [
+                            'exit_code' => $result['exit_code'],
+                        ]
+                    );
+                }
+            } else {
+                $toolkit->persistOperationTransition(
+                    $storeDir,
+                    'failed',
+                    'system-api-updates-apply',
+                    [
+                        'exit_code' => $result['exit_code'],
+                    ],
+                    $this->buildUpdateObservedError($result)
+                );
+            }
+        }
+
+        $updatedStore = $toolkit->loadOperationStore($storeDir);
+
+        return [
+            'operation' => $updatedStore['operation'],
+            'health_report' => $updatedStore['healthReport'],
+        ];
+    }
+
+    /**
+     * @param array{stdout:string,stderr:string,exit_code:int} $result
+     * @return array<string, mixed>
+     */
+    private function buildUpdateObservedError(array $result): array
+    {
+        return [
+            'code' => 'UPDATE_APPLY_FAILED',
+            'message' => trim((string) ($result['stderr'] ?? '')) !== ''
+                ? trim((string) $result['stderr'])
+                : 'updates.apply failed',
+            'exit_code' => (int) ($result['exit_code'] ?? 1),
+        ];
+    }
+
+    private function resolveUpdateOperationStoreDir(string $operationId): string
+    {
+        $sanitized = preg_replace('/[^A-Za-z0-9._-]/', '-', trim($operationId));
+        if (!is_string($sanitized) || $sanitized === '') {
+            throw new ValidationError('operation_id invalido para update operation store');
+        }
+
+        return $this->rootDir
+            . DIRECTORY_SEPARATOR . 'build'
+            . DIRECTORY_SEPARATOR . 'system-api'
+            . DIRECTORY_SEPARATOR . 'update-operations'
+            . DIRECTORY_SEPARATOR . $sanitized;
     }
 
     /**

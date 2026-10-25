@@ -30,7 +30,7 @@ final class SystemApiToolkit
         $this->dbusRuntimeProbe = new SystemApiDbusRuntimeProbeToolkit();
         $this->dbusRuntimeActivation = new SystemApiDbusRuntimeActivationToolkit();
         $this->dbusRuntimeBackend = new SystemApiDbusRuntimeBackendToolkit();
-        $this->packages = new SystemApiPackagesToolkit();
+        $this->packages = new SystemApiPackagesToolkit($this->rootDir);
         $this->services = new SystemApiServicesToolkit();
         $this->operations = new SystemApiOperationsToolkit($rootDir);
     }
@@ -264,6 +264,12 @@ final class SystemApiToolkit
                     'resource_kind' => 'update-operation',
                     'mutates_state' => true,
                     'params' => ['operation_id', 'plan_hash', 'idempotency_key', 'expected_catalog_revision?', 'plan?', 'plan_path?'],
+                ],
+                [
+                    'name' => 'updates.reconcile',
+                    'resource_kind' => 'update-operation',
+                    'mutates_state' => true,
+                    'params' => ['operation_id', 'observed_stage', 'details?', 'observed_error?'],
                 ],
                 [
                     'name' => 'operations.get',
@@ -607,6 +613,26 @@ final class SystemApiToolkit
                 method: 'updates.apply',
                 resourceKind: 'update-operation',
                 resourceId: is_string($storedOperation['operation_id'] ?? null) ? $storedOperation['operation_id'] : null,
+                data: $operation,
+                provider: 'local-system-api-updates-contract'
+            );
+        }
+
+        if ($method === 'updates.reconcile') {
+            $operationId = $this->requireString($params, 'operation_id');
+            $operation = $this->packages->reconcileUpdates(
+                $operationId,
+                $this->requireString($params, 'observed_stage'),
+                $this->optionalObject($params, 'details') ?? [],
+                $this->optionalObject($params, 'observed_error')
+            );
+            $storedOperation = $this->operations->refresh($operationId, $operation);
+
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'updates.reconcile',
+                resourceKind: 'update-operation',
+                resourceId: is_string($storedOperation['operation_id'] ?? null) ? $storedOperation['operation_id'] : $operationId,
                 data: $operation,
                 provider: 'local-system-api-updates-contract'
             );

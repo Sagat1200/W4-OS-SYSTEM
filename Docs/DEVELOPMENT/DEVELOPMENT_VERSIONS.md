@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.338 | 2026-10-25 | Activa | La `System API` ya expone `updates.reconcile`, persiste store durable de `update-operation` durante `updates.apply` y permite cerrar el tramo `pending_health -> confirmed/failed` reutilizando `UpdateToolkit` |
 | TECH | TECH-1.337 | 2026-10-24 | Activa | `updates.apply` ya acepta `expected_catalog_revision` y toma un lock exclusivo de admision sobre `system-updates` para rechazar applies desalineados o concurrentes antes de registrar la operacion |
 | TECH | TECH-1.336 | 2026-10-24 | Activa | `updates.apply` ya publica `durable_state`, contrato `post_reboot` y coordinacion exclusiva de updates para enlazar la operacion `pending-reboot` con el tramo durable de health checks y reconciliacion |
 | TECH | TECH-1.335 | 2026-10-24 | Activa | La `System API` ya expone `updates.apply`, reutiliza `plan_hash` de `updates.plan`, valida el `update-plan` y persiste una operacion estructurada con `idempotency_key` en estado `pending-reboot` / `needs_attention` |

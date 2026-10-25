@@ -1,0 +1,49 @@
+{
+    "kind": "system-api-operation",
+    "operation_id": "pkg-op-ebfb19dac11a",
+    "method": "packages.apply",
+    "resource": {
+        "kind": "package-operation",
+        "id": "pkg-plan-ledger-a-75c0dcbbfe96"
+    },
+    "state": "succeeded",
+    "status": "ok",
+    "cancel_requested": false,
+    "cancelable": false,
+    "progress": {
+        "percent": 100,
+        "current_step": "reconcile-installed-packages"
+    },
+    "result": {
+        "kind": "system-api-package-operation",
+        "status": "ok",
+        "backend": "apt-get",
+        "operation_id": "pkg-op-ebfb19dac11a",
+        "plan_id": "pkg-plan-ledger-a-75c0dcbbfe96",
+        "plan_hash": "76fea0d4af5c59b30b2725c8c76dd31f5ea3270e",
+        "idempotency_key": "pkg-intent-ledger-75c0dcbbfe96",
+        "expected_catalog_revision": null,
+        "observed_catalog_revision": null,
+        "action": "install",
+        "state": "succeeded",
+        "command": "apt-get -y -o APT::Color=0 -o Dpkg::Options::=--force-confold install php8.4-cli",
+        "exit_code": 0,
+        "stdout": "Packages applied",
+        "stderr": "",
+        "requested_packages": [
+            {
+                "name": "php8.4-cli"
+            }
+        ],
+        "effects": {
+            "installs": [],
+            "upgrades": [],
+            "removals": []
+        },
+        "next_action": "reconcile-installed-packages"
+    },
+    "error": null,
+    "created_at": "2026-10-25T06:06:51+00:00",
+    "observed_at": "2026-10-25T06:06:51+00:00",
+    "completed_at": "2026-10-25T06:06:51+00:00"
+}

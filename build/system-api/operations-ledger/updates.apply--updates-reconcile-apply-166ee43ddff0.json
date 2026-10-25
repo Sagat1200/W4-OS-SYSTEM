@@ -1,0 +1,8 @@
+{
+    "kind": "system-api-idempotency-ledger-entry",
+    "method": "updates.apply",
+    "idempotency_key": "updates-reconcile-apply-166ee43ddff0",
+    "digest": "3688f56d0bcbf8dbd52d2bf54c583b75d9c2000d",
+    "operation_id": "system-api-update-reconcile-166ee43ddff0",
+    "observed_at": "2026-10-25T06:10:04+00:00"
+}

@@ -1,0 +1,61 @@
+{
+    "kind": "system-api-operation",
+    "operation_id": "pkg-op-40e7b512a9d0",
+    "method": "packages.apply",
+    "resource": {
+        "kind": "package-operation",
+        "id": "pkg-plan-apply-001"
+    },
+    "state": "succeeded",
+    "status": "ok",
+    "cancel_requested": false,
+    "cancelable": false,
+    "progress": {
+        "percent": 100,
+        "current_step": "reconcile-installed-packages"
+    },
+    "result": {
+        "kind": "system-api-package-operation",
+        "status": "ok",
+        "backend": "apt-get",
+        "operation_id": "pkg-op-40e7b512a9d0",
+        "plan_id": "pkg-plan-apply-001",
+        "plan_hash": "01ce78adef6d8d06bff1d958002bb388d005b55c",
+        "idempotency_key": "pkg-intent-775d92d63f41",
+        "expected_catalog_revision": null,
+        "observed_catalog_revision": "catalog-apply-001",
+        "action": "install",
+        "state": "succeeded",
+        "command": "apt-get -y -o APT::Color=0 -o Dpkg::Options::=--force-confold install php8.4-cli:amd64",
+        "exit_code": 0,
+        "stdout": "Packages applied",
+        "stderr": "",
+        "requested_packages": [
+            {
+                "name": "php8.4-cli",
+                "architecture": "amd64",
+                "requested_version": null,
+                "origin": null,
+                "installed_version": null,
+                "candidate_version": "8.4.4-1"
+            }
+        ],
+        "effects": {
+            "installs": [
+                {
+                    "name": "php8.4-cli",
+                    "architecture": "amd64",
+                    "installed_version": null,
+                    "target_version": "8.4.4-1"
+                }
+            ],
+            "upgrades": [],
+            "removals": []
+        },
+        "next_action": "reconcile-installed-packages"
+    },
+    "error": null,
+    "created_at": "2026-10-25T06:06:50+00:00",
+    "observed_at": "2026-10-25T06:06:50+00:00",
+    "completed_at": "2026-10-25T06:06:50+00:00"
+}

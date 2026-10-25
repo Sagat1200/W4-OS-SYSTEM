@@ -303,9 +303,140 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertSame('manager-updates-catalog-' . $suffix, $payload['result']['data']['expected_catalog_revision']);
         self::assertSame('manager-updates-catalog-' . $suffix, $payload['result']['data']['observed_catalog_revision']);
         self::assertTrue($payload['result']['data']['reboot_required']);
-        self::assertSame('prepared', $payload['result']['data']['durable_state']['stage']);
+        self::assertSame('pending_health', $payload['result']['data']['durable_state']['stage']);
         self::assertSame('pending_health', $payload['result']['data']['post_reboot']['pending_state']);
         self::assertSame('system-updates', $payload['result']['data']['coordination']['exclusive_scope']);
+    }
+
+    public function testCallDispatchesUpdatesReconcile(): void
+    {
+        $suffix = bin2hex(random_bytes(6));
+        $operationId = 'manager-update-op-reconcile-' . $suffix;
+        $applyRequest = [
+            'api_version' => '1.0',
+            'request_id' => 'manager-updates-reconcile-apply-001',
+            'method' => 'updates.apply',
+            'params' => [
+                'operation_id' => $operationId,
+                'plan_hash' => 'placeholder',
+                'idempotency_key' => 'manager-updates-reconcile-apply-' . $suffix,
+                'expected_catalog_revision' => 'manager-updates-reconcile-catalog-' . $suffix,
+                'plan' => [
+                    'update_plan_schema_version' => 1,
+                    'kind' => 'update-plan',
+                    'operation_id' => $operationId,
+                    'profile_id' => 'w4-os-home',
+                    'source_version' => '1.0.0-lab',
+                    'target_version' => '1.0.1-lab',
+                    'repository_snapshot' => [
+                        'id' => 'w4-main-2026-09-19T120000Z',
+                        'channel' => 'testing',
+                    ],
+                    'catalog_revision' => 'manager-updates-reconcile-catalog-' . $suffix,
+                    'package_changes' => [
+                        'install' => ['w4-recovery-tools'],
+                        'upgrade' => ['w4-home-meta'],
+                        'remove' => [],
+                        'counts' => [
+                            'install' => 1,
+                            'upgrade' => 1,
+                            'remove' => 0,
+                            'total' => 2,
+                        ],
+                    ],
+                    'execution' => [
+                        'engine' => 'apt-offline-snapshot',
+                        'apply_mode' => 'live-apt',
+                        'reboot_required' => true,
+                        'stages' => [
+                            'planned',
+                            'downloading',
+                            'ready',
+                            'prepared',
+                            'applying_offline',
+                            'pending_health',
+                            'confirmed',
+                        ],
+                        'failure_state' => 'failed',
+                    ],
+                    'snapshot' => [
+                        'root_subvolume' => '/@',
+                        'snapshot_name' => 'pre-update-' . $operationId,
+                        'snapshot_path' => '/.snapshots/pre-update-' . $operationId,
+                        'retention' => 'protected-until-confirmed',
+                    ],
+                    'staging' => [
+                        'directory' => '/var/lib/w4-update/staging/' . $operationId,
+                        'estimated_space_kib' => 262144,
+                        'cache_policy' => 'protected-until-confirmed',
+                    ],
+                    'boot_manifest' => [
+                        'kernel_package' => 'linux-image-amd64',
+                        'boot_mode' => 'efi',
+                        'initramfs_strategy' => 'update-initramfs',
+                    ],
+                    'health_check_manifest' => [
+                        'required' => ['boot-entry-present', 'dpkg-consistent'],
+                        'test_file_path' => '/var/lib/w4-update/test-file',
+                        'pending_state' => 'pending_health',
+                        'success_state' => 'confirmed',
+                        'failure_state' => 'failed',
+                    ],
+                    'durable_state_template' => [
+                        'update_operation_schema_version' => 1,
+                        'kind' => 'update-operation',
+                        'operation_id' => $operationId,
+                        'stage' => 'planned',
+                        'last_error' => null,
+                    ],
+                ],
+            ],
+        ];
+        $applyRequest['params']['plan_hash'] = sha1(json_encode($applyRequest['params']['plan'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+
+        $applyResult = $this->runPhpScript([
+            $this->scriptPath(),
+            'call',
+            '--request-json',
+            json_encode($applyRequest, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_UPDATES_APPLY_EXIT_CODE' => '0',
+            'W4_SYSTEM_API_UPDATES_APPLY_STDOUT' => 'Manager update apply',
+        ]);
+
+        self::assertSame(0, $applyResult['exitCode'], $applyResult['stderr']);
+
+        $reconcileRequest = [
+            'api_version' => '1.0',
+            'request_id' => 'manager-updates-reconcile-001',
+            'method' => 'updates.reconcile',
+            'params' => [
+                'operation_id' => $operationId,
+                'observed_stage' => 'confirmed',
+                'details' => [
+                    'health_status' => 'ok',
+                ],
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'call',
+            '--request-json',
+            json_encode($reconcileRequest, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('updates.reconcile', $payload['result']['method']);
+        self::assertSame('confirmed', $payload['result']['data']['stage']);
+        self::assertSame('ok', $payload['result']['data']['status']);
+        self::assertTrue($payload['result']['data']['reconciled']);
+        self::assertSame('ok', $payload['result']['data']['health_report']['status']);
     }
 
     public function testCallDispatchesPackagesApplyWithExpectedCatalogRevision(): void
