@@ -263,7 +263,7 @@ final class SystemApiToolkit
                     'name' => 'updates.apply',
                     'resource_kind' => 'update-operation',
                     'mutates_state' => true,
-                    'params' => ['operation_id', 'plan_hash', 'idempotency_key', 'plan?', 'plan_path?'],
+                    'params' => ['operation_id', 'plan_hash', 'idempotency_key', 'expected_catalog_revision?', 'plan?', 'plan_path?'],
                 ],
                 [
                     'name' => 'operations.get',
@@ -556,9 +556,11 @@ final class SystemApiToolkit
             $operationId = $this->requireString($params, 'operation_id');
             $planHash = $this->requireString($params, 'plan_hash');
             $idempotencyKey = $this->requireString($params, 'idempotency_key');
+            $expectedCatalogRevision = $this->optionalString($params, 'expected_catalog_revision');
             $digest = $this->operations->buildIdempotencyDigest('updates.apply', [
                 'operation_id' => $operationId,
                 'plan_hash' => $planHash,
+                'expected_catalog_revision' => $expectedCatalogRevision,
             ]);
             $reusedOperation = $this->operations->reuseIdempotentOperation('updates.apply', $idempotencyKey, $digest);
             if ($reusedOperation !== null) {
@@ -574,25 +576,31 @@ final class SystemApiToolkit
                 );
             }
 
-            $operation = $this->packages->applyUpdates(
-                $operationId,
-                $planHash,
-                $idempotencyKey,
-                $this->optionalObject($params, 'plan'),
-                $this->optionalString($params, 'plan_path')
-            );
-            $storedOperation = $this->operations->record(
-                'updates.apply',
-                'update-operation',
-                (string) ($operation['operation_id'] ?? 'update-operation'),
-                $operation
-            );
-            $this->operations->rememberIdempotentOperation(
-                'updates.apply',
-                $idempotencyKey,
-                $digest,
-                (string) ($storedOperation['operation_id'] ?? $operation['operation_id'] ?? '')
-            );
+            $this->operations->acquireExclusiveLock('system-updates', $operationId);
+            try {
+                $operation = $this->packages->applyUpdates(
+                    $operationId,
+                    $planHash,
+                    $idempotencyKey,
+                    $expectedCatalogRevision,
+                    $this->optionalObject($params, 'plan'),
+                    $this->optionalString($params, 'plan_path')
+                );
+                $storedOperation = $this->operations->record(
+                    'updates.apply',
+                    'update-operation',
+                    (string) ($operation['operation_id'] ?? 'update-operation'),
+                    $operation
+                );
+                $this->operations->rememberIdempotentOperation(
+                    'updates.apply',
+                    $idempotencyKey,
+                    $digest,
+                    (string) ($storedOperation['operation_id'] ?? $operation['operation_id'] ?? '')
+                );
+            } finally {
+                $this->operations->releaseExclusiveLock('system-updates', $operationId);
+            }
 
             return $this->createSuccessResponse(
                 requestId: $requestId,
@@ -876,6 +884,9 @@ final class SystemApiToolkit
                 throw new ValidationError(sprintf('Update-plan invalido: %s', $absoluteOutputPath));
             }
 
+            if (is_string($decoded['catalog_revision'] ?? null)) {
+                $payload['catalog_revision'] = trim((string) $decoded['catalog_revision']);
+            }
             $payload['plan_hash'] = $this->packages->computeUpdatePlanHash($decoded);
         }
 

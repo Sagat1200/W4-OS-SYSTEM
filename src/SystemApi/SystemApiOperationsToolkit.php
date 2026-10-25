@@ -156,6 +156,67 @@ final class SystemApiOperationsToolkit
         $this->writeJsonFile($ledgerPath, $payload);
     }
 
+    public function acquireExclusiveLock(string $scope, string $operationId): void
+    {
+        $lockPath = $this->resolveExclusiveLockPath($scope);
+        if (is_file($lockPath)) {
+            $raw = file_get_contents($lockPath);
+            if (is_string($raw) && trim($raw) !== '') {
+                try {
+                    $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $exception) {
+                    throw new ValidationError(sprintf('Conflicto: lock exclusivo invalido para %s (%s)', $scope, $exception->getMessage()));
+                }
+
+                if (is_array($decoded)) {
+                    $lockedOperationId = $decoded['operation_id'] ?? null;
+                    if (is_string($lockedOperationId) && trim($lockedOperationId) !== '' && trim($lockedOperationId) !== trim($operationId)) {
+                        throw new ValidationError(sprintf(
+                            'Conflicto: %s ya tiene una mutacion activa (operation_id=%s)',
+                            $scope,
+                            trim($lockedOperationId)
+                        ));
+                    }
+                }
+            }
+        }
+
+        $this->writeJsonFile($lockPath, [
+            'kind' => 'system-api-exclusive-lock',
+            'scope' => $scope,
+            'operation_id' => trim($operationId),
+            'observed_at' => gmdate('c'),
+        ]);
+    }
+
+    public function releaseExclusiveLock(string $scope, string $operationId): void
+    {
+        $lockPath = $this->resolveExclusiveLockPath($scope);
+        if (!is_file($lockPath)) {
+            return;
+        }
+
+        $raw = file_get_contents($lockPath);
+        if (!is_string($raw) || trim($raw) === '') {
+            @unlink($lockPath);
+
+            return;
+        }
+
+        try {
+            $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            @unlink($lockPath);
+
+            return;
+        }
+
+        $lockedOperationId = is_array($decoded) ? ($decoded['operation_id'] ?? null) : null;
+        if (!is_string($lockedOperationId) || trim($lockedOperationId) === '' || trim($lockedOperationId) === trim($operationId)) {
+            @unlink($lockPath);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -221,6 +282,16 @@ final class SystemApiOperationsToolkit
         }
 
         return $this->ledgerDir . DIRECTORY_SEPARATOR . $methodToken . '--' . $keyToken . '.json';
+    }
+
+    private function resolveExclusiveLockPath(string $scope): string
+    {
+        $scopeToken = preg_replace('/[^A-Za-z0-9._-]/', '-', trim($scope));
+        if (!is_string($scopeToken) || $scopeToken === '') {
+            throw new ValidationError('scope de lock invalido');
+        }
+
+        return $this->ledgerDir . DIRECTORY_SEPARATOR . 'lock--' . $scopeToken . '.json';
     }
 
     private function normalizeState(mixed $state): string

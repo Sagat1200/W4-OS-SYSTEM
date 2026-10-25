@@ -201,6 +201,7 @@ final class SystemApiManagerCliTest extends TestCase
                 'operation_id' => 'manager-update-op-apply-001',
                 'plan_hash' => 'placeholder',
                 'idempotency_key' => 'manager-updates-apply-' . $suffix,
+                'expected_catalog_revision' => 'manager-updates-catalog-' . $suffix,
                 'plan' => [
                     'update_plan_schema_version' => 1,
                     'kind' => 'update-plan',
@@ -212,6 +213,7 @@ final class SystemApiManagerCliTest extends TestCase
                         'id' => 'w4-main-2026-09-19T120000Z',
                         'channel' => 'testing',
                     ],
+                    'catalog_revision' => 'manager-updates-catalog-' . $suffix,
                     'package_changes' => [
                         'install' => ['w4-recovery-tools'],
                         'upgrade' => ['w4-home-meta'],
@@ -298,6 +300,8 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertSame('pending-reboot', $payload['result']['data']['status']);
         self::assertSame('needs_attention', $payload['result']['data']['state']);
         self::assertSame('manager-update-op-apply-001', $payload['result']['data']['operation_id']);
+        self::assertSame('manager-updates-catalog-' . $suffix, $payload['result']['data']['expected_catalog_revision']);
+        self::assertSame('manager-updates-catalog-' . $suffix, $payload['result']['data']['observed_catalog_revision']);
         self::assertTrue($payload['result']['data']['reboot_required']);
         self::assertSame('prepared', $payload['result']['data']['durable_state']['stage']);
         self::assertSame('pending_health', $payload['result']['data']['post_reboot']['pending_state']);

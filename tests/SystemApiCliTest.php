@@ -114,7 +114,7 @@ final class SystemApiCliTest extends TestCase
         self::assertTrue($methodsByName['updates.apply']['mutates_state']);
         self::assertSame(['refresh?', 'limit?'], $methodsByName['updates.check']['params']);
         self::assertSame(['limit?'], $methodsByName['updates.list']['params']);
-        self::assertSame(['operation_id', 'plan_hash', 'idempotency_key', 'plan?', 'plan_path?'], $methodsByName['updates.apply']['params']);
+        self::assertSame(['operation_id', 'plan_hash', 'idempotency_key', 'expected_catalog_revision?', 'plan?', 'plan_path?'], $methodsByName['updates.apply']['params']);
         self::assertFalse($methodsByName['operations.get']['mutates_state']);
         self::assertTrue($methodsByName['operations.cancel']['mutates_state']);
         self::assertFalse($methodsByName['services.list']['mutates_state']);
@@ -2115,6 +2115,7 @@ final class SystemApiCliTest extends TestCase
                     'id' => 'w4-main-2026-09-19T120000Z',
                     'channel' => 'testing',
                 ],
+                'catalog_revision' => 'updates-catalog-' . $suffix,
                 'package_changes' => [
                     'install' => ['w4-recovery-tools'],
                     'upgrade' => ['w4-home-meta'],
@@ -2190,6 +2191,7 @@ final class SystemApiCliTest extends TestCase
                     'operation_id' => 'system-api-update-apply-001',
                     'plan_hash' => $planHash,
                     'idempotency_key' => 'updates-apply-' . $suffix,
+                    'expected_catalog_revision' => 'updates-catalog-' . $suffix,
                     'plan_path' => $planPath,
                 ],
             ];
@@ -2214,6 +2216,8 @@ final class SystemApiCliTest extends TestCase
             self::assertSame('needs_attention', $payload['result']['data']['state']);
             self::assertSame('prepared', $payload['result']['data']['stage']);
             self::assertSame($planHash, $payload['result']['data']['plan_hash']);
+            self::assertSame('updates-catalog-' . $suffix, $payload['result']['data']['expected_catalog_revision']);
+            self::assertSame('updates-catalog-' . $suffix, $payload['result']['data']['observed_catalog_revision']);
             self::assertSame('reboot-into-post-update-health-checks', $payload['result']['data']['next_action']);
             self::assertTrue($payload['result']['data']['reboot_required']);
             self::assertSame('prepared', $payload['result']['data']['durable_state']['stage']);
@@ -2232,6 +2236,224 @@ final class SystemApiCliTest extends TestCase
         } finally {
             if (is_file($planPath)) {
                 unlink($planPath);
+            }
+        }
+    }
+
+    public function testUpdatesApplyRejectsMismatchedExpectedCatalogRevision(): void
+    {
+        $suffix = bin2hex(random_bytes(6));
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-updates-apply-catalog-conflict-001',
+            'method' => 'updates.apply',
+            'params' => [
+                'operation_id' => 'system-api-update-catalog-conflict-' . $suffix,
+                'plan_hash' => 'placeholder',
+                'idempotency_key' => 'updates-apply-catalog-conflict-' . $suffix,
+                'expected_catalog_revision' => 'catalog-expected-' . $suffix,
+                'plan' => [
+                    'update_plan_schema_version' => 1,
+                    'kind' => 'update-plan',
+                    'operation_id' => 'system-api-update-catalog-conflict-' . $suffix,
+                    'profile_id' => 'w4-os-home',
+                    'source_version' => '1.0.0-lab',
+                    'target_version' => '1.0.1-lab',
+                    'repository_snapshot' => [
+                        'id' => 'w4-main-2026-09-19T120000Z',
+                        'channel' => 'testing',
+                    ],
+                    'catalog_revision' => 'catalog-observed-' . $suffix,
+                    'package_changes' => [
+                        'install' => ['w4-recovery-tools'],
+                        'upgrade' => [],
+                        'remove' => [],
+                        'counts' => [
+                            'install' => 1,
+                            'upgrade' => 0,
+                            'remove' => 0,
+                            'total' => 1,
+                        ],
+                    ],
+                    'execution' => [
+                        'engine' => 'apt-offline-snapshot',
+                        'apply_mode' => 'live-apt',
+                        'reboot_required' => true,
+                        'stages' => [
+                            'planned',
+                            'downloading',
+                            'ready',
+                            'prepared',
+                            'applying_offline',
+                            'pending_health',
+                            'confirmed',
+                        ],
+                        'failure_state' => 'failed',
+                    ],
+                    'snapshot' => [
+                        'root_subvolume' => '/@',
+                        'snapshot_name' => 'pre-update-system-api-update-catalog-conflict-' . $suffix,
+                        'snapshot_path' => '/.snapshots/pre-update-system-api-update-catalog-conflict-' . $suffix,
+                        'retention' => 'protected-until-confirmed',
+                    ],
+                    'staging' => [
+                        'directory' => '/var/lib/w4-update/staging/system-api-update-catalog-conflict-' . $suffix,
+                        'estimated_space_kib' => 262144,
+                        'cache_policy' => 'protected-until-confirmed',
+                    ],
+                    'boot_manifest' => [
+                        'kernel_package' => 'linux-image-amd64',
+                        'boot_mode' => 'efi',
+                        'initramfs_strategy' => 'update-initramfs',
+                    ],
+                    'health_check_manifest' => [
+                        'required' => ['boot-entry-present'],
+                        'test_file_path' => '/var/lib/w4-update/test-file',
+                        'pending_state' => 'pending_health',
+                        'success_state' => 'confirmed',
+                        'failure_state' => 'failed',
+                    ],
+                    'durable_state_template' => [
+                        'update_operation_schema_version' => 1,
+                        'kind' => 'update-operation',
+                        'operation_id' => 'system-api-update-catalog-conflict-' . $suffix,
+                        'stage' => 'planned',
+                        'last_error' => null,
+                    ],
+                ],
+            ],
+        ];
+        $request['params']['plan_hash'] = sha1(json_encode($request['params']['plan'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['result']);
+        self::assertSame('CONFLICT', $payload['error']['code']);
+        self::assertStringContainsString('expected_catalog_revision', $payload['error']['message']);
+    }
+
+    public function testUpdatesApplyRejectsActiveExclusiveLock(): void
+    {
+        $suffix = bin2hex(random_bytes(6));
+        $ledgerDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'system-api' . DIRECTORY_SEPARATOR . 'operations-ledger';
+        $lockPath = $ledgerDir . DIRECTORY_SEPARATOR . 'lock--system-updates.json';
+
+        if (!is_dir($ledgerDir)) {
+            mkdir($ledgerDir, 0777, true);
+        }
+
+        file_put_contents($lockPath, json_encode([
+            'kind' => 'system-api-exclusive-lock',
+            'scope' => 'system-updates',
+            'operation_id' => 'other-update-op-' . $suffix,
+            'observed_at' => gmdate('c'),
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+
+        try {
+            $request = [
+                'api_version' => '1.0',
+                'request_id' => 'req-updates-apply-lock-conflict-001',
+                'method' => 'updates.apply',
+                'params' => [
+                    'operation_id' => 'system-api-update-lock-conflict-' . $suffix,
+                    'plan_hash' => 'placeholder',
+                    'idempotency_key' => 'updates-apply-lock-conflict-' . $suffix,
+                    'plan' => [
+                        'update_plan_schema_version' => 1,
+                        'kind' => 'update-plan',
+                        'operation_id' => 'system-api-update-lock-conflict-' . $suffix,
+                        'profile_id' => 'w4-os-home',
+                        'source_version' => '1.0.0-lab',
+                        'target_version' => '1.0.1-lab',
+                        'repository_snapshot' => [
+                            'id' => 'w4-main-2026-09-19T120000Z',
+                            'channel' => 'testing',
+                        ],
+                        'package_changes' => [
+                            'install' => ['w4-recovery-tools'],
+                            'upgrade' => [],
+                            'remove' => [],
+                            'counts' => [
+                                'install' => 1,
+                                'upgrade' => 0,
+                                'remove' => 0,
+                                'total' => 1,
+                            ],
+                        ],
+                        'execution' => [
+                            'engine' => 'apt-offline-snapshot',
+                            'apply_mode' => 'live-apt',
+                            'reboot_required' => true,
+                            'stages' => [
+                                'planned',
+                                'downloading',
+                                'ready',
+                                'prepared',
+                                'applying_offline',
+                                'pending_health',
+                                'confirmed',
+                            ],
+                            'failure_state' => 'failed',
+                        ],
+                        'snapshot' => [
+                            'root_subvolume' => '/@',
+                            'snapshot_name' => 'pre-update-system-api-update-lock-conflict-' . $suffix,
+                            'snapshot_path' => '/.snapshots/pre-update-system-api-update-lock-conflict-' . $suffix,
+                            'retention' => 'protected-until-confirmed',
+                        ],
+                        'staging' => [
+                            'directory' => '/var/lib/w4-update/staging/system-api-update-lock-conflict-' . $suffix,
+                            'estimated_space_kib' => 262144,
+                            'cache_policy' => 'protected-until-confirmed',
+                        ],
+                        'boot_manifest' => [
+                            'kernel_package' => 'linux-image-amd64',
+                            'boot_mode' => 'efi',
+                            'initramfs_strategy' => 'update-initramfs',
+                        ],
+                        'health_check_manifest' => [
+                            'required' => ['boot-entry-present'],
+                            'test_file_path' => '/var/lib/w4-update/test-file',
+                            'pending_state' => 'pending_health',
+                            'success_state' => 'confirmed',
+                            'failure_state' => 'failed',
+                        ],
+                        'durable_state_template' => [
+                            'update_operation_schema_version' => 1,
+                            'kind' => 'update-operation',
+                            'operation_id' => 'system-api-update-lock-conflict-' . $suffix,
+                            'stage' => 'planned',
+                            'last_error' => null,
+                        ],
+                    ],
+                ],
+            ];
+            $request['params']['plan_hash'] = sha1(json_encode($request['params']['plan'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+
+            $result = $this->runPhpScript([
+                $this->scriptPath(),
+                '--request-json',
+                json_encode($request, JSON_THROW_ON_ERROR),
+            ], [
+                'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            ]);
+
+            self::assertSame(0, $result['exitCode'], $result['stderr']);
+            $payload = $this->decodeJson($result['stdout']);
+            self::assertNull($payload['result']);
+            self::assertSame('CONFLICT', $payload['error']['code']);
+            self::assertStringContainsString('mutacion activa', $payload['error']['message']);
+        } finally {
+            if (is_file($lockPath)) {
+                unlink($lockPath);
             }
         }
     }
