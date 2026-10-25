@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.346 | 2026-10-25 | Activa | El proyecto ya incorpora `run_native_dbus_real_host_validation_in_wsl.php`, un wrapper PHP Windows->WSL que inspecciona la distro real, materializa `W4_SYSTEM_API_PROBE_*` desde ese host y delega en `run_native_dbus_real_host_validation.php` para dejar evidencia automatizada del bloqueo o readiness del carril native D-Bus |
 | TECH | TECH-1.345 | 2026-10-25 | Activa | `run_system_api_update_bundle_via_virtualbox_vm.php` ya valida la existencia real de la VM con `VBoxManage showvminfo`, permite `--check-only` sin credenciales y quedo contrastado en laboratorio contra `W4-OS-Server-DbusModern` usando un `store_dir` real materializado por `System API` |
 | TECH | TECH-1.344 | 2026-10-25 | Activa | El proyecto ya incorpora `run_system_api_update_bundle_via_virtualbox_vm.php`, un runner PHP host->VirtualBox que usa `W4-OS-Server-DbusModern` u otra VM existente para preparar SSH, subir el `store_dir` embebido de `updates.apply` y ejecutar los stages `offline|health|reconcile` del bundle sobre el guest |
 | TECH | TECH-1.343 | 2026-10-25 | Activa | El proyecto ya incorpora `run_system_api_update_bundle_in_wsl.php`, un runner/preview PHP para ejecutar o preparar en WSL el bundle embebido de `updates.apply` por `store_dir` u `operation_id`, con stages `offline|health|reconcile`, soporte para `repo.env`/`repo-dir` y cobertura determinista por fixtures |

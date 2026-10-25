@@ -1,0 +1,37 @@
+{
+    "api_version": "1.0",
+    "kind": "system-api-dbus-runtime-diagnosis",
+    "ready": false,
+    "status": "pending-runtime-adapter",
+    "bus_name": "org.w4.System1",
+    "object_path": "/org/w4/System1",
+    "interface": "org.w4.System1.Manager",
+    "environment": {
+        "os_family": "Linux",
+        "php_binary": "/usr/bin/php",
+        "php_version": "7.4.3-4ubuntu2.29"
+    },
+    "probes": {
+        "php_dbus_extension": false,
+        "pecl": true,
+        "busctl": true,
+        "gdbus": true,
+        "dbus_daemon": true,
+        "system_bus_socket": false
+    },
+    "native_dbus_extension_installation": {
+        "state": "unknown",
+        "pecl_available": true,
+        "extension_loaded": false,
+        "blocking_reason": null,
+        "next_action": "install-native-dbus-extension",
+        "build_phase": "unknown",
+        "reason": null,
+        "failure_signature": null,
+        "log_path": null
+    },
+    "missing_capabilities": [
+        "php-dbus-runtime-adapter",
+        "system-bus-socket"
+    ]
+}
