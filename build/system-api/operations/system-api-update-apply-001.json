@@ -20,7 +20,7 @@
         "backend": "apt-get",
         "operation_id": "system-api-update-apply-001",
         "plan_hash": "c1540e78a12c1b8e6bfd50a749cead66b64953e3",
-        "idempotency_key": "updates-apply-31ebdb2f3d8c",
+        "idempotency_key": "updates-apply-28998722626f",
         "profile_id": "w4-os-home",
         "source_version": "1.0.0-lab",
         "target_version": "1.0.1-lab",
@@ -53,6 +53,23 @@
             "id": "w4-main-2026-09-19T120000Z",
             "channel": "testing"
         },
+        "snapshot": {
+            "root_subvolume": "/@",
+            "snapshot_name": "pre-update-system-api-update-apply-001",
+            "snapshot_path": "/.snapshots/pre-update-system-api-update-apply-001",
+            "retention": "protected-until-confirmed"
+        },
+        "staging": {
+            "directory": "/var/lib/w4-update/staging/system-api-update-apply-001",
+            "estimated_space_kib": 262144,
+            "cache_policy": "protected-until-confirmed"
+        },
+        "boot_manifest": {
+            "kernel_package": "linux-image-amd64",
+            "boot_mode": "efi",
+            "initramfs_strategy": "update-initramfs"
+        },
+        "reboot_required": true,
         "stages": [
             "planned",
             "downloading",
@@ -62,10 +79,68 @@
             "pending_health",
             "confirmed"
         ],
+        "evidence": [
+            "update-plan.json",
+            "operation.json"
+        ],
+        "notes": [
+            "Una sola operacion mutante puede estar activa a la vez."
+        ],
+        "durable_state": {
+            "update_operation_schema_version": 1,
+            "kind": "update-operation",
+            "operation_id": "system-api-update-apply-001",
+            "stage": "prepared",
+            "last_error": null,
+            "profile_id": "w4-os-home",
+            "source_version": "1.0.0-lab",
+            "target_version": "1.0.1-lab",
+            "repository_snapshot": {
+                "id": "w4-main-2026-09-19T120000Z",
+                "channel": "testing"
+            },
+            "snapshot": {
+                "root_subvolume": "/@",
+                "snapshot_name": "pre-update-system-api-update-apply-001",
+                "snapshot_path": "/.snapshots/pre-update-system-api-update-apply-001",
+                "retention": "protected-until-confirmed"
+            },
+            "boot_manifest": {
+                "kernel_package": "linux-image-amd64",
+                "boot_mode": "efi",
+                "initramfs_strategy": "update-initramfs"
+            },
+            "plan_hash": "c1540e78a12c1b8e6bfd50a749cead66b64953e3",
+            "apply_mode": "live-apt",
+            "reboot_required": true,
+            "timestamps": {
+                "created_at": "2026-10-25T04:55:18+00:00",
+                "updated_at": "2026-10-25T04:55:18+00:00"
+            }
+        },
+        "post_reboot": {
+            "pending_state": "pending_health",
+            "success_state": "confirmed",
+            "failure_state": "failed",
+            "required_checks": [
+                "boot-entry-present",
+                "dpkg-consistent"
+            ],
+            "test_file_path": "/var/lib/w4-update/test-file",
+            "resume_from_stage": "prepared",
+            "next_action": "run-post-reboot-health-checks"
+        },
+        "coordination": {
+            "exclusive_scope": "system-updates",
+            "mutating_operation_policy": "single-active-operation",
+            "busy_state": "pending-reboot-health-reconciliation",
+            "reboot_required": true,
+            "next_stage": "pending_health"
+        },
         "next_action": "reboot-into-post-update-health-checks"
     },
     "error": null,
-    "created_at": "2026-10-25T04:43:56+00:00",
-    "observed_at": "2026-10-25T04:43:56+00:00",
+    "created_at": "2026-10-25T04:55:18+00:00",
+    "observed_at": "2026-10-25T04:55:18+00:00",
     "completed_at": null
 }

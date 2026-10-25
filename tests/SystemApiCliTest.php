@@ -2215,6 +2215,19 @@ final class SystemApiCliTest extends TestCase
             self::assertSame('prepared', $payload['result']['data']['stage']);
             self::assertSame($planHash, $payload['result']['data']['plan_hash']);
             self::assertSame('reboot-into-post-update-health-checks', $payload['result']['data']['next_action']);
+            self::assertTrue($payload['result']['data']['reboot_required']);
+            self::assertSame('prepared', $payload['result']['data']['durable_state']['stage']);
+            self::assertSame('update-operation', $payload['result']['data']['durable_state']['kind']);
+            self::assertSame($planHash, $payload['result']['data']['durable_state']['plan_hash']);
+            self::assertSame('pending_health', $payload['result']['data']['post_reboot']['pending_state']);
+            self::assertSame('confirmed', $payload['result']['data']['post_reboot']['success_state']);
+            self::assertSame(['boot-entry-present', 'dpkg-consistent'], $payload['result']['data']['post_reboot']['required_checks']);
+            self::assertSame('run-post-reboot-health-checks', $payload['result']['data']['post_reboot']['next_action']);
+            self::assertSame('system-updates', $payload['result']['data']['coordination']['exclusive_scope']);
+            self::assertSame('single-active-operation', $payload['result']['data']['coordination']['mutating_operation_policy']);
+            self::assertSame('pending_health', $payload['result']['data']['coordination']['next_stage']);
+            self::assertContains('update-plan.json', $payload['result']['data']['evidence']);
+            self::assertContains('Una sola operacion mutante puede estar activa a la vez.', $payload['result']['data']['notes']);
             self::assertSame('apt-get -y -o APT::Color=0 install w4-recovery-tools w4-home-meta', $payload['result']['data']['command_sequence'][0]);
         } finally {
             if (is_file($planPath)) {

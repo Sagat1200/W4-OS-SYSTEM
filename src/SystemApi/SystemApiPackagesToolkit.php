@@ -69,6 +69,8 @@ final class SystemApiPackagesToolkit
 
         $result = $this->resolveUpdatesApplyExecutionResult($resolvedPlan);
         $succeeded = ($result['exit_code'] ?? 1) === 0;
+        $durableState = $this->buildUpdatesDurableState($resolvedPlan, $succeeded, $result);
+        $postReboot = $this->buildUpdatesPostRebootContract($resolvedPlan, $succeeded);
 
         return [
             'kind' => 'system-api-update-operation',
@@ -90,7 +92,16 @@ final class SystemApiPackagesToolkit
             'stderr' => $result['stderr'],
             'package_changes' => $resolvedPlan['package_changes'] ?? [],
             'repository_snapshot' => $resolvedPlan['repository_snapshot'] ?? [],
+            'snapshot' => is_array($resolvedPlan['snapshot'] ?? null) ? $resolvedPlan['snapshot'] : null,
+            'staging' => is_array($resolvedPlan['staging'] ?? null) ? $resolvedPlan['staging'] : null,
+            'boot_manifest' => is_array($resolvedPlan['boot_manifest'] ?? null) ? $resolvedPlan['boot_manifest'] : null,
+            'reboot_required' => (($resolvedPlan['execution']['reboot_required'] ?? false) === true),
             'stages' => $resolvedPlan['execution']['stages'] ?? [],
+            'evidence' => $this->normalizeOptionalStringList($resolvedPlan['evidence'] ?? null, 'params.plan.evidence'),
+            'notes' => $this->normalizeOptionalStringList($resolvedPlan['notes'] ?? null, 'params.plan.notes'),
+            'durable_state' => $durableState,
+            'post_reboot' => $postReboot,
+            'coordination' => $this->buildUpdatesCoordinationContract($resolvedPlan, $succeeded, $postReboot),
             'next_action' => $succeeded ? 'reboot-into-post-update-health-checks' : 'inspect-update-state',
         ];
     }
@@ -476,6 +487,88 @@ final class SystemApiPackagesToolkit
         if (trim($resolvedOperationId) !== $operationId || $expectedHash !== $planHash) {
             throw new ValidationError('Conflicto: operation_id o plan_hash no coinciden con el update-plan suministrado');
         }
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     * @param array{stdout:string,stderr:string,exit_code:int} $result
+     * @return array<string, mixed>
+     */
+    private function buildUpdatesDurableState(array $plan, bool $succeeded, array $result): array
+    {
+        $template = $plan['durable_state_template'] ?? null;
+        if ($template !== null && !is_array($template)) {
+            throw new ValidationError('params.plan.durable_state_template debe ser un objeto');
+        }
+
+        $timestamps = is_array($template['timestamps'] ?? null) ? $template['timestamps'] : [];
+        $observedAt = gmdate('c');
+        $stderr = is_string($result['stderr'] ?? null) ? trim($result['stderr']) : '';
+
+        $durableState = array_merge($template ?? [], [
+            'update_operation_schema_version' => 1,
+            'kind' => 'update-operation',
+            'operation_id' => $plan['operation_id'],
+            'profile_id' => $plan['profile_id'],
+            'source_version' => $plan['source_version'],
+            'target_version' => $plan['target_version'],
+            'stage' => $succeeded ? 'prepared' : 'failed',
+            'repository_snapshot' => is_array($plan['repository_snapshot'] ?? null) ? $plan['repository_snapshot'] : [],
+            'snapshot' => is_array($plan['snapshot'] ?? null) ? $plan['snapshot'] : [],
+            'boot_manifest' => is_array($plan['boot_manifest'] ?? null) ? $plan['boot_manifest'] : [],
+            'plan_hash' => $this->computeUpdatePlanHash($plan),
+            'apply_mode' => is_string($plan['execution']['apply_mode'] ?? null) ? $plan['execution']['apply_mode'] : null,
+            'reboot_required' => (($plan['execution']['reboot_required'] ?? false) === true),
+            'last_error' => $succeeded ? null : ($stderr !== '' ? $stderr : 'updates.apply failed'),
+            'timestamps' => [
+                'created_at' => is_string($timestamps['created_at'] ?? null) ? $timestamps['created_at'] : $observedAt,
+                'updated_at' => $observedAt,
+            ],
+        ]);
+
+        (new UpdateToolkit())->validateOperation($durableState, 'updates.apply durable_state');
+
+        return $durableState;
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     * @return array<string, mixed>
+     */
+    private function buildUpdatesPostRebootContract(array $plan, bool $succeeded): array
+    {
+        $manifest = $plan['health_check_manifest'] ?? null;
+        if ($manifest !== null && !is_array($manifest)) {
+            throw new ValidationError('params.plan.health_check_manifest debe ser un objeto');
+        }
+
+        return [
+            'pending_state' => is_string($manifest['pending_state'] ?? null) ? trim((string) $manifest['pending_state']) : 'pending_health',
+            'success_state' => is_string($manifest['success_state'] ?? null) ? trim((string) $manifest['success_state']) : 'confirmed',
+            'failure_state' => is_string($manifest['failure_state'] ?? null) ? trim((string) $manifest['failure_state']) : 'failed',
+            'required_checks' => $this->normalizeOptionalStringList($manifest['required'] ?? null, 'params.plan.health_check_manifest.required'),
+            'test_file_path' => is_string($manifest['test_file_path'] ?? null) ? trim((string) $manifest['test_file_path']) : null,
+            'resume_from_stage' => $succeeded ? 'prepared' : 'failed',
+            'next_action' => $succeeded ? 'run-post-reboot-health-checks' : 'inspect-update-state',
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     * @param array<string, mixed> $postReboot
+     * @return array<string, mixed>
+     */
+    private function buildUpdatesCoordinationContract(array $plan, bool $succeeded, array $postReboot): array
+    {
+        return [
+            'exclusive_scope' => 'system-updates',
+            'mutating_operation_policy' => 'single-active-operation',
+            'busy_state' => $succeeded ? 'pending-reboot-health-reconciliation' : 'failed-before-reboot',
+            'reboot_required' => (($plan['execution']['reboot_required'] ?? false) === true),
+            'next_stage' => $succeeded
+                ? (is_string($postReboot['pending_state'] ?? null) ? $postReboot['pending_state'] : 'pending_health')
+                : 'failed',
+        ];
     }
 
     /**
@@ -1147,6 +1240,19 @@ final class SystemApiPackagesToolkit
         }
 
         return $items;
+    }
+
+    /**
+     * @param mixed $value
+     * @return list<string>
+     */
+    private function normalizeOptionalStringList(mixed $value, string $field): array
+    {
+        if ($value === null) {
+            return [];
+        }
+
+        return $this->normalizeStringList($value, $field);
     }
 
 

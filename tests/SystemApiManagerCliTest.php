@@ -298,6 +298,10 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertSame('pending-reboot', $payload['result']['data']['status']);
         self::assertSame('needs_attention', $payload['result']['data']['state']);
         self::assertSame('manager-update-op-apply-001', $payload['result']['data']['operation_id']);
+        self::assertTrue($payload['result']['data']['reboot_required']);
+        self::assertSame('prepared', $payload['result']['data']['durable_state']['stage']);
+        self::assertSame('pending_health', $payload['result']['data']['post_reboot']['pending_state']);
+        self::assertSame('system-updates', $payload['result']['data']['coordination']['exclusive_scope']);
     }
 
     public function testCallDispatchesPackagesApplyWithExpectedCatalogRevision(): void
