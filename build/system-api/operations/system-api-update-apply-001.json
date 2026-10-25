@@ -19,10 +19,10 @@
         "status": "pending-reboot",
         "backend": "apt-get",
         "operation_id": "system-api-update-apply-001",
-        "plan_hash": "f6f0d1a26ba45fa0e4be30a14598c6cfa2d8922c",
-        "idempotency_key": "updates-apply-5bddbf6131de",
-        "expected_catalog_revision": "updates-catalog-5bddbf6131de",
-        "observed_catalog_revision": "updates-catalog-5bddbf6131de",
+        "plan_hash": "d0821d32f3554bd154db8f1f6b2112ec37053901",
+        "idempotency_key": "updates-apply-d4d423e24cb3",
+        "expected_catalog_revision": "updates-catalog-d4d423e24cb3",
+        "observed_catalog_revision": "updates-catalog-d4d423e24cb3",
         "profile_id": "w4-os-home",
         "source_version": "1.0.0-lab",
         "target_version": "1.0.1-lab",
@@ -116,7 +116,7 @@
                 "created_at": "2026-10-25T06:04:47+00:00",
                 "updated_at": "2026-10-25T06:04:47+00:00"
             },
-            "plan_hash": "f6f0d1a26ba45fa0e4be30a14598c6cfa2d8922c",
+            "plan_hash": "d0821d32f3554bd154db8f1f6b2112ec37053901",
             "apply_mode": "live-apt",
             "reboot_required": true
         },
@@ -144,6 +144,7 @@
                 "run_health_checks_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-apply-001\\run-health-checks.sh",
                 "reconcile_after_reboot_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-apply-001\\reconcile-after-reboot.sh",
                 "manifest_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-apply-001\\update-executor.json",
+                "env_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-apply-001\\executor.env",
                 "readme_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-apply-001\\UPDATE_EXECUTOR_README.txt"
             }
         },
@@ -169,7 +170,7 @@
         "next_action": "reboot-into-post-update-health-checks"
     },
     "error": null,
-    "created_at": "2026-10-25T07:11:25+00:00",
-    "observed_at": "2026-10-25T07:11:25+00:00",
+    "created_at": "2026-10-25T07:31:58+00:00",
+    "observed_at": "2026-10-25T07:31:58+00:00",
     "completed_at": null
 }

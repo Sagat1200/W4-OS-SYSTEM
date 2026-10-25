@@ -309,6 +309,10 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertSame('system-updates', $payload['result']['data']['coordination']['exclusive_scope']);
         self::assertFileExists($payload['result']['data']['durable_store']['executor']['manifest_path']);
         self::assertFileExists($payload['result']['data']['durable_store']['executor']['run_update_with_repo_env_path']);
+        self::assertFileExists($payload['result']['data']['durable_store']['executor']['env_path']);
+        $healthScript = file_get_contents($payload['result']['data']['durable_store']['executor']['run_health_checks_path']);
+        self::assertIsString($healthScript);
+        self::assertStringContainsString('STORE_DIR="${W4_UPDATE_STORE_DIR:-${SCRIPT_DIR}}"', $healthScript);
     }
 
     public function testCallDispatchesUpdatesReconcile(): void

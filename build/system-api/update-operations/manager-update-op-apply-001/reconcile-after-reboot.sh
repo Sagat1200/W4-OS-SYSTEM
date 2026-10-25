@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_ENGINE_ROOT="$(cd -- "${SCRIPT_DIR}/../../../.." 2>/dev/null && pwd || true)"
 ENGINE_ROOT="${W4_UPDATE_ENGINE_ROOT:-${DEFAULT_ENGINE_ROOT}}"
-STORE_DIR="${W4_UPDATE_STORE_DIR:-${SCRIPT_DIR}/store}"
+STORE_DIR="${W4_UPDATE_STORE_DIR:-${SCRIPT_DIR}}"
 OBSERVED_STAGE="${W4_UPDATE_OBSERVED_STAGE:-}"
 DETAIL="${W4_UPDATE_RECONCILE_DETAIL:-post-reboot-check}"
 ERROR_CODE="${W4_UPDATE_ERROR_CODE:-health-check-failed}"

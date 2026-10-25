@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-STORE_DIR="${W4_UPDATE_STORE_DIR:-${SCRIPT_DIR}/store}"
+STORE_DIR="${W4_UPDATE_STORE_DIR:-${SCRIPT_DIR}}"
 RESULT_PATH="${W4_UPDATE_HEALTH_RESULT_PATH:-${STORE_DIR}/health-check-results.json}"
 TEST_FILE_PATH="${W4_UPDATE_TEST_FILE_PATH:-/var/lib/w4-update/test-file}"
 KERNEL_PACKAGE="${W4_UPDATE_KERNEL_PACKAGE:-linux-image-amd64}"

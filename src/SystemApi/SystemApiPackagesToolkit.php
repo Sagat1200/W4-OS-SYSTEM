@@ -903,11 +903,18 @@ final class SystemApiPackagesToolkit
     {
         $bundle = $this->buildUpdateExecutorBundleDescriptor($storeDir);
 
-        $this->writeTextFile($bundle['run_update_offline_path'], $toolkit->renderOfflineExecutorScript($plan, $this->rootDir));
+        $this->writeTextFile($bundle['run_update_offline_path'], $this->adaptEmbeddedStoreScript(
+            $toolkit->renderOfflineExecutorScript($plan, $this->rootDir)
+        ));
         $this->writeTextFile($bundle['run_update_with_repo_env_path'], $toolkit->renderRepositoryAwareLauncherScript());
-        $this->writeTextFile($bundle['run_health_checks_path'], $toolkit->renderHealthCheckScript($plan));
-        $this->writeTextFile($bundle['reconcile_after_reboot_path'], $toolkit->renderReconcileScript($plan, $this->rootDir));
+        $this->writeTextFile($bundle['run_health_checks_path'], $this->adaptEmbeddedStoreScript(
+            $toolkit->renderHealthCheckScript($plan)
+        ));
+        $this->writeTextFile($bundle['reconcile_after_reboot_path'], $this->adaptEmbeddedStoreScript(
+            $toolkit->renderReconcileScript($plan, $this->rootDir)
+        ));
         $this->writeJsonFile($bundle['manifest_path'], $toolkit->createUpdateExecutorManifest($plan));
+        $this->writeTextFile($bundle['env_path'], $this->renderUpdateExecutorEnv());
         $this->writeTextFile($bundle['readme_path'], $this->renderUpdateExecutorReadme($plan, $storeDir, $bundle));
     }
 
@@ -922,6 +929,7 @@ final class SystemApiPackagesToolkit
             'run_health_checks_path' => $storeDir . DIRECTORY_SEPARATOR . 'run-health-checks.sh',
             'reconcile_after_reboot_path' => $storeDir . DIRECTORY_SEPARATOR . 'reconcile-after-reboot.sh',
             'manifest_path' => $storeDir . DIRECTORY_SEPARATOR . 'update-executor.json',
+            'env_path' => $storeDir . DIRECTORY_SEPARATOR . 'executor.env',
             'readme_path' => $storeDir . DIRECTORY_SEPARATOR . 'UPDATE_EXECUTOR_README.txt',
         ];
     }
@@ -941,18 +949,41 @@ final class SystemApiPackagesToolkit
             sprintf('operation_id=%s', $operationId),
             sprintf('store_dir=%s', $storeDir),
             '',
+            'Run from inside the bundle directory:',
+            sprintf('0. source "%s"', basename($bundle['env_path'])),
+            '',
             'Recommended flow:',
-            sprintf('1. Set W4_UPDATE_STORE_DIR="%s" and run "%s".', $storeDir, $bundle['run_update_offline_path']),
-            sprintf('2. After reboot, run "%s".', $bundle['run_health_checks_path']),
-            sprintf('3. Then run "%s" or call updates.reconcile with health_result_path="%s".', $bundle['reconcile_after_reboot_path'], $healthResultPath),
+            sprintf('1. Run "./%s" or "./%s --repo-dir /path/to/repository".', basename($bundle['run_update_offline_path']), basename($bundle['run_update_with_repo_env_path'])),
+            sprintf('2. After reboot, run "./%s".', basename($bundle['run_health_checks_path'])),
+            sprintf('3. Then run "./%s" or call updates.reconcile with health_result_path="%s".', basename($bundle['reconcile_after_reboot_path']), $healthResultPath),
             '',
             'Main artifacts:',
             sprintf('- update-executor.json: %s', $bundle['manifest_path']),
+            sprintf('- executor.env: %s', $bundle['env_path']),
             sprintf('- health-check-results.json: %s', $healthResultPath),
             sprintf('- operation.json: %s', $storeDir . DIRECTORY_SEPARATOR . 'operation.json'),
             sprintf('- health-report.json: %s', $storeDir . DIRECTORY_SEPARATOR . 'health-report.json'),
             '',
         ]);
+    }
+
+    private function renderUpdateExecutorEnv(): string
+    {
+        return <<<'BASH'
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+export W4_UPDATE_STORE_DIR="${W4_UPDATE_STORE_DIR:-${SCRIPT_DIR}}"
+export W4_UPDATE_HEALTH_RESULT_PATH="${W4_UPDATE_HEALTH_RESULT_PATH:-${W4_UPDATE_STORE_DIR}/health-check-results.json}"
+BASH;
+    }
+
+    private function adaptEmbeddedStoreScript(string $script): string
+    {
+        return str_replace(
+            'STORE_DIR="${W4_UPDATE_STORE_DIR:-${SCRIPT_DIR}/store}"',
+            'STORE_DIR="${W4_UPDATE_STORE_DIR:-${SCRIPT_DIR}}"',
+            $script
+        );
     }
 
     /**

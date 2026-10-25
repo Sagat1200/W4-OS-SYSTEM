@@ -4,7 +4,7 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_ENGINE_ROOT="$(cd -- "${SCRIPT_DIR}/../../../.." 2>/dev/null && pwd || true)"
 ENGINE_ROOT="${W4_UPDATE_ENGINE_ROOT:-${DEFAULT_ENGINE_ROOT}}"
-STORE_DIR="${W4_UPDATE_STORE_DIR:-${SCRIPT_DIR}/store}"
+STORE_DIR="${W4_UPDATE_STORE_DIR:-${SCRIPT_DIR}}"
 STAGING_DIR="${W4_UPDATE_STAGING_DIR:-/var/lib/w4-update/staging/system-api-update-apply-001}"
 SNAPSHOT_PARENT="${W4_UPDATE_SNAPSHOT_PARENT:-/.snapshots}"
 ROOT_MOUNT="${W4_UPDATE_ROOT_MOUNT:-/}"
