@@ -1,0 +1,17 @@
+{
+    "health_report_schema_version": 1,
+    "kind": "health-report",
+    "operation_id": "system-api-update-apply-001",
+    "stage": "failed",
+    "status": "failed",
+    "required_checks": [
+        "boot-entry-present",
+        "dpkg-consistent"
+    ],
+    "test_file_path": "\/var\/lib\/w4-update\/test-file",
+    "last_error": {
+        "code": "health-check-failed",
+        "message": "La validacion post-arranque fallo"
+    },
+    "updated_at": "2026-10-25T19:36:20+00:00"
+}

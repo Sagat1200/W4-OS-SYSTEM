@@ -31,20 +31,37 @@ function readJsonFixtureFromEnv(string $variable): ?array
     return $data;
 }
 
-function runWindowsCommand(string $command): string
+/**
+ * @return array{stdout: string, stderr: string, exit_code: int}
+ */
+function runWindowsCommandCaptured(string $command): array
 {
     $fixtureMap = readJsonFixtureFromEnv('W4_RUN_SYSTEM_API_UPDATE_BUNDLE_WSL_COMMAND_MAP_JSON');
     if ($fixtureMap !== null) {
         $fixture = $fixtureMap[$command] ?? null;
         if ($fixture !== null) {
-            if (!is_scalar($fixture)) {
-                throw new ValidationError(sprintf(
-                    'W4_RUN_SYSTEM_API_UPDATE_BUNDLE_WSL_COMMAND_MAP_JSON[%s] debe ser escalar',
-                    $command
-                ));
+            if (is_array($fixture)) {
+                $stdout = $fixture['stdout'] ?? '';
+                $stderr = (string) ($fixture['stderr'] ?? '');
+                $exitCode = (int) ($fixture['exit_code'] ?? 0);
+            } else {
+                if (!is_scalar($fixture)) {
+                    throw new ValidationError(sprintf(
+                        'W4_RUN_SYSTEM_API_UPDATE_BUNDLE_WSL_COMMAND_MAP_JSON[%s] debe ser escalar o arreglo',
+                        $command
+                    ));
+                }
+
+                $stdout = $fixture;
+                $stderr = '';
+                $exitCode = 0;
             }
 
-            return trim((string) $fixture);
+            return [
+                'stdout' => trim((string) $stdout),
+                'stderr' => trim($stderr),
+                'exit_code' => $exitCode,
+            ];
         }
     }
 
@@ -52,11 +69,26 @@ function runWindowsCommand(string $command): string
     $exitCode = 0;
     exec($command . ' 2>&1', $output, $exitCode);
 
-    if ($exitCode !== 0) {
-        throw new ValidationError(trim(implode(PHP_EOL, $output)) ?: sprintf('Fallo al ejecutar: %s', $command));
+    return [
+        'stdout' => trim(implode(PHP_EOL, $output)),
+        'stderr' => '',
+        'exit_code' => $exitCode,
+    ];
+}
+
+function runWindowsCommand(string $command): string
+{
+    $result = runWindowsCommandCaptured($command);
+    if ($result['exit_code'] !== 0) {
+        $message = $result['stderr'] !== '' ? $result['stderr'] : $result['stdout'];
+        if ($message === '') {
+            $message = sprintf('Fallo al ejecutar: %s', $command);
+        }
+
+        throw new ValidationError($message);
     }
 
-    return trim(implode(PHP_EOL, $output));
+    return $result['stdout'];
 }
 
 /**
@@ -135,6 +167,136 @@ function buildChmodCommand(array $scriptNames): string
     $quoted = array_map(static fn (string $name): string => quoteForBash('./' . $name), $scriptNames);
 
     return 'chmod +x ' . implode(' ', $quoted);
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function decodeJsonFile(string $path, string $label): array
+{
+    $raw = file_get_contents($path);
+    if (!is_string($raw)) {
+        throw new ValidationError(sprintf('No se pudo leer %s: %s', $label, $path));
+    }
+
+    try {
+        /** @var array<string, mixed> $decoded */
+        $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $exception) {
+        throw new ValidationError(sprintf('%s contiene JSON invalido: %s', $label, $exception->getMessage()));
+    }
+
+    if (!is_array($decoded)) {
+        throw new ValidationError(sprintf('%s debe contener un objeto JSON: %s', $label, $path));
+    }
+
+    return $decoded;
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function loadHealthCheckResults(string $storeDir): array
+{
+    $path = $storeDir . DIRECTORY_SEPARATOR . 'health-check-results.json';
+    if (!is_file($path)) {
+        throw new ValidationError(sprintf(
+            'El stage WSL no materializo health-check-results.json en %s',
+            $storeDir
+        ));
+    }
+
+    $payload = decodeJsonFile($path, 'health-check-results.json');
+    if (($payload['kind'] ?? null) !== 'health-check-results') {
+        throw new ValidationError(sprintf('health-check-results.json invalido en %s: kind no soportado', $path));
+    }
+
+    $status = $payload['status'] ?? null;
+    if (!is_string($status) || !in_array($status, ['ok', 'failed'], true)) {
+        throw new ValidationError(sprintf('health-check-results.json invalido en %s: status no soportado', $path));
+    }
+
+    if (!is_array($payload['results'] ?? null)) {
+        throw new ValidationError(sprintf('health-check-results.json invalido en %s: results debe ser un objeto', $path));
+    }
+
+    return $payload;
+}
+
+function formatFailedHealthChecks(array $healthCheckResults): string
+{
+    $results = is_array($healthCheckResults['results'] ?? null) ? $healthCheckResults['results'] : [];
+    $failed = [];
+
+    foreach ($results as $checkName => $status) {
+        if (is_string($checkName) && $status === 'failed') {
+            $failed[] = $checkName;
+        }
+    }
+
+    if ($failed === []) {
+        return 'sin detalle de checks fallidos';
+    }
+
+    sort($failed);
+
+    return implode(', ', $failed);
+}
+
+function validateLocalArtifacts(string $storeDir, string $stage): array
+{
+    if (!in_array($stage, ['health', 'reconcile'], true)) {
+        return [
+            'validated_stage' => $stage,
+            'health_status' => null,
+            'expected_stage' => null,
+        ];
+    }
+
+    $healthCheckResults = loadHealthCheckResults($storeDir);
+    $healthStatus = (string) $healthCheckResults['status'];
+    $expectedStage = $healthStatus === 'ok' ? 'confirmed' : 'failed';
+
+    if ($stage === 'health' && $healthStatus !== 'ok') {
+        throw new ValidationError(sprintf(
+            'La validacion post-arranque fallo en WSL: %s',
+            formatFailedHealthChecks($healthCheckResults)
+        ));
+    }
+
+    if ($stage === 'reconcile') {
+        $operationPath = $storeDir . DIRECTORY_SEPARATOR . 'operation.json';
+        $healthReportPath = $storeDir . DIRECTORY_SEPARATOR . 'health-report.json';
+
+        if (!is_file($operationPath) || !is_file($healthReportPath)) {
+            throw new ValidationError(sprintf(
+                'El stage reconcile en WSL no dejo operation.json y health-report.json en %s',
+                $storeDir
+            ));
+        }
+
+        $operation = decodeJsonFile($operationPath, 'operation.json');
+        $healthReport = decodeJsonFile($healthReportPath, 'health-report.json');
+        $operationStage = is_string($operation['stage'] ?? null) ? trim((string) $operation['stage']) : null;
+        $healthReportStage = is_string($healthReport['stage'] ?? null) ? trim((string) $healthReport['stage']) : null;
+        $healthReportStatus = is_string($healthReport['status'] ?? null) ? trim((string) $healthReport['status']) : null;
+
+        if ($operationStage !== $expectedStage || $healthReportStage !== $expectedStage || $healthReportStatus !== $healthStatus) {
+            throw new ValidationError(sprintf(
+                'El store WSL quedo inconsistente: health-check-results=%s, operation.stage=%s, health-report.stage=%s, health-report.status=%s',
+                $expectedStage,
+                $operationStage ?? 'null',
+                $healthReportStage ?? 'null',
+                $healthReportStatus ?? 'null'
+            ));
+        }
+    }
+
+    return [
+        'validated_stage' => $stage,
+        'health_status' => $healthStatus,
+        'expected_stage' => $expectedStage,
+    ];
 }
 
 try {
@@ -307,7 +469,19 @@ try {
         exit(0);
     }
 
-    $executionOutput = runWindowsCommand($runCommand);
+    $executionResult = runWindowsCommandCaptured($runCommand);
+    $executionOutput = $executionResult['stdout'];
+
+    if (!in_array($stage, ['health', 'reconcile'], true) && $executionResult['exit_code'] !== 0) {
+        $message = $executionResult['stderr'] !== '' ? $executionResult['stderr'] : $executionResult['stdout'];
+        if ($message === '') {
+            $message = sprintf('Fallo al ejecutar: %s', $runCommand);
+        }
+
+        throw new ValidationError($message);
+    }
+
+    $artifactValidation = validateLocalArtifacts($storeDir, $stage);
 
     printJson([
         'status' => 'ok',
@@ -327,6 +501,9 @@ try {
         'reconcile_command' => $reconcileCommand,
         'run_command' => $runCommand,
         'execution_output' => $executionOutput,
+        'execution_exit_code' => $executionResult['exit_code'],
+        'execution_error_output' => $executionResult['stderr'],
+        'artifact_validation' => $artifactValidation,
     ]);
 } catch (Throwable $throwable) {
     fwrite(STDERR, 'ERROR: ' . $throwable->getMessage() . PHP_EOL);

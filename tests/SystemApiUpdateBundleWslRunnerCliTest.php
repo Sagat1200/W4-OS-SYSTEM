@@ -98,6 +98,113 @@ final class SystemApiUpdateBundleWslRunnerCliTest extends TestCase
         self::assertSame('health', $payload['stage']);
         self::assertSame($expectedRunCommand, $payload['run_command']);
         self::assertSame('{"status":"ok","health":"executed"}', $payload['execution_output']);
+        self::assertSame(0, $payload['execution_exit_code']);
+        self::assertSame('', $payload['execution_error_output']);
+        self::assertSame('health', $payload['artifact_validation']['validated_stage']);
+        self::assertSame('ok', $payload['artifact_validation']['health_status']);
+        self::assertSame('confirmed', $payload['artifact_validation']['expected_stage']);
+    }
+
+    public function testRunnerFailsHealthStageWhenHealthResultsReportFailure(): void
+    {
+        $storeDir = $this->createEmbeddedBundleStore('system-api-update-op-health-failed');
+        $this->writeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'health-check-results.json', [
+            'health_check_result_schema_version' => 1,
+            'kind' => 'health-check-results',
+            'status' => 'failed',
+            'results' => [
+                'boot-entry-present' => 'failed',
+                'dpkg-consistent' => 'ok',
+            ],
+        ]);
+
+        $expectedRunCommand = sprintf(
+            'wsl -d %s -- bash -lc %s',
+            'Ubuntu-Fixture',
+            $this->quoteForWindowsCommand(sprintf(
+                'cd %s && %s && source ./executor.env && ./run-health-checks.sh',
+                $this->quoteForBash('/mnt/c/w4/system-api-update-op-health-failed'),
+                'chmod +x \'./run-update-offline.sh\' \'./run-update-with-repo-env.sh\' \'./run-health-checks.sh\' \'./reconcile-after-reboot.sh\''
+            ))
+        );
+
+        $this->setFixtureEnv([
+            $expectedRunCommand => [
+                'stdout' => '',
+                'stderr' => '',
+                'exit_code' => 1,
+            ],
+        ]);
+
+        $result = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'run_system_api_update_bundle_in_wsl.php',
+            [
+                '--store-dir',
+                $storeDir,
+                '--distribution',
+                'Ubuntu-Fixture',
+                '--stage',
+                'health',
+            ]
+        );
+
+        self::assertSame(1, $result['exitCode']);
+        self::assertStringContainsString('boot-entry-present', $result['stderr']);
+    }
+
+    public function testRunnerFailsReconcileStageWhenLocalArtifactsConflictWithHealthResults(): void
+    {
+        $storeDir = $this->createEmbeddedBundleStore('system-api-update-op-reconcile-mismatch');
+        $this->writeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'health-check-results.json', [
+            'health_check_result_schema_version' => 1,
+            'kind' => 'health-check-results',
+            'status' => 'failed',
+            'results' => [
+                'boot-entry-present' => 'failed',
+            ],
+        ]);
+        $this->writeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'operation.json', [
+            'update_operation_schema_version' => 1,
+            'kind' => 'update-operation',
+            'operation_id' => 'fixture-op',
+            'stage' => 'confirmed',
+        ]);
+        $this->writeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'health-report.json', [
+            'health_report_schema_version' => 1,
+            'kind' => 'health-report',
+            'operation_id' => 'fixture-op',
+            'stage' => 'confirmed',
+            'status' => 'ok',
+        ]);
+
+        $expectedRunCommand = sprintf(
+            'wsl -d %s -- bash -lc %s',
+            'Ubuntu-Fixture',
+            $this->quoteForWindowsCommand(sprintf(
+                'cd %s && %s && source ./executor.env && ./reconcile-after-reboot.sh',
+                $this->quoteForBash('/mnt/c/w4/system-api-update-op-reconcile-mismatch'),
+                'chmod +x \'./run-update-offline.sh\' \'./run-update-with-repo-env.sh\' \'./run-health-checks.sh\' \'./reconcile-after-reboot.sh\''
+            ))
+        );
+
+        $this->setFixtureEnv([
+            $expectedRunCommand => '{"status":"ok","reconcile":"executed"}',
+        ]);
+
+        $result = $this->runPhpScript(
+            $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'run_system_api_update_bundle_in_wsl.php',
+            [
+                '--store-dir',
+                $storeDir,
+                '--distribution',
+                'Ubuntu-Fixture',
+                '--stage',
+                'reconcile',
+            ]
+        );
+
+        self::assertSame(1, $result['exitCode']);
+        self::assertStringContainsString('inconsistente', $result['stderr']);
     }
 
     private function setFixtureEnv(array $commandMap): void
@@ -118,6 +225,10 @@ final class SystemApiUpdateBundleWslRunnerCliTest extends TestCase
             sprintf('wsl -d %s -- wslpath -a %s', 'Ubuntu-Fixture', $this->quoteForWindowsCommand($this->tempDir . DIRECTORY_SEPARATOR . 'system-api-update-op-ready' . DIRECTORY_SEPARATOR . 'health-check-results.json')) => '/mnt/c/w4/system-api-update-op-ready/health-check-results.json',
             sprintf('wsl -d %s -- wslpath -a %s', 'Ubuntu-Fixture', $this->quoteForWindowsCommand($this->tempDir . DIRECTORY_SEPARATOR . 'system-api-update-op-health')) => '/mnt/c/w4/system-api-update-op-health',
             sprintf('wsl -d %s -- wslpath -a %s', 'Ubuntu-Fixture', $this->quoteForWindowsCommand($this->tempDir . DIRECTORY_SEPARATOR . 'system-api-update-op-health' . DIRECTORY_SEPARATOR . 'health-check-results.json')) => '/mnt/c/w4/system-api-update-op-health/health-check-results.json',
+            sprintf('wsl -d %s -- wslpath -a %s', 'Ubuntu-Fixture', $this->quoteForWindowsCommand($this->tempDir . DIRECTORY_SEPARATOR . 'system-api-update-op-health-failed')) => '/mnt/c/w4/system-api-update-op-health-failed',
+            sprintf('wsl -d %s -- wslpath -a %s', 'Ubuntu-Fixture', $this->quoteForWindowsCommand($this->tempDir . DIRECTORY_SEPARATOR . 'system-api-update-op-health-failed' . DIRECTORY_SEPARATOR . 'health-check-results.json')) => '/mnt/c/w4/system-api-update-op-health-failed/health-check-results.json',
+            sprintf('wsl -d %s -- wslpath -a %s', 'Ubuntu-Fixture', $this->quoteForWindowsCommand($this->tempDir . DIRECTORY_SEPARATOR . 'system-api-update-op-reconcile-mismatch')) => '/mnt/c/w4/system-api-update-op-reconcile-mismatch',
+            sprintf('wsl -d %s -- wslpath -a %s', 'Ubuntu-Fixture', $this->quoteForWindowsCommand($this->tempDir . DIRECTORY_SEPARATOR . 'system-api-update-op-reconcile-mismatch' . DIRECTORY_SEPARATOR . 'health-check-results.json')) => '/mnt/c/w4/system-api-update-op-reconcile-mismatch/health-check-results.json',
         ];
     }
 
@@ -145,6 +256,9 @@ final class SystemApiUpdateBundleWslRunnerCliTest extends TestCase
             'reconcile-update-operation.php' => "<?php\n",
             'update-executor.json' => "{}\n",
             'update-plan.json' => "{}\n",
+            'operation.json' => "{\n  \"update_operation_schema_version\": 1,\n  \"kind\": \"update-operation\",\n  \"operation_id\": \"fixture-op\",\n  \"stage\": \"pending_health\"\n}\n",
+            'health-report.json' => "{\n  \"health_report_schema_version\": 1,\n  \"kind\": \"health-report\",\n  \"operation_id\": \"fixture-op\",\n  \"stage\": \"pending_health\",\n  \"status\": \"pending\"\n}\n",
+            'health-check-results.json' => "{\n  \"health_check_result_schema_version\": 1,\n  \"kind\": \"health-check-results\",\n  \"status\": \"ok\",\n  \"results\": {\n    \"boot-entry-present\": \"ok\"\n  }\n}\n",
         ] as $file => $contents) {
             self::assertNotFalse(file_put_contents($path . DIRECTORY_SEPARATOR . $file, $contents), sprintf('No se pudo escribir %s', $file));
         }
@@ -192,6 +306,15 @@ final class SystemApiUpdateBundleWslRunnerCliTest extends TestCase
         $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
         return $data;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function writeJsonFile(string $path, array $payload): void
+    {
+        $encoded = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        self::assertNotFalse(file_put_contents($path, $encoded . PHP_EOL));
     }
 
     private function quoteForWindowsCommand(string $value): string
