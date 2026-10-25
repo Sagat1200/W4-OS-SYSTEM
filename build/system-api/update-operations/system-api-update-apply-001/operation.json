@@ -5,7 +5,7 @@
     "profile_id": "w4-os-home",
     "source_version": "1.0.0-lab",
     "target_version": "1.0.1-lab",
-    "stage": "pending_health",
+    "stage": "confirmed",
     "repository_snapshot": {
         "id": "w4-main-2026-09-19T120000Z",
         "channel": "testing"
@@ -24,6 +24,6 @@
     "last_error": null,
     "timestamps": {
         "created_at": "2026-10-25T06:04:47+00:00",
-        "updated_at": "2026-10-25T06:04:47+00:00"
+        "updated_at": "2026-10-25T18:42:31+00:00"
     }
 }

@@ -59,6 +59,7 @@ final class SystemApiUpdateBundleWslRunnerCliTest extends TestCase
         self::assertStringContainsString('./reconcile-after-reboot.sh', $payload['reconcile_command']);
         self::assertStringContainsString('wsl -d Ubuntu-Fixture -- bash -lc', $payload['run_command']);
         self::assertContains('executor.env', $payload['required_artifacts']);
+        self::assertContains('reconcile-update-operation.php', $payload['required_artifacts']);
     }
 
     public function testRunnerReturnsCanonicalOkPayloadWhenExecutingHealthStage(): void
@@ -141,6 +142,7 @@ final class SystemApiUpdateBundleWslRunnerCliTest extends TestCase
             'run-update-with-repo-env.sh' => "#!/usr/bin/env bash\n",
             'run-health-checks.sh' => "#!/usr/bin/env bash\n",
             'reconcile-after-reboot.sh' => "#!/usr/bin/env bash\n",
+            'reconcile-update-operation.php' => "<?php\n",
             'update-executor.json' => "{}\n",
             'update-plan.json' => "{}\n",
         ] as $file => $contents) {

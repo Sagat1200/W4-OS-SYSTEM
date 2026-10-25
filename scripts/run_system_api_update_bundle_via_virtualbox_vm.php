@@ -209,6 +209,7 @@ function requiredArtifacts(): array
         'run-update-with-repo-env.sh',
         'run-health-checks.sh',
         'reconcile-after-reboot.sh',
+        'reconcile-update-operation.php',
         'update-executor.json',
         'update-plan.json',
     ];
@@ -271,6 +272,22 @@ function buildRemoteStageCommand(
             $stageCommand
         ))
     );
+}
+
+/**
+ * @return list<string>
+ */
+function artifactsToSyncBack(): array
+{
+    return [
+        'operation.json',
+        'health-report.json',
+        'events.ndjson',
+        'health-check-results.json',
+        'offline-application.json',
+        'snapshot-manifest.json',
+        'staging-manifest.json',
+    ];
 }
 
 try {
@@ -390,6 +407,7 @@ try {
     $enableLiveSshScript = __DIR__ . DIRECTORY_SEPARATOR . 'enable_live_ssh_in_virtualbox.php';
     $uploadTreeScript = __DIR__ . DIRECTORY_SEPARATOR . 'upload_tree_via_paramiko.php';
     $runRemoteScript = __DIR__ . DIRECTORY_SEPARATOR . 'run_remote_command_via_paramiko.php';
+    $downloadFilesScript = __DIR__ . DIRECTORY_SEPARATOR . 'download_files_via_paramiko.php';
 
     $remoteCommand = buildRemoteStageCommand(
         $remoteBundleDir,
@@ -415,7 +433,9 @@ try {
         'enable_live_ssh_script' => $enableLiveSshScript,
         'upload_tree_script' => $uploadTreeScript,
         'run_remote_command_script' => $runRemoteScript,
+        'download_files_script' => $downloadFilesScript,
         'required_artifacts' => requiredArtifacts(),
+        'sync_back_artifacts' => artifactsToSyncBack(),
         'remote_command' => $remoteCommand,
     ];
 
@@ -487,10 +507,35 @@ try {
         '--pty',
     ]);
 
+    $downloadCommand = [
+        $phpBinary,
+        $downloadFilesScript,
+        '--host',
+        $sshHost,
+        '--port',
+        (string) $sshPort,
+        '--username',
+        $username,
+        '--password',
+        $password,
+        '--remote-dir',
+        $remoteBundleDir,
+        '--local-dir',
+        $storeDir,
+    ];
+
+    foreach (artifactsToSyncBack() as $artifact) {
+        $downloadCommand[] = '--artifact';
+        $downloadCommand[] = $artifact;
+    }
+
+    $downloadOutput = runChecked($downloadCommand);
+
     $payload = $readyPayload;
     $payload['status'] = 'ok';
     $payload['upload_output'] = $uploadOutput;
     $payload['execution_output'] = $executionOutput;
+    $payload['download_output'] = $downloadOutput;
     $payload['next_step'] = match ($stage) {
         'offline' => 'reboot-and-run-health',
         'health' => 'reconcile',

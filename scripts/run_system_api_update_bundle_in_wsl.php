@@ -226,6 +226,7 @@ try {
         'run-update-with-repo-env.sh',
         'run-health-checks.sh',
         'reconcile-after-reboot.sh',
+        'reconcile-update-operation.php',
         'update-executor.json',
         'update-plan.json',
     ];

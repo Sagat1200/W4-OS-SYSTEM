@@ -12,6 +12,8 @@ ERROR_MESSAGE="${W4_UPDATE_ERROR_MESSAGE:-La validacion post-arranque fallo}"
 AUTO_HEALTHCHECK="${W4_UPDATE_AUTO_HEALTHCHECK:-1}"
 HEALTH_SCRIPT="${SCRIPT_DIR}/run-health-checks.sh"
 HEALTH_RESULT_PATH="${STORE_DIR}/health-check-results.json"
+BUNDLED_RECONCILE_SCRIPT="${SCRIPT_DIR}/reconcile-update-operation.php"
+RECONCILE_SCRIPT="${W4_UPDATE_RECONCILE_SCRIPT:-}"
 
 if [[ -z "${OBSERVED_STAGE}" && "${AUTO_HEALTHCHECK}" == "1" ]]; then
   if "${HEALTH_SCRIPT}"; then
@@ -25,8 +27,21 @@ fi
 
 OBSERVED_STAGE="${OBSERVED_STAGE:-confirmed}"
 
+if [[ -z "${RECONCILE_SCRIPT}" ]]; then
+  if [[ -f "${BUNDLED_RECONCILE_SCRIPT}" ]]; then
+    RECONCILE_SCRIPT="${BUNDLED_RECONCILE_SCRIPT}"
+  else
+    RECONCILE_SCRIPT="${ENGINE_ROOT}/scripts/reconcile_update_operation.php"
+  fi
+fi
+
+[[ -f "${RECONCILE_SCRIPT}" ]] || {
+  echo "ERROR: no se encontro ${RECONCILE_SCRIPT}; bundle incompleto y ENGINE_ROOT no disponible" >&2
+  exit 1
+}
+
 COMMAND=(
-  php "${ENGINE_ROOT}/scripts/reconcile_update_operation.php"
+  php "${RECONCILE_SCRIPT}"
   --store-dir "${STORE_DIR}"
   --observed-stage "${OBSERVED_STAGE}"
   --component "update-post-boot-check"

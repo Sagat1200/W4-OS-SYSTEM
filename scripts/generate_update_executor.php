@@ -9,6 +9,26 @@ require_once __DIR__ . '/lib/UpdateToolkit.php';
 $rootDir = dirname(__DIR__);
 $defaultOutputRoot = $rootDir . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'update' . DIRECTORY_SEPARATOR . 'executors';
 
+function writeTextArtifact(string $path, string $contents): void
+{
+    $normalized = str_replace("\r\n", "\n", $contents);
+    $normalized = str_replace("\r", "\n", $normalized);
+    $normalized = rtrim($normalized, "\n") . "\n";
+
+    if (file_put_contents($path, $normalized) === false) {
+        throw new ValidationError(sprintf('No se pudo escribir %s', $path));
+    }
+}
+
+function adaptEmbeddedStoreScript(string $script): string
+{
+    return str_replace(
+        'STORE_DIR="${W4_UPDATE_STORE_DIR:-${SCRIPT_DIR}/store}"',
+        'STORE_DIR="${W4_UPDATE_STORE_DIR:-${SCRIPT_DIR}}"',
+        $script
+    );
+}
+
 try {
     $arguments = $argv ?? [];
     $planPath = null;
@@ -54,16 +74,18 @@ try {
     }
 
     $manifest = $toolkit->createUpdateExecutorManifest($plan);
-    $offlineScript = $toolkit->renderOfflineExecutorScript($plan, $rootDir);
+    $offlineScript = adaptEmbeddedStoreScript($toolkit->renderOfflineExecutorScript($plan, $rootDir));
     $repoLauncherScript = $toolkit->renderRepositoryAwareLauncherScript();
-    $healthCheckScript = $toolkit->renderHealthCheckScript($plan);
-    $reconcileScript = $toolkit->renderReconcileScript($plan, $rootDir);
+    $healthCheckScript = adaptEmbeddedStoreScript($toolkit->renderHealthCheckScript($plan));
+    $reconcileScript = adaptEmbeddedStoreScript($toolkit->renderReconcileScript($plan, $rootDir));
+    $bundledReconcileOperationScript = $toolkit->renderBundledReconcileOperationScript();
 
     $manifestPath = $bundleDir . DIRECTORY_SEPARATOR . 'update-executor.json';
     $offlinePath = $bundleDir . DIRECTORY_SEPARATOR . 'run-update-offline.sh';
     $repoLauncherPath = $bundleDir . DIRECTORY_SEPARATOR . 'run-update-with-repo-env.sh';
     $healthCheckPath = $bundleDir . DIRECTORY_SEPARATOR . 'run-health-checks.sh';
     $reconcilePath = $bundleDir . DIRECTORY_SEPARATOR . 'reconcile-after-reboot.sh';
+    $bundledReconcileOperationPath = $bundleDir . DIRECTORY_SEPARATOR . 'reconcile-update-operation.php';
     $readmePath = $bundleDir . DIRECTORY_SEPARATOR . 'UPDATE_EXECUTOR_README.txt';
 
     $manifestJson = json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
@@ -75,21 +97,11 @@ try {
         throw new ValidationError(sprintf('No se pudo escribir %s', $manifestPath));
     }
 
-    if (file_put_contents($offlinePath, $offlineScript . PHP_EOL) === false) {
-        throw new ValidationError(sprintf('No se pudo escribir %s', $offlinePath));
-    }
-
-    if (file_put_contents($repoLauncherPath, $repoLauncherScript . PHP_EOL) === false) {
-        throw new ValidationError(sprintf('No se pudo escribir %s', $repoLauncherPath));
-    }
-
-    if (file_put_contents($healthCheckPath, $healthCheckScript . PHP_EOL) === false) {
-        throw new ValidationError(sprintf('No se pudo escribir %s', $healthCheckPath));
-    }
-
-    if (file_put_contents($reconcilePath, $reconcileScript . PHP_EOL) === false) {
-        throw new ValidationError(sprintf('No se pudo escribir %s', $reconcilePath));
-    }
+    writeTextArtifact($offlinePath, $offlineScript);
+    writeTextArtifact($repoLauncherPath, $repoLauncherScript);
+    writeTextArtifact($healthCheckPath, $healthCheckScript);
+    writeTextArtifact($reconcilePath, $reconcileScript);
+    writeTextArtifact($bundledReconcileOperationPath, $bundledReconcileOperationScript);
 
     $readme = <<<TEXT
 W4 OS Update Executor
@@ -99,6 +111,7 @@ Archivos generados:
 - run-update-with-repo-env.sh
 - run-health-checks.sh
 - reconcile-after-reboot.sh
+- reconcile-update-operation.php
 - update-executor.json
 
 Uso previsto:
@@ -106,7 +119,7 @@ Uso previsto:
 2. copiar tambien el repositorio APT reconstruido al sistema objetivo
 3. ejecutar preferentemente run-update-with-repo-env.sh --repo-dir /ruta/al/repositorio hasta dejar la operacion en pending_health
 4. tras el reinicio, ejecutar run-health-checks.sh
-5. ejecutar reconcile-after-reboot.sh para confirmar o fallar la operacion
+5. ejecutar reconcile-after-reboot.sh para confirmar o fallar la operacion usando el helper autocontenido del bundle
 
 Variables utiles:
 - W4_UPDATE_STORE_DIR: carpeta del store durable
@@ -123,9 +136,7 @@ Variables utiles:
 - W4_UPDATE_OBSERVED_STAGE: estado observado tras reinicio
 TEXT;
 
-    if (file_put_contents($readmePath, $readme . PHP_EOL) === false) {
-        throw new ValidationError(sprintf('No se pudo escribir %s', $readmePath));
-    }
+    writeTextArtifact($readmePath, $readme);
 
     $metadataToolkit = new ArtifactMetadataToolkit();
 

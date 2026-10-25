@@ -913,6 +913,7 @@ final class SystemApiPackagesToolkit
         $this->writeTextFile($bundle['reconcile_after_reboot_path'], $this->adaptEmbeddedStoreScript(
             $toolkit->renderReconcileScript($plan, $this->rootDir)
         ));
+        $this->writeTextFile($bundle['reconcile_operation_path'], $toolkit->renderBundledReconcileOperationScript());
         $this->writeJsonFile($bundle['manifest_path'], $toolkit->createUpdateExecutorManifest($plan));
         $this->writeTextFile($bundle['env_path'], $this->renderUpdateExecutorEnv());
         $this->writeTextFile($bundle['readme_path'], $this->renderUpdateExecutorReadme($plan, $storeDir, $bundle));
@@ -928,6 +929,7 @@ final class SystemApiPackagesToolkit
             'run_update_with_repo_env_path' => $storeDir . DIRECTORY_SEPARATOR . 'run-update-with-repo-env.sh',
             'run_health_checks_path' => $storeDir . DIRECTORY_SEPARATOR . 'run-health-checks.sh',
             'reconcile_after_reboot_path' => $storeDir . DIRECTORY_SEPARATOR . 'reconcile-after-reboot.sh',
+            'reconcile_operation_path' => $storeDir . DIRECTORY_SEPARATOR . 'reconcile-update-operation.php',
             'manifest_path' => $storeDir . DIRECTORY_SEPARATOR . 'update-executor.json',
             'env_path' => $storeDir . DIRECTORY_SEPARATOR . 'executor.env',
             'readme_path' => $storeDir . DIRECTORY_SEPARATOR . 'UPDATE_EXECUTOR_README.txt',
@@ -960,6 +962,7 @@ final class SystemApiPackagesToolkit
             'Main artifacts:',
             sprintf('- update-executor.json: %s', $bundle['manifest_path']),
             sprintf('- executor.env: %s', $bundle['env_path']),
+            sprintf('- reconcile-update-operation.php: %s', $bundle['reconcile_operation_path']),
             sprintf('- health-check-results.json: %s', $healthResultPath),
             sprintf('- operation.json: %s', $storeDir . DIRECTORY_SEPARATOR . 'operation.json'),
             sprintf('- health-report.json: %s', $storeDir . DIRECTORY_SEPARATOR . 'health-report.json'),
@@ -1596,7 +1599,11 @@ BASH;
 
     private function writeTextFile(string $path, string $contents): void
     {
-        $result = file_put_contents($path, $contents . (str_ends_with($contents, PHP_EOL) ? '' : PHP_EOL));
+        $normalized = str_replace("\r\n", "\n", $contents);
+        $normalized = str_replace("\r", "\n", $normalized);
+        $normalized = rtrim($normalized, "\n") . "\n";
+
+        $result = file_put_contents($path, $normalized);
         if ($result === false) {
             throw new ValidationError(sprintf('No se pudo escribir el archivo en %s', $path));
         }

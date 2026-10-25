@@ -241,6 +241,8 @@ final class UpdateToolkitTest extends TestCase
         self::assertStringContainsString('W4_UPDATE_APT_CHECK_DATE', $repoLauncherScript);
         self::assertStringContainsString('dpkg --audit', $healthScript);
         self::assertStringContainsString('health-check-results.json', $healthScript);
+        self::assertStringContainsString('reconcile-update-operation.php', $reconcileScript);
+        self::assertStringContainsString('W4_UPDATE_RECONCILE_SCRIPT', $reconcileScript);
         self::assertStringContainsString('scripts/reconcile_update_operation.php', $reconcileScript);
         self::assertStringContainsString('W4_UPDATE_OBSERVED_STAGE', $reconcileScript);
         self::assertStringContainsString('run-health-checks.sh', $reconcileScript);
@@ -248,6 +250,54 @@ final class UpdateToolkitTest extends TestCase
         self::assertContains('run-update-with-repo-env.sh', $manifest['generated_artifacts']);
         self::assertContains('run-health-checks.sh', $manifest['generated_artifacts']);
         self::assertContains('reconcile-after-reboot.sh', $manifest['generated_artifacts']);
+        self::assertContains('reconcile-update-operation.php', $manifest['generated_artifacts']);
+    }
+
+    public function testBundledReconcileScriptCanConfirmStoreWithoutRepoRoot(): void
+    {
+        $toolkit = new UpdateToolkit();
+        $requestPath = $this->fixturePath('examples/update/home-lab-to-1.0.1.update-request.json');
+
+        $request = $toolkit->readJsonFile($requestPath);
+        $toolkit->validateUpdateRequest($request, $requestPath);
+        $plan = $toolkit->createUpdatePlan($request, 'w4-update-fixed-006');
+
+        $storeDir = $this->tempDir . DIRECTORY_SEPARATOR . 'bundled-reconcile-store';
+        $toolkit->initializeOperationStore($plan, $storeDir);
+        $toolkit->persistOperationTransition($storeDir, 'downloading', 'phpunit');
+        $toolkit->persistOperationTransition($storeDir, 'ready', 'phpunit');
+        $toolkit->persistOperationTransition($storeDir, 'prepared', 'phpunit');
+        $toolkit->persistOperationTransition($storeDir, 'applying_offline', 'phpunit');
+        $toolkit->persistOperationTransition($storeDir, 'pending_health', 'phpunit');
+
+        $scriptPath = $this->tempDir . DIRECTORY_SEPARATOR . 'reconcile-update-operation.php';
+        self::assertNotFalse(file_put_contents($scriptPath, $toolkit->renderBundledReconcileOperationScript() . PHP_EOL));
+
+        $result = $this->runPhpScript($scriptPath, [
+            '--store-dir',
+            $storeDir,
+            '--observed-stage',
+            'confirmed',
+            '--component',
+            'phpunit-bundled-reconcile',
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = json_decode($result['stdout'], true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($payload);
+        self::assertSame('ok', $payload['status']);
+        self::assertTrue($payload['reconciled']);
+        self::assertSame('confirmed', $payload['stage']);
+        self::assertSame('ok', $payload['health_status']);
+
+        $operation = $this->decodeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'operation.json');
+        self::assertSame('confirmed', $operation['stage']);
+        self::assertNull($operation['last_error']);
+
+        $healthReport = $this->decodeJsonFile($storeDir . DIRECTORY_SEPARATOR . 'health-report.json');
+        self::assertSame('confirmed', $healthReport['stage']);
+        self::assertSame('ok', $healthReport['status']);
     }
 
     public function testRejectInvalidTransition(): void
@@ -297,6 +347,37 @@ final class UpdateToolkitTest extends TestCase
     private function fixturePath(string $relativePath): string
     {
         return $this->rootDir . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
+    }
+
+    /**
+     * @param list<string> $arguments
+     * @return array{exitCode: int, stdout: string, stderr: string}
+     */
+    private function runPhpScript(string $scriptPath, array $arguments): array
+    {
+        $command = array_merge([PHP_BINARY, $scriptPath], $arguments);
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+
+        $process = proc_open($command, $descriptors, $pipes, $this->rootDir);
+        self::assertIsResource($process);
+
+        fclose($pipes[0]);
+        $stdout = stream_get_contents($pipes[1]);
+        fclose($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[2]);
+
+        $exitCode = proc_close($process);
+
+        return [
+            'exitCode' => $exitCode,
+            'stdout' => $stdout === false ? '' : $stdout,
+            'stderr' => $stderr === false ? '' : $stderr,
+        ];
     }
 
     private function removeDirectory(string $path): void

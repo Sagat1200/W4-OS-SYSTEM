@@ -1,19 +1,30 @@
-W4 Update Executor Bundle
+W4 OS Update Executor
 
-operation_id=system-api-update-apply-001
-store_dir=C:\W4\Packages\W4-OS SYSTEM\build\system-api\update-operations\system-api-update-apply-001
+Archivos generados:
+- run-update-offline.sh
+- run-update-with-repo-env.sh
+- run-health-checks.sh
+- reconcile-after-reboot.sh
+- reconcile-update-operation.php
+- update-executor.json
 
-Run from inside the bundle directory:
-0. source "executor.env"
+Uso previsto:
+1. preparar primero el store durable con prepare_update_operation.php
+2. copiar tambien el repositorio APT reconstruido al sistema objetivo
+3. ejecutar preferentemente run-update-with-repo-env.sh --repo-dir /ruta/al/repositorio hasta dejar la operacion en pending_health
+4. tras el reinicio, ejecutar run-health-checks.sh
+5. ejecutar reconcile-after-reboot.sh para confirmar o fallar la operacion usando el helper autocontenido del bundle
 
-Recommended flow:
-1. Run "./run-update-offline.sh" or "./run-update-with-repo-env.sh --repo-dir /path/to/repository".
-2. After reboot, run "./run-health-checks.sh".
-3. Then run "./reconcile-after-reboot.sh" or call updates.reconcile with health_result_path="C:\W4\Packages\W4-OS SYSTEM\build\system-api\update-operations\system-api-update-apply-001\health-check-results.json".
-
-Main artifacts:
-- update-executor.json: C:\W4\Packages\W4-OS SYSTEM\build\system-api\update-operations\system-api-update-apply-001\update-executor.json
-- executor.env: C:\W4\Packages\W4-OS SYSTEM\build\system-api\update-operations\system-api-update-apply-001\executor.env
-- health-check-results.json: C:\W4\Packages\W4-OS SYSTEM\build\system-api\update-operations\system-api-update-apply-001\health-check-results.json
-- operation.json: C:\W4\Packages\W4-OS SYSTEM\build\system-api\update-operations\system-api-update-apply-001\operation.json
-- health-report.json: C:\W4\Packages\W4-OS SYSTEM\build\system-api\update-operations\system-api-update-apply-001\health-report.json
+Variables utiles:
+- W4_UPDATE_STORE_DIR: carpeta del store durable
+- W4_UPDATE_ENGINE_ROOT: raiz del repo cuando el bundle se mueve fuera del arbol local
+- W4_UPDATE_REPOSITORY_DIR: directorio real del repo APT copiado al sistema objetivo
+- W4_UPDATE_REPOSITORY_ENV_FILE: ruta alternativa al repo.env del repositorio copiado
+- W4_UPDATE_EXECUTE: usar 1 para habilitar apt-get y snapshot reales
+- W4_UPDATE_APPLY_MODE: estrategia de aplicacion, por ahora `live-apt`
+- W4_UPDATE_APT_SOURCE_MODE: `auto` por defecto; prioriza `W4_UPDATE_APT_SOURCE_LINE_DISTS` y cae a `W4_UPDATE_APT_SOURCE_LINE`
+- W4_UPDATE_APT_SOURCE_LINE: source line APT temporal plana para compatibilidad de laboratorio
+- W4_UPDATE_APT_SOURCE_LINE_DISTS: source line APT estilo `dists/<channel>` para el repo W4 alineado con APT real
+- W4_UPDATE_APT_SOURCE_FILE: archivo `.list` alternativo para instalar temporalmente antes de `apt-get update`
+- W4_UPDATE_FAIL_STAGE: inyeccion de fallo para laboratorio
+- W4_UPDATE_OBSERVED_STAGE: estado observado tras reinicio

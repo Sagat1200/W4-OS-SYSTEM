@@ -66,9 +66,13 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
         self::assertStringContainsString('./run-health-checks.sh', $payload['remote_command']);
         self::assertStringContainsString('source ./executor.env', $payload['remote_command']);
         self::assertContains('executor.env', $payload['required_artifacts']);
+        self::assertContains('reconcile-update-operation.php', $payload['required_artifacts']);
         self::assertStringEndsWith('scripts\enable_live_ssh_in_virtualbox.php', $payload['enable_live_ssh_script']);
         self::assertStringEndsWith('scripts\upload_tree_via_paramiko.php', $payload['upload_tree_script']);
         self::assertStringEndsWith('scripts\run_remote_command_via_paramiko.php', $payload['run_remote_command_script']);
+        self::assertStringEndsWith('scripts\download_files_via_paramiko.php', $payload['download_files_script']);
+        self::assertContains('operation.json', $payload['sync_back_artifacts']);
+        self::assertContains('health-check-results.json', $payload['sync_back_artifacts']);
     }
 
     public function testExecutionReturnsCanonicalOkPayload(): void
@@ -79,6 +83,7 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
         $enableLiveSshScript = $this->scriptPath('scripts/enable_live_ssh_in_virtualbox.php');
         $uploadTreeScript = $this->scriptPath('scripts/upload_tree_via_paramiko.php');
         $runRemoteScript = $this->scriptPath('scripts/run_remote_command_via_paramiko.php');
+        $downloadFilesScript = $this->scriptPath('scripts/download_files_via_paramiko.php');
         $remoteBundleDir = '/home/w4live/system-api-update-bundle/' . basename($storeDir);
         $remoteCommand = sprintf(
             'bash -lc %s',
@@ -152,6 +157,36 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
                 $remoteCommand,
                 '--pty',
             ]) => 'health-checks-ok',
+            $this->fixtureKey([
+                $phpBinary,
+                $downloadFilesScript,
+                '--host',
+                '127.0.0.1',
+                '--port',
+                '2244',
+                '--username',
+                'w4live',
+                '--password',
+                'fixture-live-password',
+                '--remote-dir',
+                $remoteBundleDir,
+                '--local-dir',
+                $storeDir,
+                '--artifact',
+                'operation.json',
+                '--artifact',
+                'health-report.json',
+                '--artifact',
+                'events.ndjson',
+                '--artifact',
+                'health-check-results.json',
+                '--artifact',
+                'offline-application.json',
+                '--artifact',
+                'snapshot-manifest.json',
+                '--artifact',
+                'staging-manifest.json',
+            ]) => '{"status":"ok","downloaded":["operation.json","health-report.json"],"missing":[]}',
         ];
 
         putenv('W4_SYSTEM_API_UPDATE_VM_COMMAND_MAP_JSON=' . json_encode($fixtureMap, JSON_THROW_ON_ERROR));
@@ -184,6 +219,7 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
         self::assertSame($remoteCommand, $payload['remote_command']);
         self::assertSame('uploaded', $payload['upload_output']);
         self::assertSame('health-checks-ok', $payload['execution_output']);
+        self::assertSame('{"status":"ok","downloaded":["operation.json","health-report.json"],"missing":[]}', $payload['download_output']);
         self::assertSame('reconcile', $payload['next_step']);
 
         $liveSshPayload = $this->decodeJson($payload['live_ssh_setup_output']);
@@ -232,6 +268,7 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
             'run-update-with-repo-env.sh' => "#!/usr/bin/env bash\n",
             'run-health-checks.sh' => "#!/usr/bin/env bash\n",
             'reconcile-after-reboot.sh' => "#!/usr/bin/env bash\n",
+            'reconcile-update-operation.php' => "<?php\n",
             'update-executor.json' => "{}\n",
             'update-plan.json' => "{}\n",
         ] as $file => $contents) {
