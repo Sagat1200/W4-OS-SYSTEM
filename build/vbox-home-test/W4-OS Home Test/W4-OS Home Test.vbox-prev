@@ -57,11 +57,13 @@
       <AudioAdapter useDefault="true" driver="WAS" enabled="true" enabledOut="true"/>
       <Clipboard/>
       <GuestProperties>
-        <GuestProperty name="/VirtualBox/GuestAdd/GuiOnFocus" value="1" timestamp="1792823082769630700" flags="TRANSIENT, RDONLYGUEST"/>
+        <GuestProperty name="/VirtualBox/GuestAdd/GuiOnFocus" value="1" timestamp="1792826264997323100" flags="TRANSIENT, RDONLYGUEST"/>
         <GuestProperty name="/VirtualBox/HostInfo/GUI/LanguageID" value="en_US" timestamp="1792823087554988000" flags="RDONLYGUEST"/>
         <GuestProperty name="/VirtualBox/HostInfo/VBoxRev" value="173730" timestamp="1792822995436653702" flags="TRANSIENT, RDONLYGUEST"/>
         <GuestProperty name="/VirtualBox/HostInfo/VBoxVer" value="7.2.8" timestamp="1792822995436653700" flags="TRANSIENT, RDONLYGUEST"/>
         <GuestProperty name="/VirtualBox/HostInfo/VBoxVerExt" value="7.2.8" timestamp="1792822995436653701" flags="TRANSIENT, RDONLYGUEST"/>
+        <GuestProperty name="/VirtualBox/VMInfo/ResetCounter" value="2" timestamp="1792823644343636700" flags="TRANSIENT, RDONLYGUEST"/>
+        <GuestProperty name="/VirtualBox/VMInfo/ResumeCounter" value="1" timestamp="1792823644214127000" flags="TRANSIENT, RDONLYGUEST"/>
       </GuestProperties>
       <StorageControllers>
         <StorageController name="IDE" type="PIIX4" PortCount="2" useHostIOCache="true" Bootable="true">

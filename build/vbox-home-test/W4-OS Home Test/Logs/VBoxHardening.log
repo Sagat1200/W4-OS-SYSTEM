@@ -5113,3 +5113,40 @@
 4394.2b44: supR3HardenedScreenImage/LdrLoadDll: cache hit (VINF_SUCCESS) on \Device\HarddiskVolume3\Windows\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.26100.9278_none_3e0d1ba8e3303201\comctl32.dll
 4394.2b44: supR3HardenedMonitor_LdrLoadDll: pName=C:\WINDOWS\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.26100.9278_none_3e0d1ba8e3303201\comctl32.dll (Input=comctl32.dll, rcNtResolve=0x0) *pfFlags=0x0 pwszSearchPath=0000000000004001:<flags> [calling]
 4394.2b44: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd03dc0000 'C:\WINDOWS\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.26100.9278_none_3e0d1ba8e3303201\comctl32.dll'
+4394.2d00: supR3HardenedDllNotificationCallback: Unload 00007ffd07a80000 LB 0x000c4000 C:\Windows\System32\Windows.StateRepositoryPS.dll [flags=0x0]
+4394.2d00: supR3HardenedDllNotificationCallback: Unload 00007ffce9600000 LB 0x00074000 C:\Windows\System32\thumbcache.dll [flags=0x0]
+4394.2d00: supR3HardenedDllNotificationCallback: Unload 00007ffcf4160000 LB 0x00180000 C:\Windows\System32\Windows.System.Launcher.dll [flags=0x0]
+4394.2d00: supR3HardenedDllNotificationCallback: Unload 00007ffcfee20000 LB 0x0001e000 C:\WINDOWS\SYSTEM32\windows.staterepositorycore.dll [flags=0x0]
+4394.2d00: supR3HardenedDllNotificationCallback: Unload 00007ffcf2290000 LB 0x000c2000 C:\Windows\System32\Windows.FileExplorer.Common.dll [flags=0x0]
+4394.2d00: supR3HardenedDllNotificationCallback: Unload 00007ffcfdbc0000 LB 0x00044000 C:\WINDOWS\SYSTEM32\windows.staterepositoryclient.dll [flags=0x0]
+4394.4384: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 00000000000016ec (hFile=00000000000015a0) with 0xc0000022 -> STATUS_TRUST_FAILURE
+4394.4384: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 00000000000015a0 (hFile=00000000000016ec) with 0xc0000022 -> STATUS_TRUST_FAILURE
+4394.4384: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 00000000000016ec (hFile=00000000000015a0) with 0xc0000022 -> STATUS_TRUST_FAILURE
+4394.4384: supR3HardenedMonitor_NtCreateSection: NtMapViewOfSection failed on 00000000000015a0 (hFile=00000000000016ec) with 0xc0000022 -> STATUS_TRUST_FAILURE
+4394.4384: supR3HardenedMonitor_LdrLoadDll: returns rcNt=0x0 hMod=00007ffd111e0000 'C:\WINDOWS\system32\ole32.dll'
+4394.3e04: supR3HardenedDllNotificationCallback: Unload 00007ffcf8440000 LB 0x0000d000 C:\Program Files\Oracle\VirtualBox\VBoxGuestPropSvc.DLL [flags=0x0]
+4394.2274: supR3HardenedDllNotificationCallback: Unload 00007ffd028f0000 LB 0x0000c000 C:\Program Files\Oracle\VirtualBox\VBoxGuestControlSvc.DLL [flags=0x0]
+4394.34b8: supR3HardenedDllNotificationCallback: Unload 00007ffcf66c0000 LB 0x00016000 C:\Program Files\Oracle\VirtualBox\VBoxSharedFolders.DLL [flags=0x0]
+4394.2660: supR3HardenedDllNotificationCallback: Unload 00007ffd041f0000 LB 0x0000d000 C:\Program Files\Oracle\VirtualBox\VBoxDragAndDropSvc.DLL [flags=0x0]
+4394.1880: supR3HardenedWinVerifyCacheScheduleImports: Import todo: #0 'msvcrt.dll'.
+4394.1880: supHardenedWinVerifyImageByHandle: -> 22900 (\Device\HarddiskVolume3\Windows\System32\edputil.dll)
+4394.1880: supR3HardenedWinVerifyCacheInsert: \Device\HarddiskVolume3\Windows\System32\edputil.dll
+4394.1880: supR3HardenedDllNotificationCallback: load   00007ffcf2260000 LB 0x00029000 C:\WINDOWS\SYSTEM32\edputil.dll [fFlags=0x0]
+4394.1880: supR3HardenedScreenImage/LdrLoadDll: cache hit (22900) on \Device\HarddiskVolume3\Windows\System32\edputil.dll [avoiding WinVerifyTrust]
+4394.1880: supR3HardenedDllNotificationCallback: Unload 00007ffce69d0000 LB 0x00022000 C:\Program Files\Oracle\VirtualBox\VBoxSharedClipboard.DLL [flags=0x0]
+4394.4678: supR3HardenedDllNotificationCallback: Unload 00007ffc5c300000 LB 0x00af7000 C:\Program Files\Oracle\VirtualBox\VBoxDD.DLL [flags=0x0]
+4394.4678: supR3HardenedDllNotificationCallback: Unload 00007ffc69bf0000 LB 0x00075000 C:\Program Files\Oracle\VirtualBox\VBoxDDU.dll [flags=0x0]
+4394.4678: supR3HardenedDllNotificationCallback: Unload 00007ffc5b4a0000 LB 0x00e5e000 C:\Program Files\Oracle\VirtualBox\VBoxDD2.dll [flags=0x0]
+4394.4384: supR3HardenedDllNotificationCallback: Unload 00007ffc72050000 LB 0x005b7000 C:\Program Files\Oracle\VirtualBox\VBoxVMM.DLL [flags=0x0]
+4394.4384: supR3HardenedDllNotificationCallback: Unload 00007ffcff6d0000 LB 0x00015000 C:\WINDOWS\system32\wbem\wbemsvc.dll [flags=0x0]
+4394.4384: supR3HardenedDllNotificationCallback: Unload 00007ffcfeb30000 LB 0x000f5000 C:\WINDOWS\system32\wbem\fastprox.dll [flags=0x0]
+4394.4384: supR3HardenedDllNotificationCallback: Unload 00007ffcff690000 LB 0x00012000 C:\WINDOWS\system32\wbem\wbemprox.dll [flags=0x0]
+4394.4384: supR3HardenedDllNotificationCallback: Unload 00007ffd04130000 LB 0x0007a000 C:\WINDOWS\SYSTEM32\wbemcomn.dll [flags=0x0]
+4394.4384: supR3HardenedDllNotificationCallback: Unload 00007ffcef850000 LB 0x0005c000 C:\WINDOWS\system32\dataexchange.dll [flags=0x0]
+4394.4384: supR3HardenedDllNotificationCallback: Unload 00007ffd06120000 LB 0x00250000 C:\WINDOWS\system32\twinapi.appcore.dll [flags=0x0]
+4394.4384: supR3HardenedDllNotificationCallback: Unload 00007ffc5da90000 LB 0x000eb000 C:\Program Files\Oracle\VirtualBox\VBoxProxyStub.dll [flags=0x0]
+4394.4384: supR3HardenedDllNotificationCallback: Unload 00007ffd02970000 LB 0x00662000 C:\Windows\System32\OneCoreUAPCommonProxyStub.dll [flags=0x0]
+4394.4384: supR3HardenedDllNotificationCallback: Unload 00007ffc5d650000 LB 0x00433000 C:\Program Files\Oracle\VirtualBox\VBoxC.dll [flags=0x0]
+4394.4384: Terminating the normal way: rcExit=0
+468c.a6c: supR3HardNtChildWaitFor[2]: Quitting: ExitCode=0x0 (rcNtWait=0x0, rcNt1=0x0, rcNt2=0x103, rcNt3=0x103, 3321709 ms, the end);
+402c.158c: supR3HardNtChildWaitFor[1]: Quitting: ExitCode=0x0 (rcNtWait=0x0, rcNt1=0x0, rcNt2=0x103, rcNt3=0x103, 3322735 ms, the end);
