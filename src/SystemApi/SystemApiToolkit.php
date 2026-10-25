@@ -15,6 +15,7 @@ final class SystemApiToolkit
     private const PROPOSED_INTERFACE = 'org.w4.System1.Manager';
 
     private W4ctlApplication $w4ctl;
+    private string $rootDir;
     private SystemApiDbusRuntimeProbeToolkit $dbusRuntimeProbe;
     private SystemApiDbusRuntimeActivationToolkit $dbusRuntimeActivation;
     private SystemApiDbusRuntimeBackendToolkit $dbusRuntimeBackend;
@@ -24,6 +25,7 @@ final class SystemApiToolkit
 
     public function __construct(string $rootDir)
     {
+        $this->rootDir = rtrim($rootDir, DIRECTORY_SEPARATOR);
         $this->w4ctl = new W4ctlApplication($rootDir);
         $this->dbusRuntimeProbe = new SystemApiDbusRuntimeProbeToolkit();
         $this->dbusRuntimeActivation = new SystemApiDbusRuntimeActivationToolkit();
@@ -256,6 +258,12 @@ final class SystemApiToolkit
                     'resource_kind' => 'updates-list',
                     'mutates_state' => false,
                     'params' => ['limit?'],
+                ],
+                [
+                    'name' => 'updates.apply',
+                    'resource_kind' => 'update-operation',
+                    'mutates_state' => true,
+                    'params' => ['operation_id', 'plan_hash', 'idempotency_key', 'plan?', 'plan_path?'],
                 ],
                 [
                     'name' => 'operations.get',
@@ -544,6 +552,58 @@ final class SystemApiToolkit
             );
         }
 
+        if ($method === 'updates.apply') {
+            $operationId = $this->requireString($params, 'operation_id');
+            $planHash = $this->requireString($params, 'plan_hash');
+            $idempotencyKey = $this->requireString($params, 'idempotency_key');
+            $digest = $this->operations->buildIdempotencyDigest('updates.apply', [
+                'operation_id' => $operationId,
+                'plan_hash' => $planHash,
+            ]);
+            $reusedOperation = $this->operations->reuseIdempotentOperation('updates.apply', $idempotencyKey, $digest);
+            if ($reusedOperation !== null) {
+                $reusedResult = is_array($reusedOperation['result'] ?? null) ? $reusedOperation['result'] : $reusedOperation;
+
+                return $this->createSuccessResponse(
+                    requestId: $requestId,
+                    method: 'updates.apply',
+                    resourceKind: 'update-operation',
+                    resourceId: is_string($reusedOperation['operation_id'] ?? null) ? $reusedOperation['operation_id'] : null,
+                    data: $reusedResult,
+                    provider: 'local-system-api-updates-contract'
+                );
+            }
+
+            $operation = $this->packages->applyUpdates(
+                $operationId,
+                $planHash,
+                $idempotencyKey,
+                $this->optionalObject($params, 'plan'),
+                $this->optionalString($params, 'plan_path')
+            );
+            $storedOperation = $this->operations->record(
+                'updates.apply',
+                'update-operation',
+                (string) ($operation['operation_id'] ?? 'update-operation'),
+                $operation
+            );
+            $this->operations->rememberIdempotentOperation(
+                'updates.apply',
+                $idempotencyKey,
+                $digest,
+                (string) ($storedOperation['operation_id'] ?? $operation['operation_id'] ?? '')
+            );
+
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'updates.apply',
+                resourceKind: 'update-operation',
+                resourceId: is_string($storedOperation['operation_id'] ?? null) ? $storedOperation['operation_id'] : null,
+                data: $operation,
+                provider: 'local-system-api-updates-contract'
+            );
+        }
+
         if ($method === 'operations.get') {
             $operationId = $this->requireString($params, 'operation_id');
 
@@ -717,6 +777,10 @@ final class SystemApiToolkit
             );
         }
 
+        if ($method === 'updates.plan') {
+            return $this->handleUpdatesPlan($requestId, $params);
+        }
+
         [$command, $options, $resourceKind, $resourceId] = $this->translateMethod($method, $params);
         $payload = $this->w4ctl->handleCommand($command, $options);
 
@@ -785,6 +849,43 @@ final class SystemApiToolkit
             ],
             default => throw new ValidationError(sprintf('Metodo no soportado: %s', $method)),
         };
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    private function handleUpdatesPlan(string $requestId, array $params): array
+    {
+        $payload = $this->w4ctl->handleCommand('update:plan', $this->filterOptions([
+            'request' => $this->requireString($params, 'request_path'),
+            'operation-id' => $this->optionalString($params, 'operation_id'),
+            'output' => $this->optionalString($params, 'output_path'),
+        ]));
+
+        $outputPath = $payload['output_path'] ?? null;
+        if (is_string($outputPath) && trim($outputPath) !== '') {
+            $absoluteOutputPath = $this->resolveWorkspacePath($outputPath);
+            $raw = file_get_contents($absoluteOutputPath);
+            if (!is_string($raw)) {
+                throw new ValidationError(sprintf('No se pudo leer update-plan generado: %s', $absoluteOutputPath));
+            }
+
+            $decoded = json_decode($raw, true);
+            if (!is_array($decoded)) {
+                throw new ValidationError(sprintf('Update-plan invalido: %s', $absoluteOutputPath));
+            }
+
+            $payload['plan_hash'] = $this->packages->computeUpdatePlanHash($decoded);
+        }
+
+        return $this->createSuccessResponse(
+            requestId: $requestId,
+            method: 'updates.plan',
+            resourceKind: 'update-plan',
+            resourceId: is_string($payload['operation_id'] ?? null) ? $payload['operation_id'] : $this->optionalString($params, 'operation_id'),
+            data: $payload
+        );
     }
 
     /**
@@ -1030,6 +1131,20 @@ final class SystemApiToolkit
         }
 
         return $filtered;
+    }
+
+    private function resolveWorkspacePath(string $path): string
+    {
+        $normalized = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, trim($path));
+        if ($normalized === '') {
+            throw new ValidationError('Ruta invalida para artifact del System API');
+        }
+
+        if (preg_match('/^[A-Za-z]:\\\\/', $normalized) === 1 || str_starts_with($normalized, DIRECTORY_SEPARATOR)) {
+            return $normalized;
+        }
+
+        return $this->rootDir . DIRECTORY_SEPARATOR . ltrim($normalized, DIRECTORY_SEPARATOR);
     }
 
     /**

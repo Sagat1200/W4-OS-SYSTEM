@@ -1,0 +1,71 @@
+{
+    "kind": "system-api-operation",
+    "operation_id": "system-api-update-apply-001",
+    "method": "updates.apply",
+    "resource": {
+        "kind": "update-operation",
+        "id": "system-api-update-apply-001"
+    },
+    "state": "needs_attention",
+    "status": "pending-reboot",
+    "cancel_requested": false,
+    "cancelable": false,
+    "progress": {
+        "percent": 50,
+        "current_step": "reboot-into-post-update-health-checks"
+    },
+    "result": {
+        "kind": "system-api-update-operation",
+        "status": "pending-reboot",
+        "backend": "apt-get",
+        "operation_id": "system-api-update-apply-001",
+        "plan_hash": "c1540e78a12c1b8e6bfd50a749cead66b64953e3",
+        "idempotency_key": "updates-apply-31ebdb2f3d8c",
+        "profile_id": "w4-os-home",
+        "source_version": "1.0.0-lab",
+        "target_version": "1.0.1-lab",
+        "apply_mode": "live-apt",
+        "stage": "prepared",
+        "state": "needs_attention",
+        "command": "updates:apply",
+        "command_sequence": [
+            "apt-get -y -o APT::Color=0 install w4-recovery-tools w4-home-meta"
+        ],
+        "exit_code": 0,
+        "stdout": "Update packages applied",
+        "stderr": "",
+        "package_changes": {
+            "install": [
+                "w4-recovery-tools"
+            ],
+            "upgrade": [
+                "w4-home-meta"
+            ],
+            "remove": [],
+            "counts": {
+                "install": 1,
+                "upgrade": 1,
+                "remove": 0,
+                "total": 2
+            }
+        },
+        "repository_snapshot": {
+            "id": "w4-main-2026-09-19T120000Z",
+            "channel": "testing"
+        },
+        "stages": [
+            "planned",
+            "downloading",
+            "ready",
+            "prepared",
+            "applying_offline",
+            "pending_health",
+            "confirmed"
+        ],
+        "next_action": "reboot-into-post-update-health-checks"
+    },
+    "error": null,
+    "created_at": "2026-10-25T04:43:56+00:00",
+    "observed_at": "2026-10-25T04:43:56+00:00",
+    "completed_at": null
+}

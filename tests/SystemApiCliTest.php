@@ -78,6 +78,7 @@ final class SystemApiCliTest extends TestCase
         self::assertContains('packages.apply', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('updates.check', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('updates.list', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('updates.apply', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('operations.get', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('operations.cancel', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('services.list', array_column($payload['result']['data']['methods'], 'name'));
@@ -110,8 +111,10 @@ final class SystemApiCliTest extends TestCase
         self::assertSame(['plan_id', 'plan_hash', 'idempotency_key', 'expected_catalog_revision?', 'plan?', 'plan_path?'], $methodsByName['packages.apply']['params']);
         self::assertFalse($methodsByName['updates.check']['mutates_state']);
         self::assertFalse($methodsByName['updates.list']['mutates_state']);
+        self::assertTrue($methodsByName['updates.apply']['mutates_state']);
         self::assertSame(['refresh?', 'limit?'], $methodsByName['updates.check']['params']);
         self::assertSame(['limit?'], $methodsByName['updates.list']['params']);
+        self::assertSame(['operation_id', 'plan_hash', 'idempotency_key', 'plan?', 'plan_path?'], $methodsByName['updates.apply']['params']);
         self::assertFalse($methodsByName['operations.get']['mutates_state']);
         self::assertTrue($methodsByName['operations.cancel']['mutates_state']);
         self::assertFalse($methodsByName['services.list']['mutates_state']);
@@ -2079,13 +2082,143 @@ final class SystemApiCliTest extends TestCase
             self::assertSame('update:plan', $payload['result']['data']['command']);
             self::assertSame('system-api-update-001', $payload['result']['data']['operation_id']);
             self::assertSame($this->normalizePath($outputPath), $payload['result']['data']['output_path']);
+            self::assertIsString($payload['result']['data']['plan_hash']);
 
             $plan = $this->decodeJsonFile($outputPath);
             self::assertSame('update-plan', $plan['kind']);
             self::assertSame('system-api-update-001', $plan['operation_id']);
+            self::assertSame(
+                sha1(json_encode($plan, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)),
+                $payload['result']['data']['plan_hash']
+            );
         } finally {
             if (is_file($outputPath)) {
                 unlink($outputPath);
+            }
+        }
+    }
+
+    public function testUpdatesApplyConsumesUpdatePlanAndReturnsPendingRebootOperation(): void
+    {
+        $suffix = bin2hex(random_bytes(6));
+        $planPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'system-api-update-apply-' . $suffix . '.json';
+
+        try {
+            $plan = [
+                'update_plan_schema_version' => 1,
+                'kind' => 'update-plan',
+                'operation_id' => 'system-api-update-apply-001',
+                'profile_id' => 'w4-os-home',
+                'source_version' => '1.0.0-lab',
+                'target_version' => '1.0.1-lab',
+                'repository_snapshot' => [
+                    'id' => 'w4-main-2026-09-19T120000Z',
+                    'channel' => 'testing',
+                ],
+                'package_changes' => [
+                    'install' => ['w4-recovery-tools'],
+                    'upgrade' => ['w4-home-meta'],
+                    'remove' => [],
+                    'counts' => [
+                        'install' => 1,
+                        'upgrade' => 1,
+                        'remove' => 0,
+                        'total' => 2,
+                    ],
+                ],
+                'execution' => [
+                    'engine' => 'apt-offline-snapshot',
+                    'apply_mode' => 'live-apt',
+                    'reboot_required' => true,
+                    'stages' => [
+                        'planned',
+                        'downloading',
+                        'ready',
+                        'prepared',
+                        'applying_offline',
+                        'pending_health',
+                        'confirmed',
+                    ],
+                    'failure_state' => 'failed',
+                ],
+                'snapshot' => [
+                    'root_subvolume' => '/@',
+                    'snapshot_name' => 'pre-update-system-api-update-apply-001',
+                    'snapshot_path' => '/.snapshots/pre-update-system-api-update-apply-001',
+                    'retention' => 'protected-until-confirmed',
+                ],
+                'staging' => [
+                    'directory' => '/var/lib/w4-update/staging/system-api-update-apply-001',
+                    'estimated_space_kib' => 262144,
+                    'cache_policy' => 'protected-until-confirmed',
+                ],
+                'boot_manifest' => [
+                    'kernel_package' => 'linux-image-amd64',
+                    'boot_mode' => 'efi',
+                    'initramfs_strategy' => 'update-initramfs',
+                ],
+                'health_check_manifest' => [
+                    'required' => ['boot-entry-present', 'dpkg-consistent'],
+                    'test_file_path' => '/var/lib/w4-update/test-file',
+                    'pending_state' => 'pending_health',
+                    'success_state' => 'confirmed',
+                    'failure_state' => 'failed',
+                ],
+                'durable_state_template' => [
+                    'update_operation_schema_version' => 1,
+                    'kind' => 'update-operation',
+                    'operation_id' => 'system-api-update-apply-001',
+                    'stage' => 'planned',
+                    'last_error' => null,
+                ],
+                'evidence' => [
+                    'update-plan.json',
+                    'operation.json',
+                ],
+                'notes' => [
+                    'Una sola operacion mutante puede estar activa a la vez.',
+                ],
+            ];
+            file_put_contents($planPath, json_encode($plan, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+            $planHash = sha1(json_encode($plan, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+
+            $request = [
+                'api_version' => '1.0',
+                'request_id' => 'req-updates-apply-001',
+                'method' => 'updates.apply',
+                'params' => [
+                    'operation_id' => 'system-api-update-apply-001',
+                    'plan_hash' => $planHash,
+                    'idempotency_key' => 'updates-apply-' . $suffix,
+                    'plan_path' => $planPath,
+                ],
+            ];
+
+            $result = $this->runPhpScript([
+                $this->scriptPath(),
+                '--request-json',
+                json_encode($request, JSON_THROW_ON_ERROR),
+            ], [
+                'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+                'W4_SYSTEM_API_UPDATES_APPLY_EXIT_CODE' => '0',
+                'W4_SYSTEM_API_UPDATES_APPLY_STDOUT' => 'Update packages applied',
+            ]);
+
+            self::assertSame(0, $result['exitCode'], $result['stderr']);
+            $payload = $this->decodeJson($result['stdout']);
+            self::assertNull($payload['error']);
+            self::assertSame('updates.apply', $payload['result']['method']);
+            self::assertSame('update-operation', $payload['result']['resource']['kind']);
+            self::assertSame('system-api-update-operation', $payload['result']['data']['kind']);
+            self::assertSame('pending-reboot', $payload['result']['data']['status']);
+            self::assertSame('needs_attention', $payload['result']['data']['state']);
+            self::assertSame('prepared', $payload['result']['data']['stage']);
+            self::assertSame($planHash, $payload['result']['data']['plan_hash']);
+            self::assertSame('reboot-into-post-update-health-checks', $payload['result']['data']['next_action']);
+            self::assertSame('apt-get -y -o APT::Color=0 install w4-recovery-tools w4-home-meta', $payload['result']['data']['command_sequence'][0]);
+        } finally {
+            if (is_file($planPath)) {
+                unlink($planPath);
             }
         }
     }

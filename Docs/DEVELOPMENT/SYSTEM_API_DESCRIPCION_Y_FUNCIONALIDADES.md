@@ -231,10 +231,13 @@ La `System API` ya expone tambien una primera superficie de descubrimiento de up
 
 - `updates.check`
 - `updates.list`
+- `updates.apply`
 
 `updates.list` publica el catalogo normalizado de paquetes actualizables sobre `apt list --upgradable`, incluyendo `catalog_revision`, versiones instalada/candidata y origen resumido. `updates.check` reutiliza ese mismo catalogo y, cuando recibe `refresh = true`, intenta refrescarlo previamente con `apt-get update`.
 
-En esta etapa el dominio ya deja de ser un hueco documental y pasa a devolver lectura real del host. Lo pendiente para V1 no es crear el verbo, sino endurecer semantica de frescura, locks y busy-state, y luego cerrar la continuidad natural con `updates.apply`.
+`updates.plan` ya devuelve tambien `plan_hash` para que el cliente pueda encadenar la aplicacion sin recalcular el digest fuera del contrato. Sobre esa base, `updates.apply` ya acepta `operation_id`, `plan_hash`, `idempotency_key` y un `update-plan` por objeto o por ruta. El primer corte operativo valida el `update-plan`, ejecuta la secuencia APT basica derivada de `package_changes` y, si sale bien, deja una operacion en `needs_attention` / `pending-reboot` con `next_action = reboot-into-post-update-health-checks`.
+
+En esta etapa el dominio ya deja de ser solo descubrimiento y pasa a cubrir tambien el arranque de la ejecucion. Lo pendiente para V1 es endurecer semantica de frescura, locks y busy-state, y despues enganchar el apply con el coordinador durable completo de update/recovery.
 
 ## 5. Componentes principales de la vertical
 

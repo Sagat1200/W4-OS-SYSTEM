@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace W4\OS\SystemApi;
 
 use W4\OS\Support\ValidationError;
+use W4\OS\Update\UpdateToolkit;
 
 final class SystemApiPackagesToolkit
 {
@@ -49,6 +50,48 @@ final class SystemApiPackagesToolkit
             'catalog_revision' => $list['catalog_revision'] ?? null,
             'updates' => $list,
             'count' => $list['count'] ?? 0,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed>|null $plan
+     * @return array<string, mixed>
+     */
+    public function applyUpdates(
+        string $operationId,
+        string $planHash,
+        string $idempotencyKey,
+        ?array $plan = null,
+        ?string $planPath = null
+    ): array {
+        $resolvedPlan = $this->resolveUpdateApplyPlan($plan, $planPath);
+        $this->assertUpdatePlanMatches($resolvedPlan, $operationId, $planHash);
+
+        $result = $this->resolveUpdatesApplyExecutionResult($resolvedPlan);
+        $succeeded = ($result['exit_code'] ?? 1) === 0;
+
+        return [
+            'kind' => 'system-api-update-operation',
+            'status' => $succeeded ? 'pending-reboot' : 'failed',
+            'backend' => 'apt-get',
+            'operation_id' => $operationId,
+            'plan_hash' => $planHash,
+            'idempotency_key' => $idempotencyKey,
+            'profile_id' => $resolvedPlan['profile_id'] ?? null,
+            'source_version' => $resolvedPlan['source_version'] ?? null,
+            'target_version' => $resolvedPlan['target_version'] ?? null,
+            'apply_mode' => $resolvedPlan['execution']['apply_mode'] ?? null,
+            'stage' => $succeeded ? 'prepared' : 'failed',
+            'state' => $succeeded ? 'needs_attention' : 'failed',
+            'command' => 'updates:apply',
+            'command_sequence' => $this->renderCommandSequence($this->buildUpdatesApplyCommands($resolvedPlan)),
+            'exit_code' => $result['exit_code'],
+            'stdout' => $result['stdout'],
+            'stderr' => $result['stderr'],
+            'package_changes' => $resolvedPlan['package_changes'] ?? [],
+            'repository_snapshot' => $resolvedPlan['repository_snapshot'] ?? [],
+            'stages' => $resolvedPlan['execution']['stages'] ?? [],
+            'next_action' => $succeeded ? 'reboot-into-post-update-health-checks' : 'inspect-update-state',
         ];
     }
 
@@ -350,6 +393,33 @@ final class SystemApiPackagesToolkit
     }
 
     /**
+     * @param array<string, mixed>|null $plan
+     * @return array<string, mixed>
+     */
+    private function resolveUpdateApplyPlan(?array $plan, ?string $planPath): array
+    {
+        if ($plan !== null) {
+            (new UpdateToolkit())->validateUpdatePlan($plan, 'params.plan');
+
+            return $plan;
+        }
+
+        if ($planPath !== null) {
+            $raw = file_get_contents($planPath);
+            if (!is_string($raw)) {
+                throw new ValidationError(sprintf('params.plan_path no se pudo leer: %s', $planPath));
+            }
+
+            $decoded = $this->decodeJsonObject($raw, 'params.plan_path');
+            (new UpdateToolkit())->validateUpdatePlan($decoded, $planPath);
+
+            return $decoded;
+        }
+
+        throw new ValidationError('params.plan o params.plan_path es obligatorio para updates.apply');
+    }
+
+    /**
      * @param array<string, mixed> $plan
      */
     private function assertPlanMatches(array $plan, string $planId, string $planHash): void
@@ -394,6 +464,22 @@ final class SystemApiPackagesToolkit
 
     /**
      * @param array<string, mixed> $plan
+     */
+    private function assertUpdatePlanMatches(array $plan, string $operationId, string $planHash): void
+    {
+        $resolvedOperationId = $plan['operation_id'] ?? null;
+        if (!is_string($resolvedOperationId) || trim($resolvedOperationId) === '') {
+            throw new ValidationError('params.plan.operation_id debe estar presente');
+        }
+
+        $expectedHash = $this->computeUpdatePlanHash($plan);
+        if (trim($resolvedOperationId) !== $operationId || $expectedHash !== $planHash) {
+            throw new ValidationError('Conflicto: operation_id o plan_hash no coinciden con el update-plan suministrado');
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $plan
      * @return array{stdout:string,stderr:string,exit_code:int}
      */
     private function resolveApplyExecutionResult(array $plan): array
@@ -414,6 +500,59 @@ final class SystemApiPackagesToolkit
         $this->assertLinuxCommandSupport('packages.apply', 'apt-get');
 
         return $this->runLinuxCommand($this->buildApplyCommand($plan), allowFailure: true);
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     * @return array{stdout:string,stderr:string,exit_code:int}
+     */
+    private function resolveUpdatesApplyExecutionResult(array $plan): array
+    {
+        $stdoutFixture = getenv('W4_SYSTEM_API_UPDATES_APPLY_STDOUT');
+        $stderrFixture = getenv('W4_SYSTEM_API_UPDATES_APPLY_STDERR');
+        $exitCodeFixture = getenv('W4_SYSTEM_API_UPDATES_APPLY_EXIT_CODE');
+        if (is_string($stdoutFixture) || is_string($stderrFixture) || is_string($exitCodeFixture)) {
+            return [
+                'stdout' => is_string($stdoutFixture) ? $stdoutFixture : '',
+                'stderr' => is_string($stderrFixture) ? $stderrFixture : '',
+                'exit_code' => is_string($exitCodeFixture) && preg_match('/^-?\d+$/', $exitCodeFixture) === 1
+                    ? (int) $exitCodeFixture
+                    : 0,
+            ];
+        }
+
+        $commands = $this->buildUpdatesApplyCommands($plan);
+        if ($commands === []) {
+            throw new ValidationError('params.plan.package_changes no contiene acciones aplicables');
+        }
+
+        $stdoutParts = [];
+        $stderrParts = [];
+        foreach ($commands as $command) {
+            $this->assertLinuxCommandSupport('updates.apply', 'apt-get');
+            $result = $this->runLinuxCommand($command, allowFailure: true);
+            if (trim($result['stdout']) !== '') {
+                $stdoutParts[] = trim($result['stdout']);
+            }
+
+            if (trim($result['stderr']) !== '') {
+                $stderrParts[] = trim($result['stderr']);
+            }
+
+            if (($result['exit_code'] ?? 1) !== 0) {
+                return [
+                    'stdout' => implode(PHP_EOL, $stdoutParts),
+                    'stderr' => implode(PHP_EOL, $stderrParts),
+                    'exit_code' => (int) $result['exit_code'],
+                ];
+            }
+        }
+
+        return [
+            'stdout' => implode(PHP_EOL, $stdoutParts),
+            'stderr' => implode(PHP_EOL, $stderrParts),
+            'exit_code' => 0,
+        ];
     }
 
     /**
@@ -462,6 +601,44 @@ final class SystemApiPackagesToolkit
     }
 
     /**
+     * @param array<string, mixed> $plan
+     * @return list<list<string>>
+     */
+    private function buildUpdatesApplyCommands(array $plan): array
+    {
+        $packageChanges = $plan['package_changes'] ?? null;
+        if (!is_array($packageChanges)) {
+            throw new ValidationError('params.plan.package_changes debe ser un objeto');
+        }
+
+        $install = $this->normalizeStringList($packageChanges['install'] ?? [], 'params.plan.package_changes.install');
+        $upgrade = $this->normalizeStringList($packageChanges['upgrade'] ?? [], 'params.plan.package_changes.upgrade');
+        $remove = $this->normalizeStringList($packageChanges['remove'] ?? [], 'params.plan.package_changes.remove');
+
+        $commands = [];
+        $installAndUpgrade = array_values(array_unique(array_merge($install, $upgrade)));
+        if ($installAndUpgrade !== []) {
+            $command = ['apt-get', '-y', '-o', 'APT::Color=0', 'install'];
+            foreach ($installAndUpgrade as $package) {
+                $command[] = $package;
+            }
+
+            $commands[] = $command;
+        }
+
+        if ($remove !== []) {
+            $command = ['apt-get', '-y', '-o', 'APT::Color=0', 'remove'];
+            foreach ($remove as $package) {
+                $command[] = $package;
+            }
+
+            $commands[] = $command;
+        }
+
+        return $commands;
+    }
+
+    /**
      * @param array<int, array<string, mixed>> $selection
      * @return list<string>
      */
@@ -484,6 +661,20 @@ final class SystemApiPackagesToolkit
         }
 
         return $command;
+    }
+
+    /**
+     * @param list<list<string>> $commands
+     * @return list<string>
+     */
+    private function renderCommandSequence(array $commands): array
+    {
+        $rendered = [];
+        foreach ($commands as $command) {
+            $rendered[] = $this->renderCommand($command);
+        }
+
+        return $rendered;
     }
 
     /**
@@ -936,6 +1127,28 @@ final class SystemApiPackagesToolkit
         return $fields;
     }
 
+    /**
+     * @param mixed $value
+     * @return list<string>
+     */
+    private function normalizeStringList(mixed $value, string $field): array
+    {
+        if (!is_array($value)) {
+            throw new ValidationError(sprintf('%s debe ser una lista de strings', $field));
+        }
+
+        $items = [];
+        foreach ($value as $entry) {
+            if (!is_string($entry) || trim($entry) === '') {
+                throw new ValidationError(sprintf('%s debe ser una lista de strings no vacios', $field));
+            }
+
+            $items[] = trim($entry);
+        }
+
+        return $items;
+    }
+
 
     /**
      * @return list<array<string, mixed>>
@@ -978,6 +1191,19 @@ final class SystemApiPackagesToolkit
         }
     }
 
+    /**
+     * @param array<string, mixed> $plan
+     */
+    public function computeUpdatePlanHash(array $plan): string
+    {
+        $encoded = json_encode($plan, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($encoded === false) {
+            throw new ValidationError('No se pudo serializar el update-plan');
+        }
+
+        return sha1($encoded);
+    }
+
     private function resolveOsFamily(): string
     {
         $override = getenv('W4_SYSTEM_API_HOST_OS_FAMILY');
@@ -1015,6 +1241,9 @@ final class SystemApiPackagesToolkit
             'W4_SYSTEM_API_UPDATES_REFRESH_STDOUT',
             'W4_SYSTEM_API_UPDATES_REFRESH_STDERR',
             'W4_SYSTEM_API_UPDATES_REFRESH_EXIT_CODE',
+            'W4_SYSTEM_API_UPDATES_APPLY_STDOUT',
+            'W4_SYSTEM_API_UPDATES_APPLY_STDERR',
+            'W4_SYSTEM_API_UPDATES_APPLY_EXIT_CODE',
             'W4_SYSTEM_API_PACKAGES_PLAN_JSON',
             'W4_SYSTEM_API_PACKAGES_PLAN_SIMULATION_OUTPUT',
             'W4_SYSTEM_API_PACKAGES_APPLY_STDOUT',
