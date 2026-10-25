@@ -89,8 +89,8 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
             'bash -lc %s',
             $this->quoteForBash(sprintf(
                 'cd %s && %s && source ./executor.env && %s',
-                $this->quoteForBash($remoteBundleDir),
-                'chmod +x \'./run-update-offline.sh\' \'./run-update-with-repo-env.sh\' \'./run-health-checks.sh\' \'./reconcile-after-reboot.sh\'',
+                $this->quoteForBashDouble($remoteBundleDir),
+                'chmod +x "./run-update-offline.sh" "./run-update-with-repo-env.sh" "./run-health-checks.sh" "./reconcile-after-reboot.sh"',
                 './run-health-checks.sh'
             ))
         );
@@ -153,8 +153,8 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
                 'w4live',
                 '--password',
                 'fixture-live-password',
-                '--command',
-                $remoteCommand,
+                '--command-b64',
+                base64_encode($remoteCommand),
                 '--pty',
             ]) => 'health-checks-ok',
             $this->fixtureKey([
@@ -219,6 +219,8 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
         self::assertSame($remoteCommand, $payload['remote_command']);
         self::assertSame('uploaded', $payload['upload_output']);
         self::assertSame('health-checks-ok', $payload['execution_output']);
+        self::assertSame(0, $payload['execution_exit_code']);
+        self::assertSame('', $payload['execution_error_output']);
         self::assertSame('{"status":"ok","downloaded":["operation.json","health-report.json"],"missing":[]}', $payload['download_output']);
         self::assertSame('health', $payload['synced_artifact_validation']['validated_stage']);
         self::assertSame('ok', $payload['synced_artifact_validation']['health_status']);
@@ -253,8 +255,8 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
             'bash -lc %s',
             $this->quoteForBash(sprintf(
                 'cd %s && %s && source ./executor.env && %s',
-                $this->quoteForBash($remoteBundleDir),
-                'chmod +x \'./run-update-offline.sh\' \'./run-update-with-repo-env.sh\' \'./run-health-checks.sh\' \'./reconcile-after-reboot.sh\'',
+                $this->quoteForBashDouble($remoteBundleDir),
+                'chmod +x "./run-update-offline.sh" "./run-update-with-repo-env.sh" "./run-health-checks.sh" "./reconcile-after-reboot.sh"',
                 './run-health-checks.sh'
             ))
         );
@@ -288,10 +290,14 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
                 'w4live',
                 '--password',
                 'fixture-live-password',
-                '--command',
-                $remoteCommand,
+                '--command-b64',
+                base64_encode($remoteCommand),
                 '--pty',
-            ]) => 'health-checks-failed',
+            ]) => [
+                'stdout' => '',
+                'stderr' => '',
+                'exit_code' => 1,
+            ],
             $this->fixtureKey([
                 $phpBinary,
                 $downloadFilesScript,
@@ -384,8 +390,8 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
             'bash -lc %s',
             $this->quoteForBash(sprintf(
                 'cd %s && %s && source ./executor.env && %s',
-                $this->quoteForBash($remoteBundleDir),
-                'chmod +x \'./run-update-offline.sh\' \'./run-update-with-repo-env.sh\' \'./run-health-checks.sh\' \'./reconcile-after-reboot.sh\'',
+                $this->quoteForBashDouble($remoteBundleDir),
+                'chmod +x "./run-update-offline.sh" "./run-update-with-repo-env.sh" "./run-health-checks.sh" "./reconcile-after-reboot.sh"',
                 './reconcile-after-reboot.sh'
             ))
         );
@@ -419,8 +425,8 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
                 'w4live',
                 '--password',
                 'fixture-live-password',
-                '--command',
-                $remoteCommand,
+                '--command-b64',
+                base64_encode($remoteCommand),
                 '--pty',
             ]) => 'reconciled',
             $this->fixtureKey([
@@ -597,6 +603,15 @@ final class SystemApiUpdateBundleVirtualBoxVmCliTest extends TestCase
     private function quoteForBash(string $value): string
     {
         return "'" . str_replace("'", "'\"'\"'", $value) . "'";
+    }
+
+    private function quoteForBashDouble(string $value): string
+    {
+        return '"' . str_replace(
+            ['\\', '"', '$', '`'],
+            ['\\\\', '\\"', '\\$', '\\`'],
+            $value
+        ) . '"';
     }
 
 

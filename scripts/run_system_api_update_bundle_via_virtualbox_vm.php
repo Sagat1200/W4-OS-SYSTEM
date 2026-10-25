@@ -30,8 +30,9 @@ function readJsonFixtureFromEnv(string $variable): ?array
 
 /**
  * @param list<string> $command
+ * @return array{stdout: string, stderr: string, exit_code: int}
  */
-function runChecked(array $command): string
+function runCaptured(array $command): array
 {
     $fixtureMap = readJsonFixtureFromEnv('W4_SYSTEM_API_UPDATE_VM_COMMAND_MAP_JSON');
     $fixtureKey = json_encode(array_values($command), JSON_THROW_ON_ERROR);
@@ -52,11 +53,11 @@ function runChecked(array $command): string
             throw new ValidationError(sprintf('Fixture invalido para %s', $fixtureKey));
         }
 
-        if ($exitCode !== 0) {
-            throw new ValidationError(trim($stderr) !== '' ? trim($stderr) : sprintf('Fallo al ejecutar: %s', implode(' ', $command)));
-        }
-
-        return trim((string) $stdout);
+        return [
+            'stdout' => trim((string) $stdout),
+            'stderr' => trim($stderr),
+            'exit_code' => $exitCode,
+        ];
     }
 
     $descriptors = [
@@ -77,10 +78,23 @@ function runChecked(array $command): string
     fclose($pipes[2]);
 
     $exitCode = proc_close($process);
-    if ($exitCode !== 0) {
-        $message = trim((string) $stderr);
+    return [
+        'stdout' => trim((string) $stdout),
+        'stderr' => trim((string) $stderr),
+        'exit_code' => $exitCode,
+    ];
+}
+
+/**
+ * @param list<string> $command
+ */
+function runChecked(array $command): string
+{
+    $result = runCaptured($command);
+    if ($result['exit_code'] !== 0) {
+        $message = $result['stderr'];
         if ($message === '') {
-            $message = trim((string) $stdout);
+            $message = $result['stdout'];
         }
         if ($message === '') {
             $message = sprintf('Fallo al ejecutar: %s', implode(' ', $command));
@@ -89,7 +103,7 @@ function runChecked(array $command): string
         throw new ValidationError($message);
     }
 
-    return trim((string) $stdout);
+    return $result['stdout'];
 }
 
 function findVBoxManagePath(): string
@@ -180,6 +194,15 @@ function quoteForBash(string $value): string
     return "'" . str_replace("'", "'\"'\"'", $value) . "'";
 }
 
+function quoteForBashDouble(string $value): string
+{
+    return '"' . str_replace(
+        ['\\', '"', '$', '`'],
+        ['\\\\', '\\"', '\\$', '\\`'],
+        $value
+    ) . '"';
+}
+
 function resolveStoreDir(string $rootDir, ?string $storeDir, ?string $operationId): string
 {
     if ($storeDir !== null) {
@@ -234,7 +257,7 @@ function ensureBundleArtifacts(string $storeDir): void
  */
 function buildChmodCommand(array $scriptNames): string
 {
-    $quoted = array_map(static fn (string $name): string => quoteForBash('./' . $name), $scriptNames);
+    $quoted = array_map(static fn (string $name): string => quoteForBashDouble('./' . $name), $scriptNames);
 
     return 'chmod +x ' . implode(' ', $quoted);
 }
@@ -254,9 +277,9 @@ function buildRemoteStageCommand(
 
     $stageCommand = match ($stage) {
         'offline' => $remoteRepositoryDir !== null
-            ? './run-update-with-repo-env.sh --repo-dir ' . quoteForBash($remoteRepositoryDir)
+            ? './run-update-with-repo-env.sh --repo-dir ' . quoteForBashDouble($remoteRepositoryDir)
             : ($remoteRepositoryEnv !== null
-                ? './run-update-with-repo-env.sh --repo-env ' . quoteForBash($remoteRepositoryEnv)
+                ? './run-update-with-repo-env.sh --repo-env ' . quoteForBashDouble($remoteRepositoryEnv)
                 : './run-update-offline.sh'),
         'health' => './run-health-checks.sh',
         'reconcile' => './reconcile-after-reboot.sh',
@@ -267,7 +290,7 @@ function buildRemoteStageCommand(
         'bash -lc %s',
         quoteForBash(sprintf(
             'cd %s && %s && source ./executor.env && %s',
-            quoteForBash($remoteDir),
+            quoteForBashDouble($remoteDir),
             $chmodCommand,
             $stageCommand
         ))
@@ -621,7 +644,7 @@ try {
         '--replace',
     ]);
 
-    $executionOutput = runChecked([
+    $executionResult = runCaptured([
         $phpBinary,
         $runRemoteScript,
         '--host',
@@ -632,10 +655,20 @@ try {
         $username,
         '--password',
         $password,
-        '--command',
-        $remoteCommand,
+        '--command-b64',
+        base64_encode($remoteCommand),
         '--pty',
     ]);
+    $executionOutput = $executionResult['stdout'];
+
+    if (!in_array($stage, ['health', 'reconcile'], true) && $executionResult['exit_code'] !== 0) {
+        $message = $executionResult['stderr'] !== '' ? $executionResult['stderr'] : $executionResult['stdout'];
+        if ($message === '') {
+            $message = sprintf('Fallo al ejecutar: %s', $remoteCommand);
+        }
+
+        throw new ValidationError($message);
+    }
 
     $downloadCommand = [
         $phpBinary,
@@ -666,6 +699,8 @@ try {
     $payload['status'] = 'ok';
     $payload['upload_output'] = $uploadOutput;
     $payload['execution_output'] = $executionOutput;
+    $payload['execution_exit_code'] = $executionResult['exit_code'];
+    $payload['execution_error_output'] = $executionResult['stderr'];
     $payload['download_output'] = $downloadOutput;
     $payload['synced_artifact_validation'] = $syncedArtifactValidation;
     $payload['next_step'] = match ($stage) {
