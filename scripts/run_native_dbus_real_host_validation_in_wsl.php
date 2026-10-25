@@ -175,6 +175,23 @@ function normalizeOptionalOutput(?string $value): ?string
 }
 
 /**
+ * @param array<string, mixed> $data
+ */
+function writeJsonArtifact(string $path, array $data): void
+{
+    $directory = dirname($path);
+    if (!is_dir($directory) && !mkdir($directory, 0777, true) && !is_dir($directory)) {
+        throw new ValidationError(sprintf('No se pudo crear la carpeta del artefacto: %s', $directory));
+    }
+
+    $encoded = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+    $result = file_put_contents($path, $encoded . PHP_EOL);
+    if ($result === false) {
+        throw new ValidationError(sprintf('No se pudo escribir el artefacto JSON: %s', $path));
+    }
+}
+
+/**
  * @return array<string, string>
  */
 function collectWslEnvironment(string $distribution): array
@@ -311,6 +328,27 @@ try {
     $wslRepoRoot = resolvePathForWsl($distribution, $rootDir);
     $effectiveTargetRepoRoot = $targetRepoRoot ?? $wslRepoRoot;
     $collectedEnvironment = collectWslEnvironment($distribution);
+    $wslEnvironmentPayload = [
+        'distribution' => $distribution,
+        'wsl_repo_root' => $wslRepoRoot,
+        'preparation_target_repo_root' => $effectiveTargetRepoRoot,
+        'php_version' => $collectedEnvironment['W4_SYSTEM_API_PROBE_PHP_VERSION'] ?? null,
+        'php_binary' => $collectedEnvironment['W4_SYSTEM_API_PROBE_PHP_BINARY'] ?? null,
+        'has_pecl' => ($collectedEnvironment['W4_SYSTEM_API_PROBE_HAS_PECL'] ?? '0') === '1',
+        'has_busctl' => ($collectedEnvironment['W4_SYSTEM_API_PROBE_HAS_BUSCTL'] ?? '0') === '1',
+        'has_gdbus' => ($collectedEnvironment['W4_SYSTEM_API_PROBE_HAS_GDBUS'] ?? '0') === '1',
+        'has_dbus_daemon' => ($collectedEnvironment['W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON'] ?? '0') === '1',
+        'has_system_bus_socket' => ($collectedEnvironment['W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET'] ?? '0') === '1',
+        'release' => $collectedEnvironment['W4_SYSTEM_API_WSL_RELEASE'] ?? null,
+        'kernel' => $collectedEnvironment['W4_SYSTEM_API_WSL_KERNEL'] ?? null,
+    ];
+    $wslEnvironmentReportPath = $evidenceDir . DIRECTORY_SEPARATOR . 'wsl-host-environment.json';
+    writeJsonArtifact($wslEnvironmentReportPath, [
+        'api_version' => '1.0',
+        'kind' => 'system-api-native-dbus-wsl-host-environment',
+        'generated_at' => gmdate(DATE_ATOM),
+        'environment' => $wslEnvironmentPayload,
+    ]);
 
     $localRunnerArguments = [
         $rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'run_native_dbus_real_host_validation.php',
@@ -336,17 +374,8 @@ try {
 
         $payload['wsl_distribution'] = $distribution;
         $payload['wsl_repo_root'] = $wslRepoRoot;
-        $payload['wsl_environment'] = [
-            'php_version' => $collectedEnvironment['W4_SYSTEM_API_PROBE_PHP_VERSION'] ?? null,
-            'php_binary' => $collectedEnvironment['W4_SYSTEM_API_PROBE_PHP_BINARY'] ?? null,
-            'has_pecl' => ($collectedEnvironment['W4_SYSTEM_API_PROBE_HAS_PECL'] ?? '0') === '1',
-            'has_busctl' => ($collectedEnvironment['W4_SYSTEM_API_PROBE_HAS_BUSCTL'] ?? '0') === '1',
-            'has_gdbus' => ($collectedEnvironment['W4_SYSTEM_API_PROBE_HAS_GDBUS'] ?? '0') === '1',
-            'has_dbus_daemon' => ($collectedEnvironment['W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON'] ?? '0') === '1',
-            'has_system_bus_socket' => ($collectedEnvironment['W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET'] ?? '0') === '1',
-            'release' => $collectedEnvironment['W4_SYSTEM_API_WSL_RELEASE'] ?? null,
-            'kernel' => $collectedEnvironment['W4_SYSTEM_API_WSL_KERNEL'] ?? null,
-        ];
+        $payload['wsl_environment'] = $wslEnvironmentPayload;
+        $payload['wsl_environment_report_path'] = $wslEnvironmentReportPath;
 
         printJson($payload);
     } else {

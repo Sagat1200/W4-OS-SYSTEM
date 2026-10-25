@@ -19,44 +19,26 @@
     "bus_name": "org.w4.System1",
     "object_path": "/org/w4/System1",
     "interface": "org.w4.System1.Manager",
-    "started_at": "2026-10-25T22:19:19+00:00",
-    "completed_at": "2026-10-25T22:19:19+00:00",
+    "started_at": "2026-10-25T22:52:51+00:00",
+    "completed_at": "2026-10-25T22:52:51+00:00",
     "ownership_validated": false,
     "coupling_ready": false,
     "startup_acknowledged": false,
-    "blocking_reason": "linux-php-runtime-too-old",
-    "next_action": "upgrade-runtime-php",
+    "blocking_reason": "missing-runtime-capabilities",
+    "next_action": "install-native-dbus-extension",
     "recommended_next_actions": [
-        "upgrade-runtime-php",
-        "migrate-to-modern-linux-host"
+        "install-native-dbus-extension"
     ],
     "host_compatibility": {
-        "compatible": false,
+        "compatible": true,
         "os_family": "Linux",
-        "php_version": "7.4.3-4ubuntu2.29",
+        "php_version": "8.4.3",
         "required_php_constraint": "^8.4",
         "required_php_version": "8.4.0",
-        "blocking_reason": "linux-php-runtime-too-old",
-        "next_action": "upgrade-runtime-php",
-        "recommended_next_actions": [
-            "upgrade-runtime-php",
-            "migrate-to-modern-linux-host"
-        ],
-        "preparation_steps": [
-            {
-                "action": "upgrade-runtime-php",
-                "description": "El host Linux publica PHP `7.4.3-4ubuntu2.29`, pero el repo exige `^8.4`. Homologar un runtime PHP moderno antes de volver a intentar PECL `dbus` y el ownership real.",
-                "commands": [
-                    "php --version",
-                    "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && php -r \"echo json_decode(file_get_contents('composer.json'), true)['require']['php'], PHP_EOL;\"",
-                    "lsb_release -a || cat /etc/os-release",
-                    "sudo apt-cache policy php8.4-cli php8.4-dev php8.4-pear",
-                    "sudo apt-get update",
-                    "sudo apt-get install -y php8.4-cli php8.4-dev php8.4-pear",
-                    "php --version"
-                ]
-            }
-        ]
+        "blocking_reason": null,
+        "next_action": null,
+        "recommended_next_actions": [],
+        "preparation_steps": []
     },
     "native_dbus_extension_installability": {
         "blocked": false,
@@ -73,44 +55,21 @@
     },
     "preparation_plan": [
         {
-            "action": "upgrade-runtime-php",
-            "description": "El host Linux publica PHP `7.4.3-4ubuntu2.29`, pero el repo exige `^8.4`. Homologar un runtime PHP moderno antes de volver a intentar PECL `dbus` y el ownership real.",
+            "action": "install-native-dbus-extension",
+            "description": "Instalar y habilitar la extension PECL `dbus` para que PHP pueda pedir el bus name y exportar el objeto D-Bus.",
             "commands": [
-                "php --version",
-                "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && php -r \"echo json_decode(file_get_contents('composer.json'), true)['require']['php'], PHP_EOL;\"",
-                "lsb_release -a || cat /etc/os-release",
-                "sudo apt-cache policy php8.4-cli php8.4-dev php8.4-pear",
                 "sudo apt-get update",
-                "sudo apt-get install -y php8.4-cli php8.4-dev php8.4-pear",
-                "php --version"
+                "sudo apt-get install -y php-pear php-dev libdbus-1-dev pkg-config",
+                "sudo pecl install dbus",
+                "php --ri dbus"
             ]
         },
         {
-            "action": "migrate-to-modern-linux-host",
-            "description": "Preparar o elegir un Linux moderno homologado con PHP `8.4+`, toolchain de compilacion y dependencias D-Bus antes de repetir el contraste nativo real.",
+            "action": "materialize-system-bus-socket",
+            "description": "Confirmar que el socket del system bus exista y que el servicio D-Bus del sistema este activo.",
             "commands": [
-                "lsb_release -a || cat /etc/os-release",
-                "php --version || true",
-                "printf '%s\\n' \"Objetivo: host Linux moderno con PHP 8.4+ y toolchain homologada para PECL dbus.\"",
-                "sudo apt-get update",
-                "sudo apt-cache policy php8.4-cli php8.4-dev php8.4-pear",
-                "sudo apt-get install -y software-properties-common ca-certificates lsb-release apt-transport-https gnupg || true",
-                "sudo apt-get install -y build-essential autoconf automake libtool re2c pkg-config libdbus-1-dev libxml2-dev dbus dbus-user-session",
-                "sudo apt-get install -y php8.4-cli php8.4-dev php8.4-pear",
-                "php --version",
-                "phpize --version || true",
-                "pecl version || true",
-                "busctl --version || true",
-                "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && php -r \"echo json_decode(file_get_contents('composer.json'), true)['require']['php'], PHP_EOL;\""
-            ]
-        },
-        {
-            "action": "rerun-native-runtime-validation",
-            "description": "Reejecutar el runner despues de homologar el runtime PHP del host Linux para confirmar si el siguiente bloqueo ya es exclusivamente D-Bus.",
-            "commands": [
-                "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && php scripts/run_native_dbus_real_host_validation.php --format text --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment",
-                "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && php scripts/run_native_dbus_real_host_validation.php --format markdown --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment",
-                "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment"
+                "sudo systemctl status dbus",
+                "test -S /run/dbus/system_bus_socket && echo system-bus-socket-ready"
             ]
         }
     ],
@@ -131,8 +90,8 @@
             "interface": "org.w4.System1.Manager",
             "environment": {
                 "os_family": "Linux",
-                "php_binary": "/usr/bin/php",
-                "php_version": "7.4.3-4ubuntu2.29"
+                "php_binary": "/opt/php/8.4.3/bin/php",
+                "php_version": "8.4.3"
             },
             "probes": {
                 "php_dbus_extension": false,

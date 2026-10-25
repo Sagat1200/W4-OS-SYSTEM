@@ -8,8 +8,8 @@
     "interface": "org.w4.System1.Manager",
     "environment": {
         "os_family": "Linux",
-        "php_binary": "/usr/bin/php",
-        "php_version": "7.4.3-4ubuntu2.29"
+        "php_binary": "/opt/php/8.4.3/bin/php",
+        "php_version": "8.4.3"
     },
     "probes": {
         "php_dbus_extension": false,

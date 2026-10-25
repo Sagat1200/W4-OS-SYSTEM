@@ -1,0 +1,19 @@
+{
+    "api_version": "1.0",
+    "kind": "system-api-native-dbus-wsl-host-environment",
+    "generated_at": "2026-10-25T22:52:47+00:00",
+    "environment": {
+        "distribution": "Ubuntu",
+        "wsl_repo_root": "/mnt/c/W4/Packages/W4-OS SYSTEM",
+        "preparation_target_repo_root": "/mnt/c/W4/Packages/W4-OS SYSTEM",
+        "php_version": "8.4.3",
+        "php_binary": "/opt/php/8.4.3/bin/php",
+        "has_pecl": true,
+        "has_busctl": true,
+        "has_gdbus": true,
+        "has_dbus_daemon": true,
+        "has_system_bus_socket": false,
+        "release": "NAME=\"Ubuntu\"\r\nVERSION=\"20.04.6 LTS (Focal Fossa)\"\r\nID=ubuntu\r\nID_LIKE=debian\r\nPRETTY_NAME=\"Ubuntu 20.04.6 LTS\"\r\nVERSION_ID=\"20.04\"\r\nHOME_URL=\"https://www.ubuntu.com/\"\r\nSUPPORT_URL=\"https://help.ubuntu.com/\"\r\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\r\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\r\nVERSION_CODENAME=focal\r\nUBUNTU_CODENAME=focal",
+        "kernel": "Linux W4-TECHNOLOGIES 6.18.40.1-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Fri Jul 31 22:12:15 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux"
+    }
+}

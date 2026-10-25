@@ -75,9 +75,17 @@ final class NativeDbusRealHostValidationWslRunnerCliTest extends TestCase
         self::assertStringContainsString('Ubuntu', (string) $payload['wsl_environment']['release']);
         self::assertStringContainsString('fixture-host', (string) $payload['wsl_environment']['kernel']);
         self::assertStringContainsString('php8.4-cli', implode("\n", $payload['preparation_plan'][0]['commands']));
+        self::assertFileExists($payload['wsl_environment_report_path']);
         self::assertFileExists($payload['report_path']);
         self::assertFileExists($payload['summary_path']);
         self::assertFileExists($payload['handoff_path']);
+
+        $environmentReport = $this->decodeJsonFile($payload['wsl_environment_report_path']);
+        self::assertSame('system-api-native-dbus-wsl-host-environment', $environmentReport['kind']);
+        self::assertSame($distribution, $environmentReport['environment']['distribution']);
+        self::assertSame($wslRepoRoot, $environmentReport['environment']['wsl_repo_root']);
+        self::assertSame('7.4.3', $environmentReport['environment']['php_version']);
+        self::assertFalse($environmentReport['environment']['has_system_bus_socket']);
     }
 
     public function testRunnerCanOverrideLinuxTargetRepoRootWhileKeepingCollectedWslRoot(): void
@@ -117,6 +125,10 @@ final class NativeDbusRealHostValidationWslRunnerCliTest extends TestCase
         self::assertSame($distribution, $payload['wsl_distribution']);
         self::assertSame($wslRepoRoot, $payload['wsl_repo_root']);
         self::assertSame($targetRepoRoot, $payload['preparation_target_repo_root']);
+        self::assertFileExists($payload['wsl_environment_report_path']);
+
+        $environmentReport = $this->decodeJsonFile($payload['wsl_environment_report_path']);
+        self::assertSame($targetRepoRoot, $environmentReport['environment']['preparation_target_repo_root']);
 
         $handoff = file_get_contents($payload['handoff_path']);
         self::assertNotFalse($handoff);
@@ -254,6 +266,17 @@ final class NativeDbusRealHostValidationWslRunnerCliTest extends TestCase
         $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
         return $data;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decodeJsonFile(string $path): array
+    {
+        $raw = file_get_contents($path);
+        self::assertNotFalse($raw, sprintf('No se pudo leer %s', $path));
+
+        return $this->decodeJson($raw);
     }
 
     private function removeDirectory(string $path): void
