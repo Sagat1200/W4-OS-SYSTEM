@@ -1,0 +1,29 @@
+{
+    "update_operation_schema_version": 1,
+    "kind": "update-operation",
+    "operation_id": "manager-update-op-get-5d3896676c0c",
+    "profile_id": "w4-os-home",
+    "source_version": "1.0.0-lab",
+    "target_version": "1.0.1-lab",
+    "stage": "confirmed",
+    "repository_snapshot": {
+        "id": "w4-main-2026-09-19T120000Z",
+        "channel": "testing"
+    },
+    "snapshot": {
+        "root_subvolume": "\/@",
+        "snapshot_name": "pre-update-manager-update-op-get-5d3896676c0c",
+        "snapshot_path": "\/.snapshots\/pre-update-manager-update-op-get-5d3896676c0c",
+        "retention": "protected-until-confirmed"
+    },
+    "boot_manifest": {
+        "kernel_package": "linux-image-amd64",
+        "boot_mode": "efi",
+        "initramfs_strategy": "update-initramfs"
+    },
+    "last_error": null,
+    "timestamps": {
+        "created_at": "2026-10-25T06:32:59+00:00",
+        "updated_at": "2026-10-25T06:32:59+00:00"
+    }
+}

@@ -640,13 +640,15 @@ final class SystemApiToolkit
 
         if ($method === 'operations.get') {
             $operationId = $this->requireString($params, 'operation_id');
+            $operation = $this->operations->get($operationId);
+            $operation = $this->refreshOperationFromDurableStores($operation);
 
             return $this->createSuccessResponse(
                 requestId: $requestId,
                 method: 'operations.get',
                 resourceKind: 'system-api-operation',
                 resourceId: $operationId,
-                data: $this->operations->get($operationId),
+                data: $operation,
                 provider: 'local-system-api-operations-contract'
             );
         }
@@ -1233,6 +1235,30 @@ final class SystemApiToolkit
         }
 
         return 'VALIDATION_ERROR';
+    }
+
+    /**
+     * @param array<string, mixed> $operation
+     * @return array<string, mixed>
+     */
+    private function refreshOperationFromDurableStores(array $operation): array
+    {
+        $method = $operation['method'] ?? null;
+        $operationId = $operation['operation_id'] ?? null;
+        if (!is_string($method) || !is_string($operationId) || trim($operationId) === '') {
+            return $operation;
+        }
+
+        if (!in_array($method, ['updates.apply', 'updates.reconcile'], true)) {
+            return $operation;
+        }
+
+        $refreshedResult = $this->packages->refreshDurableUpdateOperation($operationId, $operation);
+        if ($refreshedResult === null) {
+            return $operation;
+        }
+
+        return $this->operations->refresh($operationId, $refreshedResult);
     }
 
     /**

@@ -19,10 +19,10 @@
         "status": "pending-reboot",
         "backend": "apt-get",
         "operation_id": "manager-update-op-apply-001",
-        "plan_hash": "9dfee7a07ea71b368a0f68392b5f7ef9f83a93ab",
-        "idempotency_key": "manager-updates-apply-1f47939ab7eb",
-        "expected_catalog_revision": "manager-updates-catalog-1f47939ab7eb",
-        "observed_catalog_revision": "manager-updates-catalog-1f47939ab7eb",
+        "plan_hash": "7146ae25ab499a0ee7291674ebea55919871677c",
+        "idempotency_key": "manager-updates-apply-93c6e6247b3b",
+        "expected_catalog_revision": "manager-updates-catalog-93c6e6247b3b",
+        "observed_catalog_revision": "manager-updates-catalog-93c6e6247b3b",
         "profile_id": "w4-os-home",
         "source_version": "1.0.0-lab",
         "target_version": "1.0.1-lab",
@@ -116,7 +116,7 @@
                 "created_at": "2026-10-25T06:04:51+00:00",
                 "updated_at": "2026-10-25T06:04:51+00:00"
             },
-            "plan_hash": "9dfee7a07ea71b368a0f68392b5f7ef9f83a93ab",
+            "plan_hash": "7146ae25ab499a0ee7291674ebea55919871677c",
             "apply_mode": "live-apt",
             "reboot_required": true
         },
@@ -159,7 +159,7 @@
         "next_action": "reboot-into-post-update-health-checks"
     },
     "error": null,
-    "created_at": "2026-10-25T06:12:31+00:00",
-    "observed_at": "2026-10-25T06:12:31+00:00",
+    "created_at": "2026-10-25T06:32:58+00:00",
+    "observed_at": "2026-10-25T06:32:58+00:00",
     "completed_at": null
 }

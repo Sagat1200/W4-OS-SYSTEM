@@ -205,6 +205,76 @@ final class SystemApiPackagesToolkit
     }
 
     /**
+     * @param array<string, mixed> $storedOperation
+     * @return array<string, mixed>|null
+     */
+    public function refreshDurableUpdateOperation(string $operationId, array $storedOperation): ?array
+    {
+        $storeDir = $this->resolveUpdateOperationStoreDir($operationId);
+        if (!is_file($storeDir . DIRECTORY_SEPARATOR . 'update-plan.json')
+            || !is_file($storeDir . DIRECTORY_SEPARATOR . 'operation.json')
+            || !is_file($storeDir . DIRECTORY_SEPARATOR . 'health-report.json')) {
+            return null;
+        }
+
+        $toolkit = new UpdateToolkit();
+        $store = $toolkit->loadOperationStore($storeDir);
+        $plan = $store['plan'];
+        $operation = $this->enrichDurableUpdateOperation($plan, $store['operation']);
+        $healthReport = $store['healthReport'];
+        $stage = is_string($operation['stage'] ?? null) ? trim((string) $operation['stage']) : 'failed';
+        $state = $stage === 'confirmed'
+            ? 'succeeded'
+            : ($stage === 'failed' ? 'failed' : 'needs_attention');
+        $status = $stage === 'confirmed'
+            ? 'ok'
+            : ($stage === 'failed' ? 'failed' : 'pending-reboot');
+        $postReboot = $this->buildUpdatesPostRebootContract($plan, $stage !== 'failed', $operation);
+        $storedResult = is_array($storedOperation['result'] ?? null) ? $storedOperation['result'] : [];
+
+        return [
+            'kind' => 'system-api-update-operation',
+            'status' => $status,
+            'backend' => 'apt-get',
+            'operation_id' => $operationId,
+            'plan_hash' => $operation['plan_hash'] ?? $this->computeUpdatePlanHash($plan),
+            'idempotency_key' => is_string($storedResult['idempotency_key'] ?? null) ? $storedResult['idempotency_key'] : null,
+            'expected_catalog_revision' => is_string($storedResult['expected_catalog_revision'] ?? null) ? $storedResult['expected_catalog_revision'] : null,
+            'observed_catalog_revision' => is_string($plan['catalog_revision'] ?? null) ? $plan['catalog_revision'] : null,
+            'profile_id' => $plan['profile_id'] ?? null,
+            'source_version' => $plan['source_version'] ?? null,
+            'target_version' => $plan['target_version'] ?? null,
+            'apply_mode' => $plan['execution']['apply_mode'] ?? null,
+            'stage' => $stage,
+            'state' => $state,
+            'command' => is_string($storedResult['command'] ?? null) ? $storedResult['command'] : 'updates:apply',
+            'command_sequence' => is_array($storedResult['command_sequence'] ?? null)
+                ? $storedResult['command_sequence']
+                : $this->renderCommandSequence($this->buildUpdatesApplyCommands($plan)),
+            'exit_code' => $storedResult['exit_code'] ?? null,
+            'stdout' => $storedResult['stdout'] ?? null,
+            'stderr' => $storedResult['stderr'] ?? null,
+            'package_changes' => $plan['package_changes'] ?? [],
+            'repository_snapshot' => $plan['repository_snapshot'] ?? [],
+            'snapshot' => is_array($plan['snapshot'] ?? null) ? $plan['snapshot'] : null,
+            'staging' => is_array($plan['staging'] ?? null) ? $plan['staging'] : null,
+            'boot_manifest' => is_array($plan['boot_manifest'] ?? null) ? $plan['boot_manifest'] : null,
+            'reboot_required' => (($plan['execution']['reboot_required'] ?? false) === true),
+            'stages' => $plan['execution']['stages'] ?? [],
+            'evidence' => $this->normalizeOptionalStringList($plan['evidence'] ?? null, 'update-plan.evidence'),
+            'notes' => $this->normalizeOptionalStringList($plan['notes'] ?? null, 'update-plan.notes'),
+            'durable_state' => $operation,
+            'health_report' => $healthReport,
+            'durable_store' => [
+                'store_dir' => $storeDir,
+            ],
+            'post_reboot' => $postReboot,
+            'coordination' => $this->buildUpdatesCoordinationContract($plan, $stage !== 'failed', $postReboot),
+            'next_action' => $stage === 'confirmed' ? 'record-update-confirmation' : ($stage === 'failed' ? 'inspect-update-state' : 'run-post-reboot-health-checks'),
+        ];
+    }
+
+    /**
      * @param array<int, array<string, mixed>> $selection
      * @return array<string, mixed>
      */
