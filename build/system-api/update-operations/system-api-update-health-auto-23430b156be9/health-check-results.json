@@ -1,0 +1,9 @@
+{
+    "health_check_result_schema_version": 1,
+    "kind": "health-check-results",
+    "status": "ok",
+    "results": {
+        "boot-entry-present": "ok",
+        "dpkg-consistent": "ok"
+    }
+}

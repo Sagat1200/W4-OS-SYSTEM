@@ -1,0 +1,8 @@
+{
+    "kind": "system-api-idempotency-ledger-entry",
+    "method": "packages.apply",
+    "idempotency_key": "pkg-intent-reuse-b95dec98c1d3",
+    "digest": "7821661cdc7d8d7eb13fbace184bbf5b9dfcaaed",
+    "operation_id": "pkg-op-679c2edbedd2",
+    "observed_at": "2026-10-25T18:02:43+00:00"
+}
