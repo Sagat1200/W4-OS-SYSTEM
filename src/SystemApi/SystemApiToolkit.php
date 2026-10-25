@@ -243,7 +243,7 @@ final class SystemApiToolkit
                     'name' => 'packages.apply',
                     'resource_kind' => 'package-operation',
                     'mutates_state' => true,
-                    'params' => ['plan_id', 'plan_hash', 'idempotency_key', 'plan?', 'plan_path?'],
+                    'params' => ['plan_id', 'plan_hash', 'idempotency_key', 'expected_catalog_revision?', 'plan?', 'plan_path?'],
                 ],
                 [
                     'name' => 'operations.get',
@@ -459,9 +459,11 @@ final class SystemApiToolkit
             $planId = $this->requireString($params, 'plan_id');
             $planHash = $this->requireString($params, 'plan_hash');
             $idempotencyKey = $this->requireString($params, 'idempotency_key');
+            $expectedCatalogRevision = $this->optionalString($params, 'expected_catalog_revision');
             $digest = $this->operations->buildIdempotencyDigest('packages.apply', [
                 'plan_id' => $planId,
                 'plan_hash' => $planHash,
+                'expected_catalog_revision' => $expectedCatalogRevision,
             ]);
             $reusedOperation = $this->operations->reuseIdempotentOperation('packages.apply', $idempotencyKey, $digest);
             if ($reusedOperation !== null) {
@@ -481,6 +483,7 @@ final class SystemApiToolkit
                 $planId,
                 $planHash,
                 $idempotencyKey,
+                $expectedCatalogRevision,
                 $this->optionalObject($params, 'plan'),
                 $this->optionalString($params, 'plan_path')
             );

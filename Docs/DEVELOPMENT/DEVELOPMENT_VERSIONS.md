@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.333 | 2026-10-24 | Activa | `packages.apply` ya acepta `expected_catalog_revision` opcional y rechaza la ejecucion cuando no coincide con `catalog_revision` del plan suministrado |
 | TECH | TECH-1.332 | 2026-10-24 | Activa | `services.status` ya publica `revision` y las mutaciones `services.*` aceptan `expected_revision` opcional para rechazar cambios sobre estado observado desactualizado |
 | TECH | TECH-1.331 | 2026-10-24 | Activa | Las mutaciones `services.*` del `System API` ya aceptan `idempotency_key` opcional y reutilizan la operacion previa cuando coincide la misma intencion sobre la misma unidad |
 | TECH | TECH-1.330 | 2026-10-24 | Activa | `System API` ya expone `operations.cancel` y `packages.apply` reutiliza la operacion previa cuando coincide el mismo `idempotency_key` con el mismo digest de intencion |

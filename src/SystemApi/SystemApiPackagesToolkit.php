@@ -37,11 +37,13 @@ final class SystemApiPackagesToolkit
         string $planId,
         string $planHash,
         string $idempotencyKey,
+        ?string $expectedCatalogRevision = null,
         ?array $plan = null,
         ?string $planPath = null
     ): array {
         $resolvedPlan = $this->resolveApplyPlan($plan, $planPath);
         $this->assertPlanMatches($resolvedPlan, $planId, $planHash);
+        $observedCatalogRevision = $this->assertCatalogRevisionMatches($resolvedPlan, $expectedCatalogRevision);
 
         $result = $this->resolveApplyExecutionResult($resolvedPlan);
         $operationId = sprintf('pkg-op-%s', substr(sha1($idempotencyKey . '|' . $planHash), 0, 12));
@@ -55,6 +57,8 @@ final class SystemApiPackagesToolkit
             'plan_id' => $planId,
             'plan_hash' => $planHash,
             'idempotency_key' => $idempotencyKey,
+            'expected_catalog_revision' => $expectedCatalogRevision,
+            'observed_catalog_revision' => $observedCatalogRevision,
             'action' => $resolvedPlan['action'],
             'state' => $succeeded ? 'succeeded' : 'failed',
             'command' => $this->renderCommand($this->buildApplyCommand($resolvedPlan)),
@@ -321,6 +325,27 @@ final class SystemApiPackagesToolkit
         if ($expectedHash !== $planHash || trim($resolvedPlanHash) !== $planHash || trim($resolvedPlanId) !== $planId) {
             throw new ValidationError('Conflicto: plan_id o plan_hash no coinciden con el plan suministrado');
         }
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     */
+    private function assertCatalogRevisionMatches(array $plan, ?string $expectedCatalogRevision): ?string
+    {
+        $observedCatalogRevision = $plan['catalog_revision'] ?? null;
+        if ($observedCatalogRevision !== null && !is_string($observedCatalogRevision)) {
+            throw new ValidationError('params.plan.catalog_revision debe ser un string cuando esta presente');
+        }
+
+        if ($expectedCatalogRevision !== null && $observedCatalogRevision !== $expectedCatalogRevision) {
+            throw new ValidationError(sprintf(
+                'Conflicto: expected_catalog_revision no coincide con el plan suministrado (esperada=%s, observada=%s)',
+                $expectedCatalogRevision,
+                is_string($observedCatalogRevision) ? $observedCatalogRevision : 'null'
+            ));
+        }
+
+        return is_string($observedCatalogRevision) ? $observedCatalogRevision : null;
     }
 
     /**

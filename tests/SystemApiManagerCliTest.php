@@ -158,6 +158,58 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertSame('manager-pkg-plan-001', $payload['result']['data']['plan_id']);
     }
 
+    public function testCallDispatchesPackagesApplyWithExpectedCatalogRevision(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'manager-packages-apply-revision-001',
+            'method' => 'packages.apply',
+            'params' => [
+                'plan_id' => 'manager-pkg-apply-001',
+                'plan_hash' => 'placeholder',
+                'idempotency_key' => 'manager-pkg-intent-revision-001',
+                'expected_catalog_revision' => 'manager-catalog-001',
+                'plan' => [
+                    'kind' => 'package-plan',
+                    'status' => 'ok',
+                    'backend' => 'apt-get',
+                    'action' => 'install',
+                    'plan_id' => 'manager-pkg-apply-001',
+                    'catalog_revision' => 'manager-catalog-001',
+                    'requested_packages' => [
+                        ['name' => 'php8.4-cli', 'architecture' => 'amd64'],
+                    ],
+                    'installs' => [
+                        ['name' => 'php8.4-cli', 'architecture' => 'amd64', 'installed_version' => null, 'target_version' => '8.4.4-1'],
+                    ],
+                    'upgrades' => [],
+                    'removals' => [],
+                    'conffile_policy' => 'keep-local',
+                ],
+            ],
+        ];
+        $request['params']['plan']['plan_hash'] = sha1(json_encode($request['params']['plan'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+        $request['params']['plan_hash'] = $request['params']['plan']['plan_hash'];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'call',
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            'W4_SYSTEM_API_PACKAGES_APPLY_EXIT_CODE' => '0',
+            'W4_SYSTEM_API_PACKAGES_APPLY_STDOUT' => 'Packages applied from manager',
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('packages.apply', $payload['result']['method']);
+        self::assertSame('manager-catalog-001', $payload['result']['data']['expected_catalog_revision']);
+        self::assertSame('manager-catalog-001', $payload['result']['data']['observed_catalog_revision']);
+    }
+
     public function testCallDispatchesServicesEnable(): void
     {
         $request = [

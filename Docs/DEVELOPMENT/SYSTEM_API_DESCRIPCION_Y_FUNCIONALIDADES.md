@@ -180,6 +180,7 @@ Para el carril mutante, la API ya puede:
 - construir un plan canonico con `plan_id`, `plan_hash`, seleccion y `conffile_policy`,
 - persistir opcionalmente ese plan a disco para reutilizarlo entre llamadas,
 - ejecutar `packages.apply` validando que `plan_id` y `plan_hash` coincidan con el plan suministrado,
+- rechazar `packages.apply` cuando `expected_catalog_revision` no coincide con `catalog_revision` del plan,
 - y reutilizar la operacion previa cuando entra el mismo `idempotency_key` con el mismo digest de intencion.
 
 Lo que sigue pendiente para cerrar V1 en este dominio no es la existencia del contrato, sino endurecer el ledger durable de `idempotency_key` mas alla del store local actual, la reconciliacion posterior y la evidencia end-to-end sobre un host Linux real.
