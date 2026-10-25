@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.340 | 2026-10-25 | Activa | `updates.reconcile` ya puede derivar `observed_stage` desde `health-check-results.json` del store durable, publicar ese artefacto en su payload y reconciliar el tramo post-reboot sin requerir que el caller repita manualmente el stage observado |
 | TECH | TECH-1.339 | 2026-10-25 | Activa | `operations.get` ya refresca operaciones de updates desde el store durable de `update-operation`, de forma que los avances externos del tramo post-reboot se observan sin depender de una segunda llamada previa a `updates.reconcile` |
 | TECH | TECH-1.338 | 2026-10-25 | Activa | La `System API` ya expone `updates.reconcile`, persiste store durable de `update-operation` durante `updates.apply` y permite cerrar el tramo `pending_health -> confirmed/failed` reutilizando `UpdateToolkit` |
 | TECH | TECH-1.337 | 2026-10-24 | Activa | `updates.apply` ya acepta `expected_catalog_revision` y toma un lock exclusivo de admision sobre `system-updates` para rechazar applies desalineados o concurrentes antes de registrar la operacion |

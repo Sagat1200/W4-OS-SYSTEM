@@ -269,7 +269,7 @@ final class SystemApiToolkit
                     'name' => 'updates.reconcile',
                     'resource_kind' => 'update-operation',
                     'mutates_state' => true,
-                    'params' => ['operation_id', 'observed_stage', 'details?', 'observed_error?'],
+                    'params' => ['operation_id', 'observed_stage?', 'health_result_path?', 'details?', 'observed_error?'],
                 ],
                 [
                     'name' => 'operations.get',
@@ -622,7 +622,8 @@ final class SystemApiToolkit
             $operationId = $this->requireString($params, 'operation_id');
             $operation = $this->packages->reconcileUpdates(
                 $operationId,
-                $this->requireString($params, 'observed_stage'),
+                $this->optionalString($params, 'observed_stage'),
+                $this->optionalString($params, 'health_result_path'),
                 $this->optionalObject($params, 'details') ?? [],
                 $this->optionalObject($params, 'observed_error')
             );

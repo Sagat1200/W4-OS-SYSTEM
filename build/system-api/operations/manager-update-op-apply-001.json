@@ -19,10 +19,10 @@
         "status": "pending-reboot",
         "backend": "apt-get",
         "operation_id": "manager-update-op-apply-001",
-        "plan_hash": "7146ae25ab499a0ee7291674ebea55919871677c",
-        "idempotency_key": "manager-updates-apply-93c6e6247b3b",
-        "expected_catalog_revision": "manager-updates-catalog-93c6e6247b3b",
-        "observed_catalog_revision": "manager-updates-catalog-93c6e6247b3b",
+        "plan_hash": "70c52ad4920ccad99b76b3a27a662ed51a74097c",
+        "idempotency_key": "manager-updates-apply-a177448fc8ab",
+        "expected_catalog_revision": "manager-updates-catalog-a177448fc8ab",
+        "observed_catalog_revision": "manager-updates-catalog-a177448fc8ab",
         "profile_id": "w4-os-home",
         "source_version": "1.0.0-lab",
         "target_version": "1.0.1-lab",
@@ -116,7 +116,7 @@
                 "created_at": "2026-10-25T06:04:51+00:00",
                 "updated_at": "2026-10-25T06:04:51+00:00"
             },
-            "plan_hash": "7146ae25ab499a0ee7291674ebea55919871677c",
+            "plan_hash": "70c52ad4920ccad99b76b3a27a662ed51a74097c",
             "apply_mode": "live-apt",
             "reboot_required": true
         },
@@ -134,8 +134,10 @@
             "last_error": null,
             "updated_at": "2026-10-25T06:04:51+00:00"
         },
+        "health_check_results": null,
         "durable_store": {
-            "store_dir": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001"
+            "store_dir": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001",
+            "health_result_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001\\health-check-results.json"
         },
         "post_reboot": {
             "pending_state": "pending_health",
@@ -159,7 +161,7 @@
         "next_action": "reboot-into-post-update-health-checks"
     },
     "error": null,
-    "created_at": "2026-10-25T06:32:58+00:00",
-    "observed_at": "2026-10-25T06:32:58+00:00",
+    "created_at": "2026-10-25T06:50:58+00:00",
+    "observed_at": "2026-10-25T06:50:58+00:00",
     "completed_at": null
 }

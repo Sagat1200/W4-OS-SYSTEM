@@ -123,8 +123,10 @@ final class SystemApiPackagesToolkit
             'notes' => $this->normalizeOptionalStringList($resolvedPlan['notes'] ?? null, 'params.plan.notes'),
             'durable_state' => $durableState,
             'health_report' => $healthReport,
+            'health_check_results' => $this->loadHealthCheckResults($this->resolveUpdateOperationStoreDir($operationId) . DIRECTORY_SEPARATOR . 'health-check-results.json'),
             'durable_store' => [
                 'store_dir' => $this->resolveUpdateOperationStoreDir($operationId),
+                'health_result_path' => $this->resolveUpdateOperationStoreDir($operationId) . DIRECTORY_SEPARATOR . 'health-check-results.json',
             ],
             'post_reboot' => $postReboot,
             'coordination' => $this->buildUpdatesCoordinationContract($resolvedPlan, $succeeded, $postReboot),
@@ -139,18 +141,32 @@ final class SystemApiPackagesToolkit
      */
     public function reconcileUpdates(
         string $operationId,
-        string $observedStage,
+        ?string $observedStage = null,
+        ?string $healthResultPath = null,
         array $details = [],
         ?array $observedError = null
     ): array {
         $toolkit = new UpdateToolkit();
         $storeDir = $this->resolveUpdateOperationStoreDir($operationId);
-        $reconciled = $toolkit->reconcileOperationStore(
-            $storeDir,
+        [
+            'observed_stage' => $resolvedObservedStage,
+            'details' => $resolvedDetails,
+            'observed_error' => $resolvedObservedError,
+            'health_result_path' => $resolvedHealthResultPath,
+            'health_check_results' => $healthCheckResults,
+        ] = $this->resolveUpdateReconcileInput(
+            $operationId,
             $observedStage,
-            'system-api-updates-reconcile',
+            $healthResultPath,
             $details,
             $observedError
+        );
+        $reconciled = $toolkit->reconcileOperationStore(
+            $storeDir,
+            $resolvedObservedStage,
+            'system-api-updates-reconcile',
+            $resolvedDetails,
+            $resolvedObservedError
         );
         $store = $toolkit->loadOperationStore($storeDir);
         $plan = $store['plan'];
@@ -181,9 +197,9 @@ final class SystemApiPackagesToolkit
             'state' => $state,
             'command' => 'updates:reconcile',
             'reconciled' => ($reconciled['reconciled'] ?? false) === true,
-            'observed_stage' => $observedStage,
-            'details' => $details,
-            'observed_error' => $observedError,
+            'observed_stage' => $resolvedObservedStage,
+            'details' => $resolvedDetails,
+            'observed_error' => $resolvedObservedError,
             'package_changes' => $plan['package_changes'] ?? [],
             'repository_snapshot' => $plan['repository_snapshot'] ?? [],
             'snapshot' => is_array($plan['snapshot'] ?? null) ? $plan['snapshot'] : null,
@@ -195,8 +211,10 @@ final class SystemApiPackagesToolkit
             'notes' => $this->normalizeOptionalStringList($plan['notes'] ?? null, 'update-plan.notes'),
             'durable_state' => $operation,
             'health_report' => $healthReport,
+            'health_check_results' => $healthCheckResults,
             'durable_store' => [
                 'store_dir' => $storeDir,
+                'health_result_path' => $resolvedHealthResultPath,
             ],
             'post_reboot' => $postReboot,
             'coordination' => $this->buildUpdatesCoordinationContract($plan, $stage !== 'failed', $postReboot),
@@ -222,6 +240,8 @@ final class SystemApiPackagesToolkit
         $plan = $store['plan'];
         $operation = $this->enrichDurableUpdateOperation($plan, $store['operation']);
         $healthReport = $store['healthReport'];
+        $healthResultPath = $storeDir . DIRECTORY_SEPARATOR . 'health-check-results.json';
+        $healthCheckResults = $this->loadHealthCheckResults($healthResultPath);
         $stage = is_string($operation['stage'] ?? null) ? trim((string) $operation['stage']) : 'failed';
         $state = $stage === 'confirmed'
             ? 'succeeded'
@@ -265,8 +285,10 @@ final class SystemApiPackagesToolkit
             'notes' => $this->normalizeOptionalStringList($plan['notes'] ?? null, 'update-plan.notes'),
             'durable_state' => $operation,
             'health_report' => $healthReport,
+            'health_check_results' => $healthCheckResults,
             'durable_store' => [
                 'store_dir' => $storeDir,
+                'health_result_path' => $healthResultPath,
             ],
             'post_reboot' => $postReboot,
             'coordination' => $this->buildUpdatesCoordinationContract($plan, $stage !== 'failed', $postReboot),
@@ -867,6 +889,163 @@ final class SystemApiPackagesToolkit
             . DIRECTORY_SEPARATOR . 'system-api'
             . DIRECTORY_SEPARATOR . 'update-operations'
             . DIRECTORY_SEPARATOR . $sanitized;
+    }
+
+    /**
+     * @param array<string, mixed> $details
+     * @param array<string, mixed>|null $observedError
+     * @return array{
+     *   observed_stage:string,
+     *   details: array<string, mixed>,
+     *   observed_error: array<string, mixed>|null,
+     *   health_result_path:string,
+     *   health_check_results: array<string, mixed>|null
+     * }
+     */
+    private function resolveUpdateReconcileInput(
+        string $operationId,
+        ?string $observedStage,
+        ?string $healthResultPath,
+        array $details,
+        ?array $observedError
+    ): array {
+        $resolvedHealthResultPath = $this->resolveUpdateHealthResultPath($operationId, $healthResultPath);
+        $healthCheckResults = $this->loadHealthCheckResults($resolvedHealthResultPath);
+        $derivedStage = $this->deriveObservedStageFromHealthCheckResults($healthCheckResults);
+
+        if ($observedStage === null && $derivedStage === null) {
+            throw new ValidationError('updates.reconcile requiere observed_stage o un health-check-results valido');
+        }
+
+        if ($observedStage !== null && $derivedStage !== null && $observedStage !== $derivedStage) {
+            throw new ValidationError(sprintf(
+                'Conflicto: observed_stage=%s no coincide con health-check-results (%s)',
+                $observedStage,
+                $derivedStage
+            ));
+        }
+
+        $resolvedObservedStage = $observedStage ?? $derivedStage;
+        if (!is_string($resolvedObservedStage) || trim($resolvedObservedStage) === '') {
+            throw new ValidationError('observed_stage invalido para updates.reconcile');
+        }
+
+        $resolvedDetails = $details;
+        if ($healthCheckResults !== null) {
+            $resolvedDetails = array_merge($resolvedDetails, $this->buildHealthCheckDetails($healthCheckResults, $resolvedHealthResultPath));
+        }
+
+        $resolvedObservedError = $observedError;
+        if ($resolvedObservedError === null && $healthCheckResults !== null && (($healthCheckResults['status'] ?? null) === 'failed')) {
+            $resolvedObservedError = [
+                'code' => 'health-check-failed',
+                'message' => 'La validacion post-arranque fallo segun health-check-results.json',
+                'health_result_path' => $resolvedHealthResultPath,
+            ];
+        }
+
+        return [
+            'observed_stage' => $resolvedObservedStage,
+            'details' => $resolvedDetails,
+            'observed_error' => $resolvedObservedError,
+            'health_result_path' => $resolvedHealthResultPath,
+            'health_check_results' => $healthCheckResults,
+        ];
+    }
+
+    private function resolveUpdateHealthResultPath(string $operationId, ?string $healthResultPath): string
+    {
+        if ($healthResultPath === null || trim($healthResultPath) === '') {
+            return $this->resolveUpdateOperationStoreDir($operationId) . DIRECTORY_SEPARATOR . 'health-check-results.json';
+        }
+
+        $trimmed = trim($healthResultPath);
+        if (preg_match('/^[A-Za-z]:[\\\\\\/]/', $trimmed) === 1 || str_starts_with($trimmed, '\\\\')) {
+            return str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $trimmed);
+        }
+
+        return $this->rootDir . DIRECTORY_SEPARATOR . ltrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $trimmed), DIRECTORY_SEPARATOR);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function loadHealthCheckResults(string $path): ?array
+    {
+        if (!is_file($path)) {
+            return null;
+        }
+
+        $raw = file_get_contents($path);
+        if (!is_string($raw)) {
+            throw new ValidationError(sprintf('No se pudo leer health-check-results: %s', $path));
+        }
+
+        $decoded = $this->decodeJsonObject($raw, sprintf('health-check-results %s', $path));
+        if (($decoded['kind'] ?? null) !== 'health-check-results') {
+            throw new ValidationError(sprintf('health-check-results invalido en %s: kind no soportado', $path));
+        }
+
+        $status = $decoded['status'] ?? null;
+        if (!is_string($status) || !in_array($status, ['ok', 'failed'], true)) {
+            throw new ValidationError(sprintf('health-check-results invalido en %s: status no soportado', $path));
+        }
+
+        $results = $decoded['results'] ?? null;
+        if (!is_array($results)) {
+            throw new ValidationError(sprintf('health-check-results invalido en %s: results debe ser un objeto', $path));
+        }
+
+        return $decoded;
+    }
+
+    private function deriveObservedStageFromHealthCheckResults(?array $healthCheckResults): ?string
+    {
+        if ($healthCheckResults === null) {
+            return null;
+        }
+
+        return (($healthCheckResults['status'] ?? null) === 'ok') ? 'confirmed' : 'failed';
+    }
+
+    /**
+     * @param array<string, mixed> $healthCheckResults
+     * @return array<string, mixed>
+     */
+    private function buildHealthCheckDetails(array $healthCheckResults, string $path): array
+    {
+        $results = is_array($healthCheckResults['results'] ?? null) ? $healthCheckResults['results'] : [];
+        $passed = [];
+        $failed = [];
+        $unsupported = [];
+
+        foreach ($results as $name => $status) {
+            if (!is_string($name) || !is_string($status)) {
+                continue;
+            }
+
+            if ($status === 'ok') {
+                $passed[] = $name;
+                continue;
+            }
+
+            if ($status === 'failed') {
+                $failed[] = $name;
+                continue;
+            }
+
+            if ($status === 'unsupported') {
+                $unsupported[] = $name;
+            }
+        }
+
+        return [
+            'health_status' => $healthCheckResults['status'],
+            'health_result_path' => $path,
+            'checks_passed' => $passed,
+            'checks_failed' => $failed,
+            'checks_unsupported' => $unsupported,
+        ];
     }
 
     /**

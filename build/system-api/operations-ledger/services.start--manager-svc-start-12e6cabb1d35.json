@@ -1,0 +1,8 @@
+{
+    "kind": "system-api-idempotency-ledger-entry",
+    "method": "services.start",
+    "idempotency_key": "manager-svc-start-12e6cabb1d35",
+    "digest": "30d665e739fd3d3ec362a919d9c4fb8392158822",
+    "operation_id": "service-start-4f1a80ceabad",
+    "observed_at": "2026-10-25T06:51:01+00:00"
+}

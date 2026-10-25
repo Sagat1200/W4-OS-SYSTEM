@@ -118,7 +118,7 @@ final class SystemApiCliTest extends TestCase
         self::assertSame(['refresh?', 'limit?'], $methodsByName['updates.check']['params']);
         self::assertSame(['limit?'], $methodsByName['updates.list']['params']);
         self::assertSame(['operation_id', 'plan_hash', 'idempotency_key', 'expected_catalog_revision?', 'plan?', 'plan_path?'], $methodsByName['updates.apply']['params']);
-        self::assertSame(['operation_id', 'observed_stage', 'details?', 'observed_error?'], $methodsByName['updates.reconcile']['params']);
+        self::assertSame(['operation_id', 'observed_stage?', 'health_result_path?', 'details?', 'observed_error?'], $methodsByName['updates.reconcile']['params']);
         self::assertFalse($methodsByName['operations.get']['mutates_state']);
         self::assertTrue($methodsByName['operations.cancel']['mutates_state']);
         self::assertFalse($methodsByName['services.list']['mutates_state']);
@@ -2391,6 +2391,158 @@ final class SystemApiCliTest extends TestCase
             self::assertSame('confirmed', $payload['result']['data']['durable_state']['stage']);
             self::assertSame('ok', $payload['result']['data']['health_report']['status']);
             self::assertSame('record-update-confirmation', $payload['result']['data']['next_action']);
+        } finally {
+            if (is_file($planPath)) {
+                unlink($planPath);
+            }
+        }
+    }
+
+    public function testUpdatesReconcileDerivesObservedStageFromHealthCheckResults(): void
+    {
+        $suffix = bin2hex(random_bytes(6));
+        $planPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'system-api-update-health-auto-' . $suffix . '.json';
+        $operationId = 'system-api-update-health-auto-' . $suffix;
+
+        try {
+            $plan = [
+                'update_plan_schema_version' => 1,
+                'kind' => 'update-plan',
+                'operation_id' => $operationId,
+                'profile_id' => 'w4-os-home',
+                'source_version' => '1.0.0-lab',
+                'target_version' => '1.0.1-lab',
+                'repository_snapshot' => [
+                    'id' => 'w4-main-2026-09-19T120000Z',
+                    'channel' => 'testing',
+                ],
+                'catalog_revision' => 'updates-health-auto-catalog-' . $suffix,
+                'package_changes' => [
+                    'install' => ['w4-recovery-tools'],
+                    'upgrade' => ['w4-home-meta'],
+                    'remove' => [],
+                    'counts' => [
+                        'install' => 1,
+                        'upgrade' => 1,
+                        'remove' => 0,
+                        'total' => 2,
+                    ],
+                ],
+                'execution' => [
+                    'engine' => 'apt-offline-snapshot',
+                    'apply_mode' => 'live-apt',
+                    'reboot_required' => true,
+                    'stages' => [
+                        'planned',
+                        'downloading',
+                        'ready',
+                        'prepared',
+                        'applying_offline',
+                        'pending_health',
+                        'confirmed',
+                    ],
+                    'failure_state' => 'failed',
+                ],
+                'snapshot' => [
+                    'root_subvolume' => '/@',
+                    'snapshot_name' => 'pre-update-' . $operationId,
+                    'snapshot_path' => '/.snapshots/pre-update-' . $operationId,
+                    'retention' => 'protected-until-confirmed',
+                ],
+                'staging' => [
+                    'directory' => '/var/lib/w4-update/staging/' . $operationId,
+                    'estimated_space_kib' => 262144,
+                    'cache_policy' => 'protected-until-confirmed',
+                ],
+                'boot_manifest' => [
+                    'kernel_package' => 'linux-image-amd64',
+                    'boot_mode' => 'efi',
+                    'initramfs_strategy' => 'update-initramfs',
+                ],
+                'health_check_manifest' => [
+                    'required' => ['boot-entry-present', 'dpkg-consistent'],
+                    'test_file_path' => '/var/lib/w4-update/test-file',
+                    'pending_state' => 'pending_health',
+                    'success_state' => 'confirmed',
+                    'failure_state' => 'failed',
+                ],
+                'durable_state_template' => [
+                    'update_operation_schema_version' => 1,
+                    'kind' => 'update-operation',
+                    'operation_id' => $operationId,
+                    'stage' => 'planned',
+                    'last_error' => null,
+                ],
+            ];
+            file_put_contents($planPath, json_encode($plan, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+            $planHash = sha1(json_encode($plan, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+
+            $applyRequest = [
+                'api_version' => '1.0',
+                'request_id' => 'req-updates-health-auto-apply-001',
+                'method' => 'updates.apply',
+                'params' => [
+                    'operation_id' => $operationId,
+                    'plan_hash' => $planHash,
+                    'idempotency_key' => 'updates-health-auto-apply-' . $suffix,
+                    'expected_catalog_revision' => 'updates-health-auto-catalog-' . $suffix,
+                    'plan_path' => $planPath,
+                ],
+            ];
+
+            $applyResult = $this->runPhpScript([
+                $this->scriptPath(),
+                '--request-json',
+                json_encode($applyRequest, JSON_THROW_ON_ERROR),
+            ], [
+                'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+                'W4_SYSTEM_API_UPDATES_APPLY_EXIT_CODE' => '0',
+                'W4_SYSTEM_API_UPDATES_APPLY_STDOUT' => 'Update packages applied',
+            ]);
+
+            self::assertSame(0, $applyResult['exitCode'], $applyResult['stderr']);
+            $applyPayload = $this->decodeJson($applyResult['stdout']);
+            $healthResultPath = $applyPayload['result']['data']['durable_store']['health_result_path'] ?? null;
+            self::assertIsString($healthResultPath);
+
+            file_put_contents($healthResultPath, json_encode([
+                'health_check_result_schema_version' => 1,
+                'kind' => 'health-check-results',
+                'status' => 'ok',
+                'results' => [
+                    'boot-entry-present' => 'ok',
+                    'dpkg-consistent' => 'ok',
+                ],
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+
+            $reconcileRequest = [
+                'api_version' => '1.0',
+                'request_id' => 'req-updates-health-auto-reconcile-001',
+                'method' => 'updates.reconcile',
+                'params' => [
+                    'operation_id' => $operationId,
+                ],
+            ];
+
+            $reconcileResult = $this->runPhpScript([
+                $this->scriptPath(),
+                '--request-json',
+                json_encode($reconcileRequest, JSON_THROW_ON_ERROR),
+            ], [
+                'W4_SYSTEM_API_HOST_OS_FAMILY' => 'Linux',
+            ]);
+
+            self::assertSame(0, $reconcileResult['exitCode'], $reconcileResult['stderr']);
+            $payload = $this->decodeJson($reconcileResult['stdout']);
+            self::assertNull($payload['error']);
+            self::assertSame('updates.reconcile', $payload['result']['method']);
+            self::assertSame('confirmed', $payload['result']['data']['observed_stage']);
+            self::assertSame('confirmed', $payload['result']['data']['stage']);
+            self::assertSame('ok', $payload['result']['data']['health_check_results']['status']);
+            self::assertSame($healthResultPath, $payload['result']['data']['durable_store']['health_result_path']);
+            self::assertSame('ok', $payload['result']['data']['details']['health_status']);
+            self::assertSame(['boot-entry-present', 'dpkg-consistent'], $payload['result']['data']['details']['checks_passed']);
+            self::assertSame([], $payload['result']['data']['details']['checks_failed']);
         } finally {
             if (is_file($planPath)) {
                 unlink($planPath);
