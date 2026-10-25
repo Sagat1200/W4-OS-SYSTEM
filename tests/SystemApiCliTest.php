@@ -76,6 +76,8 @@ final class SystemApiCliTest extends TestCase
         self::assertContains('packages.list_installed', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('packages.plan', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('packages.apply', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('updates.check', array_column($payload['result']['data']['methods'], 'name'));
+        self::assertContains('updates.list', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('operations.get', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('operations.cancel', array_column($payload['result']['data']['methods'], 'name'));
         self::assertContains('services.list', array_column($payload['result']['data']['methods'], 'name'));
@@ -106,6 +108,10 @@ final class SystemApiCliTest extends TestCase
         self::assertFalse($methodsByName['packages.plan']['mutates_state']);
         self::assertTrue($methodsByName['packages.apply']['mutates_state']);
         self::assertSame(['plan_id', 'plan_hash', 'idempotency_key', 'expected_catalog_revision?', 'plan?', 'plan_path?'], $methodsByName['packages.apply']['params']);
+        self::assertFalse($methodsByName['updates.check']['mutates_state']);
+        self::assertFalse($methodsByName['updates.list']['mutates_state']);
+        self::assertSame(['refresh?', 'limit?'], $methodsByName['updates.check']['params']);
+        self::assertSame(['limit?'], $methodsByName['updates.list']['params']);
         self::assertFalse($methodsByName['operations.get']['mutates_state']);
         self::assertTrue($methodsByName['operations.cancel']['mutates_state']);
         self::assertFalse($methodsByName['services.list']['mutates_state']);
@@ -221,6 +227,76 @@ final class SystemApiCliTest extends TestCase
         self::assertSame('system-api-packages-installed-list', $payload['result']['data']['kind']);
         self::assertSame(1, $payload['result']['data']['count']);
         self::assertSame('bash', $payload['result']['data']['items'][0]['name']);
+    }
+
+    public function testUpdatesListReturnsNormalizedUpgradablePackages(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-updates-list-001',
+            'method' => 'updates.list',
+            'params' => [
+                'limit' => 1,
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_UPDATES_LIST_OUTPUT' => "Listing... Done\nphp8.4-cli/stable 8.4.4-1 amd64 [upgradable from: 8.4.3-1]\nbash/stable 5.2.15-2 amd64 [upgradable from: 5.2.15-1]\n",
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('updates.list', $payload['result']['method']);
+        self::assertSame('updates-list', $payload['result']['resource']['kind']);
+        self::assertSame('system-api-updates-list', $payload['result']['data']['kind']);
+        self::assertSame(1, $payload['result']['data']['count']);
+        self::assertSame('php8.4-cli', $payload['result']['data']['items'][0]['name']);
+        self::assertSame('8.4.4-1', $payload['result']['data']['items'][0]['candidate_version']);
+        self::assertSame('8.4.3-1', $payload['result']['data']['items'][0]['installed_version']);
+        self::assertSame('stable', $payload['result']['data']['items'][0]['origin']);
+        self::assertIsString($payload['result']['data']['catalog_revision']);
+    }
+
+    public function testUpdatesCheckRefreshesCatalogAndReturnsAvailability(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'req-updates-check-001',
+            'method' => 'updates.check',
+            'params' => [
+                'refresh' => true,
+                'limit' => 1,
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_UPDATES_REFRESH_STDOUT' => 'Hit:1 http://deb.debian.org/debian stable InRelease',
+            'W4_SYSTEM_API_UPDATES_LIST_OUTPUT' => "Listing... Done\nphp8.4-cli/stable 8.4.4-1 amd64 [upgradable from: 8.4.3-1]\n",
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('updates.check', $payload['result']['method']);
+        self::assertSame('updates-check', $payload['result']['resource']['kind']);
+        self::assertSame('system-api-updates-check', $payload['result']['data']['kind']);
+        self::assertSame('updates-available', $payload['result']['data']['status']);
+        self::assertTrue($payload['result']['data']['refresh_requested']);
+        self::assertTrue($payload['result']['data']['refresh_performed']);
+        self::assertSame('apt-get update', $payload['result']['data']['refresh']['command']);
+        self::assertSame(1, $payload['result']['data']['count']);
+        self::assertSame('php8.4-cli', $payload['result']['data']['updates']['items'][0]['name']);
     }
 
     public function testPackagesPlanWritesCanonicalPlanFromFixture(): void

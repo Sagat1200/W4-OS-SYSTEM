@@ -158,6 +158,38 @@ final class SystemApiManagerCliTest extends TestCase
         self::assertSame('manager-pkg-plan-001', $payload['result']['data']['plan_id']);
     }
 
+    public function testCallDispatchesUpdatesCheck(): void
+    {
+        $request = [
+            'api_version' => '1.0',
+            'request_id' => 'manager-updates-check-001',
+            'method' => 'updates.check',
+            'params' => [
+                'refresh' => true,
+                'limit' => 1,
+            ],
+        ];
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            'call',
+            '--request-json',
+            json_encode($request, JSON_THROW_ON_ERROR),
+        ], [
+            'W4_SYSTEM_API_UPDATES_REFRESH_STDOUT' => 'Hit:1 http://deb.debian.org/debian stable InRelease',
+            'W4_SYSTEM_API_UPDATES_LIST_OUTPUT' => "Listing... Done\nphp8.4-cli/stable 8.4.4-1 amd64 [upgradable from: 8.4.3-1]\n",
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertNull($payload['error']);
+        self::assertSame('updates.check', $payload['result']['method']);
+        self::assertSame('updates-check', $payload['result']['resource']['kind']);
+        self::assertSame('updates-available', $payload['result']['data']['status']);
+        self::assertTrue($payload['result']['data']['refresh_requested']);
+    }
+
     public function testCallDispatchesPackagesApplyWithExpectedCatalogRevision(): void
     {
         $request = [

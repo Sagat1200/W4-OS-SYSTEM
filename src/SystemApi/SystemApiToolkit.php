@@ -246,6 +246,18 @@ final class SystemApiToolkit
                     'params' => ['plan_id', 'plan_hash', 'idempotency_key', 'expected_catalog_revision?', 'plan?', 'plan_path?'],
                 ],
                 [
+                    'name' => 'updates.check',
+                    'resource_kind' => 'updates-check',
+                    'mutates_state' => false,
+                    'params' => ['refresh?', 'limit?'],
+                ],
+                [
+                    'name' => 'updates.list',
+                    'resource_kind' => 'updates-list',
+                    'mutates_state' => false,
+                    'params' => ['limit?'],
+                ],
+                [
                     'name' => 'operations.get',
                     'resource_kind' => 'system-api-operation',
                     'mutates_state' => false,
@@ -506,6 +518,28 @@ final class SystemApiToolkit
                 resourceKind: 'package-operation',
                 resourceId: is_string($storedOperation['operation_id'] ?? null) ? $storedOperation['operation_id'] : null,
                 data: $operation,
+                provider: 'local-system-api-packages-contract'
+            );
+        }
+
+        if ($method === 'updates.check') {
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'updates.check',
+                resourceKind: 'updates-check',
+                resourceId: 'update-catalog',
+                data: $this->packages->checkUpdates($this->optionalBool($params, 'refresh') ?? false, $this->optionalPositiveInt($params, 'limit')),
+                provider: 'local-system-api-packages-contract'
+            );
+        }
+
+        if ($method === 'updates.list') {
+            return $this->createSuccessResponse(
+                requestId: $requestId,
+                method: 'updates.list',
+                resourceKind: 'updates-list',
+                resourceId: 'update-catalog',
+                data: $this->packages->listUpdates($this->optionalPositiveInt($params, 'limit')),
                 provider: 'local-system-api-packages-contract'
             );
         }
@@ -866,6 +900,23 @@ final class SystemApiToolkit
 
         if (!is_int($value) || $value <= 0) {
             throw new ValidationError(sprintf('params.%s debe ser un entero positivo cuando se usa', $field));
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     */
+    private function optionalBool(array $params, string $field): ?bool
+    {
+        $value = $params[$field] ?? null;
+        if ($value === null) {
+            return null;
+        }
+
+        if (!is_bool($value)) {
+            throw new ValidationError(sprintf('params.%s debe ser un booleano cuando se usa', $field));
         }
 
         return $value;

@@ -9,6 +9,50 @@ use W4\OS\Support\ValidationError;
 final class SystemApiPackagesToolkit
 {
     /**
+     * @return array<string, mixed>
+     */
+    public function listUpdates(?int $limit = null): array
+    {
+        $output = $this->resolveUpdatesListOutput();
+        $items = $this->parseUpgradablePackages($output);
+
+        if (is_int($limit) && $limit > 0) {
+            $items = array_slice($items, 0, $limit);
+        }
+
+        return [
+            'kind' => 'system-api-updates-list',
+            'status' => 'ok',
+            'backend' => 'apt',
+            'catalog_revision' => sha1($output),
+            'items' => $items,
+            'count' => count($items),
+            'limit' => $limit,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function checkUpdates(bool $refresh = false, ?int $limit = null): array
+    {
+        $refreshReport = $refresh ? $this->refreshUpdateCatalog() : null;
+        $list = $this->listUpdates($limit);
+
+        return [
+            'kind' => 'system-api-updates-check',
+            'status' => ($list['count'] ?? 0) > 0 ? 'updates-available' : 'up-to-date',
+            'backend' => 'apt',
+            'refresh_requested' => $refresh,
+            'refresh_performed' => $refresh,
+            'refresh' => $refreshReport,
+            'catalog_revision' => $list['catalog_revision'] ?? null,
+            'updates' => $list,
+            'count' => $list['count'] ?? 0,
+        ];
+    }
+
+    /**
      * @param array<int, array<string, mixed>> $selection
      * @return array<string, mixed>
      */
@@ -765,6 +809,72 @@ final class SystemApiPackagesToolkit
         return $result['stdout'];
     }
 
+    private function resolveUpdatesListOutput(): string
+    {
+        $fixture = getenv('W4_SYSTEM_API_UPDATES_LIST_OUTPUT');
+        if (is_string($fixture)) {
+            return $fixture;
+        }
+
+        $this->assertLinuxCommandSupport('updates.list', 'apt');
+        $result = $this->runLinuxCommand(['apt', 'list', '--upgradable'], allowFailure: true);
+        if ($result['exit_code'] !== 0) {
+            throw new ValidationError(sprintf(
+                'Backend no disponible: updates.list no pudo consultar actualizaciones (%s)',
+                trim($result['stderr']) !== '' ? trim($result['stderr']) : 'apt list --upgradable failed'
+            ));
+        }
+
+        return $result['stdout'];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function refreshUpdateCatalog(): array
+    {
+        $stdoutFixture = getenv('W4_SYSTEM_API_UPDATES_REFRESH_STDOUT');
+        $stderrFixture = getenv('W4_SYSTEM_API_UPDATES_REFRESH_STDERR');
+        $exitCodeFixture = getenv('W4_SYSTEM_API_UPDATES_REFRESH_EXIT_CODE');
+
+        if (is_string($stdoutFixture) || is_string($stderrFixture) || is_string($exitCodeFixture)) {
+            $exitCode = is_string($exitCodeFixture) && preg_match('/^-?\d+$/', $exitCodeFixture) === 1
+                ? (int) $exitCodeFixture
+                : 0;
+            if ($exitCode !== 0) {
+                throw new ValidationError(sprintf(
+                    'Backend no disponible: updates.check no pudo refrescar el catalogo (%s)',
+                    is_string($stderrFixture) && trim($stderrFixture) !== '' ? trim($stderrFixture) : 'apt-get update failed'
+                ));
+            }
+
+            return [
+                'status' => 'ok',
+                'command' => 'apt-get update',
+                'stdout' => is_string($stdoutFixture) ? $stdoutFixture : '',
+                'stderr' => is_string($stderrFixture) ? $stderrFixture : '',
+                'exit_code' => $exitCode,
+            ];
+        }
+
+        $this->assertLinuxCommandSupport('updates.check', 'apt-get');
+        $result = $this->runLinuxCommand(['apt-get', 'update'], allowFailure: true);
+        if ($result['exit_code'] !== 0) {
+            throw new ValidationError(sprintf(
+                'Backend no disponible: updates.check no pudo refrescar el catalogo (%s)',
+                trim($result['stderr']) !== '' ? trim($result['stderr']) : 'apt-get update failed'
+            ));
+        }
+
+        return [
+            'status' => 'ok',
+            'command' => 'apt-get update',
+            'stdout' => $result['stdout'],
+            'stderr' => $result['stderr'],
+            'exit_code' => $result['exit_code'],
+        ];
+    }
+
     /**
      * @return array<string, string>
      */
@@ -826,6 +936,37 @@ final class SystemApiPackagesToolkit
         return $fields;
     }
 
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function parseUpgradablePackages(string $output): array
+    {
+        $items = [];
+
+        foreach (preg_split('/\r?\n/', trim($output)) ?: [] as $line) {
+            $trimmed = trim($line);
+            if ($trimmed === '' || str_starts_with($trimmed, 'Listing...')) {
+                continue;
+            }
+
+            if (preg_match('/^([^\/\s:]+)(?::([^\s\/]+))?\/([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+\[upgradable from:\s*(.+)\]$/', $trimmed, $matches) !== 1) {
+                continue;
+            }
+
+            $items[] = [
+                'name' => trim($matches[1]),
+                'architecture' => trim($matches[2] ?? '') !== '' ? trim($matches[2]) : null,
+                'origin' => trim($matches[3]),
+                'candidate_version' => trim($matches[4]),
+                'channel_architecture' => trim($matches[5]),
+                'installed_version' => trim($matches[6]),
+            ];
+        }
+
+        return $items;
+    }
+
     private function assertLinuxCommandSupport(string $method, string $command): void
     {
         if ($this->resolveOsFamily() !== 'Linux') {
@@ -854,7 +995,7 @@ final class SystemApiPackagesToolkit
 
     private function commandExists(string $command): bool
     {
-        if (in_array($command, ['apt-cache', 'apt-get', 'dpkg-query'], true) && $this->hasPackageFixtureOverrides()) {
+        if (in_array($command, ['apt', 'apt-cache', 'apt-get', 'dpkg-query'], true) && $this->hasPackageFixtureOverrides()) {
             return true;
         }
 
@@ -870,6 +1011,10 @@ final class SystemApiPackagesToolkit
             'W4_SYSTEM_API_PACKAGES_INFO_SHOW_OUTPUT',
             'W4_SYSTEM_API_PACKAGES_INFO_POLICY_OUTPUT',
             'W4_SYSTEM_API_PACKAGES_LIST_INSTALLED_OUTPUT',
+            'W4_SYSTEM_API_UPDATES_LIST_OUTPUT',
+            'W4_SYSTEM_API_UPDATES_REFRESH_STDOUT',
+            'W4_SYSTEM_API_UPDATES_REFRESH_STDERR',
+            'W4_SYSTEM_API_UPDATES_REFRESH_EXIT_CODE',
             'W4_SYSTEM_API_PACKAGES_PLAN_JSON',
             'W4_SYSTEM_API_PACKAGES_PLAN_SIMULATION_OUTPUT',
             'W4_SYSTEM_API_PACKAGES_APPLY_STDOUT',

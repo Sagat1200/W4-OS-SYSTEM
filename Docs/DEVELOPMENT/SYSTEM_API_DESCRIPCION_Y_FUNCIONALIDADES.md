@@ -225,6 +225,17 @@ En este corte, `operations.cancel` es deliberadamente honesta: si una operacion 
 
 La deduplicacion basica por `idempotency_key` ya cubre tanto `packages.apply` como las mutaciones de servicios. Todavia no es un ledger distribuido ni durable a nivel de release, pero ya evita la readmision de la misma intencion dentro del store local actual.
 
+### 4.13 Catalogo de actualizaciones
+
+La `System API` ya expone tambien una primera superficie de descubrimiento de updates:
+
+- `updates.check`
+- `updates.list`
+
+`updates.list` publica el catalogo normalizado de paquetes actualizables sobre `apt list --upgradable`, incluyendo `catalog_revision`, versiones instalada/candidata y origen resumido. `updates.check` reutiliza ese mismo catalogo y, cuando recibe `refresh = true`, intenta refrescarlo previamente con `apt-get update`.
+
+En esta etapa el dominio ya deja de ser un hueco documental y pasa a devolver lectura real del host. Lo pendiente para V1 no es crear el verbo, sino endurecer semantica de frescura, locks y busy-state, y luego cerrar la continuidad natural con `updates.apply`.
+
 ## 5. Componentes principales de la vertical
 
 La implementacion actual se apoya en varias piezas:
