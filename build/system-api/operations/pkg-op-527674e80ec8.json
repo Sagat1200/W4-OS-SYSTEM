@@ -1,0 +1,61 @@
+{
+    "kind": "system-api-operation",
+    "operation_id": "pkg-op-527674e80ec8",
+    "method": "packages.apply",
+    "resource": {
+        "kind": "package-operation",
+        "id": "pkg-plan-reuse-4c1f0bd25dff"
+    },
+    "state": "succeeded",
+    "status": "ok",
+    "cancel_requested": false,
+    "cancelable": false,
+    "progress": {
+        "percent": 100,
+        "current_step": "reconcile-installed-packages"
+    },
+    "result": {
+        "kind": "system-api-package-operation",
+        "status": "ok",
+        "backend": "apt-get",
+        "operation_id": "pkg-op-527674e80ec8",
+        "plan_id": "pkg-plan-reuse-4c1f0bd25dff",
+        "plan_hash": "c1555b58c4d4fc1505bc3d879125e6198eea6bbd",
+        "idempotency_key": "pkg-intent-reuse-4c1f0bd25dff",
+        "expected_catalog_revision": null,
+        "observed_catalog_revision": "catalog-reuse-4c1f0bd25dff",
+        "action": "install",
+        "state": "succeeded",
+        "command": "apt-get -y -o APT::Color=0 -o Dpkg::Options::=--force-confold install php8.4-cli:amd64",
+        "exit_code": 0,
+        "stdout": "Packages applied once",
+        "stderr": "",
+        "requested_packages": [
+            {
+                "name": "php8.4-cli",
+                "architecture": "amd64",
+                "requested_version": null,
+                "origin": null,
+                "installed_version": null,
+                "candidate_version": "8.4.4-1"
+            }
+        ],
+        "effects": {
+            "installs": [
+                {
+                    "name": "php8.4-cli",
+                    "architecture": "amd64",
+                    "installed_version": null,
+                    "target_version": "8.4.4-1"
+                }
+            ],
+            "upgrades": [],
+            "removals": []
+        },
+        "next_action": "reconcile-installed-packages"
+    },
+    "error": null,
+    "created_at": "2026-10-25T17:44:53+00:00",
+    "observed_at": "2026-10-25T17:44:53+00:00",
+    "completed_at": "2026-10-25T17:44:53+00:00"
+}

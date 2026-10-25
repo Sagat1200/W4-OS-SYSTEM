@@ -22,6 +22,7 @@ Mantener trazabilidad entre:
 
 | Tipo | Version | Fecha | Estado | Descripcion |
 | --- | --- | --- | --- | --- |
+| TECH | TECH-1.343 | 2026-10-25 | Activa | El proyecto ya incorpora `run_system_api_update_bundle_in_wsl.php`, un runner/preview PHP para ejecutar o preparar en WSL el bundle embebido de `updates.apply` por `store_dir` u `operation_id`, con stages `offline|health|reconcile`, soporte para `repo.env`/`repo-dir` y cobertura determinista por fixtures |
 | TECH | TECH-1.342 | 2026-10-25 | Activa | El bundle de `updates.apply` ya queda autocontenido para el layout embebido de `System API`: los scripts usan `STORE_DIR=${SCRIPT_DIR}`, se genera `executor.env` y el `README` deja de depender de rutas absolutas o de un subdirectorio `store` inexistente |
 | TECH | TECH-1.341 | 2026-10-25 | Activa | `updates.apply` ya materializa en el store durable el bundle ejecutable de updates (`run-update-offline.sh`, `run-health-checks.sh`, `reconcile-after-reboot.sh`, `update-executor.json`, `UPDATE_EXECUTOR_README.txt`) y expone esas rutas en el payload de la `System API` |
 | TECH | TECH-1.340 | 2026-10-25 | Activa | `updates.reconcile` ya puede derivar `observed_stage` desde `health-check-results.json` del store durable, publicar ese artefacto en su payload y reconciliar el tramo post-reboot sin requerir que el caller repita manualmente el stage observado |
