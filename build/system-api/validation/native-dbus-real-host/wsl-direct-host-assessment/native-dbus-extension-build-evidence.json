@@ -1,7 +1,7 @@
 {
     "api_version": "1.0",
     "kind": "system-api-native-dbus-extension-build-evidence",
-    "generated_at": "2026-10-26T05:14:35+00:00",
+    "generated_at": "2026-10-26T08:01:30+00:00",
     "source_path": "build/system-api/native-dbus-extension-fork/evidence/php84-build-attempt-current.log",
     "state": "buildable",
     "build_phase": "make",
