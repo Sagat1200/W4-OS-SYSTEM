@@ -4,6 +4,7 @@
     "operation_id": "system-api-update-apply-001",
     "engine": "apt-offline-snapshot",
     "generated_artifacts": [
+        "executor.env",
         "run-update-offline.sh",
         "run-update-with-repo-env.sh",
         "run-health-checks.sh",

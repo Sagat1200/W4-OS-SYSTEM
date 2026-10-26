@@ -19,10 +19,10 @@
         "status": "pending-reboot",
         "backend": "apt-get",
         "operation_id": "manager-update-op-apply-001",
-        "plan_hash": "533f7e5ecc3deb8d733affe204c2d80bc0c81b3d",
-        "idempotency_key": "manager-updates-apply-b3cc2a84b31f",
-        "expected_catalog_revision": "manager-updates-catalog-b3cc2a84b31f",
-        "observed_catalog_revision": "manager-updates-catalog-b3cc2a84b31f",
+        "plan_hash": "9bb562642a82e635ef69888b0eb2efb34c16ca33",
+        "idempotency_key": "manager-updates-apply-f23400455883",
+        "expected_catalog_revision": "manager-updates-catalog-f23400455883",
+        "observed_catalog_revision": "manager-updates-catalog-f23400455883",
         "profile_id": "w4-os-home",
         "source_version": "1.0.0-lab",
         "target_version": "1.0.1-lab",
@@ -116,7 +116,7 @@
                 "created_at": "2026-10-25T06:04:51+00:00",
                 "updated_at": "2026-10-25T06:04:51+00:00"
             },
-            "plan_hash": "533f7e5ecc3deb8d733affe204c2d80bc0c81b3d",
+            "plan_hash": "9bb562642a82e635ef69888b0eb2efb34c16ca33",
             "apply_mode": "live-apt",
             "reboot_required": true
         },
@@ -143,6 +143,7 @@
                 "run_update_with_repo_env_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001\\run-update-with-repo-env.sh",
                 "run_health_checks_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001\\run-health-checks.sh",
                 "reconcile_after_reboot_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001\\reconcile-after-reboot.sh",
+                "reconcile_operation_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001\\reconcile-update-operation.php",
                 "manifest_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001\\update-executor.json",
                 "env_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001\\executor.env",
                 "readme_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\manager-update-op-apply-001\\UPDATE_EXECUTOR_README.txt"
@@ -170,7 +171,7 @@
         "next_action": "reboot-into-post-update-health-checks"
     },
     "error": null,
-    "created_at": "2026-10-25T18:22:05+00:00",
-    "observed_at": "2026-10-25T18:22:05+00:00",
+    "created_at": "2026-10-26T16:26:17+00:00",
+    "observed_at": "2026-10-26T16:26:17+00:00",
     "completed_at": null
 }

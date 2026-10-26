@@ -1,0 +1,29 @@
+{
+    "update_operation_schema_version": 1,
+    "kind": "update-operation",
+    "operation_id": "manager-update-op-reconcile-45b6908310b2",
+    "profile_id": "w4-os-home",
+    "source_version": "1.0.0-lab",
+    "target_version": "1.0.1-lab",
+    "stage": "confirmed",
+    "repository_snapshot": {
+        "id": "w4-main-2026-09-19T120000Z",
+        "channel": "testing"
+    },
+    "snapshot": {
+        "root_subvolume": "\/@",
+        "snapshot_name": "pre-update-manager-update-op-reconcile-45b6908310b2",
+        "snapshot_path": "\/.snapshots\/pre-update-manager-update-op-reconcile-45b6908310b2",
+        "retention": "protected-until-confirmed"
+    },
+    "boot_manifest": {
+        "kernel_package": "linux-image-amd64",
+        "boot_mode": "efi",
+        "initramfs_strategy": "update-initramfs"
+    },
+    "last_error": null,
+    "timestamps": {
+        "created_at": "2026-10-26T16:26:17+00:00",
+        "updated_at": "2026-10-26T16:26:18+00:00"
+    }
+}

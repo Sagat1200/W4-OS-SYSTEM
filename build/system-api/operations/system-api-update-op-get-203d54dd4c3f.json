@@ -1,0 +1,172 @@
+{
+    "kind": "system-api-operation",
+    "operation_id": "system-api-update-op-get-203d54dd4c3f",
+    "method": "updates.apply",
+    "resource": {
+        "kind": "update-operation",
+        "id": "system-api-update-op-get-203d54dd4c3f"
+    },
+    "state": "succeeded",
+    "status": "ok",
+    "cancel_requested": false,
+    "cancelable": false,
+    "progress": {
+        "percent": 100,
+        "current_step": "record-update-confirmation"
+    },
+    "result": {
+        "kind": "system-api-update-operation",
+        "status": "ok",
+        "backend": "apt-get",
+        "operation_id": "system-api-update-op-get-203d54dd4c3f",
+        "plan_hash": "ac7e38ae2d367887c3c60af2bda7bee15a84f30f",
+        "idempotency_key": "updates-op-get-apply-203d54dd4c3f",
+        "expected_catalog_revision": "updates-op-get-catalog-203d54dd4c3f",
+        "observed_catalog_revision": "updates-op-get-catalog-203d54dd4c3f",
+        "profile_id": "w4-os-home",
+        "source_version": "1.0.0-lab",
+        "target_version": "1.0.1-lab",
+        "apply_mode": "live-apt",
+        "stage": "confirmed",
+        "state": "succeeded",
+        "command": "updates:apply",
+        "command_sequence": [
+            "apt-get -y -o APT::Color=0 install w4-recovery-tools w4-home-meta"
+        ],
+        "exit_code": 0,
+        "stdout": "Update packages applied",
+        "stderr": "",
+        "package_changes": {
+            "install": [
+                "w4-recovery-tools"
+            ],
+            "upgrade": [
+                "w4-home-meta"
+            ],
+            "remove": [],
+            "counts": {
+                "install": 1,
+                "upgrade": 1,
+                "remove": 0,
+                "total": 2
+            }
+        },
+        "repository_snapshot": {
+            "id": "w4-main-2026-09-19T120000Z",
+            "channel": "testing"
+        },
+        "snapshot": {
+            "root_subvolume": "/@",
+            "snapshot_name": "pre-update-system-api-update-op-get-203d54dd4c3f",
+            "snapshot_path": "/.snapshots/pre-update-system-api-update-op-get-203d54dd4c3f",
+            "retention": "protected-until-confirmed"
+        },
+        "staging": {
+            "directory": "/var/lib/w4-update/staging/system-api-update-op-get-203d54dd4c3f",
+            "estimated_space_kib": 262144,
+            "cache_policy": "protected-until-confirmed"
+        },
+        "boot_manifest": {
+            "kernel_package": "linux-image-amd64",
+            "boot_mode": "efi",
+            "initramfs_strategy": "update-initramfs"
+        },
+        "reboot_required": true,
+        "stages": [
+            "planned",
+            "downloading",
+            "ready",
+            "prepared",
+            "applying_offline",
+            "pending_health",
+            "confirmed"
+        ],
+        "evidence": [],
+        "notes": [],
+        "durable_state": {
+            "update_operation_schema_version": 1,
+            "kind": "update-operation",
+            "operation_id": "system-api-update-op-get-203d54dd4c3f",
+            "profile_id": "w4-os-home",
+            "source_version": "1.0.0-lab",
+            "target_version": "1.0.1-lab",
+            "stage": "confirmed",
+            "repository_snapshot": {
+                "id": "w4-main-2026-09-19T120000Z",
+                "channel": "testing"
+            },
+            "snapshot": {
+                "root_subvolume": "/@",
+                "snapshot_name": "pre-update-system-api-update-op-get-203d54dd4c3f",
+                "snapshot_path": "/.snapshots/pre-update-system-api-update-op-get-203d54dd4c3f",
+                "retention": "protected-until-confirmed"
+            },
+            "boot_manifest": {
+                "kernel_package": "linux-image-amd64",
+                "boot_mode": "efi",
+                "initramfs_strategy": "update-initramfs"
+            },
+            "last_error": null,
+            "timestamps": {
+                "created_at": "2026-10-26T16:26:13+00:00",
+                "updated_at": "2026-10-26T16:26:14+00:00"
+            },
+            "plan_hash": "ac7e38ae2d367887c3c60af2bda7bee15a84f30f",
+            "apply_mode": "live-apt",
+            "reboot_required": true
+        },
+        "health_report": {
+            "health_report_schema_version": 1,
+            "kind": "health-report",
+            "operation_id": "system-api-update-op-get-203d54dd4c3f",
+            "stage": "confirmed",
+            "status": "ok",
+            "required_checks": [
+                "boot-entry-present",
+                "dpkg-consistent"
+            ],
+            "test_file_path": "/var/lib/w4-update/test-file",
+            "last_error": null,
+            "updated_at": "2026-10-26T16:26:14+00:00"
+        },
+        "health_check_results": null,
+        "durable_store": {
+            "store_dir": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-op-get-203d54dd4c3f",
+            "health_result_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-op-get-203d54dd4c3f\\health-check-results.json",
+            "executor": {
+                "run_update_offline_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-op-get-203d54dd4c3f\\run-update-offline.sh",
+                "run_update_with_repo_env_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-op-get-203d54dd4c3f\\run-update-with-repo-env.sh",
+                "run_health_checks_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-op-get-203d54dd4c3f\\run-health-checks.sh",
+                "reconcile_after_reboot_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-op-get-203d54dd4c3f\\reconcile-after-reboot.sh",
+                "reconcile_operation_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-op-get-203d54dd4c3f\\reconcile-update-operation.php",
+                "manifest_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-op-get-203d54dd4c3f\\update-executor.json",
+                "env_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-op-get-203d54dd4c3f\\executor.env",
+                "readme_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-op-get-203d54dd4c3f\\UPDATE_EXECUTOR_README.txt"
+            }
+        },
+        "post_reboot": {
+            "pending_state": "pending_health",
+            "success_state": "confirmed",
+            "failure_state": "failed",
+            "required_checks": [
+                "boot-entry-present",
+                "dpkg-consistent"
+            ],
+            "test_file_path": "/var/lib/w4-update/test-file",
+            "resume_from_stage": "confirmed",
+            "next_action": "run-post-reboot-health-checks"
+        },
+        "coordination": {
+            "exclusive_scope": "system-updates",
+            "mutating_operation_policy": "single-active-operation",
+            "busy_state": "pending-reboot-health-reconciliation",
+            "reboot_required": true,
+            "next_stage": "confirmed"
+        },
+        "next_action": "record-update-confirmation"
+    },
+    "error": null,
+    "created_at": "2026-10-26T16:26:14+00:00",
+    "observed_at": "2026-10-26T16:26:14+00:00",
+    "completed_at": "2026-10-26T16:26:14+00:00"
+}

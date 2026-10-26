@@ -1,0 +1,8 @@
+{
+    "kind": "system-api-idempotency-ledger-entry",
+    "method": "updates.apply",
+    "idempotency_key": "manager-updates-health-auto-apply-22156e46940a",
+    "digest": "93882af548d6a60edffab3181ee2d1c4687f0fc7",
+    "operation_id": "manager-update-health-auto-22156e46940a",
+    "observed_at": "2026-10-26T16:26:18+00:00"
+}

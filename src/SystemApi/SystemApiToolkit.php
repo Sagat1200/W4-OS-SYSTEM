@@ -64,18 +64,20 @@ final class SystemApiToolkit
             : 'system-api-capabilities';
         $runtimeDiagnosis = $this->dbusRuntimeProbe->createReport();
         $activationPreparation = $this->dbusRuntimeActivation->createActivationPreparation($runtimeDiagnosis);
-        $runtimeBackend = is_array($activationPreparation['runtime_backend'] ?? null)
-            ? $activationPreparation['runtime_backend']
+        $runtimePresentation = $this->createRuntimePresentation($runtimeDiagnosis, $activationPreparation);
+        $resolvedActivationPreparation = $runtimePresentation['activation_preparation'];
+        $runtimeBackend = is_array($runtimePresentation['runtime_backend'] ?? null)
+            ? $runtimePresentation['runtime_backend']
             : [];
-        $executionPlan = is_array($activationPreparation['execution_plan'] ?? null)
-            ? $activationPreparation['execution_plan']
+        $executionPlan = is_array($resolvedActivationPreparation['execution_plan'] ?? null)
+            ? $resolvedActivationPreparation['execution_plan']
             : [];
         $runtimeBackendPlan = is_array($executionPlan['runtime_backend'] ?? null)
             ? $executionPlan['runtime_backend']
             : [];
-        $activationNextAction = $activationPreparation['next_action'] ?? 'materialize-runtime-adapter';
-        $activationRecoveryPlan = is_array($activationPreparation['recovery_plan'] ?? null)
-            ? $activationPreparation['recovery_plan']
+        $activationNextAction = $runtimePresentation['next_action'] ?? 'materialize-runtime-adapter';
+        $activationRecoveryPlan = is_array($runtimePresentation['recovery_plan'] ?? null)
+            ? $runtimePresentation['recovery_plan']
             : ['materialize-runtime-adapter'];
         $selectedRuntimeBackend = $runtimeBackend['selected_backend'] ?? 'contract-pending';
         $runtimeBackendStatus = $runtimeBackend['status'] ?? 'pending-runtime-adapter';
@@ -146,7 +148,7 @@ final class SystemApiToolkit
                         'experimental-embedded-runtime',
                         'native-dbus-extension',
                     ],
-                    'runtime_status' => $activationPreparation['status'] ?? 'pending-runtime-adapter',
+                    'runtime_status' => $resolvedActivationPreparation['status'] ?? 'pending-runtime-adapter',
                     'selected_runtime_backend' => $selectedRuntimeBackend,
                     'runtime_backend_status' => $runtimeBackendStatus,
                     'activation_next_action' => $activationNextAction,
@@ -714,13 +716,14 @@ final class SystemApiToolkit
         if ($method === 'system.dbus-runtime') {
             $runtimeDiagnosis = $this->dbusRuntimeProbe->createReport();
             $activationPreparation = $this->dbusRuntimeActivation->createActivationPreparation($runtimeDiagnosis);
+            $runtimePresentation = $this->createRuntimePresentation($runtimeDiagnosis, $activationPreparation);
 
             return $this->createSuccessResponse(
                 requestId: $requestId,
                 method: 'system.dbus-runtime',
                 resourceKind: 'system-api-dbus-runtime-diagnosis',
                 resourceId: 'org.w4.System1',
-                data: $this->createRuntimeContractPayload($runtimeDiagnosis, $activationPreparation),
+                data: $this->createRuntimeContractPayload($runtimeDiagnosis, $runtimePresentation),
                 provider: 'local-system-api-runtime-contract'
             );
         }
@@ -1264,25 +1267,146 @@ final class SystemApiToolkit
 
     /**
      * @param array<string, mixed> $runtimeDiagnosis
-     * @param array<string, mixed> $activationPreparation
+     * @param array<string, mixed> $runtimePresentation
      * @return array<string, mixed>
      */
-    private function createRuntimeContractPayload(array $runtimeDiagnosis, array $activationPreparation): array
+    private function createRuntimeContractPayload(array $runtimeDiagnosis, array $runtimePresentation): array
     {
         $payload = $runtimeDiagnosis;
-        $payload['next_action'] = $activationPreparation['next_action'] ?? 'materialize-runtime-adapter';
-        $payload['recovery_plan'] = is_array($activationPreparation['recovery_plan'] ?? null)
-            ? $activationPreparation['recovery_plan']
-            : ['materialize-runtime-adapter'];
-        $payload['runtime_backend'] = is_array($activationPreparation['runtime_backend'] ?? null)
-            ? $activationPreparation['runtime_backend']
+        $activationPreparation = is_array($runtimePresentation['activation_preparation'] ?? null)
+            ? $runtimePresentation['activation_preparation']
             : [];
-        $payload['native_runtime_service'] = is_array($activationPreparation['native_runtime_service'] ?? null)
-            ? $activationPreparation['native_runtime_service']
+        $payload['next_action'] = $runtimePresentation['next_action'] ?? ($activationPreparation['next_action'] ?? 'materialize-runtime-adapter');
+        $payload['recovery_plan'] = is_array($runtimePresentation['recovery_plan'] ?? null)
+            ? $runtimePresentation['recovery_plan']
+            : ['materialize-runtime-adapter'];
+        $payload['runtime_backend'] = is_array($runtimePresentation['runtime_backend'] ?? null)
+            ? $runtimePresentation['runtime_backend']
+            : [];
+        $payload['native_runtime_service'] = is_array($runtimePresentation['native_runtime_service'] ?? null)
+            ? $runtimePresentation['native_runtime_service']
             : null;
         $payload['activation_preparation'] = $activationPreparation;
 
         return $payload;
+    }
+
+    /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, mixed> $activationPreparation
+     * @return array<string, mixed>
+     */
+    private function createRuntimePresentation(array $runtimeDiagnosis, array $activationPreparation): array
+    {
+        $runtimeBackend = is_array($activationPreparation['runtime_backend'] ?? null)
+            ? $activationPreparation['runtime_backend']
+            : [];
+        $nativeRuntimeService = is_array($activationPreparation['native_runtime_service'] ?? null)
+            ? $activationPreparation['native_runtime_service']
+            : null;
+        $nextAction = is_string($activationPreparation['next_action'] ?? null)
+            ? $activationPreparation['next_action']
+            : 'materialize-runtime-adapter';
+        $recoveryPlan = is_array($activationPreparation['recovery_plan'] ?? null)
+            ? $activationPreparation['recovery_plan']
+            : [$nextAction];
+
+        if ($this->shouldProjectObservedNativeRuntime($runtimeBackend, $nativeRuntimeService)) {
+            $observation = $this->dbusRuntimeBackend->createNativeRuntimeServiceObservationReport($runtimeDiagnosis);
+            if ((($observation['startup_acknowledged'] ?? false) === true) || (($observation['observed'] ?? false) === true)) {
+                $nativeRuntimeService = $this->createObservedNativeRuntimeServicePresentation(
+                    $nativeRuntimeService,
+                    $observation
+                );
+                $nextAction = is_string($observation['next_action'] ?? null) && trim((string) $observation['next_action']) !== ''
+                    ? trim((string) $observation['next_action'])
+                    : $nextAction;
+                $recoveryPlan = $this->buildRuntimeRecoveryPlan($nextAction, $nativeRuntimeService, $recoveryPlan);
+                $activationPreparation['native_runtime_service'] = $nativeRuntimeService;
+                $activationPreparation['next_action'] = $nextAction;
+                $activationPreparation['recovery_plan'] = $recoveryPlan;
+            }
+        }
+
+        return [
+            'activation_preparation' => $activationPreparation,
+            'runtime_backend' => $runtimeBackend,
+            'native_runtime_service' => $nativeRuntimeService,
+            'next_action' => $nextAction,
+            'recovery_plan' => $recoveryPlan,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $runtimeBackend
+     * @param array<string, mixed>|null $nativeRuntimeService
+     */
+    private function shouldProjectObservedNativeRuntime(array $runtimeBackend, ?array $nativeRuntimeService): bool
+    {
+        return is_array($nativeRuntimeService)
+            && (($runtimeBackend['selected_backend'] ?? null) === 'native-dbus-extension')
+            && (($runtimeBackend['materialized'] ?? false) === true);
+    }
+
+    /**
+     * @param array<string, mixed> $nativeRuntimeService
+     * @param array<string, mixed> $observation
+     * @return array<string, mixed>
+     */
+    private function createObservedNativeRuntimeServicePresentation(array $nativeRuntimeService, array $observation): array
+    {
+        $observedServiceDefinition = is_array($observation['service_definition'] ?? null)
+            ? $observation['service_definition']
+            : [];
+        $startupReport = is_array($observation['startup_report'] ?? null)
+            ? $observation['startup_report']
+            : [];
+        $startupReportServiceDefinition = is_array($startupReport['service_definition'] ?? null)
+            ? $startupReport['service_definition']
+            : [];
+
+        $resolvedService = array_replace_recursive(
+            $nativeRuntimeService,
+            $observedServiceDefinition,
+            $startupReportServiceDefinition
+        );
+
+        if (($observation['startup_acknowledged'] ?? false) === true) {
+            $resolvedService['startup_mode'] = is_string($resolvedService['startup_mode'] ?? null)
+                && trim((string) $resolvedService['startup_mode']) !== ''
+                ? trim((string) $resolvedService['startup_mode'])
+                : 'launch-process';
+        }
+
+        if (is_string($observation['blocking_reason'] ?? null) && trim((string) $observation['blocking_reason']) !== '') {
+            $resolvedService['blocking_reason'] = trim((string) $observation['blocking_reason']);
+        }
+
+        if (is_string($observation['next_action'] ?? null) && trim((string) $observation['next_action']) !== '') {
+            $resolvedService['next_action'] = trim((string) $observation['next_action']);
+        }
+
+        return $resolvedService;
+    }
+
+    /**
+     * @param array<string, mixed>|null $nativeRuntimeService
+     * @param list<string> $fallbackPlan
+     * @return list<string>
+     */
+    private function buildRuntimeRecoveryPlan(string $nextAction, ?array $nativeRuntimeService, array $fallbackPlan = []): array
+    {
+        $plan = [];
+
+        foreach ([$nextAction, $nativeRuntimeService['next_action'] ?? null, ...$fallbackPlan] as $candidate) {
+            if (!is_string($candidate) || trim($candidate) === '' || in_array(trim($candidate), $plan, true)) {
+                continue;
+            }
+
+            $plan[] = trim($candidate);
+        }
+
+        return $plan === [] ? ['materialize-runtime-adapter'] : $plan;
     }
 
     /**

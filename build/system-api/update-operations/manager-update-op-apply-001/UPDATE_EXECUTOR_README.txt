@@ -14,6 +14,7 @@ Recommended flow:
 Main artifacts:
 - update-executor.json: C:\W4\Packages\W4-OS SYSTEM\build\system-api\update-operations\manager-update-op-apply-001\update-executor.json
 - executor.env: C:\W4\Packages\W4-OS SYSTEM\build\system-api\update-operations\manager-update-op-apply-001\executor.env
+- reconcile-update-operation.php: C:\W4\Packages\W4-OS SYSTEM\build\system-api\update-operations\manager-update-op-apply-001\reconcile-update-operation.php
 - health-check-results.json: C:\W4\Packages\W4-OS SYSTEM\build\system-api\update-operations\manager-update-op-apply-001\health-check-results.json
 - operation.json: C:\W4\Packages\W4-OS SYSTEM\build\system-api\update-operations\manager-update-op-apply-001\operation.json
 - health-report.json: C:\W4\Packages\W4-OS SYSTEM\build\system-api\update-operations\manager-update-op-apply-001\health-report.json

@@ -11,8 +11,8 @@
 - Launcher command validated: `yes`
 - GetCapabilities validated: `yes`
 - Call(system.dbus-runtime) validated: `yes`
-- Call output path: `build\system-api\validation\native-dbus-real-host\wsl-serve-dbus-check\serve-dbus-call-output.txt`
-- Introspection path: `build\system-api\validation\native-dbus-real-host\wsl-serve-dbus-check\gdbus-introspect.txt`
-- Launcher stdout path: `build\system-api\validation\native-dbus-real-host\wsl-serve-dbus-check\serve-dbus-launcher-output.json`
-- Launcher stderr path: `build\system-api\validation\native-dbus-real-host\wsl-serve-dbus-check\serve-dbus-launcher-error.txt`
+- Call output path: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-serve-dbus-check\serve-dbus-call-output.txt`
+- Introspection path: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-serve-dbus-check\gdbus-introspect.txt`
+- Launcher stdout path: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-serve-dbus-check\serve-dbus-launcher-output.json`
+- Launcher stderr path: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-serve-dbus-check\serve-dbus-launcher-error.txt`
 

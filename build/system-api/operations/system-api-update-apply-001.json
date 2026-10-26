@@ -6,29 +6,29 @@
         "kind": "update-operation",
         "id": "system-api-update-apply-001"
     },
-    "state": "needs_attention",
-    "status": "pending-reboot",
+    "state": "succeeded",
+    "status": "ok",
     "cancel_requested": false,
     "cancelable": false,
     "progress": {
-        "percent": 50,
+        "percent": 100,
         "current_step": "reboot-into-post-update-health-checks"
     },
     "result": {
         "kind": "system-api-update-operation",
-        "status": "pending-reboot",
+        "status": "ok",
         "backend": "apt-get",
         "operation_id": "system-api-update-apply-001",
-        "plan_hash": "617d0d5306f3505dc992368d6ba12ac6746e8fe9",
-        "idempotency_key": "updates-apply-1918cd9a7612",
-        "expected_catalog_revision": "updates-catalog-1918cd9a7612",
-        "observed_catalog_revision": "updates-catalog-1918cd9a7612",
+        "plan_hash": "60db2d59a5bf779b93ea946e5ae283caf194d885",
+        "idempotency_key": "updates-apply-61f7a20e337b",
+        "expected_catalog_revision": "updates-catalog-61f7a20e337b",
+        "observed_catalog_revision": "updates-catalog-61f7a20e337b",
         "profile_id": "w4-os-home",
         "source_version": "1.0.0-lab",
         "target_version": "1.0.1-lab",
         "apply_mode": "live-apt",
-        "stage": "pending_health",
-        "state": "needs_attention",
+        "stage": "confirmed",
+        "state": "succeeded",
         "command": "updates:apply",
         "command_sequence": [
             "apt-get -y -o APT::Color=0 install w4-recovery-tools w4-home-meta"
@@ -95,7 +95,7 @@
             "profile_id": "w4-os-home",
             "source_version": "1.0.0-lab",
             "target_version": "1.0.1-lab",
-            "stage": "pending_health",
+            "stage": "confirmed",
             "repository_snapshot": {
                 "id": "w4-main-2026-09-19T120000Z",
                 "channel": "testing"
@@ -114,9 +114,9 @@
             "last_error": null,
             "timestamps": {
                 "created_at": "2026-10-25T06:04:47+00:00",
-                "updated_at": "2026-10-25T06:04:47+00:00"
+                "updated_at": "2026-10-25T18:42:31+00:00"
             },
-            "plan_hash": "617d0d5306f3505dc992368d6ba12ac6746e8fe9",
+            "plan_hash": "60db2d59a5bf779b93ea946e5ae283caf194d885",
             "apply_mode": "live-apt",
             "reboot_required": true
         },
@@ -124,17 +124,25 @@
             "health_report_schema_version": 1,
             "kind": "health-report",
             "operation_id": "system-api-update-apply-001",
-            "stage": "pending_health",
-            "status": "pending",
+            "stage": "confirmed",
+            "status": "ok",
             "required_checks": [
                 "boot-entry-present",
                 "dpkg-consistent"
             ],
             "test_file_path": "/var/lib/w4-update/test-file",
             "last_error": null,
-            "updated_at": "2026-10-25T06:04:47+00:00"
+            "updated_at": "2026-10-25T18:42:31+00:00"
         },
-        "health_check_results": null,
+        "health_check_results": {
+            "health_check_result_schema_version": 1,
+            "kind": "health-check-results",
+            "status": "failed",
+            "results": {
+                "boot-entry-present": "failed",
+                "dpkg-consistent": "ok"
+            }
+        },
         "durable_store": {
             "store_dir": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-apply-001",
             "health_result_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-apply-001\\health-check-results.json",
@@ -143,6 +151,7 @@
                 "run_update_with_repo_env_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-apply-001\\run-update-with-repo-env.sh",
                 "run_health_checks_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-apply-001\\run-health-checks.sh",
                 "reconcile_after_reboot_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-apply-001\\reconcile-after-reboot.sh",
+                "reconcile_operation_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-apply-001\\reconcile-update-operation.php",
                 "manifest_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-apply-001\\update-executor.json",
                 "env_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-apply-001\\executor.env",
                 "readme_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-apply-001\\UPDATE_EXECUTOR_README.txt"
@@ -157,7 +166,7 @@
                 "dpkg-consistent"
             ],
             "test_file_path": "/var/lib/w4-update/test-file",
-            "resume_from_stage": "pending_health",
+            "resume_from_stage": "confirmed",
             "next_action": "run-post-reboot-health-checks"
         },
         "coordination": {
@@ -165,12 +174,12 @@
             "mutating_operation_policy": "single-active-operation",
             "busy_state": "pending-reboot-health-reconciliation",
             "reboot_required": true,
-            "next_stage": "pending_health"
+            "next_stage": "confirmed"
         },
         "next_action": "reboot-into-post-update-health-checks"
     },
     "error": null,
-    "created_at": "2026-10-25T18:21:02+00:00",
-    "observed_at": "2026-10-25T18:21:02+00:00",
-    "completed_at": null
+    "created_at": "2026-10-26T16:26:10+00:00",
+    "observed_at": "2026-10-26T16:26:10+00:00",
+    "completed_at": "2026-10-26T16:26:10+00:00"
 }
