@@ -259,6 +259,8 @@ final class NativeDbusExtensionOwnershipDriver
             $driver['register_object_invocation_plan'] = $registerObjectInvocationPlan['report'];
             $driver['register_object_result'] = $this->normalizeResultValue($registerObjectResult);
             $this->writePhaseMarker($environment, 'after-register-object');
+            $this->markActiveNativeRuntimeEnvironment($serviceDefinition);
+            $this->persistActiveOwnershipArtifacts($serviceDefinition, $driver);
         } catch (Throwable $exception) {
             $this->writePhaseMarker($environment, 'register-object-exception');
             return [
@@ -328,6 +330,131 @@ final class NativeDbusExtensionOwnershipDriver
             'driver_status' => 'ownership-materialized',
             'driver' => $driver,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $serviceDefinition
+     */
+    private function markActiveNativeRuntimeEnvironment(array $serviceDefinition): void
+    {
+        $this->putEnvironmentValue('W4_SYSTEM_API_NATIVE_RUNTIME_ACTIVE', '1');
+        $this->putEnvironmentValue('W4_SYSTEM_API_NATIVE_RUNTIME_OWNERSHIP_STATE', 'bus-name-owned');
+
+        foreach ([
+            'W4_SYSTEM_API_BUS_NAME' => 'bus_name',
+            'W4_SYSTEM_API_OBJECT_PATH' => 'object_path',
+            'W4_SYSTEM_API_INTERFACE' => 'interface',
+        ] as $environmentKey => $definitionKey) {
+            $value = $serviceDefinition[$definitionKey] ?? null;
+            if (is_string($value) && trim($value) !== '') {
+                $this->putEnvironmentValue($environmentKey, trim($value));
+            }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $serviceDefinition
+     * @param array<string, mixed> $driver
+     */
+    private function persistActiveOwnershipArtifacts(array $serviceDefinition, array $driver): void
+    {
+        $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
+        $readyMarkerPath = $this->resolveArtifactPath($artifacts, 'ready_marker_path');
+        $statusFilePath = $this->resolveArtifactPath($artifacts, 'status_file_path');
+        $pidFilePath = $this->resolveArtifactPath($artifacts, 'pid_file_path');
+        $pid = getmypid();
+        $resolvedPid = is_int($pid) && $pid > 0 ? $pid : 0;
+
+        $resolvedServiceDefinition = $serviceDefinition;
+        $resolvedServiceDefinition['startup_mode'] = 'launch-process';
+        $resolvedServiceDefinition['blocking_reason'] = null;
+        $resolvedServiceDefinition['next_action'] = 'runtime-service-active';
+
+        if ($readyMarkerPath !== null) {
+            @file_put_contents($readyMarkerPath, "native-runtime-bus-owned\n");
+        }
+
+        if ($pidFilePath !== null) {
+            @file_put_contents($pidFilePath, sprintf("%d\n", $resolvedPid));
+        }
+
+        if ($statusFilePath === null) {
+            return;
+        }
+
+        $statusPayload = json_encode([
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-native-runtime-ownership',
+            'status' => 'native-runtime-bus-owned',
+            'attempted' => true,
+            'startup_acknowledged' => true,
+            'exit_code' => 0,
+            'bus_name' => $resolvedServiceDefinition['bus_name'] ?? 'org.w4.System1',
+            'object_path' => $resolvedServiceDefinition['object_path'] ?? '/org/w4/System1',
+            'interface' => $resolvedServiceDefinition['interface'] ?? 'org.w4.System1.Manager',
+            'service_definition' => $resolvedServiceDefinition,
+            'runtime_backend' => $resolvedServiceDefinition['runtime_backend'] ?? [],
+            'service_observation' => [
+                'api_version' => '1.0',
+                'kind' => 'system-api-dbus-native-runtime-observation',
+                'status' => 'native-runtime-service-observed-active',
+                'observed' => true,
+                'exit_code' => 0,
+                'startup_acknowledged' => true,
+                'bus_name' => $resolvedServiceDefinition['bus_name'] ?? 'org.w4.System1',
+                'object_path' => $resolvedServiceDefinition['object_path'] ?? '/org/w4/System1',
+                'interface' => $resolvedServiceDefinition['interface'] ?? 'org.w4.System1.Manager',
+                'service_definition' => $resolvedServiceDefinition,
+                'runtime_backend' => $resolvedServiceDefinition['runtime_backend'] ?? [],
+                'ownership_state' => 'bus-name-owned',
+                'pid' => $resolvedPid,
+                'blocking_reason' => null,
+                'next_action' => 'runtime-service-active',
+            ],
+            'execution_mode' => 'native-driver',
+            'ownership_driver' => $driver + [
+                'mode' => 'native-driver',
+                'runtime_active_artifacts_persisted' => true,
+            ],
+            'ownership_state' => 'bus-name-owned',
+            'service_lifecycle' => [
+                'request_name' => [
+                    'required' => true,
+                    'state' => 'owned',
+                ],
+                'register_object' => [
+                    'required' => true,
+                    'state' => 'registered',
+                ],
+                'wait_loop' => [
+                    'required' => true,
+                    'state' => 'running',
+                ],
+            ],
+            'blocking_reason' => null,
+            'next_action' => 'runtime-service-active',
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+        if ($statusPayload !== false) {
+            @file_put_contents($statusFilePath, $statusPayload . PHP_EOL);
+        }
+    }
+
+    private function putEnvironmentValue(string $key, string $value): void
+    {
+        putenv($key . '=' . $value);
+        $_ENV[$key] = $value;
+        $_SERVER[$key] = $value;
+    }
+
+    /**
+     * @param array<string, mixed> $artifacts
+     */
+    private function resolveArtifactPath(array $artifacts, string $field): ?string
+    {
+        $value = $artifacts[$field] ?? null;
+
+        return is_string($value) && trim($value) !== '' ? trim($value) : null;
     }
 
     /**

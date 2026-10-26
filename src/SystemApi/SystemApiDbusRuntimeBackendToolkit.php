@@ -127,7 +127,8 @@ final class SystemApiDbusRuntimeBackendToolkit
      */
     public function createNativeRuntimeServiceObservationReport(array $runtimeDiagnosis, ?array $environment = null): array
     {
-        $serviceDefinition = $this->createNativeRuntimeServiceDefinition($runtimeDiagnosis, $environment);
+        $env = $environment ?? $this->captureEnvironment();
+        $serviceDefinition = $this->createNativeRuntimeServiceDefinition($runtimeDiagnosis, $env);
         $eligible = ($serviceDefinition['eligible'] ?? false) === true;
         $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
         $readyMarker = $this->observeTextArtifact($this->optionalArtifactPath($artifacts, 'ready_marker_path'));
@@ -146,11 +147,22 @@ final class SystemApiDbusRuntimeBackendToolkit
         $reportedOwnershipState = is_string($startupReport['ownership_state'] ?? null)
             ? $startupReport['ownership_state']
             : null;
+        $activeRuntimeProcess = $this->resolveBoolOverride($env, 'W4_SYSTEM_API_NATIVE_RUNTIME_ACTIVE') === true;
+        $activeRuntimeOwnershipState = $this->resolveNativeRuntimeActiveOwnershipState($env);
         $ownershipState = $reportedOwnershipState;
+        if ($activeRuntimeProcess && $activeRuntimeOwnershipState !== null) {
+            $ownershipState = $activeRuntimeOwnershipState;
+        }
         if ($ownershipState === null) {
-            $ownershipState = $observed
-                ? 'pending-bus-name-ownership'
-                : ($startupAcknowledged ? 'startup-recorded-no-process' : 'native-runtime-service-not-started');
+            $ownershipState = $activeRuntimeProcess
+                ? 'bus-name-owned'
+                : ($observed
+                    ? 'pending-bus-name-ownership'
+                    : ($startupAcknowledged ? 'startup-recorded-no-process' : 'native-runtime-service-not-started'));
+        }
+        if ($activeRuntimeProcess) {
+            $startupAcknowledged = $eligible;
+            $observed = $eligible;
         }
         if ($pidSignalsActiveRuntime && $ownershipState === 'startup-recorded-no-process') {
             $ownershipState = 'pending-bus-name-ownership';
@@ -214,6 +226,23 @@ final class SystemApiDbusRuntimeBackendToolkit
             'blocking_reason' => $blockingReason,
             'next_action' => $nextAction,
         ];
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeActiveOwnershipState(array $environment): ?string
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_OWNERSHIP_STATE'] ?? null;
+        if (!is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        $normalized = strtolower(trim($value));
+
+        return in_array($normalized, ['bus-name-owned', 'pending-bus-name-ownership'], true)
+            ? $normalized
+            : null;
     }
 
     /**

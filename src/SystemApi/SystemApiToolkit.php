@@ -1378,8 +1378,15 @@ final class SystemApiToolkit
                 : 'launch-process';
         }
 
-        if (is_string($observation['blocking_reason'] ?? null) && trim((string) $observation['blocking_reason']) !== '') {
-            $resolvedService['blocking_reason'] = trim((string) $observation['blocking_reason']);
+        if (array_key_exists('blocking_reason', $observation)) {
+            $resolvedService['blocking_reason'] = is_string($observation['blocking_reason'] ?? null)
+                && trim((string) $observation['blocking_reason']) !== ''
+                ? trim((string) $observation['blocking_reason'])
+                : null;
+        }
+
+        if (($observation['ownership_state'] ?? null) === 'bus-name-owned') {
+            $resolvedService['blocking_reason'] = null;
         }
 
         if (is_string($observation['next_action'] ?? null) && trim((string) $observation['next_action']) !== '') {

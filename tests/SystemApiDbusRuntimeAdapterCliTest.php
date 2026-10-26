@@ -342,28 +342,21 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
 
             $payload = $this->decodeJson($result['stdout']);
             self::assertSame('system-api-dbus-native-runtime-startup', $payload['kind']);
-            self::assertSame('native-runtime-service-launch-recorded', $payload['status']);
+            self::assertSame('native-runtime-bus-owned', $payload['status']);
             self::assertTrue($payload['startup_acknowledged']);
             self::assertTrue($payload['launched']);
             self::assertSame('background-process', $payload['launch_mode']);
-            self::assertSame('pending-bus-name-ownership', $payload['ownership_state']);
-            self::assertSame('observe-native-runtime-service-state', $payload['next_action']);
+            self::assertSame('bus-name-owned', $payload['ownership_state']);
+            self::assertNull($payload['blocking_reason']);
+            self::assertSame('runtime-service-active', $payload['next_action']);
             self::assertGreaterThan(0, $payload['pid']);
             self::assertFileExists($pidFilePath);
             self::assertSame($payload['pid'] . "\n", file_get_contents($pidFilePath));
             self::assertFileExists($statusFilePath);
             $persistedStatus = $this->decodeJson((string) file_get_contents($statusFilePath));
-            self::assertContains(
-                $persistedStatus['status'],
-                ['native-runtime-service-launch-recorded', 'native-runtime-bus-owned']
-            );
-            if (($persistedStatus['status'] ?? null) === 'native-runtime-service-launch-recorded') {
-                self::assertTrue($persistedStatus['launched']);
-                self::assertSame($payload['pid'], $persistedStatus['pid']);
-            } else {
-                self::assertSame('bus-name-owned', $persistedStatus['ownership_state']);
-                self::assertSame($payload['pid'], $persistedStatus['service_observation']['pid']);
-            }
+            self::assertSame('native-runtime-bus-owned', $persistedStatus['status']);
+            self::assertSame('bus-name-owned', $persistedStatus['ownership_state']);
+            self::assertSame($payload['pid'], $persistedStatus['service_observation']['pid']);
         } finally {
             $this->cleanupDirectory($baseDirectory);
         }

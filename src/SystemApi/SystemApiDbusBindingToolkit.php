@@ -1006,6 +1006,19 @@ switch ($command) {
             && resolveNativeRuntimeStartupMode(captureEnvironment()) === 'launch-process'
         ) {
             $nativeRuntimeStartup = materializeSyntheticNativeRuntimeLaunch($nativeRuntimeStartup);
+            persistNativeRuntimeArtifacts($nativeRuntimeStartup);
+            $nativeBusOwnership = createNativeBusOwnershipReport(buildRuntimeDiagnosis());
+            if (($nativeBusOwnership['ownership_state'] ?? null) === 'bus-name-owned') {
+                persistNativeRuntimeOwnershipArtifacts($nativeBusOwnership);
+                $nativeRuntimeStartup = reconcileLaunchedNativeRuntimeStartupReportFromOwnership(
+                    $nativeRuntimeStartup,
+                    $nativeBusOwnership
+                );
+            }
+            $nativeRuntimeStartup = reconcileLaunchedNativeRuntimeStartupReport(
+                $nativeRuntimeStartup,
+                createNativeRuntimeServiceObservationReport(buildRuntimeDiagnosis())
+            );
         }
         persistNativeRuntimeArtifacts($nativeRuntimeStartup);
         emitJson($nativeRuntimeStartup);
@@ -1479,11 +1492,23 @@ function createNativeRuntimeServiceObservationReport(array $runtimeDiagnosis): a
     $reportedOwnershipState = is_string($startupReport['ownership_state'] ?? null)
         ? $startupReport['ownership_state']
         : null;
+    $environment = captureEnvironment();
+    $activeRuntimeProcess = resolveBoolOverride($environment, 'W4_SYSTEM_API_NATIVE_RUNTIME_ACTIVE') === true;
+    $activeRuntimeOwnershipState = resolveNativeRuntimeActiveOwnershipState($environment);
     $ownershipState = $reportedOwnershipState;
+    if ($activeRuntimeProcess && $activeRuntimeOwnershipState !== null) {
+        $ownershipState = $activeRuntimeOwnershipState;
+    }
     if ($ownershipState === null) {
-        $ownershipState = $observed
-            ? 'pending-bus-name-ownership'
-            : ($startupAcknowledged ? 'startup-recorded-no-process' : 'native-runtime-service-not-started');
+        $ownershipState = $activeRuntimeProcess
+            ? 'bus-name-owned'
+            : ($observed
+                ? 'pending-bus-name-ownership'
+                : ($startupAcknowledged ? 'startup-recorded-no-process' : 'native-runtime-service-not-started'));
+    }
+    if ($activeRuntimeProcess) {
+        $startupAcknowledged = $eligible;
+        $observed = $eligible;
     }
     if ($pidSignalsActiveRuntime && $ownershipState === 'startup-recorded-no-process') {
         $ownershipState = 'pending-bus-name-ownership';
@@ -1547,6 +1572,20 @@ function createNativeRuntimeServiceObservationReport(array $runtimeDiagnosis): a
         'blocking_reason' => $blockingReason,
         'next_action' => $nextAction,
     ];
+}
+
+function resolveNativeRuntimeActiveOwnershipState(array $environment): ?string
+{
+    $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_OWNERSHIP_STATE'] ?? null;
+    if (!is_string($value) || trim($value) === '') {
+        return null;
+    }
+
+    $normalized = strtolower(trim($value));
+
+    return in_array($normalized, ['bus-name-owned', 'pending-bus-name-ownership'], true)
+        ? $normalized
+        : null;
 }
 
 /**
@@ -2262,6 +2301,77 @@ function materializeSyntheticNativeRuntimeLaunch(array $report): array
 
     if (is_array($report['service_definition'] ?? null)) {
         $report['service_definition']['startup_mode'] = 'launch-process';
+    }
+
+    return $report;
+}
+
+/**
+ * @param array<string, mixed> $report
+ * @param array<string, mixed> $observation
+ * @return array<string, mixed>
+ */
+function reconcileLaunchedNativeRuntimeStartupReport(array $report, array $observation): array
+{
+    $ownershipState = is_string($observation['ownership_state'] ?? null)
+        ? trim((string) $observation['ownership_state'])
+        : null;
+    $reportedPid = is_int($report['pid'] ?? null) ? (int) $report['pid'] : null;
+    $observedPid = is_int($observation['pid'] ?? null) ? (int) $observation['pid'] : null;
+
+    if ($reportedPid !== null && $reportedPid > 0 && $observedPid === $reportedPid && $ownershipState === 'bus-name-owned') {
+        $report['status'] = 'native-runtime-bus-owned';
+        $report['ownership_state'] = 'bus-name-owned';
+        $report['blocking_reason'] = null;
+        $report['next_action'] = 'runtime-service-active';
+        $report['service_observation'] = $observation;
+
+        if (is_array($report['service_definition'] ?? null)) {
+            $report['service_definition']['startup_mode'] = 'launch-process';
+            $report['service_definition']['blocking_reason'] = null;
+            $report['service_definition']['next_action'] = 'runtime-service-active';
+        }
+
+        return $report;
+    }
+
+    if ($reportedPid !== null && $reportedPid > 0 && $observedPid === $reportedPid && (($observation['observed'] ?? false) === true)) {
+        $report['service_observation'] = $observation;
+    }
+
+    return $report;
+}
+
+/**
+ * @param array<string, mixed> $report
+ * @param array<string, mixed> $ownership
+ * @return array<string, mixed>
+ */
+function reconcileLaunchedNativeRuntimeStartupReportFromOwnership(array $report, array $ownership): array
+{
+    $reportedPid = is_int($report['pid'] ?? null) ? (int) $report['pid'] : null;
+    $observedPid = is_int($ownership['service_observation']['pid'] ?? null)
+        ? (int) $ownership['service_observation']['pid']
+        : null;
+
+    if ($reportedPid === null || $reportedPid <= 0 || $observedPid !== $reportedPid) {
+        return $report;
+    }
+
+    if (($ownership['ownership_state'] ?? null) !== 'bus-name-owned') {
+        return $report;
+    }
+
+    $report['status'] = 'native-runtime-bus-owned';
+    $report['ownership_state'] = 'bus-name-owned';
+    $report['blocking_reason'] = null;
+    $report['next_action'] = 'runtime-service-active';
+    $report['service_observation'] = $ownership['service_observation'] ?? null;
+
+    if (is_array($report['service_definition'] ?? null)) {
+        $report['service_definition']['startup_mode'] = 'launch-process';
+        $report['service_definition']['blocking_reason'] = null;
+        $report['service_definition']['next_action'] = 'runtime-service-active';
     }
 
     return $report;

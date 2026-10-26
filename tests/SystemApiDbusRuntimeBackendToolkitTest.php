@@ -348,6 +348,56 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
         }
     }
 
+    public function testCreateNativeRuntimeServiceObservationReportAcceptsActiveRuntimeProcessContext(): void
+    {
+        $toolkit = new SystemApiDbusRuntimeBackendToolkit();
+        $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-native-runtime-active-context-' . bin2hex(random_bytes(6));
+        $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
+        $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
+        $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+
+        try {
+            self::assertTrue(mkdir($baseDirectory, 0777, true) || is_dir($baseDirectory));
+            file_put_contents($readyMarkerPath, "native-runtime-service-bootstrap-recorded\n");
+            file_put_contents($statusFilePath, json_encode([
+                'startup_acknowledged' => true,
+                'ownership_state' => 'pending-bus-name-ownership',
+            ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+            file_put_contents($pidFilePath, "4242\n");
+
+            $report = $toolkit->createNativeRuntimeServiceObservationReport(
+                ['ready' => true],
+                [
+                    'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+                    'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+                    'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+                    'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+                    'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
+                    'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_ACTIVE' => '1',
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_OWNERSHIP_STATE' => 'bus-name-owned',
+                ]
+            );
+
+            self::assertSame('system-api-dbus-native-runtime-observation', $report['kind']);
+            self::assertTrue($report['observed']);
+            self::assertTrue($report['startup_acknowledged']);
+            self::assertSame('native-runtime-service-observed-active', $report['status']);
+            self::assertSame(0, $report['exit_code']);
+            self::assertSame('bus-name-owned', $report['ownership_state']);
+            self::assertNull($report['blocking_reason']);
+            self::assertSame('runtime-service-active', $report['next_action']);
+        } finally {
+            @unlink($readyMarkerPath);
+            @unlink($statusFilePath);
+            @unlink($pidFilePath);
+            @rmdir($baseDirectory);
+        }
+    }
+
     public function testCreateNativeBusOwnershipReportUsesServiceRecoveryPlanWhenBackendIsBlocked(): void
     {
         $toolkit = new SystemApiDbusRuntimeBackendToolkit();

@@ -512,7 +512,10 @@ final class SystemApiDbusRuntimeLauncherCliTest extends TestCase
             self::assertSame(0, $result['exitCode'], $result['stderr']);
 
             $payload = $this->decodeJson($result['stdout']);
-            self::assertSame('native-runtime-service-launch-recorded', $payload['status']);
+            self::assertSame('native-runtime-bus-owned', $payload['status']);
+            self::assertSame('bus-name-owned', $payload['ownership_state']);
+            self::assertNull($payload['blocking_reason']);
+            self::assertSame('runtime-service-active', $payload['next_action']);
             self::assertTrue($payload['launched']);
             self::assertGreaterThan(0, $payload['pid']);
             self::assertFileExists($pidFilePath);

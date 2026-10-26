@@ -835,6 +835,30 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         ]));
         self::assertSame(0, $runtimeAdapterStartNative['exitCode'], $runtimeAdapterStartNative['stderr']);
 
+        $runtimeAdapterStartNativeOwned = $this->runGeneratedPhpScript([
+            $runtimeAdapterScriptPath,
+            'StartNativeRuntimeService',
+        ], array_merge($this->readyRuntimeEnvironment(), [
+            'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+            'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
+            'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR' => $this->tempDir . DIRECTORY_SEPARATOR . 'native-runtime-artifacts-owned',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE' => 'launch-process',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_REQUEST_NAME_STATE' => 'owned',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_REGISTER_OBJECT_STATE' => 'registered',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_WAIT_LOOP_STATE' => 'running',
+        ]));
+        self::assertSame(0, $runtimeAdapterStartNativeOwned['exitCode'], $runtimeAdapterStartNativeOwned['stderr']);
+        $runtimeAdapterStartNativeOwnedPayload = $this->decodeJson($runtimeAdapterStartNativeOwned['stdout']);
+        self::assertSame('system-api-dbus-native-runtime-startup', $runtimeAdapterStartNativeOwnedPayload['kind']);
+        self::assertSame('native-runtime-bus-owned', $runtimeAdapterStartNativeOwnedPayload['status']);
+        self::assertSame('bus-name-owned', $runtimeAdapterStartNativeOwnedPayload['ownership_state']);
+        self::assertNull($runtimeAdapterStartNativeOwnedPayload['blocking_reason']);
+        self::assertSame('runtime-service-active', $runtimeAdapterStartNativeOwnedPayload['next_action']);
+
         $runtimeAdapterObserveNative = $this->runGeneratedPhpScript([
             $runtimeAdapterScriptPath,
             'ObserveNativeRuntimeServiceState',
