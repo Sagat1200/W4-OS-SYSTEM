@@ -508,8 +508,20 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('StartNativeRuntimeService', $runtimeLauncherExecuteNativePayload['target_command']['command']);
         self::assertSame('native-runtime-service-bootstrap', $runtimeLauncherExecuteNativePayload['target_command']['command_role']);
         self::assertSame('system-api-dbus-native-runtime-startup', $runtimeLauncherExecuteNativePayload['command_result']['payload']['kind']);
-        self::assertSame('native-runtime-service-bootstrap-recorded', $runtimeLauncherExecuteNativePayload['command_result']['payload']['status']);
-        self::assertSame('launch-native-runtime-service', $runtimeLauncherExecuteNativePayload['next_action']);
+        self::assertSame('native-runtime-service-launch-recorded', $runtimeLauncherExecuteNativePayload['command_result']['payload']['status']);
+        self::assertTrue($runtimeLauncherExecuteNativePayload['command_result']['payload']['launched']);
+        self::assertSame('background-process', $runtimeLauncherExecuteNativePayload['command_result']['payload']['launch_mode']);
+        self::assertSame('observe-native-runtime-service-state', $runtimeLauncherExecuteNativePayload['next_action']);
+        self::assertTrue($runtimeLauncherExecuteNativePayload['activation_attempt']['attempted']);
+        self::assertSame('observe-native-runtime-service-state', $runtimeLauncherExecuteNativePayload['activation_attempt']['next_action']);
+        self::assertSame(
+            'observe-native-runtime-service-state',
+            $runtimeLauncherExecuteNativePayload['activation_attempt']['activation_preparation']['next_action']
+        );
+        self::assertSame(
+            'launch-process',
+            $runtimeLauncherExecuteNativePayload['activation_attempt']['activation_preparation']['native_runtime_service']['startup_mode']
+        );
 
         $runtimeLauncherExecuteNativeBlocked = $this->runGeneratedPhpScript([
             $runtimeLauncherScriptPath,
@@ -738,8 +750,20 @@ final class SystemApiDbusBindingGenerationTest extends TestCase
         self::assertSame('StartNativeRuntimeService', $runtimeAdapterExecuteNativePayload['target_command']['command']);
         self::assertSame('native-runtime-service-bootstrap', $runtimeAdapterExecuteNativePayload['target_command']['command_role']);
         self::assertSame('system-api-dbus-native-runtime-startup', $runtimeAdapterExecuteNativePayload['command_result']['payload']['kind']);
-        self::assertSame('native-runtime-service-bootstrap-recorded', $runtimeAdapterExecuteNativePayload['command_result']['payload']['status']);
-        self::assertSame('launch-native-runtime-service', $runtimeAdapterExecuteNativePayload['next_action']);
+        self::assertSame('native-runtime-service-launch-recorded', $runtimeAdapterExecuteNativePayload['command_result']['payload']['status']);
+        self::assertTrue($runtimeAdapterExecuteNativePayload['command_result']['payload']['launched']);
+        self::assertSame('background-process', $runtimeAdapterExecuteNativePayload['command_result']['payload']['launch_mode']);
+        self::assertSame('observe-native-runtime-service-state', $runtimeAdapterExecuteNativePayload['next_action']);
+        self::assertTrue($runtimeAdapterExecuteNativePayload['activation_attempt']['attempted']);
+        self::assertSame('observe-native-runtime-service-state', $runtimeAdapterExecuteNativePayload['activation_attempt']['next_action']);
+        self::assertSame(
+            'observe-native-runtime-service-state',
+            $runtimeAdapterExecuteNativePayload['activation_attempt']['activation_preparation']['next_action']
+        );
+        self::assertSame(
+            'launch-process',
+            $runtimeAdapterExecuteNativePayload['activation_attempt']['activation_preparation']['native_runtime_service']['startup_mode']
+        );
 
         $runtimeAdapterExecuteNativeBlocked = $this->runGeneratedPhpScript([
             $runtimeAdapterScriptPath,

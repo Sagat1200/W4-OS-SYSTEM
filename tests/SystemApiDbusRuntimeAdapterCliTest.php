@@ -841,14 +841,28 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertSame('execution-completed', $payload['status']);
         self::assertSame('native-dbus-extension', $payload['runtime_backend']['selected_backend']);
         self::assertSame('ready-to-launch-native-runtime', $payload['activation_attempt']['status']);
-        self::assertSame('execute-native-runtime-service', $payload['activation_attempt']['next_action']);
+        self::assertSame('observe-native-runtime-service-state', $payload['activation_attempt']['next_action']);
         self::assertSame('StartNativeRuntimeService', $payload['target_command']['command']);
         self::assertSame('native-runtime-service-bootstrap', $payload['target_command']['command_role']);
         self::assertSame('long-running-dbus-service', $payload['target_command']['activation_mode']);
         self::assertSame(0, $payload['command_result']['exit_code']);
         self::assertSame('system-api-dbus-native-runtime-startup', $payload['command_result']['payload']['kind']);
-        self::assertSame('native-runtime-service-bootstrap-recorded', $payload['command_result']['payload']['status']);
-        self::assertSame('launch-native-runtime-service', $payload['next_action']);
+        self::assertSame('native-runtime-service-launch-recorded', $payload['command_result']['payload']['status']);
+        self::assertTrue($payload['command_result']['payload']['launched']);
+        self::assertSame('background-process', $payload['command_result']['payload']['launch_mode']);
+        self::assertSame('observe-native-runtime-service-state', $payload['next_action']);
+        self::assertTrue($payload['activation_attempt']['attempted']);
+        self::assertSame('observe-native-runtime-service-state', $payload['activation_attempt']['next_action']);
+        self::assertSame('native-runtime-bus-ownership-pending', $payload['activation_attempt']['blocking_reason']);
+        self::assertSame('observe-native-runtime-service-state', $payload['activation_attempt']['activation_preparation']['next_action']);
+        self::assertSame(
+            'observe-native-runtime-service-state',
+            $payload['activation_attempt']['activation_preparation']['native_runtime_service']['next_action']
+        );
+        self::assertSame(
+            'launch-process',
+            $payload['activation_attempt']['activation_preparation']['native_runtime_service']['startup_mode']
+        );
     }
 
     public function testCallDelegatesToSystemApiContract(): void

@@ -162,6 +162,9 @@ final class SystemApiDbusRuntimeAdapter
         $startupReport['launch_mode'] = 'background-process';
         $startupReport['launched'] = true;
         $startupReport['pid'] = $pid;
+        $startupReport['service_definition'] = $this->markNativeRuntimeServiceDefinitionAsLaunched(
+            is_array($startupReport['service_definition'] ?? null) ? $startupReport['service_definition'] : []
+        );
         $this->runtimeBackend->persistNativeRuntimeStartupArtifacts($startupReport);
 
         $report = $this->runtimeBackend->createNativeBusOwnershipReport($runtimeDiagnosis, $environment);
@@ -426,9 +429,19 @@ final class SystemApiDbusRuntimeAdapter
         }
 
         $resolvedEntrypoint = trim($entrypoint);
+        $commandRole = is_string($targetCommand['command_role'] ?? null)
+            ? trim((string) $targetCommand['command_role'])
+            : '';
         $processCommand = str_ends_with(strtolower($resolvedEntrypoint), '.php')
             ? [PHP_BINARY, $resolvedEntrypoint, trim($command)]
             : [$resolvedEntrypoint, trim($command)];
+        $environment = $this->captureEnvironment();
+        if (
+            $commandRole === 'native-runtime-service-bootstrap'
+            && !isset($environment['W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE'])
+        ) {
+            $environment['W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE'] = 'launch-process';
+        }
 
         $descriptorSpec = [
             0 => ['pipe', 'r'],
@@ -441,7 +454,7 @@ final class SystemApiDbusRuntimeAdapter
             $descriptorSpec,
             $pipes,
             dirname(__DIR__, 2),
-            $this->captureEnvironment()
+            $environment
         );
 
         if (!is_resource($process)) {
@@ -512,8 +525,24 @@ final class SystemApiDbusRuntimeAdapter
         $report['launch_mode'] = 'background-process';
         $report['launched'] = true;
         $report['pid'] = $pid;
+        $report['service_definition'] = $this->markNativeRuntimeServiceDefinitionAsLaunched(
+            is_array($report['service_definition'] ?? null) ? $report['service_definition'] : []
+        );
 
         return $report;
+    }
+
+    /**
+     * @param array<string, mixed> $serviceDefinition
+     * @return array<string, mixed>
+     */
+    private function markNativeRuntimeServiceDefinitionAsLaunched(array $serviceDefinition): array
+    {
+        $serviceDefinition['startup_mode'] = 'launch-process';
+        $serviceDefinition['blocking_reason'] = 'native-runtime-bus-ownership-pending';
+        $serviceDefinition['next_action'] = 'observe-native-runtime-service-state';
+
+        return $serviceDefinition;
     }
 
     /**
@@ -721,7 +750,7 @@ final class SystemApiDbusRuntimeAdapter
         $report['command_result'] = $commandResult;
         $report['next_action'] = match ($exitCode) {
             0 => $commandRole === 'native-runtime-service-bootstrap'
-                ? 'launch-native-runtime-service'
+                ? 'observe-native-runtime-service-state'
                 : 'observe-runtime-adapter-state',
             3 => $commandRole === 'native-runtime-service-bootstrap'
                 ? 'inspect-native-runtime-service-report'
@@ -729,8 +758,9 @@ final class SystemApiDbusRuntimeAdapter
             default => 'inspect-runtime-adapter-error',
         };
 
-        return $report;
+        return $this->activationToolkit->reconcileNativeRuntimeLaunchExecution($report, $commandResult);
     }
+
 
     /**
      * @return array<string, string>

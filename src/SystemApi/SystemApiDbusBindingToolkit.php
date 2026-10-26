@@ -1001,6 +1001,12 @@ switch ($command) {
 
     case 'StartNativeRuntimeService':
         $nativeRuntimeStartup = createNativeRuntimeServiceStartupReport(buildRuntimeDiagnosis());
+        if (
+            ($nativeRuntimeStartup['startup_acknowledged'] ?? false) === true
+            && resolveNativeRuntimeStartupMode(captureEnvironment()) === 'launch-process'
+        ) {
+            $nativeRuntimeStartup = materializeSyntheticNativeRuntimeLaunch($nativeRuntimeStartup);
+        }
         persistNativeRuntimeArtifacts($nativeRuntimeStartup);
         emitJson($nativeRuntimeStartup);
         exit($nativeRuntimeStartup['exit_code']);
@@ -1383,7 +1389,7 @@ function createNativeRuntimeServiceDefinition(array $runtimeDiagnosis): array
         'object_path' => W4_SYSTEM_API_OBJECT_PATH,
         'interface' => W4_SYSTEM_API_INTERFACE,
         'startup_command' => 'StartNativeRuntimeService',
-        'startup_mode' => 'bootstrap-contract',
+        'startup_mode' => resolveNativeRuntimeStartupMode($environment),
         'ownership_goal' => W4_SYSTEM_API_BUS_NAME,
         'service_lifecycle' => 'request-name-register-object-wait-loop',
         'artifacts' => [
@@ -2221,8 +2227,44 @@ function persistNativeRuntimeArtifacts(array $report): void
     }
 
     if ($pidFilePath !== null) {
-        writeArtifactFile($pidFilePath, "0\n");
+        $pid = is_int($report['pid'] ?? null) && (int) $report['pid'] > 0
+            ? (int) $report['pid']
+            : 0;
+        writeArtifactFile($pidFilePath, sprintf("%d\n", $pid));
     }
+}
+
+function resolveNativeRuntimeStartupMode(array $environment): string
+{
+    $mode = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE'] ?? 'bootstrap-contract';
+
+    return is_string($mode) && trim($mode) === 'launch-process'
+        ? 'launch-process'
+        : 'bootstrap-contract';
+}
+
+/**
+ * @param array<string, mixed> $report
+ * @return array<string, mixed>
+ */
+function materializeSyntheticNativeRuntimeLaunch(array $report): array
+{
+    $pid = getmypid();
+    $resolvedPid = is_int($pid) && $pid > 0 ? $pid : 1;
+
+    $report['status'] = 'native-runtime-service-launch-recorded';
+    $report['ownership_state'] = 'pending-bus-name-ownership';
+    $report['blocking_reason'] = 'native-runtime-bus-ownership-pending';
+    $report['next_action'] = 'observe-native-runtime-service-state';
+    $report['launch_mode'] = 'background-process';
+    $report['launched'] = true;
+    $report['pid'] = $resolvedPid;
+
+    if (is_array($report['service_definition'] ?? null)) {
+        $report['service_definition']['startup_mode'] = 'launch-process';
+    }
+
+    return $report;
 }
 
 /**
@@ -2787,6 +2829,137 @@ function createActivationExecution(): array
     ];
 }
 
+/**
+ * @param array<string, mixed> $activationExecution
+ * @param array<string, mixed> $commandResult
+ * @return array<string, mixed>
+ */
+function reconcileNativeRuntimeLaunchExecution(array $activationExecution, array $commandResult): array
+{
+    $commandRole = is_string($activationExecution['target_command']['command_role'] ?? null)
+        ? trim((string) $activationExecution['target_command']['command_role'])
+        : '';
+    $exitCode = is_int($commandResult['exit_code'] ?? null) ? $commandResult['exit_code'] : 1;
+    $payload = is_array($commandResult['payload'] ?? null) ? $commandResult['payload'] : [];
+
+    if ($commandRole !== 'native-runtime-service-bootstrap' || $exitCode !== 0 || $payload === []) {
+        return $activationExecution;
+    }
+
+    $nextAction = resolveStringOrDefault($payload['next_action'] ?? null, 'observe-native-runtime-service-state');
+    $blockingReason = resolveStringOrDefault($payload['blocking_reason'] ?? null, 'native-runtime-bus-ownership-pending');
+    $startupMode = resolveStringOrDefault($payload['service_definition']['startup_mode'] ?? null, 'launch-process');
+
+    $activationExecution['next_action'] = $nextAction;
+
+    if (is_array($activationExecution['activation_attempt'] ?? null)) {
+        $activationExecution['activation_attempt'] = reconcileActivationAttemptAfterNativeRuntimeLaunch(
+            $activationExecution['activation_attempt'],
+            $nextAction,
+            $blockingReason,
+            $startupMode
+        );
+    }
+
+    $nativeRuntimeService = is_array($activationExecution['activation_attempt']['native_runtime_service'] ?? null)
+        ? $activationExecution['activation_attempt']['native_runtime_service']
+        : null;
+    $activationExecution['recovery_plan'] = createRecoveryPlan($nextAction, $nativeRuntimeService);
+
+    return $activationExecution;
+}
+
+/**
+ * @param array<string, mixed> $attempt
+ * @return array<string, mixed>
+ */
+function reconcileActivationAttemptAfterNativeRuntimeLaunch(
+    array $attempt,
+    string $nextAction,
+    string $blockingReason,
+    string $startupMode
+): array {
+    $attempt['attempted'] = true;
+    $attempt['blocking_reason'] = $blockingReason;
+    $attempt['next_action'] = $nextAction;
+
+    if (is_array($attempt['native_runtime_service'] ?? null)) {
+        $attempt['native_runtime_service'] = reconcileNativeRuntimeServiceAfterLaunch(
+            $attempt['native_runtime_service'],
+            $nextAction,
+            $blockingReason,
+            $startupMode
+        );
+    }
+
+    if (is_array($attempt['activation_preparation'] ?? null)) {
+        $attempt['activation_preparation'] = reconcileActivationPreparationAfterNativeRuntimeLaunch(
+            $attempt['activation_preparation'],
+            $nextAction,
+            $blockingReason,
+            $startupMode
+        );
+    }
+
+    $nativeRuntimeService = is_array($attempt['native_runtime_service'] ?? null)
+        ? $attempt['native_runtime_service']
+        : null;
+    $attempt['recovery_plan'] = createRecoveryPlan($nextAction, $nativeRuntimeService);
+
+    return $attempt;
+}
+
+/**
+ * @param array<string, mixed> $preparation
+ * @return array<string, mixed>
+ */
+function reconcileActivationPreparationAfterNativeRuntimeLaunch(
+    array $preparation,
+    string $nextAction,
+    string $blockingReason,
+    string $startupMode
+): array {
+    $preparation['next_action'] = $nextAction;
+
+    if (is_array($preparation['native_runtime_service'] ?? null)) {
+        $preparation['native_runtime_service'] = reconcileNativeRuntimeServiceAfterLaunch(
+            $preparation['native_runtime_service'],
+            $nextAction,
+            $blockingReason,
+            $startupMode
+        );
+    }
+
+    $nativeRuntimeService = is_array($preparation['native_runtime_service'] ?? null)
+        ? $preparation['native_runtime_service']
+        : null;
+    $preparation['recovery_plan'] = createRecoveryPlan($nextAction, $nativeRuntimeService);
+
+    return $preparation;
+}
+
+/**
+ * @param array<string, mixed> $nativeRuntimeService
+ * @return array<string, mixed>
+ */
+function reconcileNativeRuntimeServiceAfterLaunch(
+    array $nativeRuntimeService,
+    string $nextAction,
+    string $blockingReason,
+    string $startupMode
+): array {
+    $nativeRuntimeService['startup_mode'] = $startupMode;
+    $nativeRuntimeService['blocking_reason'] = $blockingReason;
+    $nativeRuntimeService['next_action'] = $nextAction;
+
+    return $nativeRuntimeService;
+}
+
+function resolveStringOrDefault(mixed $value, string $default): string
+{
+    return is_string($value) && trim($value) !== '' ? trim($value) : $default;
+}
+
 function performActivationExecution(): array
 {
     $activationExecution = createActivationExecution();
@@ -2819,9 +2992,19 @@ function executeTargetCommand(?array $targetCommand): array
     }
 
     $resolvedEntrypoint = trim($entrypoint);
+    $commandRole = is_string($targetCommand['command_role'] ?? null)
+        ? trim((string) $targetCommand['command_role'])
+        : '';
     $processCommand = str_ends_with(strtolower($resolvedEntrypoint), '.php')
         ? [PHP_BINARY, $resolvedEntrypoint, trim($command)]
         : [$resolvedEntrypoint, trim($command)];
+    $environment = captureEnvironment();
+    if (
+        $commandRole === 'native-runtime-service-bootstrap'
+        && !isset($environment['W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE'])
+    ) {
+        $environment['W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE'] = 'launch-process';
+    }
 
     $descriptorSpec = [
         0 => ['pipe', 'r'],
@@ -2829,7 +3012,7 @@ function executeTargetCommand(?array $targetCommand): array
         2 => ['pipe', 'w'],
     ];
 
-    $process = proc_open($processCommand, $descriptorSpec, $pipes, null, captureEnvironment());
+    $process = proc_open($processCommand, $descriptorSpec, $pipes, null, $environment);
     if (!is_resource($process)) {
         fwrite(STDERR, sprintf("ERROR: No se pudo ejecutar el target command %s %s\n", $resolvedEntrypoint, $command));
         exit(1);
@@ -2895,7 +3078,7 @@ function finalizeActivationExecution(array $activationExecution, array $commandR
     $activationExecution['command_result'] = $commandResult;
     $activationExecution['next_action'] = match ($exitCode) {
         0 => $commandRole === 'native-runtime-service-bootstrap'
-            ? 'launch-native-runtime-service'
+            ? 'observe-native-runtime-service-state'
             : 'observe-runtime-adapter-state',
         3 => $commandRole === 'native-runtime-service-bootstrap'
             ? 'inspect-native-runtime-service-report'
@@ -2903,7 +3086,7 @@ function finalizeActivationExecution(array $activationExecution, array $commandR
         default => 'inspect-runtime-adapter-error',
     };
 
-    return $activationExecution;
+    return reconcileNativeRuntimeLaunchExecution($activationExecution, $commandResult);
 }
 
 /**
@@ -4368,6 +4551,137 @@ function createActivationExecution(): array
     ];
 }
 
+/**
+ * @param array<string, mixed> $activationExecution
+ * @param array<string, mixed> $commandResult
+ * @return array<string, mixed>
+ */
+function reconcileNativeRuntimeLaunchExecution(array $activationExecution, array $commandResult): array
+{
+    $commandRole = is_string($activationExecution['target_command']['command_role'] ?? null)
+        ? trim((string) $activationExecution['target_command']['command_role'])
+        : '';
+    $exitCode = is_int($commandResult['exit_code'] ?? null) ? $commandResult['exit_code'] : 1;
+    $payload = is_array($commandResult['payload'] ?? null) ? $commandResult['payload'] : [];
+
+    if ($commandRole !== 'native-runtime-service-bootstrap' || $exitCode !== 0 || $payload === []) {
+        return $activationExecution;
+    }
+
+    $nextAction = resolveStringOrDefault($payload['next_action'] ?? null, 'observe-native-runtime-service-state');
+    $blockingReason = resolveStringOrDefault($payload['blocking_reason'] ?? null, 'native-runtime-bus-ownership-pending');
+    $startupMode = resolveStringOrDefault($payload['service_definition']['startup_mode'] ?? null, 'launch-process');
+
+    $activationExecution['next_action'] = $nextAction;
+
+    if (is_array($activationExecution['activation_attempt'] ?? null)) {
+        $activationExecution['activation_attempt'] = reconcileActivationAttemptAfterNativeRuntimeLaunch(
+            $activationExecution['activation_attempt'],
+            $nextAction,
+            $blockingReason,
+            $startupMode
+        );
+    }
+
+    $nativeRuntimeService = is_array($activationExecution['activation_attempt']['native_runtime_service'] ?? null)
+        ? $activationExecution['activation_attempt']['native_runtime_service']
+        : null;
+    $activationExecution['recovery_plan'] = createRecoveryPlan($nextAction, $nativeRuntimeService);
+
+    return $activationExecution;
+}
+
+/**
+ * @param array<string, mixed> $attempt
+ * @return array<string, mixed>
+ */
+function reconcileActivationAttemptAfterNativeRuntimeLaunch(
+    array $attempt,
+    string $nextAction,
+    string $blockingReason,
+    string $startupMode
+): array {
+    $attempt['attempted'] = true;
+    $attempt['blocking_reason'] = $blockingReason;
+    $attempt['next_action'] = $nextAction;
+
+    if (is_array($attempt['native_runtime_service'] ?? null)) {
+        $attempt['native_runtime_service'] = reconcileNativeRuntimeServiceAfterLaunch(
+            $attempt['native_runtime_service'],
+            $nextAction,
+            $blockingReason,
+            $startupMode
+        );
+    }
+
+    if (is_array($attempt['activation_preparation'] ?? null)) {
+        $attempt['activation_preparation'] = reconcileActivationPreparationAfterNativeRuntimeLaunch(
+            $attempt['activation_preparation'],
+            $nextAction,
+            $blockingReason,
+            $startupMode
+        );
+    }
+
+    $nativeRuntimeService = is_array($attempt['native_runtime_service'] ?? null)
+        ? $attempt['native_runtime_service']
+        : null;
+    $attempt['recovery_plan'] = createRecoveryPlan($nextAction, $nativeRuntimeService);
+
+    return $attempt;
+}
+
+/**
+ * @param array<string, mixed> $preparation
+ * @return array<string, mixed>
+ */
+function reconcileActivationPreparationAfterNativeRuntimeLaunch(
+    array $preparation,
+    string $nextAction,
+    string $blockingReason,
+    string $startupMode
+): array {
+    $preparation['next_action'] = $nextAction;
+
+    if (is_array($preparation['native_runtime_service'] ?? null)) {
+        $preparation['native_runtime_service'] = reconcileNativeRuntimeServiceAfterLaunch(
+            $preparation['native_runtime_service'],
+            $nextAction,
+            $blockingReason,
+            $startupMode
+        );
+    }
+
+    $nativeRuntimeService = is_array($preparation['native_runtime_service'] ?? null)
+        ? $preparation['native_runtime_service']
+        : null;
+    $preparation['recovery_plan'] = createRecoveryPlan($nextAction, $nativeRuntimeService);
+
+    return $preparation;
+}
+
+/**
+ * @param array<string, mixed> $nativeRuntimeService
+ * @return array<string, mixed>
+ */
+function reconcileNativeRuntimeServiceAfterLaunch(
+    array $nativeRuntimeService,
+    string $nextAction,
+    string $blockingReason,
+    string $startupMode
+): array {
+    $nativeRuntimeService['startup_mode'] = $startupMode;
+    $nativeRuntimeService['blocking_reason'] = $blockingReason;
+    $nativeRuntimeService['next_action'] = $nextAction;
+
+    return $nativeRuntimeService;
+}
+
+function resolveStringOrDefault(mixed $value, string $default): string
+{
+    return is_string($value) && trim($value) !== '' ? trim($value) : $default;
+}
+
 function performActivationExecution(): array
 {
     $activationExecution = createActivationExecution();
@@ -4780,9 +5094,19 @@ function executeTargetCommand(?array $targetCommand): array
     }
 
     $resolvedEntrypoint = trim($entrypoint);
+    $commandRole = is_string($targetCommand['command_role'] ?? null)
+        ? trim((string) $targetCommand['command_role'])
+        : '';
     $processCommand = str_ends_with(strtolower($resolvedEntrypoint), '.php')
         ? [PHP_BINARY, $resolvedEntrypoint, trim($command)]
         : [$resolvedEntrypoint, trim($command)];
+    $environment = captureEnvironment();
+    if (
+        $commandRole === 'native-runtime-service-bootstrap'
+        && !isset($environment['W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE'])
+    ) {
+        $environment['W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE'] = 'launch-process';
+    }
 
     $descriptorSpec = [
         0 => ['pipe', 'r'],
@@ -4790,7 +5114,7 @@ function executeTargetCommand(?array $targetCommand): array
         2 => ['pipe', 'w'],
     ];
 
-    $process = proc_open($processCommand, $descriptorSpec, $pipes, null, captureEnvironment());
+    $process = proc_open($processCommand, $descriptorSpec, $pipes, null, $environment);
     if (!is_resource($process)) {
         fwrite(STDERR, sprintf("ERROR: No se pudo ejecutar el target command %s %s\n", $resolvedEntrypoint, $command));
         exit(1);
@@ -4856,7 +5180,7 @@ function finalizeActivationExecution(array $activationExecution, array $commandR
     $activationExecution['command_result'] = $commandResult;
     $activationExecution['next_action'] = match ($exitCode) {
         0 => $commandRole === 'native-runtime-service-bootstrap'
-            ? 'launch-native-runtime-service'
+            ? 'observe-native-runtime-service-state'
             : 'observe-runtime-adapter-state',
         3 => $commandRole === 'native-runtime-service-bootstrap'
             ? 'inspect-native-runtime-service-report'
@@ -4864,7 +5188,7 @@ function finalizeActivationExecution(array $activationExecution, array $commandR
         default => 'inspect-runtime-adapter-error',
     };
 
-    return $activationExecution;
+    return reconcileNativeRuntimeLaunchExecution($activationExecution, $commandResult);
 }
 
 function createHostDescription(): array

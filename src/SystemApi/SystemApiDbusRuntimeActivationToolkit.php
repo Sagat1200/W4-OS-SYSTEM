@@ -268,6 +268,55 @@ final class SystemApiDbusRuntimeActivationToolkit
     }
 
     /**
+     * @param array<string, mixed> $report
+     * @param array<string, mixed> $commandResult
+     * @return array<string, mixed>
+     */
+    public function reconcileNativeRuntimeLaunchExecution(array $report, array $commandResult): array
+    {
+        $commandRole = is_string($report['target_command']['command_role'] ?? null)
+            ? trim((string) $report['target_command']['command_role'])
+            : '';
+        $exitCode = is_int($commandResult['exit_code'] ?? null) ? $commandResult['exit_code'] : 1;
+        $payload = is_array($commandResult['payload'] ?? null) ? $commandResult['payload'] : [];
+
+        if ($commandRole !== 'native-runtime-service-bootstrap' || $exitCode !== 0 || $payload === []) {
+            return $report;
+        }
+
+        $nextAction = $this->resolveStringOrDefault(
+            $payload['next_action'] ?? null,
+            'observe-native-runtime-service-state'
+        );
+        $blockingReason = $this->resolveStringOrDefault(
+            $payload['blocking_reason'] ?? null,
+            'native-runtime-bus-ownership-pending'
+        );
+        $startupMode = $this->resolveStringOrDefault(
+            $payload['service_definition']['startup_mode'] ?? null,
+            'launch-process'
+        );
+
+        $report['next_action'] = $nextAction;
+
+        if (is_array($report['activation_attempt'] ?? null)) {
+            $report['activation_attempt'] = $this->reconcileActivationAttemptAfterNativeRuntimeLaunch(
+                $report['activation_attempt'],
+                $nextAction,
+                $blockingReason,
+                $startupMode
+            );
+        }
+
+        $nativeRuntimeService = is_array($report['activation_attempt']['native_runtime_service'] ?? null)
+            ? $report['activation_attempt']['native_runtime_service']
+            : null;
+        $report['recovery_plan'] = $this->createRecoveryPlan($nextAction, $nativeRuntimeService);
+
+        return $report;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function createAdapterSpecification(): array
@@ -517,6 +566,97 @@ final class SystemApiDbusRuntimeActivationToolkit
         $nextAction = $nativeRuntimeService['next_action'] ?? null;
 
         return is_string($nextAction) && $nextAction !== '' ? $nextAction : $default;
+    }
+
+    /**
+     * @param array<string, mixed> $attempt
+     * @return array<string, mixed>
+     */
+    private function reconcileActivationAttemptAfterNativeRuntimeLaunch(
+        array $attempt,
+        string $nextAction,
+        string $blockingReason,
+        string $startupMode
+    ): array {
+        $attempt['attempted'] = true;
+        $attempt['blocking_reason'] = $blockingReason;
+        $attempt['next_action'] = $nextAction;
+
+        if (is_array($attempt['native_runtime_service'] ?? null)) {
+            $attempt['native_runtime_service'] = $this->reconcileNativeRuntimeServiceAfterLaunch(
+                $attempt['native_runtime_service'],
+                $nextAction,
+                $blockingReason,
+                $startupMode
+            );
+        }
+
+        if (is_array($attempt['activation_preparation'] ?? null)) {
+            $attempt['activation_preparation'] = $this->reconcileActivationPreparationAfterNativeRuntimeLaunch(
+                $attempt['activation_preparation'],
+                $nextAction,
+                $blockingReason,
+                $startupMode
+            );
+        }
+
+        $nativeRuntimeService = is_array($attempt['native_runtime_service'] ?? null)
+            ? $attempt['native_runtime_service']
+            : null;
+        $attempt['recovery_plan'] = $this->createRecoveryPlan($nextAction, $nativeRuntimeService);
+
+        return $attempt;
+    }
+
+    /**
+     * @param array<string, mixed> $preparation
+     * @return array<string, mixed>
+     */
+    private function reconcileActivationPreparationAfterNativeRuntimeLaunch(
+        array $preparation,
+        string $nextAction,
+        string $blockingReason,
+        string $startupMode
+    ): array {
+        $preparation['next_action'] = $nextAction;
+
+        if (is_array($preparation['native_runtime_service'] ?? null)) {
+            $preparation['native_runtime_service'] = $this->reconcileNativeRuntimeServiceAfterLaunch(
+                $preparation['native_runtime_service'],
+                $nextAction,
+                $blockingReason,
+                $startupMode
+            );
+        }
+
+        $nativeRuntimeService = is_array($preparation['native_runtime_service'] ?? null)
+            ? $preparation['native_runtime_service']
+            : null;
+        $preparation['recovery_plan'] = $this->createRecoveryPlan($nextAction, $nativeRuntimeService);
+
+        return $preparation;
+    }
+
+    /**
+     * @param array<string, mixed> $nativeRuntimeService
+     * @return array<string, mixed>
+     */
+    private function reconcileNativeRuntimeServiceAfterLaunch(
+        array $nativeRuntimeService,
+        string $nextAction,
+        string $blockingReason,
+        string $startupMode
+    ): array {
+        $nativeRuntimeService['startup_mode'] = $startupMode;
+        $nativeRuntimeService['blocking_reason'] = $blockingReason;
+        $nativeRuntimeService['next_action'] = $nextAction;
+
+        return $nativeRuntimeService;
+    }
+
+    private function resolveStringOrDefault(mixed $value, string $default): string
+    {
+        return is_string($value) && trim($value) !== '' ? trim($value) : $default;
     }
 
     /**

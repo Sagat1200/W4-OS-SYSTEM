@@ -1,7 +1,7 @@
 {
     "api_version": "1.0",
     "kind": "system-api-dbus-native-runtime-startup",
-    "status": "native-runtime-service-bootstrap-recorded",
+    "status": "native-runtime-service-launch-recorded",
     "startup_acknowledged": true,
     "exit_code": 0,
     "bus_name": "org.w4.System1",
@@ -17,7 +17,7 @@
         "object_path": "/org/w4/System1",
         "interface": "org.w4.System1.Manager",
         "startup_command": "StartNativeRuntimeService",
-        "startup_mode": "bootstrap-contract",
+        "startup_mode": "launch-process",
         "ownership_goal": "org.w4.System1",
         "service_lifecycle": "request-name-register-object-wait-loop",
         "artifacts": {
@@ -145,7 +145,10 @@
         },
         "blocking_reason": null
     },
-    "ownership_state": "startup-recorded-no-process",
-    "blocking_reason": "native-runtime-service-not-running",
-    "next_action": "launch-native-runtime-service"
+    "ownership_state": "pending-bus-name-ownership",
+    "blocking_reason": "native-runtime-bus-ownership-pending",
+    "next_action": "observe-native-runtime-service-state",
+    "launch_mode": "background-process",
+    "launched": true,
+    "pid": 20720
 }
