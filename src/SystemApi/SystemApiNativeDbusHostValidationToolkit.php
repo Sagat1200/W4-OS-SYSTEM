@@ -54,6 +54,10 @@ final class SystemApiNativeDbusHostValidationToolkit
         if ($nativeDbusBuildEvidencePath !== null) {
             $defaultOverrides['W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_PATH'] = $nativeDbusBuildEvidencePath;
         }
+        if ($this->shouldAutoLaunchNativeRuntimeForOwnershipValidation($attemptOwnership, $environmentOverrides)) {
+            $defaultOverrides['W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE'] = 'launch-process';
+            $defaultOverrides['W4_SYSTEM_API_NATIVE_RUNTIME_KEEPALIVE_SECONDS'] = '15';
+        }
         $effectiveOverrides = array_merge($defaultOverrides, $environmentOverrides);
 
         $startedAt = gmdate('c');
@@ -270,6 +274,41 @@ final class SystemApiNativeDbusHostValidationToolkit
         );
 
         return $report;
+    }
+
+    /**
+     * @param array<string, string> $environmentOverrides
+     */
+    private function shouldAutoLaunchNativeRuntimeForOwnershipValidation(
+        bool $attemptOwnership,
+        array $environmentOverrides
+    ): bool {
+        if (!$attemptOwnership) {
+            return false;
+        }
+
+        $targetOsFamily = $environmentOverrides['W4_SYSTEM_API_PREPARATION_TARGET_OS_FAMILY']
+            ?? $environmentOverrides['W4_SYSTEM_API_PROBE_OS_FAMILY']
+            ?? null;
+        if (!is_string($targetOsFamily) || strcasecmp(trim($targetOsFamily), 'Linux') !== 0) {
+            return false;
+        }
+
+        foreach ([
+            'W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_DRIVER_CLASS',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_DRIVER_BOOTSTRAP',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_REQUEST_NAME_STATE',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_REGISTER_OBJECT_STATE',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_WAIT_LOOP_STATE',
+        ] as $key) {
+            $value = $environmentOverrides[$key] ?? null;
+            if (is_string($value) && trim($value) !== '') {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -1126,6 +1165,11 @@ final class SystemApiNativeDbusHostValidationToolkit
                 'description' => 'Verificar si la extension `dbus` realmente publica una clase de servicio utilizable (`Dbus` o `DBus`) en este runtime PHP.',
                 'commands' => $this->buildNativeDbusServiceClassInspectionCommands($osFamily),
             ],
+            'install-native-dbus-system-bus-policy' => [
+                'action' => 'install-native-dbus-system-bus-policy',
+                'description' => 'Instalar o corregir la policy del system bus para permitir que el runtime reclame `org.w4.System1` y exporte `/org/w4/System1`.',
+                'commands' => $this->buildNativeDbusSystemBusPolicyCommands($osFamily),
+            ],
             default => null,
         };
     }
@@ -1164,6 +1208,25 @@ final class SystemApiNativeDbusHostValidationToolkit
         return [
             'php --ri dbus',
             'Inspeccionar manualmente si el runtime PHP publica la clase `Dbus` o `DBus`.',
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildNativeDbusSystemBusPolicyCommands(string $osFamily): array
+    {
+        if ($osFamily === 'Linux') {
+            return [
+                'grep -R "org.w4.System1" /etc/dbus-1/system.d /usr/share/dbus-1/system.d 2>/dev/null || true',
+                "sudo tee /etc/dbus-1/system.d/org.w4.System1.conf >/dev/null <<'EOF'\n<!DOCTYPE busconfig PUBLIC \"-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN\"\n \"http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd\">\n<busconfig>\n  <policy user=\"root\">\n    <allow own=\"org.w4.System1\"/>\n    <allow send_destination=\"org.w4.System1\"/>\n  </policy>\n  <policy context=\"default\">\n    <allow send_destination=\"org.w4.System1\"/>\n  </policy>\n</busconfig>\nEOF",
+                'sudo systemctl restart dbus >/dev/null 2>&1 || sudo service dbus restart >/dev/null 2>&1 || true',
+                'busctl --system list | grep org.w4.System1 || true',
+            ];
+        }
+
+        return [
+            'Instalar manualmente una policy D-Bus del system bus que permita own/send para `org.w4.System1` antes de reintentar el ownership real.',
         ];
     }
 

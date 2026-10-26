@@ -67,6 +67,12 @@ final class NativeDbusRealHostValidationWslRunnerCliTest extends TestCase
         self::assertSame($wslRepoRoot, $payload['preparation_target_repo_root']);
         self::assertSame('7.4.3', $payload['wsl_environment']['php_version']);
         self::assertSame('/usr/bin/php', $payload['wsl_environment']['php_binary']);
+        self::assertFalse($payload['wsl_environment']['has_dbus_extension']);
+        self::assertNull($payload['wsl_environment']['dbus_class']);
+        self::assertFalse($payload['wsl_environment']['has_bus_system']);
+        self::assertFalse($payload['wsl_environment']['has_request_name']);
+        self::assertFalse($payload['wsl_environment']['has_register_object']);
+        self::assertFalse($payload['wsl_environment']['has_wait_loop']);
         self::assertTrue($payload['wsl_environment']['has_pecl']);
         self::assertTrue($payload['wsl_environment']['has_busctl']);
         self::assertTrue($payload['wsl_environment']['has_gdbus']);
@@ -206,11 +212,27 @@ TEXT);
      */
     private function setFixtureEnv(string $distribution, string $wslRepoRoot, array $bashCommandMap): void
     {
+        $defaultBashCommandMap = [
+            'php -r \'echo extension_loaded("dbus") ? "1" : "0";\'' => '0',
+            'php -r \'if (class_exists("Dbus")) { echo "Dbus"; exit(0); } if (class_exists("DBus")) { echo "DBus"; exit(0); } exit(1);\'' => ['stdout' => '', 'stderr' => '', 'exit_code' => 1],
+            'php -r \'if (class_exists("Dbus")) { echo defined("Dbus::BUS_SYSTEM") ? "1" : "0"; exit(0); } if (class_exists("DBus")) { echo defined("DBus::BUS_SYSTEM") ? "1" : "0"; exit(0); } exit(1);\'' => ['stdout' => '', 'stderr' => '', 'exit_code' => 1],
+            'php -r \'if (class_exists("Dbus")) { echo method_exists("Dbus", "requestName") ? "1" : "0"; exit(0); } if (class_exists("DBus")) { echo method_exists("DBus", "requestName") ? "1" : "0"; exit(0); } exit(1);\'' => ['stdout' => '', 'stderr' => '', 'exit_code' => 1],
+            'php -r \'if (class_exists("Dbus")) { echo method_exists("Dbus", "registerObject") ? "1" : "0"; exit(0); } if (class_exists("DBus")) { echo method_exists("DBus", "registerObject") ? "1" : "0"; exit(0); } exit(1);\'' => ['stdout' => '', 'stderr' => '', 'exit_code' => 1],
+            'php -r \'if (class_exists("Dbus")) { echo method_exists("Dbus", "waitLoop") ? "1" : "0"; exit(0); } if (class_exists("DBus")) { echo method_exists("DBus", "waitLoop") ? "1" : "0"; exit(0); } exit(1);\'' => ['stdout' => '', 'stderr' => '', 'exit_code' => 1],
+            'ROOT:mkdir -p /run/dbus && (service dbus start >/dev/null 2>&1 || dbus-daemon --system --fork >/dev/null 2>&1 || true) && test -S /run/dbus/system_bus_socket' => ['stdout' => '', 'stderr' => '', 'exit_code' => 1],
+        ];
+
+        $bashCommandMap = array_merge($defaultBashCommandMap, $bashCommandMap);
         $commandMap = [
             $this->buildWslPathCommand($distribution, $this->repoRoot) => $wslRepoRoot,
         ];
 
         foreach ($bashCommandMap as $bashCommand => $fixture) {
+            if (str_starts_with($bashCommand, 'ROOT:')) {
+                $commandMap[$this->buildWslRootBashCommand($distribution, substr($bashCommand, 5))] = $fixture;
+                continue;
+            }
+
             $commandMap[$this->buildWslBashCommand($distribution, $bashCommand)] = $fixture;
         }
 
@@ -237,6 +259,15 @@ TEXT);
     {
         return sprintf(
             'wsl -d %s -- bash -lc %s',
+            $this->quoteWslDistribution($distribution),
+            $this->quoteForWindowsCommand($bashCommand)
+        );
+    }
+
+    private function buildWslRootBashCommand(string $distribution, string $bashCommand): string
+    {
+        return sprintf(
+            'wsl -u root -d %s -- bash -lc %s',
             $this->quoteWslDistribution($distribution),
             $this->quoteForWindowsCommand($bashCommand)
         );

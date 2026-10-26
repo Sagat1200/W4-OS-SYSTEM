@@ -299,6 +299,55 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
         }
     }
 
+    public function testCreateNativeBusOwnershipReportAcceptsObservedOwnedRuntimeWithoutReplayingDriver(): void
+    {
+        $toolkit = new SystemApiDbusRuntimeBackendToolkit();
+        $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-native-runtime-owned-observed-' . bin2hex(random_bytes(6));
+        $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
+        $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
+        $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+
+        try {
+            self::assertTrue(mkdir($baseDirectory, 0777, true) || is_dir($baseDirectory));
+            file_put_contents($readyMarkerPath, "native-runtime-bus-owned\n");
+            file_put_contents($statusFilePath, json_encode([
+                'startup_acknowledged' => true,
+                'ownership_state' => 'bus-name-owned',
+            ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+            file_put_contents($pidFilePath, "4242\n");
+
+            $report = $toolkit->createNativeBusOwnershipReport(
+                ['ready' => true],
+                [
+                    'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+                    'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+                    'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+                    'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+                    'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
+                    'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+                ]
+            );
+
+            self::assertSame('system-api-dbus-native-runtime-ownership', $report['kind']);
+            self::assertSame('native-runtime-bus-owned', $report['status']);
+            self::assertTrue($report['attempted']);
+            self::assertSame(0, $report['exit_code']);
+            self::assertSame('observed-runtime', $report['execution_mode']);
+            self::assertSame('bus-name-owned', $report['ownership_state']);
+            self::assertNull($report['ownership_driver']);
+            self::assertNull($report['blocking_reason']);
+            self::assertSame('runtime-service-active', $report['next_action']);
+        } finally {
+            @unlink($readyMarkerPath);
+            @unlink($statusFilePath);
+            @unlink($pidFilePath);
+            @rmdir($baseDirectory);
+        }
+    }
+
     public function testCreateNativeBusOwnershipReportUsesServiceRecoveryPlanWhenBackendIsBlocked(): void
     {
         $toolkit = new SystemApiDbusRuntimeBackendToolkit();
@@ -366,6 +415,59 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
             self::assertSame('W4\\OS\\Tests\\Fixtures\\NativeRuntimeOwnershipDriverStub', $report['ownership_driver']['class_name']);
             self::assertNull($report['blocking_reason']);
             self::assertSame('runtime-service-active', $report['next_action']);
+        } finally {
+            @unlink($readyMarkerPath);
+            @unlink($statusFilePath);
+            @unlink($pidFilePath);
+            @rmdir($baseDirectory);
+        }
+    }
+
+    public function testCreateNativeBusOwnershipReportSurfacesSystemBusPolicyDenial(): void
+    {
+        $toolkit = new SystemApiDbusRuntimeBackendToolkit();
+        $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-native-runtime-policy-denied-' . bin2hex(random_bytes(6));
+        $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
+        $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
+        $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+
+        try {
+            self::assertTrue(mkdir($baseDirectory, 0777, true) || is_dir($baseDirectory));
+            file_put_contents($readyMarkerPath, "native-runtime-service-bootstrap-recorded\n");
+            file_put_contents($statusFilePath, json_encode([
+                'startup_acknowledged' => true,
+                'ownership_state' => 'pending-bus-name-ownership',
+            ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+            file_put_contents($pidFilePath, "4242\n");
+
+            $report = $toolkit->createNativeBusOwnershipReport(
+                ['ready' => true],
+                [
+                    'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+                    'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusServicePolicyDenied',
+                    'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+                    'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+                    'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
+                    'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_DRIVER_BOOTSTRAP' => dirname(__DIR__) . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR . 'Fixtures' . DIRECTORY_SEPARATOR . 'NativeDbusExtensionDriverBootstrap.php',
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_DRIVER_CLASS' => 'W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver',
+                ]
+            );
+
+            self::assertSame('system-api-dbus-native-runtime-ownership', $report['kind']);
+            self::assertSame('native-runtime-bus-ownership-failed', $report['status']);
+            self::assertTrue($report['attempted']);
+            self::assertSame(1, $report['exit_code']);
+            self::assertSame('native-dbus-system-bus-policy-denied', $report['blocking_reason']);
+            self::assertSame('install-native-dbus-system-bus-policy', $report['next_action']);
+            self::assertSame('failed', $report['service_lifecycle']['request_name']['state']);
+            self::assertSame(
+                'Connection ":1.2" is not allowed to own the service "org.w4.System1" due to security policies in the configuration file',
+                $report['ownership_driver']['error_message']
+            );
         } finally {
             @unlink($readyMarkerPath);
             @unlink($statusFilePath);

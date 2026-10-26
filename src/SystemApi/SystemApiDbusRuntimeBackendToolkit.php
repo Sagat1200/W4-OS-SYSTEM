@@ -289,16 +289,22 @@ final class SystemApiDbusRuntimeBackendToolkit
         $observation = $this->createNativeRuntimeServiceObservationReport($runtimeDiagnosis, $env);
         $eligible = ($serviceDefinition['eligible'] ?? false) === true;
         $observed = ($observation['observed'] ?? false) === true;
+        $observedOwnershipState = is_string($observation['ownership_state'] ?? null)
+            ? trim((string) $observation['ownership_state'])
+            : null;
+        $runtimeAlreadyOwnsBus = $observed && $observedOwnershipState === 'bus-name-owned';
         $phaseOverridesConfigured = $this->hasExplicitNativeRuntimePhaseOverrides($env);
         $driverConfigured = $this->hasNativeRuntimeOwnershipDriverConfigured($env);
         $syntheticOwnershipReady = $eligible
             && (($observation['startup_acknowledged'] ?? false) === true)
             && ($phaseOverridesConfigured || $driverConfigured);
         $attempted = $eligible && ($observed || $syntheticOwnershipReady);
-        $driverExecution = $attempted && !$phaseOverridesConfigured
+        $driverExecution = $attempted && !$phaseOverridesConfigured && !$runtimeAlreadyOwnsBus
             ? $this->executeNativeRuntimeOwnershipDriver($serviceDefinition, $env)
             : null;
-        $requestNameState = $phaseOverridesConfigured
+        $requestNameState = $runtimeAlreadyOwnsBus
+            ? 'owned'
+            : ($phaseOverridesConfigured
             ? $this->resolveNativeRuntimePhaseState(
                 $env,
                 'W4_SYSTEM_API_NATIVE_RUNTIME_REQUEST_NAME_STATE',
@@ -310,8 +316,10 @@ final class SystemApiDbusRuntimeBackendToolkit
                 'request_name_state',
                 ['not-attempted', 'pending', 'owned', 'failed'],
                 $attempted ? 'pending' : 'not-attempted'
-            );
-        $registerObjectState = $phaseOverridesConfigured
+            ));
+        $registerObjectState = $runtimeAlreadyOwnsBus
+            ? 'registered'
+            : ($phaseOverridesConfigured
             ? $this->resolveNativeRuntimePhaseState(
                 $env,
                 'W4_SYSTEM_API_NATIVE_RUNTIME_REGISTER_OBJECT_STATE',
@@ -323,8 +331,10 @@ final class SystemApiDbusRuntimeBackendToolkit
                 'register_object_state',
                 ['not-attempted', 'pending', 'registered', 'failed', 'skipped'],
                 !$attempted ? 'not-attempted' : ($requestNameState === 'owned' ? 'pending' : 'skipped')
-            );
-        $waitLoopState = $phaseOverridesConfigured
+            ));
+        $waitLoopState = $runtimeAlreadyOwnsBus
+            ? 'running'
+            : ($phaseOverridesConfigured
             ? $this->resolveNativeRuntimePhaseState(
                 $env,
                 'W4_SYSTEM_API_NATIVE_RUNTIME_WAIT_LOOP_STATE',
@@ -336,16 +346,18 @@ final class SystemApiDbusRuntimeBackendToolkit
                 'wait_loop_state',
                 ['not-attempted', 'pending', 'running', 'failed', 'skipped'],
                 !$attempted ? 'not-attempted' : ($requestNameState === 'owned' && $registerObjectState === 'registered' ? 'pending' : 'skipped')
-            );
+            ));
         $hasFailure = in_array('failed', [$requestNameState, $registerObjectState, $waitLoopState], true);
         $busOwned = $requestNameState === 'owned'
             && $registerObjectState === 'registered'
             && $waitLoopState === 'running';
         $executionMode = !$attempted
             ? 'blocked-before-ownership'
-            : ($phaseOverridesConfigured
+            : ($runtimeAlreadyOwnsBus
+                ? 'observed-runtime'
+                : ($phaseOverridesConfigured
                 ? 'phase-overrides'
-                : ($driverExecution !== null ? 'native-driver' : 'contract-default'));
+                : ($driverExecution !== null ? 'native-driver' : 'contract-default')));
         $ownershipState = !$attempted
             ? 'blocked-before-ownership'
             : ($hasFailure
@@ -387,7 +399,9 @@ final class SystemApiDbusRuntimeBackendToolkit
                 : ($busOwned
                     ? 'runtime-service-active'
                     : ($hasFailure
-                        ? 'inspect-native-runtime-ownership-report'
+                        ? ($driverBlockingReason === 'native-dbus-system-bus-policy-denied'
+                            ? 'install-native-dbus-system-bus-policy'
+                            : 'inspect-native-runtime-ownership-report')
                         : 'observe-native-runtime-service-state')));
 
         return [

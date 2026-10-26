@@ -1,8 +1,8 @@
 {
     "api_version": "1.0",
     "kind": "system-api-dbus-native-runtime-validation-report",
-    "status": "blocked",
-    "exit_code": 3,
+    "status": "validation-failed",
+    "exit_code": 1,
     "attempted_ownership": false,
     "root_dir": "C:/W4/Packages/W4-OS SYSTEM",
     "evidence_dir": "build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment",
@@ -19,16 +19,17 @@
     "bus_name": "org.w4.System1",
     "object_path": "/org/w4/System1",
     "interface": "org.w4.System1.Manager",
-    "started_at": "2026-10-26T04:00:43+00:00",
-    "completed_at": "2026-10-26T04:00:43+00:00",
+    "started_at": "2026-10-26T04:44:18+00:00",
+    "completed_at": "2026-10-26T04:44:18+00:00",
     "ownership_validated": false,
     "coupling_ready": false,
-    "startup_acknowledged": false,
-    "blocking_reason": "native-dbus-extension-build-failed",
-    "next_action": "prepare-native-dbus-fork-workspace",
+    "startup_acknowledged": true,
+    "blocking_reason": "native-dbus-extension-class-unavailable",
+    "next_action": "inspect-native-runtime-coupling",
     "recommended_next_actions": [
-        "prepare-native-dbus-fork-workspace",
-        "migrate-to-modern-linux-host"
+        "start-native-runtime-service",
+        "launch-native-runtime-service",
+        "inspect-native-runtime-coupling"
     ],
     "host_compatibility": {
         "compatible": true,
@@ -42,102 +43,25 @@
         "preparation_steps": []
     },
     "native_dbus_extension_installability": {
-        "blocked": true,
-        "state": "build-failed",
-        "blocking_reason": "native-dbus-extension-build-failed",
-        "next_action": "prepare-native-dbus-fork-workspace",
+        "blocked": false,
+        "state": "buildable",
+        "blocking_reason": null,
+        "next_action": "observe-runtime-backend",
         "build_phase": "make",
-        "reason": "legacy-tsrmls-api-incompatible-with-php84",
-        "failure_signature": "make: *** [Makefile:204: dbus.lo] Error 1",
-        "log_path": "build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log",
+        "reason": "build-complete",
+        "failure_signature": "",
+        "log_path": "build/system-api/native-dbus-extension-fork/evidence/php84-build-attempt-current.log",
         "pecl_available": true,
-        "recommended_next_actions": [
-            "prepare-native-dbus-fork-workspace",
-            "migrate-to-modern-linux-host"
-        ],
-        "preparation_steps": [
-            {
-                "action": "prepare-native-dbus-fork-workspace",
-                "description": "La extension `dbus` ya avanzo hasta `make` y el fallo apunta a incompatibilidad legacy con `PHP 8.4`. Conviene preparar de inmediato el workspace del fork transitorio autorizado para V1, arrastrar la evidencia del build real y trabajar ahi el patch del port.",
-                "commands": [
-                    "php --version",
-                    "phpize --version || true",
-                    "lsb_release -a || cat /etc/os-release",
-                    "pecl version",
-                    "pecl channel-info pecl.php.net || true",
-                    "pecl channel-update pecl.php.net || true",
-                    "pecl remote-info pecl/dbus || true",
-                    "pecl remote-info channel://pecl.php.net/dbus-0.1.1",
-                    "pecl search dbus || true",
-                    "make --version || true",
-                    "gcc --version || true",
-                    "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && php scripts/prepare_native_dbus_extension_fork.php --workspace-dir \"build/system-api/native-dbus-extension-fork\" --php-target 8.4 --pecl-package DBus-0.1.1 --build-evidence-json-path \"build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-evidence.json\" --build-log-path \"build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log\"",
-                    "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && ls \"build/system-api/native-dbus-extension-fork\"",
-                    "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && cat \"build/system-api/native-dbus-extension-fork/notes/php84-porting-plan.md\"",
-                    "printf '%s\\n' \"Ultimo motivo reportado: legacy-tsrmls-api-incompatible-with-php84\"",
-                    "printf '%s\\n' \"Firma detectada del fallo: make: *** [Makefile:204: dbus.lo] Error 1\"",
-                    "test -f \"build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log\" && tail -n 80 \"build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log\" || echo \"Build log no disponible: build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log\"",
-                    "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && php -r \"echo json_decode(file_get_contents('composer.json'), true)['require']['php'], PHP_EOL;\""
-                ]
-            }
-        ]
+        "recommended_next_actions": [],
+        "preparation_steps": []
     },
     "preparation_plan": [
         {
-            "action": "prepare-native-dbus-fork-workspace",
-            "description": "La extension `dbus` ya avanzo hasta `make` y el fallo apunta a incompatibilidad legacy con `PHP 8.4`. Conviene preparar de inmediato el workspace del fork transitorio autorizado para V1, arrastrar la evidencia del build real y trabajar ahi el patch del port.",
+            "action": "inspect-native-runtime-artifacts",
+            "description": "Revisar los artefactos del runtime nativo y confirmar que startup, status y pid quedaron materializados antes del ownership.",
             "commands": [
-                "php --version",
-                "phpize --version || true",
-                "lsb_release -a || cat /etc/os-release",
-                "pecl version",
-                "pecl channel-info pecl.php.net || true",
-                "pecl channel-update pecl.php.net || true",
-                "pecl remote-info pecl/dbus || true",
-                "pecl remote-info channel://pecl.php.net/dbus-0.1.1",
-                "pecl search dbus || true",
-                "make --version || true",
-                "gcc --version || true",
-                "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && php scripts/prepare_native_dbus_extension_fork.php --workspace-dir \"build/system-api/native-dbus-extension-fork\" --php-target 8.4 --pecl-package DBus-0.1.1 --build-evidence-json-path \"build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-evidence.json\" --build-log-path \"build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log\"",
-                "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && ls \"build/system-api/native-dbus-extension-fork\"",
-                "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && cat \"build/system-api/native-dbus-extension-fork/notes/php84-porting-plan.md\"",
-                "printf '%s\\n' \"Ultimo motivo reportado: legacy-tsrmls-api-incompatible-with-php84\"",
-                "printf '%s\\n' \"Firma detectada del fallo: make: *** [Makefile:204: dbus.lo] Error 1\"",
-                "test -f \"build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log\" && tail -n 80 \"build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log\" || echo \"Build log no disponible: build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log\"",
-                "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && php -r \"echo json_decode(file_get_contents('composer.json'), true)['require']['php'], PHP_EOL;\""
-            ]
-        },
-        {
-            "action": "migrate-to-modern-linux-host",
-            "description": "Preparar o elegir un Linux moderno homologado con PHP `8.4+`, toolchain de compilacion y dependencias D-Bus antes de repetir el contraste nativo real.",
-            "commands": [
-                "lsb_release -a || cat /etc/os-release",
-                "php --version || true",
-                "printf '%s\\n' \"Objetivo: host Linux moderno con PHP 8.4+ y toolchain homologada para PECL dbus.\"",
-                "sudo apt-get update",
-                "sudo apt-cache policy php8.4-cli php8.4-dev php8.4-pear",
-                "sudo apt-get install -y software-properties-common ca-certificates lsb-release apt-transport-https gnupg || true",
-                "sudo apt-get install -y build-essential autoconf automake libtool re2c pkg-config libdbus-1-dev libxml2-dev dbus dbus-user-session",
-                "sudo apt-get install -y php8.4-cli php8.4-dev php8.4-pear",
-                "php --version",
-                "phpize --version || true",
-                "pecl version || true",
-                "busctl --version || true",
-                "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && php -r \"echo json_decode(file_get_contents('composer.json'), true)['require']['php'], PHP_EOL;\""
-            ]
-        },
-        {
-            "action": "rerun-native-runtime-validation",
-            "description": "Reejecutar el runner despues de corregir la instalacion o compilacion de la extension `dbus` para confirmar si el ownership ya puede progresar.",
-            "commands": [
-                "printf '%s\\n' \"Preserva la evidencia actual si solo vas a reinspeccionar el mismo intento de compilacion.\"",
-                "test -f \"build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-evidence.json\" && cp \"build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-evidence.json\" \"build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-evidence.json.before-rerun.$(date -u +%Y%m%dT%H%M%SZ).json\" || true",
-                "test -f \"build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log\" && cp \"build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log\" \"build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log.before-rerun.$(date -u +%Y%m%dT%H%M%SZ).log\" || true",
-                "printf '%s\\n' \"Despues de un build real nuevo, elimina el JSON previo para forzar una rematerializacion limpia en el siguiente rerun.\"",
-                "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && rm -f \"build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-evidence.json\" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment --native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log",
-                "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && php scripts/run_native_dbus_real_host_validation.php --format text --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment --native-dbus-build-evidence-json-path build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-evidence.json --native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log",
-                "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && php scripts/run_native_dbus_real_host_validation.php --format markdown --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment --native-dbus-build-evidence-json-path build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-evidence.json --native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log",
-                "cd \"/mnt/c/W4/Packages/W4-OS SYSTEM\" && php scripts/run_native_dbus_real_host_validation.php --format json --target-os-family Linux --evidence-dir build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment --native-dbus-build-evidence-json-path build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-evidence.json --native-dbus-build-log-path build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log"
+                "ls -la \"C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-current-host-assessment\\runtime-artifacts\"",
+                "cat \"C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-current-host-assessment\\runtime-artifacts\\w4-system-api-native-runtime-status.json\""
             ]
         }
     ],
@@ -145,7 +69,6 @@
         "W4_SYSTEM_API_RUNTIME_BACKEND": "native-dbus-extension",
         "W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR": "build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/runtime-artifacts",
         "W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_JSON_PATH": "build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-evidence.json",
-        "W4_SYSTEM_API_PROBE_DBUS_EXTENSION_BUILD_EVIDENCE_PATH": "build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log",
         "W4_SYSTEM_API_PREPARATION_TARGET_OS_FAMILY": "Linux",
         "W4_SYSTEM_API_PREPARATION_TARGET_REPO_ROOT": "/mnt/c/W4/Packages/W4-OS SYSTEM"
     },
@@ -153,8 +76,8 @@
         "diagnosis": {
             "api_version": "1.0",
             "kind": "system-api-dbus-runtime-diagnosis",
-            "ready": false,
-            "status": "pending-runtime-adapter",
+            "ready": true,
+            "status": "ready-for-runtime-adapter",
             "bus_name": "org.w4.System1",
             "object_path": "/org/w4/System1",
             "interface": "org.w4.System1.Manager",
@@ -164,34 +87,31 @@
                 "php_version": "8.4.3"
             },
             "probes": {
-                "php_dbus_extension": false,
+                "php_dbus_extension": true,
                 "pecl": true,
                 "busctl": true,
                 "gdbus": true,
                 "dbus_daemon": true,
-                "system_bus_socket": false
+                "system_bus_socket": true
             },
             "native_dbus_extension_installation": {
-                "state": "build-failed",
+                "state": "buildable",
                 "pecl_available": true,
-                "extension_loaded": false,
-                "blocking_reason": "native-dbus-extension-build-failed",
-                "next_action": "prepare-native-dbus-fork-workspace",
+                "extension_loaded": true,
+                "blocking_reason": null,
+                "next_action": "observe-runtime-backend",
                 "build_phase": "make",
-                "reason": "legacy-tsrmls-api-incompatible-with-php84",
-                "failure_signature": "make: *** [Makefile:204: dbus.lo] Error 1",
-                "log_path": "build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/native-dbus-extension-build-attempt-php-8.4.3.log"
+                "reason": "build-complete",
+                "failure_signature": "",
+                "log_path": "build/system-api/native-dbus-extension-fork/evidence/php84-build-attempt-current.log"
             },
-            "missing_capabilities": [
-                "php-dbus-runtime-adapter",
-                "system-bus-socket"
-            ]
+            "missing_capabilities": []
         },
         "service_definition": {
             "api_version": "1.0",
             "kind": "system-api-dbus-native-runtime-service",
-            "status": "native-runtime-service-blocked",
-            "eligible": false,
+            "status": "native-runtime-service-ready-to-start",
+            "eligible": true,
             "selected_backend": "native-dbus-extension",
             "bus_name": "org.w4.System1",
             "object_path": "/org/w4/System1",
@@ -208,35 +128,29 @@
             "runtime_backend": {
                 "kind": "system-api-dbus-runtime-backend",
                 "selected_backend": "native-dbus-extension",
-                "status": "pending-runtime-adapter",
-                "materialized": false,
+                "status": "native-runtime-backend-materialized",
+                "materialized": true,
                 "transport": "dbus-system-bus",
                 "ownership_model": "native-php-dbus-extension",
                 "supports_bus_ownership": true,
                 "native_runtime_api": {
                     "extension_name": "dbus",
-                    "extension_loaded": false,
-                    "class_name": null,
+                    "extension_loaded": true,
+                    "class_name": "Dbus",
                     "class_candidates": [
                         "Dbus",
                         "DBus"
                     ],
-                    "class_resolution_source": "unresolved",
-                    "class_available": false,
-                    "has_bus_system_constant": false,
-                    "has_request_name_method": false,
-                    "has_register_object_method": false,
-                    "has_wait_loop_method": false,
-                    "compatible_for_service": false,
-                    "missing_api": [
-                        "dbus-service-class",
-                        "Dbus::BUS_SYSTEM",
-                        "requestName",
-                        "registerObject",
-                        "waitLoop"
-                    ],
-                    "diagnostic_blocking_reason": "dbus-extension-service-backend-unavailable",
-                    "diagnostic_next_action": "install-native-dbus-extension",
+                    "class_resolution_source": "env-override",
+                    "class_available": true,
+                    "has_bus_system_constant": true,
+                    "has_request_name_method": true,
+                    "has_register_object_method": true,
+                    "has_wait_loop_method": true,
+                    "compatible_for_service": true,
+                    "missing_api": [],
+                    "diagnostic_blocking_reason": null,
+                    "diagnostic_next_action": "start-native-runtime-service",
                     "service_contract": {
                         "bus_name": "org.w4.System1",
                         "object_path": "/org/w4/System1",
@@ -248,40 +162,34 @@
                         ]
                     }
                 },
-                "blocking_reason": "missing-runtime-capabilities"
+                "blocking_reason": null
             },
             "native_backend_candidate": {
                 "kind": "system-api-dbus-runtime-backend",
                 "selected_backend": "native-dbus-extension",
-                "status": "pending-runtime-adapter",
-                "materialized": false,
+                "status": "native-runtime-backend-materialized",
+                "materialized": true,
                 "transport": "dbus-system-bus",
                 "ownership_model": "native-php-dbus-extension",
                 "supports_bus_ownership": true,
                 "native_runtime_api": {
                     "extension_name": "dbus",
-                    "extension_loaded": false,
-                    "class_name": null,
+                    "extension_loaded": true,
+                    "class_name": "Dbus",
                     "class_candidates": [
                         "Dbus",
                         "DBus"
                     ],
-                    "class_resolution_source": "unresolved",
-                    "class_available": false,
-                    "has_bus_system_constant": false,
-                    "has_request_name_method": false,
-                    "has_register_object_method": false,
-                    "has_wait_loop_method": false,
-                    "compatible_for_service": false,
-                    "missing_api": [
-                        "dbus-service-class",
-                        "Dbus::BUS_SYSTEM",
-                        "requestName",
-                        "registerObject",
-                        "waitLoop"
-                    ],
-                    "diagnostic_blocking_reason": "dbus-extension-service-backend-unavailable",
-                    "diagnostic_next_action": "install-native-dbus-extension",
+                    "class_resolution_source": "env-override",
+                    "class_available": true,
+                    "has_bus_system_constant": true,
+                    "has_request_name_method": true,
+                    "has_register_object_method": true,
+                    "has_wait_loop_method": true,
+                    "compatible_for_service": true,
+                    "missing_api": [],
+                    "diagnostic_blocking_reason": null,
+                    "diagnostic_next_action": "start-native-runtime-service",
                     "service_contract": {
                         "bus_name": "org.w4.System1",
                         "object_path": "/org/w4/System1",
@@ -293,25 +201,25 @@
                         ]
                     }
                 },
-                "blocking_reason": "missing-runtime-capabilities"
+                "blocking_reason": null
             },
-            "blocking_reason": "missing-runtime-capabilities",
-            "next_action": "install-native-dbus-extension"
+            "blocking_reason": "native-runtime-service-not-started",
+            "next_action": "start-native-runtime-service"
         },
         "startup": {
             "api_version": "1.0",
             "kind": "system-api-dbus-native-runtime-startup",
-            "status": "native-runtime-service-blocked",
-            "startup_acknowledged": false,
-            "exit_code": 3,
+            "status": "native-runtime-service-bootstrap-recorded",
+            "startup_acknowledged": true,
+            "exit_code": 0,
             "bus_name": "org.w4.System1",
             "object_path": "/org/w4/System1",
             "interface": "org.w4.System1.Manager",
             "service_definition": {
                 "api_version": "1.0",
                 "kind": "system-api-dbus-native-runtime-service",
-                "status": "native-runtime-service-blocked",
-                "eligible": false,
+                "status": "native-runtime-service-ready-to-start",
+                "eligible": true,
                 "selected_backend": "native-dbus-extension",
                 "bus_name": "org.w4.System1",
                 "object_path": "/org/w4/System1",
@@ -328,35 +236,29 @@
                 "runtime_backend": {
                     "kind": "system-api-dbus-runtime-backend",
                     "selected_backend": "native-dbus-extension",
-                    "status": "pending-runtime-adapter",
-                    "materialized": false,
+                    "status": "native-runtime-backend-materialized",
+                    "materialized": true,
                     "transport": "dbus-system-bus",
                     "ownership_model": "native-php-dbus-extension",
                     "supports_bus_ownership": true,
                     "native_runtime_api": {
                         "extension_name": "dbus",
-                        "extension_loaded": false,
-                        "class_name": null,
+                        "extension_loaded": true,
+                        "class_name": "Dbus",
                         "class_candidates": [
                             "Dbus",
                             "DBus"
                         ],
-                        "class_resolution_source": "unresolved",
-                        "class_available": false,
-                        "has_bus_system_constant": false,
-                        "has_request_name_method": false,
-                        "has_register_object_method": false,
-                        "has_wait_loop_method": false,
-                        "compatible_for_service": false,
-                        "missing_api": [
-                            "dbus-service-class",
-                            "Dbus::BUS_SYSTEM",
-                            "requestName",
-                            "registerObject",
-                            "waitLoop"
-                        ],
-                        "diagnostic_blocking_reason": "dbus-extension-service-backend-unavailable",
-                        "diagnostic_next_action": "install-native-dbus-extension",
+                        "class_resolution_source": "env-override",
+                        "class_available": true,
+                        "has_bus_system_constant": true,
+                        "has_request_name_method": true,
+                        "has_register_object_method": true,
+                        "has_wait_loop_method": true,
+                        "compatible_for_service": true,
+                        "missing_api": [],
+                        "diagnostic_blocking_reason": null,
+                        "diagnostic_next_action": "start-native-runtime-service",
                         "service_contract": {
                             "bus_name": "org.w4.System1",
                             "object_path": "/org/w4/System1",
@@ -368,40 +270,34 @@
                             ]
                         }
                     },
-                    "blocking_reason": "missing-runtime-capabilities"
+                    "blocking_reason": null
                 },
                 "native_backend_candidate": {
                     "kind": "system-api-dbus-runtime-backend",
                     "selected_backend": "native-dbus-extension",
-                    "status": "pending-runtime-adapter",
-                    "materialized": false,
+                    "status": "native-runtime-backend-materialized",
+                    "materialized": true,
                     "transport": "dbus-system-bus",
                     "ownership_model": "native-php-dbus-extension",
                     "supports_bus_ownership": true,
                     "native_runtime_api": {
                         "extension_name": "dbus",
-                        "extension_loaded": false,
-                        "class_name": null,
+                        "extension_loaded": true,
+                        "class_name": "Dbus",
                         "class_candidates": [
                             "Dbus",
                             "DBus"
                         ],
-                        "class_resolution_source": "unresolved",
-                        "class_available": false,
-                        "has_bus_system_constant": false,
-                        "has_request_name_method": false,
-                        "has_register_object_method": false,
-                        "has_wait_loop_method": false,
-                        "compatible_for_service": false,
-                        "missing_api": [
-                            "dbus-service-class",
-                            "Dbus::BUS_SYSTEM",
-                            "requestName",
-                            "registerObject",
-                            "waitLoop"
-                        ],
-                        "diagnostic_blocking_reason": "dbus-extension-service-backend-unavailable",
-                        "diagnostic_next_action": "install-native-dbus-extension",
+                        "class_resolution_source": "env-override",
+                        "class_available": true,
+                        "has_bus_system_constant": true,
+                        "has_request_name_method": true,
+                        "has_register_object_method": true,
+                        "has_wait_loop_method": true,
+                        "compatible_for_service": true,
+                        "missing_api": [],
+                        "diagnostic_blocking_reason": null,
+                        "diagnostic_next_action": "start-native-runtime-service",
                         "service_contract": {
                             "bus_name": "org.w4.System1",
                             "object_path": "/org/w4/System1",
@@ -413,43 +309,37 @@
                             ]
                         }
                     },
-                    "blocking_reason": "missing-runtime-capabilities"
+                    "blocking_reason": null
                 },
-                "blocking_reason": "missing-runtime-capabilities",
-                "next_action": "install-native-dbus-extension"
+                "blocking_reason": "native-runtime-service-not-started",
+                "next_action": "start-native-runtime-service"
             },
             "runtime_backend": {
                 "kind": "system-api-dbus-runtime-backend",
                 "selected_backend": "native-dbus-extension",
-                "status": "pending-runtime-adapter",
-                "materialized": false,
+                "status": "native-runtime-backend-materialized",
+                "materialized": true,
                 "transport": "dbus-system-bus",
                 "ownership_model": "native-php-dbus-extension",
                 "supports_bus_ownership": true,
                 "native_runtime_api": {
                     "extension_name": "dbus",
-                    "extension_loaded": false,
-                    "class_name": null,
+                    "extension_loaded": true,
+                    "class_name": "Dbus",
                     "class_candidates": [
                         "Dbus",
                         "DBus"
                     ],
-                    "class_resolution_source": "unresolved",
-                    "class_available": false,
-                    "has_bus_system_constant": false,
-                    "has_request_name_method": false,
-                    "has_register_object_method": false,
-                    "has_wait_loop_method": false,
-                    "compatible_for_service": false,
-                    "missing_api": [
-                        "dbus-service-class",
-                        "Dbus::BUS_SYSTEM",
-                        "requestName",
-                        "registerObject",
-                        "waitLoop"
-                    ],
-                    "diagnostic_blocking_reason": "dbus-extension-service-backend-unavailable",
-                    "diagnostic_next_action": "install-native-dbus-extension",
+                    "class_resolution_source": "env-override",
+                    "class_available": true,
+                    "has_bus_system_constant": true,
+                    "has_request_name_method": true,
+                    "has_register_object_method": true,
+                    "has_wait_loop_method": true,
+                    "compatible_for_service": true,
+                    "missing_api": [],
+                    "diagnostic_blocking_reason": null,
+                    "diagnostic_next_action": "start-native-runtime-service",
                     "service_contract": {
                         "bus_name": "org.w4.System1",
                         "object_path": "/org/w4/System1",
@@ -461,27 +351,27 @@
                         ]
                     }
                 },
-                "blocking_reason": "missing-runtime-capabilities"
+                "blocking_reason": null
             },
-            "ownership_state": "blocked-before-startup",
-            "blocking_reason": "missing-runtime-capabilities",
-            "next_action": "install-native-dbus-extension"
+            "ownership_state": "startup-recorded-no-process",
+            "blocking_reason": "native-runtime-service-not-running",
+            "next_action": "launch-native-runtime-service"
         },
         "observation_after_startup": {
             "api_version": "1.0",
             "kind": "system-api-dbus-native-runtime-observation",
-            "status": "native-runtime-service-blocked",
+            "status": "native-runtime-service-not-running",
             "observed": false,
             "exit_code": 3,
-            "startup_acknowledged": false,
+            "startup_acknowledged": true,
             "bus_name": "org.w4.System1",
             "object_path": "/org/w4/System1",
             "interface": "org.w4.System1.Manager",
             "service_definition": {
                 "api_version": "1.0",
                 "kind": "system-api-dbus-native-runtime-service",
-                "status": "native-runtime-service-blocked",
-                "eligible": false,
+                "status": "native-runtime-service-ready-to-start",
+                "eligible": true,
                 "selected_backend": "native-dbus-extension",
                 "bus_name": "org.w4.System1",
                 "object_path": "/org/w4/System1",
@@ -498,35 +388,29 @@
                 "runtime_backend": {
                     "kind": "system-api-dbus-runtime-backend",
                     "selected_backend": "native-dbus-extension",
-                    "status": "pending-runtime-adapter",
-                    "materialized": false,
+                    "status": "native-runtime-backend-materialized",
+                    "materialized": true,
                     "transport": "dbus-system-bus",
                     "ownership_model": "native-php-dbus-extension",
                     "supports_bus_ownership": true,
                     "native_runtime_api": {
                         "extension_name": "dbus",
-                        "extension_loaded": false,
-                        "class_name": null,
+                        "extension_loaded": true,
+                        "class_name": "Dbus",
                         "class_candidates": [
                             "Dbus",
                             "DBus"
                         ],
-                        "class_resolution_source": "unresolved",
-                        "class_available": false,
-                        "has_bus_system_constant": false,
-                        "has_request_name_method": false,
-                        "has_register_object_method": false,
-                        "has_wait_loop_method": false,
-                        "compatible_for_service": false,
-                        "missing_api": [
-                            "dbus-service-class",
-                            "Dbus::BUS_SYSTEM",
-                            "requestName",
-                            "registerObject",
-                            "waitLoop"
-                        ],
-                        "diagnostic_blocking_reason": "dbus-extension-service-backend-unavailable",
-                        "diagnostic_next_action": "install-native-dbus-extension",
+                        "class_resolution_source": "env-override",
+                        "class_available": true,
+                        "has_bus_system_constant": true,
+                        "has_request_name_method": true,
+                        "has_register_object_method": true,
+                        "has_wait_loop_method": true,
+                        "compatible_for_service": true,
+                        "missing_api": [],
+                        "diagnostic_blocking_reason": null,
+                        "diagnostic_next_action": "start-native-runtime-service",
                         "service_contract": {
                             "bus_name": "org.w4.System1",
                             "object_path": "/org/w4/System1",
@@ -538,40 +422,34 @@
                             ]
                         }
                     },
-                    "blocking_reason": "missing-runtime-capabilities"
+                    "blocking_reason": null
                 },
                 "native_backend_candidate": {
                     "kind": "system-api-dbus-runtime-backend",
                     "selected_backend": "native-dbus-extension",
-                    "status": "pending-runtime-adapter",
-                    "materialized": false,
+                    "status": "native-runtime-backend-materialized",
+                    "materialized": true,
                     "transport": "dbus-system-bus",
                     "ownership_model": "native-php-dbus-extension",
                     "supports_bus_ownership": true,
                     "native_runtime_api": {
                         "extension_name": "dbus",
-                        "extension_loaded": false,
-                        "class_name": null,
+                        "extension_loaded": true,
+                        "class_name": "Dbus",
                         "class_candidates": [
                             "Dbus",
                             "DBus"
                         ],
-                        "class_resolution_source": "unresolved",
-                        "class_available": false,
-                        "has_bus_system_constant": false,
-                        "has_request_name_method": false,
-                        "has_register_object_method": false,
-                        "has_wait_loop_method": false,
-                        "compatible_for_service": false,
-                        "missing_api": [
-                            "dbus-service-class",
-                            "Dbus::BUS_SYSTEM",
-                            "requestName",
-                            "registerObject",
-                            "waitLoop"
-                        ],
-                        "diagnostic_blocking_reason": "dbus-extension-service-backend-unavailable",
-                        "diagnostic_next_action": "install-native-dbus-extension",
+                        "class_resolution_source": "env-override",
+                        "class_available": true,
+                        "has_bus_system_constant": true,
+                        "has_request_name_method": true,
+                        "has_register_object_method": true,
+                        "has_wait_loop_method": true,
+                        "compatible_for_service": true,
+                        "missing_api": [],
+                        "diagnostic_blocking_reason": null,
+                        "diagnostic_next_action": "start-native-runtime-service",
                         "service_contract": {
                             "bus_name": "org.w4.System1",
                             "object_path": "/org/w4/System1",
@@ -583,43 +461,37 @@
                             ]
                         }
                     },
-                    "blocking_reason": "missing-runtime-capabilities"
+                    "blocking_reason": null
                 },
-                "blocking_reason": "missing-runtime-capabilities",
-                "next_action": "install-native-dbus-extension"
+                "blocking_reason": "native-runtime-service-not-started",
+                "next_action": "start-native-runtime-service"
             },
             "runtime_backend": {
                 "kind": "system-api-dbus-runtime-backend",
                 "selected_backend": "native-dbus-extension",
-                "status": "pending-runtime-adapter",
-                "materialized": false,
+                "status": "native-runtime-backend-materialized",
+                "materialized": true,
                 "transport": "dbus-system-bus",
                 "ownership_model": "native-php-dbus-extension",
                 "supports_bus_ownership": true,
                 "native_runtime_api": {
                     "extension_name": "dbus",
-                    "extension_loaded": false,
-                    "class_name": null,
+                    "extension_loaded": true,
+                    "class_name": "Dbus",
                     "class_candidates": [
                         "Dbus",
                         "DBus"
                     ],
-                    "class_resolution_source": "unresolved",
-                    "class_available": false,
-                    "has_bus_system_constant": false,
-                    "has_request_name_method": false,
-                    "has_register_object_method": false,
-                    "has_wait_loop_method": false,
-                    "compatible_for_service": false,
-                    "missing_api": [
-                        "dbus-service-class",
-                        "Dbus::BUS_SYSTEM",
-                        "requestName",
-                        "registerObject",
-                        "waitLoop"
-                    ],
-                    "diagnostic_blocking_reason": "dbus-extension-service-backend-unavailable",
-                    "diagnostic_next_action": "install-native-dbus-extension",
+                    "class_resolution_source": "env-override",
+                    "class_available": true,
+                    "has_bus_system_constant": true,
+                    "has_request_name_method": true,
+                    "has_register_object_method": true,
+                    "has_wait_loop_method": true,
+                    "compatible_for_service": true,
+                    "missing_api": [],
+                    "diagnostic_blocking_reason": null,
+                    "diagnostic_next_action": "start-native-runtime-service",
                     "service_contract": {
                         "bus_name": "org.w4.System1",
                         "object_path": "/org/w4/System1",
@@ -631,49 +503,349 @@
                         ]
                     }
                 },
-                "blocking_reason": "missing-runtime-capabilities"
+                "blocking_reason": null
             },
-            "ownership_state": "native-runtime-service-not-started",
+            "ownership_state": "startup-recorded-no-process",
             "artifacts": {
                 "ready_marker": {
                     "path": "build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/runtime-artifacts/w4-system-api-native-runtime.ready",
-                    "exists": false,
-                    "contents": null
+                    "exists": true,
+                    "contents": "native-runtime-service-bootstrap-recorded"
                 },
                 "status_file": {
                     "path": "build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/runtime-artifacts/w4-system-api-native-runtime-status.json",
-                    "exists": false,
-                    "payload": null,
+                    "exists": true,
+                    "payload": {
+                        "api_version": "1.0",
+                        "kind": "system-api-dbus-native-runtime-startup",
+                        "status": "native-runtime-service-bootstrap-recorded",
+                        "startup_acknowledged": true,
+                        "exit_code": 0,
+                        "bus_name": "org.w4.System1",
+                        "object_path": "/org/w4/System1",
+                        "interface": "org.w4.System1.Manager",
+                        "service_definition": {
+                            "api_version": "1.0",
+                            "kind": "system-api-dbus-native-runtime-service",
+                            "status": "native-runtime-service-ready-to-start",
+                            "eligible": true,
+                            "selected_backend": "native-dbus-extension",
+                            "bus_name": "org.w4.System1",
+                            "object_path": "/org/w4/System1",
+                            "interface": "org.w4.System1.Manager",
+                            "startup_command": "StartNativeRuntimeService",
+                            "startup_mode": "bootstrap-contract",
+                            "ownership_goal": "org.w4.System1",
+                            "service_lifecycle": "request-name-register-object-wait-loop",
+                            "artifacts": {
+                                "ready_marker_path": "build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/runtime-artifacts/w4-system-api-native-runtime.ready",
+                                "status_file_path": "build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/runtime-artifacts/w4-system-api-native-runtime-status.json",
+                                "pid_file_path": "build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/runtime-artifacts/w4-system-api-native-runtime.pid"
+                            },
+                            "runtime_backend": {
+                                "kind": "system-api-dbus-runtime-backend",
+                                "selected_backend": "native-dbus-extension",
+                                "status": "native-runtime-backend-materialized",
+                                "materialized": true,
+                                "transport": "dbus-system-bus",
+                                "ownership_model": "native-php-dbus-extension",
+                                "supports_bus_ownership": true,
+                                "native_runtime_api": {
+                                    "extension_name": "dbus",
+                                    "extension_loaded": true,
+                                    "class_name": "Dbus",
+                                    "class_candidates": [
+                                        "Dbus",
+                                        "DBus"
+                                    ],
+                                    "class_resolution_source": "env-override",
+                                    "class_available": true,
+                                    "has_bus_system_constant": true,
+                                    "has_request_name_method": true,
+                                    "has_register_object_method": true,
+                                    "has_wait_loop_method": true,
+                                    "compatible_for_service": true,
+                                    "missing_api": [],
+                                    "diagnostic_blocking_reason": null,
+                                    "diagnostic_next_action": "start-native-runtime-service",
+                                    "service_contract": {
+                                        "bus_name": "org.w4.System1",
+                                        "object_path": "/org/w4/System1",
+                                        "interface": "org.w4.System1.Manager",
+                                        "required_methods": [
+                                            "requestName",
+                                            "registerObject",
+                                            "waitLoop"
+                                        ]
+                                    }
+                                },
+                                "blocking_reason": null
+                            },
+                            "native_backend_candidate": {
+                                "kind": "system-api-dbus-runtime-backend",
+                                "selected_backend": "native-dbus-extension",
+                                "status": "native-runtime-backend-materialized",
+                                "materialized": true,
+                                "transport": "dbus-system-bus",
+                                "ownership_model": "native-php-dbus-extension",
+                                "supports_bus_ownership": true,
+                                "native_runtime_api": {
+                                    "extension_name": "dbus",
+                                    "extension_loaded": true,
+                                    "class_name": "Dbus",
+                                    "class_candidates": [
+                                        "Dbus",
+                                        "DBus"
+                                    ],
+                                    "class_resolution_source": "env-override",
+                                    "class_available": true,
+                                    "has_bus_system_constant": true,
+                                    "has_request_name_method": true,
+                                    "has_register_object_method": true,
+                                    "has_wait_loop_method": true,
+                                    "compatible_for_service": true,
+                                    "missing_api": [],
+                                    "diagnostic_blocking_reason": null,
+                                    "diagnostic_next_action": "start-native-runtime-service",
+                                    "service_contract": {
+                                        "bus_name": "org.w4.System1",
+                                        "object_path": "/org/w4/System1",
+                                        "interface": "org.w4.System1.Manager",
+                                        "required_methods": [
+                                            "requestName",
+                                            "registerObject",
+                                            "waitLoop"
+                                        ]
+                                    }
+                                },
+                                "blocking_reason": null
+                            },
+                            "blocking_reason": "native-runtime-service-not-started",
+                            "next_action": "start-native-runtime-service"
+                        },
+                        "runtime_backend": {
+                            "kind": "system-api-dbus-runtime-backend",
+                            "selected_backend": "native-dbus-extension",
+                            "status": "native-runtime-backend-materialized",
+                            "materialized": true,
+                            "transport": "dbus-system-bus",
+                            "ownership_model": "native-php-dbus-extension",
+                            "supports_bus_ownership": true,
+                            "native_runtime_api": {
+                                "extension_name": "dbus",
+                                "extension_loaded": true,
+                                "class_name": "Dbus",
+                                "class_candidates": [
+                                    "Dbus",
+                                    "DBus"
+                                ],
+                                "class_resolution_source": "env-override",
+                                "class_available": true,
+                                "has_bus_system_constant": true,
+                                "has_request_name_method": true,
+                                "has_register_object_method": true,
+                                "has_wait_loop_method": true,
+                                "compatible_for_service": true,
+                                "missing_api": [],
+                                "diagnostic_blocking_reason": null,
+                                "diagnostic_next_action": "start-native-runtime-service",
+                                "service_contract": {
+                                    "bus_name": "org.w4.System1",
+                                    "object_path": "/org/w4/System1",
+                                    "interface": "org.w4.System1.Manager",
+                                    "required_methods": [
+                                        "requestName",
+                                        "registerObject",
+                                        "waitLoop"
+                                    ]
+                                }
+                            },
+                            "blocking_reason": null
+                        },
+                        "ownership_state": "startup-recorded-no-process",
+                        "blocking_reason": "native-runtime-service-not-running",
+                        "next_action": "launch-native-runtime-service"
+                    },
                     "parse_error": null
                 },
                 "pid_file": {
                     "path": "build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/runtime-artifacts/w4-system-api-native-runtime.pid",
-                    "exists": false,
-                    "pid": null,
-                    "raw_value": null,
+                    "exists": true,
+                    "pid": 0,
+                    "raw_value": "0",
                     "is_running": false
                 }
             },
-            "startup_report": null,
-            "pid": null,
-            "blocking_reason": "missing-runtime-capabilities",
-            "next_action": "install-native-dbus-extension"
+            "startup_report": {
+                "api_version": "1.0",
+                "kind": "system-api-dbus-native-runtime-startup",
+                "status": "native-runtime-service-bootstrap-recorded",
+                "startup_acknowledged": true,
+                "exit_code": 0,
+                "bus_name": "org.w4.System1",
+                "object_path": "/org/w4/System1",
+                "interface": "org.w4.System1.Manager",
+                "service_definition": {
+                    "api_version": "1.0",
+                    "kind": "system-api-dbus-native-runtime-service",
+                    "status": "native-runtime-service-ready-to-start",
+                    "eligible": true,
+                    "selected_backend": "native-dbus-extension",
+                    "bus_name": "org.w4.System1",
+                    "object_path": "/org/w4/System1",
+                    "interface": "org.w4.System1.Manager",
+                    "startup_command": "StartNativeRuntimeService",
+                    "startup_mode": "bootstrap-contract",
+                    "ownership_goal": "org.w4.System1",
+                    "service_lifecycle": "request-name-register-object-wait-loop",
+                    "artifacts": {
+                        "ready_marker_path": "build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/runtime-artifacts/w4-system-api-native-runtime.ready",
+                        "status_file_path": "build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/runtime-artifacts/w4-system-api-native-runtime-status.json",
+                        "pid_file_path": "build/system-api/validation/native-dbus-real-host/wsl-current-host-assessment/runtime-artifacts/w4-system-api-native-runtime.pid"
+                    },
+                    "runtime_backend": {
+                        "kind": "system-api-dbus-runtime-backend",
+                        "selected_backend": "native-dbus-extension",
+                        "status": "native-runtime-backend-materialized",
+                        "materialized": true,
+                        "transport": "dbus-system-bus",
+                        "ownership_model": "native-php-dbus-extension",
+                        "supports_bus_ownership": true,
+                        "native_runtime_api": {
+                            "extension_name": "dbus",
+                            "extension_loaded": true,
+                            "class_name": "Dbus",
+                            "class_candidates": [
+                                "Dbus",
+                                "DBus"
+                            ],
+                            "class_resolution_source": "env-override",
+                            "class_available": true,
+                            "has_bus_system_constant": true,
+                            "has_request_name_method": true,
+                            "has_register_object_method": true,
+                            "has_wait_loop_method": true,
+                            "compatible_for_service": true,
+                            "missing_api": [],
+                            "diagnostic_blocking_reason": null,
+                            "diagnostic_next_action": "start-native-runtime-service",
+                            "service_contract": {
+                                "bus_name": "org.w4.System1",
+                                "object_path": "/org/w4/System1",
+                                "interface": "org.w4.System1.Manager",
+                                "required_methods": [
+                                    "requestName",
+                                    "registerObject",
+                                    "waitLoop"
+                                ]
+                            }
+                        },
+                        "blocking_reason": null
+                    },
+                    "native_backend_candidate": {
+                        "kind": "system-api-dbus-runtime-backend",
+                        "selected_backend": "native-dbus-extension",
+                        "status": "native-runtime-backend-materialized",
+                        "materialized": true,
+                        "transport": "dbus-system-bus",
+                        "ownership_model": "native-php-dbus-extension",
+                        "supports_bus_ownership": true,
+                        "native_runtime_api": {
+                            "extension_name": "dbus",
+                            "extension_loaded": true,
+                            "class_name": "Dbus",
+                            "class_candidates": [
+                                "Dbus",
+                                "DBus"
+                            ],
+                            "class_resolution_source": "env-override",
+                            "class_available": true,
+                            "has_bus_system_constant": true,
+                            "has_request_name_method": true,
+                            "has_register_object_method": true,
+                            "has_wait_loop_method": true,
+                            "compatible_for_service": true,
+                            "missing_api": [],
+                            "diagnostic_blocking_reason": null,
+                            "diagnostic_next_action": "start-native-runtime-service",
+                            "service_contract": {
+                                "bus_name": "org.w4.System1",
+                                "object_path": "/org/w4/System1",
+                                "interface": "org.w4.System1.Manager",
+                                "required_methods": [
+                                    "requestName",
+                                    "registerObject",
+                                    "waitLoop"
+                                ]
+                            }
+                        },
+                        "blocking_reason": null
+                    },
+                    "blocking_reason": "native-runtime-service-not-started",
+                    "next_action": "start-native-runtime-service"
+                },
+                "runtime_backend": {
+                    "kind": "system-api-dbus-runtime-backend",
+                    "selected_backend": "native-dbus-extension",
+                    "status": "native-runtime-backend-materialized",
+                    "materialized": true,
+                    "transport": "dbus-system-bus",
+                    "ownership_model": "native-php-dbus-extension",
+                    "supports_bus_ownership": true,
+                    "native_runtime_api": {
+                        "extension_name": "dbus",
+                        "extension_loaded": true,
+                        "class_name": "Dbus",
+                        "class_candidates": [
+                            "Dbus",
+                            "DBus"
+                        ],
+                        "class_resolution_source": "env-override",
+                        "class_available": true,
+                        "has_bus_system_constant": true,
+                        "has_request_name_method": true,
+                        "has_register_object_method": true,
+                        "has_wait_loop_method": true,
+                        "compatible_for_service": true,
+                        "missing_api": [],
+                        "diagnostic_blocking_reason": null,
+                        "diagnostic_next_action": "start-native-runtime-service",
+                        "service_contract": {
+                            "bus_name": "org.w4.System1",
+                            "object_path": "/org/w4/System1",
+                            "interface": "org.w4.System1.Manager",
+                            "required_methods": [
+                                "requestName",
+                                "registerObject",
+                                "waitLoop"
+                            ]
+                        }
+                    },
+                    "blocking_reason": null
+                },
+                "ownership_state": "startup-recorded-no-process",
+                "blocking_reason": "native-runtime-service-not-running",
+                "next_action": "launch-native-runtime-service"
+            },
+            "pid": 0,
+            "blocking_reason": "native-runtime-service-not-running",
+            "next_action": "launch-native-runtime-service"
         },
         "coupling": {
             "api_version": "1.0",
             "kind": "system-api-dbus-native-runtime-coupling",
-            "status": "native-runtime-coupling-blocked",
-            "described": false,
+            "status": "native-runtime-coupling-incompatible",
+            "described": true,
             "compatible": false,
-            "exit_code": 3,
+            "exit_code": 1,
             "bus_name": "org.w4.System1",
             "object_path": "/org/w4/System1",
             "interface": "org.w4.System1.Manager",
             "service_definition": {
                 "api_version": "1.0",
                 "kind": "system-api-dbus-native-runtime-service",
-                "status": "native-runtime-service-blocked",
-                "eligible": false,
+                "status": "native-runtime-service-ready-to-start",
+                "eligible": true,
                 "selected_backend": "native-dbus-extension",
                 "bus_name": "org.w4.System1",
                 "object_path": "/org/w4/System1",
@@ -690,35 +862,29 @@
                 "runtime_backend": {
                     "kind": "system-api-dbus-runtime-backend",
                     "selected_backend": "native-dbus-extension",
-                    "status": "pending-runtime-adapter",
-                    "materialized": false,
+                    "status": "native-runtime-backend-materialized",
+                    "materialized": true,
                     "transport": "dbus-system-bus",
                     "ownership_model": "native-php-dbus-extension",
                     "supports_bus_ownership": true,
                     "native_runtime_api": {
                         "extension_name": "dbus",
-                        "extension_loaded": false,
-                        "class_name": null,
+                        "extension_loaded": true,
+                        "class_name": "Dbus",
                         "class_candidates": [
                             "Dbus",
                             "DBus"
                         ],
-                        "class_resolution_source": "unresolved",
-                        "class_available": false,
-                        "has_bus_system_constant": false,
-                        "has_request_name_method": false,
-                        "has_register_object_method": false,
-                        "has_wait_loop_method": false,
-                        "compatible_for_service": false,
-                        "missing_api": [
-                            "dbus-service-class",
-                            "Dbus::BUS_SYSTEM",
-                            "requestName",
-                            "registerObject",
-                            "waitLoop"
-                        ],
-                        "diagnostic_blocking_reason": "dbus-extension-service-backend-unavailable",
-                        "diagnostic_next_action": "install-native-dbus-extension",
+                        "class_resolution_source": "env-override",
+                        "class_available": true,
+                        "has_bus_system_constant": true,
+                        "has_request_name_method": true,
+                        "has_register_object_method": true,
+                        "has_wait_loop_method": true,
+                        "compatible_for_service": true,
+                        "missing_api": [],
+                        "diagnostic_blocking_reason": null,
+                        "diagnostic_next_action": "start-native-runtime-service",
                         "service_contract": {
                             "bus_name": "org.w4.System1",
                             "object_path": "/org/w4/System1",
@@ -730,40 +896,34 @@
                             ]
                         }
                     },
-                    "blocking_reason": "missing-runtime-capabilities"
+                    "blocking_reason": null
                 },
                 "native_backend_candidate": {
                     "kind": "system-api-dbus-runtime-backend",
                     "selected_backend": "native-dbus-extension",
-                    "status": "pending-runtime-adapter",
-                    "materialized": false,
+                    "status": "native-runtime-backend-materialized",
+                    "materialized": true,
                     "transport": "dbus-system-bus",
                     "ownership_model": "native-php-dbus-extension",
                     "supports_bus_ownership": true,
                     "native_runtime_api": {
                         "extension_name": "dbus",
-                        "extension_loaded": false,
-                        "class_name": null,
+                        "extension_loaded": true,
+                        "class_name": "Dbus",
                         "class_candidates": [
                             "Dbus",
                             "DBus"
                         ],
-                        "class_resolution_source": "unresolved",
-                        "class_available": false,
-                        "has_bus_system_constant": false,
-                        "has_request_name_method": false,
-                        "has_register_object_method": false,
-                        "has_wait_loop_method": false,
-                        "compatible_for_service": false,
-                        "missing_api": [
-                            "dbus-service-class",
-                            "Dbus::BUS_SYSTEM",
-                            "requestName",
-                            "registerObject",
-                            "waitLoop"
-                        ],
-                        "diagnostic_blocking_reason": "dbus-extension-service-backend-unavailable",
-                        "diagnostic_next_action": "install-native-dbus-extension",
+                        "class_resolution_source": "env-override",
+                        "class_available": true,
+                        "has_bus_system_constant": true,
+                        "has_request_name_method": true,
+                        "has_register_object_method": true,
+                        "has_wait_loop_method": true,
+                        "compatible_for_service": true,
+                        "missing_api": [],
+                        "diagnostic_blocking_reason": null,
+                        "diagnostic_next_action": "start-native-runtime-service",
                         "service_contract": {
                             "bus_name": "org.w4.System1",
                             "object_path": "/org/w4/System1",
@@ -775,43 +935,37 @@
                             ]
                         }
                     },
-                    "blocking_reason": "missing-runtime-capabilities"
+                    "blocking_reason": null
                 },
-                "blocking_reason": "missing-runtime-capabilities",
-                "next_action": "install-native-dbus-extension"
+                "blocking_reason": "native-runtime-service-not-started",
+                "next_action": "start-native-runtime-service"
             },
             "runtime_backend": {
                 "kind": "system-api-dbus-runtime-backend",
                 "selected_backend": "native-dbus-extension",
-                "status": "pending-runtime-adapter",
-                "materialized": false,
+                "status": "native-runtime-backend-materialized",
+                "materialized": true,
                 "transport": "dbus-system-bus",
                 "ownership_model": "native-php-dbus-extension",
                 "supports_bus_ownership": true,
                 "native_runtime_api": {
                     "extension_name": "dbus",
-                    "extension_loaded": false,
-                    "class_name": null,
+                    "extension_loaded": true,
+                    "class_name": "Dbus",
                     "class_candidates": [
                         "Dbus",
                         "DBus"
                     ],
-                    "class_resolution_source": "unresolved",
-                    "class_available": false,
-                    "has_bus_system_constant": false,
-                    "has_request_name_method": false,
-                    "has_register_object_method": false,
-                    "has_wait_loop_method": false,
-                    "compatible_for_service": false,
-                    "missing_api": [
-                        "dbus-service-class",
-                        "Dbus::BUS_SYSTEM",
-                        "requestName",
-                        "registerObject",
-                        "waitLoop"
-                    ],
-                    "diagnostic_blocking_reason": "dbus-extension-service-backend-unavailable",
-                    "diagnostic_next_action": "install-native-dbus-extension",
+                    "class_resolution_source": "env-override",
+                    "class_available": true,
+                    "has_bus_system_constant": true,
+                    "has_request_name_method": true,
+                    "has_register_object_method": true,
+                    "has_wait_loop_method": true,
+                    "compatible_for_service": true,
+                    "missing_api": [],
+                    "diagnostic_blocking_reason": null,
+                    "diagnostic_next_action": "start-native-runtime-service",
                     "service_contract": {
                         "bus_name": "org.w4.System1",
                         "object_path": "/org/w4/System1",
@@ -823,40 +977,34 @@
                         ]
                     }
                 },
-                "blocking_reason": "missing-runtime-capabilities"
+                "blocking_reason": null
             },
             "native_backend_candidate": {
                 "kind": "system-api-dbus-runtime-backend",
                 "selected_backend": "native-dbus-extension",
-                "status": "pending-runtime-adapter",
-                "materialized": false,
+                "status": "native-runtime-backend-materialized",
+                "materialized": true,
                 "transport": "dbus-system-bus",
                 "ownership_model": "native-php-dbus-extension",
                 "supports_bus_ownership": true,
                 "native_runtime_api": {
                     "extension_name": "dbus",
-                    "extension_loaded": false,
-                    "class_name": null,
+                    "extension_loaded": true,
+                    "class_name": "Dbus",
                     "class_candidates": [
                         "Dbus",
                         "DBus"
                     ],
-                    "class_resolution_source": "unresolved",
-                    "class_available": false,
-                    "has_bus_system_constant": false,
-                    "has_request_name_method": false,
-                    "has_register_object_method": false,
-                    "has_wait_loop_method": false,
-                    "compatible_for_service": false,
-                    "missing_api": [
-                        "dbus-service-class",
-                        "Dbus::BUS_SYSTEM",
-                        "requestName",
-                        "registerObject",
-                        "waitLoop"
-                    ],
-                    "diagnostic_blocking_reason": "dbus-extension-service-backend-unavailable",
-                    "diagnostic_next_action": "install-native-dbus-extension",
+                    "class_resolution_source": "env-override",
+                    "class_available": true,
+                    "has_bus_system_constant": true,
+                    "has_request_name_method": true,
+                    "has_register_object_method": true,
+                    "has_wait_loop_method": true,
+                    "compatible_for_service": true,
+                    "missing_api": [],
+                    "diagnostic_blocking_reason": null,
+                    "diagnostic_next_action": "start-native-runtime-service",
                     "service_contract": {
                         "bus_name": "org.w4.System1",
                         "object_path": "/org/w4/System1",
@@ -868,12 +1016,39 @@
                         ]
                     }
                 },
-                "blocking_reason": "missing-runtime-capabilities"
+                "blocking_reason": null
             },
-            "coupling_driver": null,
-            "service_lifecycle": [],
-            "blocking_reason": "missing-runtime-capabilities",
-            "next_action": "install-native-dbus-extension"
+            "coupling_driver": {
+                "runtime_class_name": "Dbus",
+                "mode": "native-driver",
+                "driver_class": "W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver",
+                "bootstrap_path": null,
+                "class_name": "W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver",
+                "available": true
+            },
+            "service_lifecycle": {
+                "constructor": {
+                    "required": true,
+                    "state": "failed"
+                },
+                "request_name": {
+                    "required": true,
+                    "compatible": false,
+                    "method_name": "requestName"
+                },
+                "register_object": {
+                    "required": true,
+                    "compatible": false,
+                    "method_name": "registerObject"
+                },
+                "wait_loop": {
+                    "required": true,
+                    "compatible": false,
+                    "method_name": "waitLoop"
+                }
+            },
+            "blocking_reason": "native-dbus-extension-class-unavailable",
+            "next_action": "inspect-native-runtime-coupling"
         },
         "ownership": null,
         "observation_after_ownership": null

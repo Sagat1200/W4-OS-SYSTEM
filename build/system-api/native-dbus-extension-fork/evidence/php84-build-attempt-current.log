@@ -1,0 +1,130 @@
+Configuring for:
+PHP Version:             8.4
+PHP Api Version:         20240924
+Zend Module Api No:      20240924
+Zend Extension Api No:   420240924
+configure: WARNING: unrecognized options: --with-dbus
+checking for grep that handles long lines and -e... /usr/bin/grep
+checking for egrep... /usr/bin/grep -E
+checking for a sed that does not truncate output... /usr/bin/sed
+checking build system type... x86_64-pc-linux-gnu
+checking host system type... x86_64-pc-linux-gnu
+checking target system type... x86_64-pc-linux-gnu
+checking for gawk... gawk
+checking for pkg-config... /usr/bin/pkg-config
+checking pkg-config is at least version 0.9.0... yes
+checking for cc... cc
+checking whether the C compiler works... yes
+checking for C compiler default output file name... a.out
+checking for suffix of executables... 
+checking whether we are cross compiling... no
+checking for suffix of object files... o
+checking whether the compiler supports GNU C... yes
+checking whether cc accepts -g... yes
+checking for cc option to enable C11 features... none needed
+checking how to run the C preprocessor... cc -E
+checking for icc... no
+checking for suncc... no
+checking for system library directory... lib
+checking if compiler supports -Wl,-rpath,... yes
+checking for PHP prefix... /opt/php/8.4.3
+checking for PHP includes... -I/opt/php/8.4.3/include/php -I/opt/php/8.4.3/include/php/main -I/opt/php/8.4.3/include/php/TSRM -I/opt/php/8.4.3/include/php/Zend -I/opt/php/8.4.3/include/php/ext -I/opt/php/8.4.3/include/php/ext/date/lib
+checking for PHP extension directory... /opt/php/8.4.3/lib/php/extensions/no-debug-non-zts-20240924
+checking for PHP installed headers prefix... /opt/php/8.4.3/include/php
+checking if debugging is enabled... no
+checking if PHP is built with thread safety (ZTS)... no
+
+[1mConfiguring extension[m
+checking whether to enable dbus functions... yes, shared
+checking libxml2 install dir... no
+checking for pkg-config... found
+checking for dbus... found
+checking for libxml-2.0 >= 2.9.4... yes
+
+[1mConfiguring libtool[m
+checking for a sed that does not truncate output... /usr/bin/sed
+checking for ld used by cc... /usr/bin/ld
+checking if the linker (/usr/bin/ld) is GNU ld... yes
+checking for /usr/bin/ld option to reload object files... -r
+checking for BSD-compatible nm... /usr/bin/nm -B
+checking whether ln -s works... yes
+checking how to recognize dependent libraries... pass_all
+checking for stdio.h... yes
+checking for stdlib.h... yes
+checking for string.h... yes
+checking for inttypes.h... yes
+checking for stdint.h... yes
+checking for strings.h... yes
+checking for sys/stat.h... yes
+checking for sys/types.h... yes
+checking for unistd.h... yes
+checking for dlfcn.h... yes
+checking the maximum length of command line arguments... 1572864
+checking command to parse /usr/bin/nm -B output from cc object... ok
+checking for objdir... .libs
+checking for ar... ar
+checking for ranlib... ranlib
+checking for strip... strip
+checking if cc supports -fno-rtti -fno-exceptions... no
+checking for cc option to produce PIC... -fPIC
+checking if cc PIC flag -fPIC works... yes
+checking if cc static flag -static works... yes
+checking if cc supports -c -o file.o... yes
+checking whether the cc linker (/usr/bin/ld -m elf_x86_64) supports shared libraries... yes
+checking whether -lc should be explicitly linked in... no
+checking dynamic linker characteristics... GNU/Linux ld.so
+checking how to hardcode library paths into programs... immediate
+checking whether stripping libraries is possible... yes
+checking if libtool supports shared libraries... yes
+checking whether to build shared libraries... yes
+checking whether to build static libraries... no
+
+creating libtool
+appending configuration tag "CXX" to libtool
+
+[1mGenerating files[m
+configure: creating build directories
+configure: creating Makefile
+configure: patching config.h.in
+configure: creating ./config.status
+config.status: creating config.h
+configure: WARNING: unrecognized options: --with-dbus
+/bin/bash /tmp/w4-native-dbus-fork/dbus-0.1.1/libtool --tag=CC --mode=compile cc -I. -I/tmp/w4-native-dbus-fork/dbus-0.1.1 -I/opt/php/8.4.3/include/php -I/opt/php/8.4.3/include/php/main -I/opt/php/8.4.3/include/php/TSRM -I/opt/php/8.4.3/include/php/Zend -I/opt/php/8.4.3/include/php/ext -I/opt/php/8.4.3/include/php/ext/date/lib -I/usr/include/libxml2  -DHAVE_CONFIG_H  -g -O2 -I/usr/include/dbus-1.0 -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include -D_GNU_SOURCE    -DZEND_COMPILE_DL_EXT=1 -c /tmp/w4-native-dbus-fork/dbus-0.1.1/dbus.c -o dbus.lo  -MMD -MF dbus.dep -MT dbus.lo
+/bin/bash /tmp/w4-native-dbus-fork/dbus-0.1.1/libtool --tag=CC --mode=compile cc -I. -I/tmp/w4-native-dbus-fork/dbus-0.1.1 -I/opt/php/8.4.3/include/php -I/opt/php/8.4.3/include/php/main -I/opt/php/8.4.3/include/php/TSRM -I/opt/php/8.4.3/include/php/Zend -I/opt/php/8.4.3/include/php/ext -I/opt/php/8.4.3/include/php/ext/date/lib -I/usr/include/libxml2  -DHAVE_CONFIG_H  -g -O2 -I/usr/include/dbus-1.0 -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include -D_GNU_SOURCE    -DZEND_COMPILE_DL_EXT=1 -c /tmp/w4-native-dbus-fork/dbus-0.1.1/introspect.c -o introspect.lo  -MMD -MF introspect.dep -MT introspect.lo
+mkdir .libs
+ cc -I. -I/tmp/w4-native-dbus-fork/dbus-0.1.1 -I/opt/php/8.4.3/include/php -I/opt/php/8.4.3/include/php/main -I/opt/php/8.4.3/include/php/TSRM -I/opt/php/8.4.3/include/php/Zend -I/opt/php/8.4.3/include/php/ext -I/opt/php/8.4.3/include/php/ext/date/lib -I/usr/include/libxml2 -DHAVE_CONFIG_H -g -O2 -I/usr/include/dbus-1.0 -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include -D_GNU_SOURCE -DZEND_COMPILE_DL_EXT=1 -c /tmp/w4-native-dbus-fork/dbus-0.1.1/introspect.c -MMD -MF introspect.dep -MT introspect.lo  -fPIC -DPIC -o .libs/introspect.o
+ cc -I. -I/tmp/w4-native-dbus-fork/dbus-0.1.1 -I/opt/php/8.4.3/include/php -I/opt/php/8.4.3/include/php/main -I/opt/php/8.4.3/include/php/TSRM -I/opt/php/8.4.3/include/php/Zend -I/opt/php/8.4.3/include/php/ext -I/opt/php/8.4.3/include/php/ext/date/lib -I/usr/include/libxml2 -DHAVE_CONFIG_H -g -O2 -I/usr/include/dbus-1.0 -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include -D_GNU_SOURCE -DZEND_COMPILE_DL_EXT=1 -c /tmp/w4-native-dbus-fork/dbus-0.1.1/dbus.c -MMD -MF dbus.dep -MT dbus.lo  -fPIC -DPIC -o .libs/dbus.o
+/tmp/w4-native-dbus-fork/dbus-0.1.1/dbus.c: In function ‘zim_DbusArray___construct’:
+/tmp/w4-native-dbus-fork/dbus-0.1.1/dbus.c:2351:2: warning: #warning test whether signature is present when type == struct [-Wcpp]
+ 2351 | #warning test whether signature is present when type == struct
+      |  ^~~~~~~
+/bin/bash /tmp/w4-native-dbus-fork/dbus-0.1.1/libtool --tag=CC --mode=link cc -shared -I/opt/php/8.4.3/include/php -I/opt/php/8.4.3/include/php/main -I/opt/php/8.4.3/include/php/TSRM -I/opt/php/8.4.3/include/php/Zend -I/opt/php/8.4.3/include/php/ext -I/opt/php/8.4.3/include/php/ext/date/lib -I/usr/include/libxml2  -DHAVE_CONFIG_H  -g -O2 -I/usr/include/dbus-1.0 -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include -D_GNU_SOURCE  -ldbus-1  -o dbus.la -export-dynamic -avoid-version -prefer-pic -module -rpath /tmp/w4-native-dbus-fork/dbus-0.1.1/modules  dbus.lo introspect.lo -lxml2 -ldbus-1
+cc -shared  .libs/dbus.o .libs/introspect.o  -lxml2 -ldbus-1  -Wl,-soname -Wl,dbus.so -o .libs/dbus.so
+creating dbus.la
+(cd .libs && rm -f dbus.la && ln -s ../dbus.la dbus.la)
+/bin/bash /tmp/w4-native-dbus-fork/dbus-0.1.1/libtool --tag=CC --mode=install cp ./dbus.la /tmp/w4-native-dbus-fork/dbus-0.1.1/modules
+cp ./.libs/dbus.so /tmp/w4-native-dbus-fork/dbus-0.1.1/modules/dbus.so
+cp ./.libs/dbus.lai /tmp/w4-native-dbus-fork/dbus-0.1.1/modules/dbus.la
+PATH="$PATH:/sbin" ldconfig -n /tmp/w4-native-dbus-fork/dbus-0.1.1/modules
+----------------------------------------------------------------------
+Libraries have been installed in:
+   /tmp/w4-native-dbus-fork/dbus-0.1.1/modules
+
+If you ever happen to want to link against installed libraries
+in a given directory, LIBDIR, you must either use libtool, and
+specify the full pathname of the library, or use the `-LLIBDIR'
+flag during linking and do at least one of the following:
+   - add LIBDIR to the `LD_LIBRARY_PATH' environment variable
+     during execution
+   - add LIBDIR to the `LD_RUN_PATH' environment variable
+     during linking
+   - use the `-Wl,--rpath -Wl,LIBDIR' linker flag
+   - have your system administrator add LIBDIR to `/etc/ld.so.conf'
+
+See any operating system documentation about shared libraries for
+more information, such as the ld(1) and ld.so(8) manual pages.
+----------------------------------------------------------------------
+
+Build complete.
+Don't forget to run 'make test'.
+

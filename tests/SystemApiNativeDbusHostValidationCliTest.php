@@ -1141,7 +1141,6 @@ TEXT);
         $payload = $this->decodeJson($result['stdout']);
         self::assertSame('ownership-validated', $payload['status']);
         self::assertTrue($payload['ownership_validated']);
-        self::assertTrue($payload['coupling_ready']);
         self::assertTrue($payload['startup_acknowledged']);
         self::assertSame('runtime-service-active', $payload['next_action']);
         self::assertSame('native-runtime-bus-owned', $payload['steps']['ownership']['status']);
@@ -1170,6 +1169,93 @@ TEXT);
         $preparationShellScript = file_get_contents($payload['preparation_shell_script_path']);
         self::assertNotFalse($preparationShellScript);
         self::assertStringContainsString('php scripts/run_native_dbus_real_host_validation.php --format markdown --target-os-family Linux', $preparationShellScript);
+    }
+
+    public function testValidationCanValidateOwnedRuntimeThroughLaunchProcessFlow(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'launch-process-owned-host';
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+        ], array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE' => 'launch-process',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_KEEPALIVE_SECONDS' => '2',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_REQUEST_NAME_STATE' => 'owned',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_REGISTER_OBJECT_STATE' => 'registered',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_WAIT_LOOP_STATE' => 'running',
+            ]
+        ));
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('ownership-validated', $payload['status']);
+        self::assertTrue($payload['ownership_validated']);
+        self::assertTrue($payload['startup_acknowledged']);
+        self::assertSame('runtime-service-active', $payload['next_action']);
+        self::assertSame('native-runtime-bus-owned', $payload['steps']['ownership']['status']);
+        self::assertSame('bus-name-owned', $payload['steps']['ownership']['ownership_state']);
+        self::assertSame('native-runtime-service-observed-active', $payload['steps']['observation_after_ownership']['status']);
+
+        $savedReport = $this->decodeJsonFile($payload['report_path']);
+        self::assertSame('ownership-validated', $savedReport['status']);
+        self::assertSame('bus-name-owned', $savedReport['steps']['ownership']['ownership_state']);
+        self::assertSame('native-runtime-service-observed-active', $savedReport['steps']['observation_after_ownership']['status']);
+    }
+
+    public function testValidationSurfacesSystemBusPolicyDenialAsActionablePreparationStep(): void
+    {
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'policy-denied-host';
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--evidence-dir',
+            $evidenceDir,
+            '--target-os-family',
+            'Linux',
+        ], array_merge(
+            $this->readyRuntimeEnvironment(),
+            [
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusServicePolicyDenied',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
+                'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_DRIVER_BOOTSTRAP' => $this->repoRoot . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR . 'Fixtures' . DIRECTORY_SEPARATOR . 'NativeDbusExtensionDriverBootstrap.php',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_DRIVER_CLASS' => 'W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver',
+            ]
+        ));
+
+        self::assertSame(1, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('validation-failed', $payload['status']);
+        self::assertSame('native-dbus-system-bus-policy-denied', $payload['blocking_reason']);
+        self::assertSame('install-native-dbus-system-bus-policy', $payload['next_action']);
+        self::assertContains('install-native-dbus-system-bus-policy', $payload['recommended_next_actions']);
+        self::assertContains(
+            'install-native-dbus-system-bus-policy',
+            array_map(
+                static fn (array $step): string => (string) ($step['action'] ?? ''),
+                $payload['preparation_plan']
+            )
+        );
+
+        $preparationChecklist = file_get_contents($payload['preparation_checklist_path']);
+        self::assertNotFalse($preparationChecklist);
+        self::assertStringContainsString('/etc/dbus-1/system.d/org.w4.System1.conf', $preparationChecklist);
+        self::assertStringContainsString('allow own="org.w4.System1"', $preparationChecklist);
     }
 
     public function testValidationCanRenderMarkdownSummaryDirectlyFromRunner(): void

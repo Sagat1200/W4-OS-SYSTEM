@@ -156,6 +156,17 @@ function runWslCommand(string $distribution, string $bashCommand): array
     return runWindowsCommandCaptured($command);
 }
 
+function runWslRootCommand(string $distribution, string $bashCommand): array
+{
+    $command = sprintf(
+        'wsl -u root -d %s -- bash -lc %s',
+        quoteWslDistribution($distribution),
+        quoteForWindowsCommand($bashCommand)
+    );
+
+    return runWindowsCommandCaptured($command);
+}
+
 function runWslCommandOrNull(string $distribution, string $bashCommand): ?string
 {
     $result = runWslCommand($distribution, $bashCommand);
@@ -172,6 +183,31 @@ function normalizeOptionalOutput(?string $value): ?string
     $trimmed = trim($value);
 
     return $trimmed === '' ? null : $trimmed;
+}
+
+function probeWslBoolCommand(string $distribution, string $bashCommand): bool
+{
+    $result = runWslCommand($distribution, $bashCommand);
+
+    return $result['exit_code'] === 0 && trim($result['stdout']) !== '0';
+}
+
+function ensureWslSystemBusSocket(string $distribution): bool
+{
+    $socketProbe = runWslCommand($distribution, 'test -S /run/dbus/system_bus_socket');
+    if ($socketProbe['exit_code'] === 0) {
+        return true;
+    }
+
+    $command = implode(' && ', [
+        'mkdir -p /run/dbus',
+        '(service dbus start >/dev/null 2>&1 || dbus-daemon --system --fork >/dev/null 2>&1 || true)',
+        'test -S /run/dbus/system_bus_socket',
+    ]);
+
+    $result = runWslRootCommand($distribution, $command);
+
+    return $result['exit_code'] === 0;
 }
 
 /**
@@ -261,17 +297,33 @@ function collectWslEnvironment(string $distribution): array
     $hasBusctl = normalizeOptionalOutput(runWslCommandOrNull($distribution, 'command -v busctl')) !== null;
     $hasGdbus = normalizeOptionalOutput(runWslCommandOrNull($distribution, 'command -v gdbus')) !== null;
     $hasDbusDaemon = normalizeOptionalOutput(runWslCommandOrNull($distribution, 'command -v dbus-daemon')) !== null;
-    $hasSystemBusSocket = runWslCommand($distribution, 'test -S /run/dbus/system_bus_socket');
+    $hasDbusExtension = probeWslBoolCommand($distribution, 'php -r \'echo extension_loaded("dbus") ? "1" : "0";\'');
+    $dbusClass = normalizeOptionalOutput(runWslCommandOrNull($distribution, 'php -r \'if (class_exists("Dbus")) { echo "Dbus"; exit(0); } if (class_exists("DBus")) { echo "DBus"; exit(0); } exit(1);\''));
+    $hasBusSystem = $dbusClass !== null
+        && probeWslBoolCommand($distribution, 'php -r \'if (class_exists("Dbus")) { echo defined("Dbus::BUS_SYSTEM") ? "1" : "0"; exit(0); } if (class_exists("DBus")) { echo defined("DBus::BUS_SYSTEM") ? "1" : "0"; exit(0); } exit(1);\'');
+    $hasRequestName = $dbusClass !== null
+        && probeWslBoolCommand($distribution, 'php -r \'if (class_exists("Dbus")) { echo method_exists("Dbus", "requestName") ? "1" : "0"; exit(0); } if (class_exists("DBus")) { echo method_exists("DBus", "requestName") ? "1" : "0"; exit(0); } exit(1);\'');
+    $hasRegisterObject = $dbusClass !== null
+        && probeWslBoolCommand($distribution, 'php -r \'if (class_exists("Dbus")) { echo method_exists("Dbus", "registerObject") ? "1" : "0"; exit(0); } if (class_exists("DBus")) { echo method_exists("DBus", "registerObject") ? "1" : "0"; exit(0); } exit(1);\'');
+    $hasWaitLoop = $dbusClass !== null
+        && probeWslBoolCommand($distribution, 'php -r \'if (class_exists("Dbus")) { echo method_exists("Dbus", "waitLoop") ? "1" : "0"; exit(0); } if (class_exists("DBus")) { echo method_exists("DBus", "waitLoop") ? "1" : "0"; exit(0); } exit(1);\'');
+    $hasSystemBusSocket = ensureWslSystemBusSocket($distribution);
     $release = normalizeOptionalOutput(runWslCommandOrNull($distribution, 'cat /etc/os-release'));
     $kernel = normalizeOptionalOutput(runWslCommandOrNull($distribution, 'uname -a'));
 
     $environment = [
         'W4_SYSTEM_API_PROBE_OS_FAMILY' => $osFamily,
+        'W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION' => $hasDbusExtension ? '1' : '0',
         'W4_SYSTEM_API_PROBE_HAS_PECL' => $hasPecl ? '1' : '0',
         'W4_SYSTEM_API_PROBE_HAS_BUSCTL' => $hasBusctl ? '1' : '0',
         'W4_SYSTEM_API_PROBE_HAS_GDBUS' => $hasGdbus ? '1' : '0',
         'W4_SYSTEM_API_PROBE_HAS_DBUS_DAEMON' => $hasDbusDaemon ? '1' : '0',
-        'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET' => $hasSystemBusSocket['exit_code'] === 0 ? '1' : '0',
+        'W4_SYSTEM_API_PROBE_HAS_SYSTEM_BUS_SOCKET' => $hasSystemBusSocket ? '1' : '0',
+        'W4_SYSTEM_API_NATIVE_DBUS_EXTENSION_LOADED' => $hasDbusExtension ? '1' : '0',
+        'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => $hasBusSystem ? '1' : '0',
+        'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => $hasRequestName ? '1' : '0',
+        'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => $hasRegisterObject ? '1' : '0',
+        'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => $hasWaitLoop ? '1' : '0',
     ];
 
     if ($phpVersion !== null) {
@@ -280,6 +332,10 @@ function collectWslEnvironment(string $distribution): array
 
     if ($phpBinary !== null) {
         $environment['W4_SYSTEM_API_PROBE_PHP_BINARY'] = $phpBinary;
+    }
+
+    if ($dbusClass !== null) {
+        $environment['W4_SYSTEM_API_NATIVE_DBUS_CLASS'] = $dbusClass;
     }
 
     if ($release !== null) {
@@ -392,6 +448,12 @@ try {
         'preparation_target_repo_root' => $effectiveTargetRepoRoot,
         'php_version' => $collectedEnvironment['W4_SYSTEM_API_PROBE_PHP_VERSION'] ?? null,
         'php_binary' => $collectedEnvironment['W4_SYSTEM_API_PROBE_PHP_BINARY'] ?? null,
+        'has_dbus_extension' => ($collectedEnvironment['W4_SYSTEM_API_PROBE_HAS_DBUS_EXTENSION'] ?? '0') === '1',
+        'dbus_class' => $collectedEnvironment['W4_SYSTEM_API_NATIVE_DBUS_CLASS'] ?? null,
+        'has_bus_system' => ($collectedEnvironment['W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM'] ?? '0') === '1',
+        'has_request_name' => ($collectedEnvironment['W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME'] ?? '0') === '1',
+        'has_register_object' => ($collectedEnvironment['W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT'] ?? '0') === '1',
+        'has_wait_loop' => ($collectedEnvironment['W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP'] ?? '0') === '1',
         'has_pecl' => ($collectedEnvironment['W4_SYSTEM_API_PROBE_HAS_PECL'] ?? '0') === '1',
         'has_busctl' => ($collectedEnvironment['W4_SYSTEM_API_PROBE_HAS_BUSCTL'] ?? '0') === '1',
         'has_gdbus' => ($collectedEnvironment['W4_SYSTEM_API_PROBE_HAS_GDBUS'] ?? '0') === '1',

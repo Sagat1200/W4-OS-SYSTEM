@@ -168,15 +168,26 @@ final class NativeDbusExtensionOwnershipDriver
             $requestNameSignature = $this->createRequestNameSignatureReport($connection);
             $requestNameInvocationPlan = $this->createRequestNameInvocationPlan($connection, $serviceDefinition);
             $this->writePhaseMarker($environment, 'before-request-name');
-            $requestNameResult = $this->invokeRequestName($connection, $requestNameInvocationPlan['arguments']);
+            $requestNameErrorMessage = null;
+            set_error_handler(static function (int $severity, string $message) use (&$requestNameErrorMessage): bool {
+                $requestNameErrorMessage = $message;
+
+                return true;
+            });
+            try {
+                $requestNameResult = $this->invokeRequestName($connection, $requestNameInvocationPlan['arguments']);
+            } finally {
+                restore_error_handler();
+            }
             if ($requestNameResult === false) {
                 $this->writePhaseMarker($environment, 'request-name-failed');
                 return $this->failedLifecycle(
-                    'native-dbus-extension-request-name-failed',
+                    $this->classifyRequestNameFailureReason($requestNameErrorMessage),
                     $driver + [
                         'request_name_signature' => $requestNameSignature,
                         'request_name_invocation_plan' => $requestNameInvocationPlan['report'],
                         'request_name_result' => false,
+                        'error_message' => $requestNameErrorMessage,
                     ]
                 );
             }
@@ -186,12 +197,13 @@ final class NativeDbusExtensionOwnershipDriver
             $this->writePhaseMarker($environment, 'after-request-name');
         } catch (Throwable $exception) {
             $this->writePhaseMarker($environment, 'request-name-exception');
+            $requestNameFailureMessage = $exception->getMessage();
             return $this->failedLifecycle(
-                'native-dbus-extension-request-name-failed',
+                $this->classifyRequestNameFailureReason($requestNameFailureMessage),
                 $driver + [
                     'request_name_signature' => $requestNameSignature ?? null,
                     'request_name_invocation_plan' => $requestNameInvocationPlan['report'] ?? null,
-                    'error_message' => $exception->getMessage(),
+                    'error_message' => $requestNameFailureMessage,
                 ]
             );
         }
@@ -582,6 +594,24 @@ final class NativeDbusExtensionOwnershipDriver
     {
         // Legacy internal builds can expose requestName() without arginfo, leaving Reflection with 0 parameters.
         return $method->isInternal() && $method->getNumberOfParameters() === 0;
+    }
+
+    private function classifyRequestNameFailureReason(?string $errorMessage): string
+    {
+        if (!is_string($errorMessage) || trim($errorMessage) === '') {
+            return 'native-dbus-extension-request-name-failed';
+        }
+
+        $normalizedMessage = strtolower($errorMessage);
+        if (
+            str_contains($normalizedMessage, 'not allowed to own the service')
+            || str_contains($normalizedMessage, 'security policies in the configuration file')
+            || str_contains($normalizedMessage, 'connection is not allowed to own')
+        ) {
+            return 'native-dbus-system-bus-policy-denied';
+        }
+
+        return 'native-dbus-extension-request-name-failed';
     }
 
     private function shouldUseLegacyRegisterObjectFallback(ReflectionMethod $method): bool

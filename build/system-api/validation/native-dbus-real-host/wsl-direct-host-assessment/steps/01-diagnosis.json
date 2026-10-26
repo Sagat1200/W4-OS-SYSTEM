@@ -1,0 +1,34 @@
+{
+    "api_version": "1.0",
+    "kind": "system-api-dbus-runtime-diagnosis",
+    "ready": true,
+    "status": "ready-for-runtime-adapter",
+    "bus_name": "org.w4.System1",
+    "object_path": "/org/w4/System1",
+    "interface": "org.w4.System1.Manager",
+    "environment": {
+        "os_family": "Linux",
+        "php_binary": "/opt/php/8.4.3/bin/php",
+        "php_version": "8.4.3"
+    },
+    "probes": {
+        "php_dbus_extension": true,
+        "pecl": true,
+        "busctl": true,
+        "gdbus": true,
+        "dbus_daemon": true,
+        "system_bus_socket": true
+    },
+    "native_dbus_extension_installation": {
+        "state": "buildable",
+        "pecl_available": true,
+        "extension_loaded": true,
+        "blocking_reason": null,
+        "next_action": "observe-runtime-backend",
+        "build_phase": "make",
+        "reason": "build-complete",
+        "failure_signature": "",
+        "log_path": "build/system-api/native-dbus-extension-fork/evidence/php84-build-attempt-current.log"
+    },
+    "missing_capabilities": []
+}
