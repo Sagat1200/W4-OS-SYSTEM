@@ -1,0 +1,16 @@
+{
+    "api_version": "1.0",
+    "kind": "system-api-native-dbus-extension-build-evidence",
+    "generated_at": "2026-10-26T04:00:43+00:00",
+    "source_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-current-host-assessment\\native-dbus-extension-build-attempt-php-8.4.3.log",
+    "state": "build-failed",
+    "build_phase": "make",
+    "reason": "legacy-tsrmls-api-incompatible-with-php84",
+    "failure_signature": "make: *** [Makefile:204: dbus.lo] Error 1",
+    "log_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\validation\\native-dbus-real-host\\wsl-current-host-assessment\\native-dbus-extension-build-attempt-php-8.4.3.log",
+    "markers": [
+        "legacy-tsrmls-api-incompatible-with-php84",
+        "configure",
+        "make"
+    ]
+}

@@ -191,6 +191,64 @@ function writeJsonArtifact(string $path, array $data): void
     }
 }
 
+function normalizePathForRunner(string $path): string
+{
+    return str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
+}
+
+function resolveExistingNativeDbusBuildEvidenceJsonPath(string $evidenceDir): ?string
+{
+    $path = normalizePathForRunner($evidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-extension-build-evidence.json');
+
+    return is_file($path) ? $path : null;
+}
+
+function resolveExistingNativeDbusBuildLogPath(string $evidenceDir): ?string
+{
+    $patterns = [
+        'native-dbus-extension-build-attempt*.log',
+        'native-dbus-extension-build*.log',
+        'wsl-ubuntu-operational-attempt*.md',
+        '*.log',
+        '*.md',
+    ];
+
+    $matches = [];
+    foreach ($patterns as $pattern) {
+        $paths = glob(normalizePathForRunner($evidenceDir . DIRECTORY_SEPARATOR . $pattern));
+        if ($paths === false) {
+            continue;
+        }
+
+        foreach ($paths as $path) {
+            if (!is_file($path)) {
+                continue;
+            }
+
+            $basename = basename($path);
+            if ($basename === 'native-dbus-extension-build-evidence.json') {
+                continue;
+            }
+
+            $matches[$path] = filemtime($path) ?: 0;
+        }
+
+        if ($matches !== []) {
+            break;
+        }
+    }
+
+    if ($matches === []) {
+        return null;
+    }
+
+    arsort($matches, SORT_NUMERIC);
+
+    $selectedPath = array_key_first($matches);
+
+    return is_string($selectedPath) ? $selectedPath : null;
+}
+
 /**
  * @return array<string, string>
  */
@@ -363,6 +421,18 @@ try {
         '--target-repo-root',
         $effectiveTargetRepoRoot,
     ];
+
+    $nativeDbusBuildEvidenceJsonPath = resolveExistingNativeDbusBuildEvidenceJsonPath($evidenceDir);
+    if ($nativeDbusBuildEvidenceJsonPath !== null) {
+        $localRunnerArguments[] = '--native-dbus-build-evidence-json-path';
+        $localRunnerArguments[] = $nativeDbusBuildEvidenceJsonPath;
+    } else {
+        $nativeDbusBuildLogPath = resolveExistingNativeDbusBuildLogPath($evidenceDir);
+        if ($nativeDbusBuildLogPath !== null) {
+            $localRunnerArguments[] = '--native-dbus-build-log-path';
+            $localRunnerArguments[] = $nativeDbusBuildLogPath;
+        }
+    }
 
     $runnerResult = runLocalPhpScript($localRunnerArguments, $collectedEnvironment);
 

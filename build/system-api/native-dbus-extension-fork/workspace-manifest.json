@@ -1,7 +1,7 @@
 {
     "api_version": "1.0",
     "kind": "system-api-native-dbus-fork-workspace",
-    "generated_at": "2026-10-17T17:02:34+00:00",
+    "generated_at": "2026-10-26T04:01:05+00:00",
     "workspace_dir": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork",
     "php_target": "8.4",
     "pecl_package": "DBus-0.1.1",
@@ -15,9 +15,6 @@
         "notes_dir": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/notes"
     },
     "copied_inputs": {
-        "source_archive": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/upstream/dbus-0.1.1.tgz",
-        "source_archive_extracted_dir": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/upstream/imported-source",
-        "fork_current_dir": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/fork/current",
         "build_log": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/evidence/native-dbus-build.log",
         "build_evidence_json": "C:/W4/Packages/W4-OS SYSTEM/build/system-api/native-dbus-extension-fork/evidence/native-dbus-extension-build-evidence.json"
     },

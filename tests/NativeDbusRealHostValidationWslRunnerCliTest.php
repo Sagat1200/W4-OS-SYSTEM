@@ -139,6 +139,63 @@ final class NativeDbusRealHostValidationWslRunnerCliTest extends TestCase
         );
     }
 
+    public function testRunnerForwardsExistingNativeDbusBuildLogToLocalValidationRunner(): void
+    {
+        $distribution = 'Ubuntu-Fixture';
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'wsl-assessment-build-log';
+        $wslRepoRoot = '/mnt/c/W4/Packages/W4-OS SYSTEM';
+        self::assertTrue(mkdir($evidenceDir, 0777, true) || is_dir($evidenceDir));
+
+        $buildLogPath = $evidenceDir . DIRECTORY_SEPARATOR . 'native-dbus-extension-build-attempt-php-8.4.3.log';
+        file_put_contents($buildLogPath, <<<TEXT
+Se intento pecl install channel://pecl.php.net/dbus-0.1.1
+referencias a zend_object_store_get_object(...)
+make: *** [Makefile:192: dbus.lo] Error 1
+TEXT);
+
+        $this->setFixtureEnv($distribution, $wslRepoRoot, [
+            "php -r 'echo PHP_VERSION, PHP_EOL;'" => '8.4.3',
+            'command -v php' => '/opt/php/8.4.3/bin/php',
+            'command -v pecl' => '/opt/php/8.4.3/bin/pecl',
+            'command -v busctl' => '/usr/bin/busctl',
+            'command -v gdbus' => '/usr/bin/gdbus',
+            'command -v dbus-daemon' => '/usr/bin/dbus-daemon',
+            'test -S /run/dbus/system_bus_socket' => ['stdout' => '', 'stderr' => '', 'exit_code' => 0],
+            'cat /etc/os-release' => "NAME=\"Ubuntu\"\nVERSION=\"22.04.5 LTS (Jammy Jellyfish)\"\nVERSION_ID=\"22.04\"",
+            'uname -a' => 'Linux fixture-host 6.18.40.1-microsoft-standard-WSL2 x86_64 GNU/Linux',
+        ]);
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--distribution',
+            $distribution,
+            '--evidence-dir',
+            $evidenceDir,
+            '--attempt-ownership',
+            'false',
+        ]);
+
+        self::assertSame(3, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('blocked', $payload['status']);
+        self::assertSame('native-dbus-extension-build-failed', $payload['blocking_reason']);
+        self::assertSame('prepare-native-dbus-fork-workspace', $payload['next_action']);
+        self::assertSame('build-failed', $payload['native_dbus_extension_installability']['state']);
+        self::assertSame('make', $payload['native_dbus_extension_installability']['build_phase']);
+        self::assertSame('legacy-tsrmls-api-incompatible-with-php84', $payload['native_dbus_extension_installability']['reason']);
+        self::assertSame('make: *** [Makefile:192: dbus.lo] Error 1', $payload['native_dbus_extension_installability']['failure_signature']);
+        self::assertSame(str_replace('\\', '/', $buildLogPath), str_replace('\\', '/', (string) $payload['native_dbus_extension_installability']['log_path']));
+        self::assertFileExists($payload['native_dbus_extension_build_evidence_path']);
+
+        $structuredEvidence = $this->decodeJsonFile($payload['native_dbus_extension_build_evidence_path']);
+        self::assertSame('system-api-native-dbus-extension-build-evidence', $structuredEvidence['kind']);
+        self::assertSame('build-failed', $structuredEvidence['state']);
+        self::assertSame('make', $structuredEvidence['build_phase']);
+        self::assertSame('legacy-tsrmls-api-incompatible-with-php84', $structuredEvidence['reason']);
+        self::assertSame('make: *** [Makefile:192: dbus.lo] Error 1', $structuredEvidence['failure_signature']);
+    }
+
     private function scriptPath(): string
     {
         return $this->repoRoot . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'run_native_dbus_real_host_validation_in_wsl.php';
