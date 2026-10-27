@@ -959,7 +959,52 @@ final class SystemApiDbusRuntimeAdapter
         $pidFilePath = is_string($artifacts['pid_file_path'] ?? null) && trim((string) $artifacts['pid_file_path']) !== ''
             ? trim((string) $artifacts['pid_file_path'])
             : null;
-        $nextAttempt = $currentAttempt + 1;
+        $stateFilePath = $this->resolveNativeRuntimeSupervisorStateFilePath($serviceDefinition, $environment);
+        $state = $this->readNativeRuntimeSupervisorState($stateFilePath);
+        $cooldownMilliseconds = $this->resolveNativeRuntimeAutoReactivationBackoffMilliseconds($environment);
+        $effectiveAttempt = max($currentAttempt, is_int($state['attempt_count'] ?? null) ? (int) $state['attempt_count'] : 0);
+        $cooldownUntil = is_int($state['cooldown_until_epoch_ms'] ?? null) ? (int) $state['cooldown_until_epoch_ms'] : 0;
+        $now = (int) floor(microtime(true) * 1000);
+        if ($cooldownUntil > $now) {
+            $observation['auto_reactivation'] = [
+                'enabled' => true,
+                'attempted' => false,
+                'attempt' => $effectiveAttempt,
+                'max_attempts' => $maxAttempts,
+                'reason' => 'native-runtime-auto-reactivation-cooldown-active',
+                'cooldown_until_epoch_ms' => $cooldownUntil,
+                'state_file_path' => $stateFilePath,
+            ];
+
+            return $observation;
+        }
+
+        if ($effectiveAttempt >= $maxAttempts) {
+            $observation['auto_reactivation'] = [
+                'enabled' => true,
+                'attempted' => false,
+                'attempt' => $effectiveAttempt,
+                'max_attempts' => $maxAttempts,
+                'reason' => 'native-runtime-auto-reactivation-budget-exhausted',
+                'state_file_path' => $stateFilePath,
+            ];
+
+            return $observation;
+        }
+
+        $nextAttempt = $effectiveAttempt + 1;
+        $nextCooldownUntil = $now + $cooldownMilliseconds;
+        $this->writeNativeRuntimeSupervisorState($stateFilePath, [
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-native-runtime-supervisor-state',
+            'attempt_count' => $nextAttempt,
+            'max_attempts' => $maxAttempts,
+            'cooldown_backoff_ms' => $cooldownMilliseconds,
+            'last_attempt_epoch_ms' => $now,
+            'cooldown_until_epoch_ms' => $nextCooldownUntil,
+            'last_observed_status' => $observation['status'] ?? null,
+            'last_observed_next_action' => $observation['next_action'] ?? null,
+        ]);
         $launched = $this->launchDetachedNativeRuntimeServiceProcess($environment, [
             'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_ATTEMPT' => (string) $nextAttempt,
         ]);
@@ -969,10 +1014,13 @@ final class SystemApiDbusRuntimeAdapter
             'attempted' => true,
             'attempt' => $nextAttempt,
             'max_attempts' => $maxAttempts,
+            'cooldown_backoff_ms' => $cooldownMilliseconds,
+            'cooldown_until_epoch_ms' => $nextCooldownUntil,
             'launch_mode' => 'background-process',
             'launched' => $launched && $pid !== null,
             'parent_observation_status' => $observation['status'] ?? null,
             'parent_next_action' => $observation['next_action'] ?? null,
+            'state_file_path' => $stateFilePath,
         ];
 
         if (!$launched || $pid === null) {
@@ -1053,6 +1101,96 @@ final class SystemApiDbusRuntimeAdapter
         $attempt = (int) trim($value);
 
         return $attempt > 0 ? min($attempt, 10) : 0;
+    }
+
+    /**
+     * @param array<string, mixed> $serviceDefinition
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeSupervisorStateFilePath(array $serviceDefinition, array $environment): ?string
+    {
+        $configured = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_SUPERVISOR_STATE_FILE'] ?? null;
+        if (is_string($configured) && trim($configured) !== '') {
+            return trim($configured);
+        }
+
+        $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
+        $statusFilePath = $artifacts['status_file_path'] ?? null;
+        if (!is_string($statusFilePath) || trim($statusFilePath) === '') {
+            return null;
+        }
+
+        $directory = dirname(trim($statusFilePath));
+        if ($directory === '' || $directory === '.' || $directory === DIRECTORY_SEPARATOR) {
+            return null;
+        }
+
+        return $directory . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime-supervisor.json';
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function readNativeRuntimeSupervisorState(?string $path): array
+    {
+        if ($path === null || !is_file($path)) {
+            return [];
+        }
+
+        $raw = file_get_contents($path);
+        if (!is_string($raw) || trim($raw) === '') {
+            return [];
+        }
+
+        try {
+            $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return [];
+        }
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * @param array<string, mixed> $state
+     */
+    private function writeNativeRuntimeSupervisorState(?string $path, array $state): void
+    {
+        if ($path === null) {
+            return;
+        }
+
+        $directory = dirname($path);
+        if (!is_dir($directory) && !@mkdir($directory, 0777, true) && !is_dir($directory)) {
+            return;
+        }
+
+        $encoded = json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        if ($encoded === false) {
+            return;
+        }
+
+        $temporaryPath = $path . '.tmp';
+        if (@file_put_contents($temporaryPath, $encoded . PHP_EOL) === false) {
+            return;
+        }
+
+        @rename($temporaryPath, $path);
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeAutoReactivationBackoffMilliseconds(array $environment): int
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_BACKOFF_MS'] ?? null;
+        if (!is_string($value) || preg_match('/^\d+$/', trim($value)) !== 1) {
+            return 250;
+        }
+
+        $milliseconds = (int) trim($value);
+
+        return $milliseconds >= 0 ? min($milliseconds, 10000) : 0;
     }
 
     private function resolveWindowsCmdBinary(): string

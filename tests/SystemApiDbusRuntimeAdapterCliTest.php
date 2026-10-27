@@ -549,6 +549,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
         $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
         $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+        $supervisorStatePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-supervisor.json';
         $environment = array_merge(
             $this->readyRuntimeEnvironment(),
             $this->nativeCompatibleBackendEnvironment(),
@@ -558,8 +559,10 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
                 'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
                 'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
                 'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_SUPERVISOR_STATE_FILE' => $supervisorStatePath,
                 'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE' => '1',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_MAX_ATTEMPTS' => '1',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_BACKOFF_MS' => '10',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_LAUNCH_OBSERVATION_TIMEOUT_MS' => '500',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_SUSTAINED_OBSERVATION_MS' => '100',
                 'W4_SYSTEM_API_FAKE_DBUS_WAIT_LOOP_MS' => '700',
@@ -583,7 +586,9 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             self::assertSame('observe-native-runtime-service-state', $servePayload['next_action']);
             self::assertSame(1, $servePayload['auto_reactivation']['attempt']);
             self::assertTrue($servePayload['auto_reactivation']['launched']);
+            self::assertSame($supervisorStatePath, $servePayload['auto_reactivation']['state_file_path']);
             self::assertGreaterThan(0, $servePayload['pid']);
+            self::assertFileExists($supervisorStatePath);
 
             $activeObservation = null;
             for ($attempt = 0; $attempt < 12; $attempt++) {
@@ -605,6 +610,117 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             self::assertSame('runtime-service-active', $activeObservation['next_action']);
 
             usleep(900000);
+        } finally {
+            $this->cleanupDirectory($baseDirectory);
+        }
+    }
+
+    public function testServeNativeRuntimeServiceSkipsAutoReactivationWhenDurableBudgetIsExhausted(): void
+    {
+        $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-native-runtime-reactivation-budget-' . bin2hex(random_bytes(6));
+        $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
+        $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
+        $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+        $supervisorStatePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-supervisor.json';
+        $environment = array_merge(
+            $this->readyRuntimeEnvironment(),
+            $this->nativeCompatibleBackendEnvironment(),
+            $this->nativeDbusExtensionDriverEnvironment(),
+            [
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusServiceOptionalBus',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_SUPERVISOR_STATE_FILE' => $supervisorStatePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE' => '1',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_MAX_ATTEMPTS' => '1',
+                'W4_SYSTEM_API_FAKE_DBUS_WAIT_LOOP_MS' => '120',
+            ]
+        );
+
+        try {
+            self::assertTrue(mkdir($baseDirectory, 0777, true) || is_dir($baseDirectory));
+            file_put_contents($supervisorStatePath, json_encode([
+                'api_version' => '1.0',
+                'kind' => 'system-api-dbus-native-runtime-supervisor-state',
+                'attempt_count' => 1,
+                'max_attempts' => 1,
+                'cooldown_until_epoch_ms' => 0,
+            ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+            $serve = $this->runPhpScript([
+                $this->scriptPath(),
+                'ServeNativeRuntimeService',
+            ], '', $environment);
+
+            self::assertSame(3, $serve['exitCode'], $serve['stderr']);
+
+            $servePayload = $this->decodeJson($serve['stdout']);
+            self::assertSame('system-api-dbus-native-runtime-observation', $servePayload['kind']);
+            self::assertSame('native-runtime-service-not-running', $servePayload['status']);
+            self::assertFalse($servePayload['observed']);
+            self::assertSame('reactivate-native-runtime-service', $servePayload['next_action']);
+            self::assertFalse($servePayload['auto_reactivation']['attempted']);
+            self::assertSame('native-runtime-auto-reactivation-budget-exhausted', $servePayload['auto_reactivation']['reason']);
+            self::assertSame(1, $servePayload['auto_reactivation']['attempt']);
+            self::assertSame($supervisorStatePath, $servePayload['auto_reactivation']['state_file_path']);
+            self::assertSame("0\n", file_get_contents($pidFilePath));
+        } finally {
+            $this->cleanupDirectory($baseDirectory);
+        }
+    }
+
+    public function testServeNativeRuntimeServiceSkipsAutoReactivationWhileCooldownIsActive(): void
+    {
+        $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-native-runtime-reactivation-cooldown-' . bin2hex(random_bytes(6));
+        $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
+        $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
+        $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+        $supervisorStatePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-supervisor.json';
+        $environment = array_merge(
+            $this->readyRuntimeEnvironment(),
+            $this->nativeCompatibleBackendEnvironment(),
+            $this->nativeDbusExtensionDriverEnvironment(),
+            [
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusServiceOptionalBus',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_SUPERVISOR_STATE_FILE' => $supervisorStatePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE' => '1',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_MAX_ATTEMPTS' => '2',
+                'W4_SYSTEM_API_FAKE_DBUS_WAIT_LOOP_MS' => '120',
+            ]
+        );
+
+        try {
+            self::assertTrue(mkdir($baseDirectory, 0777, true) || is_dir($baseDirectory));
+            $cooldownUntil = (int) floor(microtime(true) * 1000) + 5000;
+            file_put_contents($supervisorStatePath, json_encode([
+                'api_version' => '1.0',
+                'kind' => 'system-api-dbus-native-runtime-supervisor-state',
+                'attempt_count' => 1,
+                'max_attempts' => 2,
+                'cooldown_until_epoch_ms' => $cooldownUntil,
+            ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+            $serve = $this->runPhpScript([
+                $this->scriptPath(),
+                'ServeNativeRuntimeService',
+            ], '', $environment);
+
+            self::assertSame(3, $serve['exitCode'], $serve['stderr']);
+
+            $servePayload = $this->decodeJson($serve['stdout']);
+            self::assertSame('system-api-dbus-native-runtime-observation', $servePayload['kind']);
+            self::assertSame('native-runtime-service-not-running', $servePayload['status']);
+            self::assertFalse($servePayload['observed']);
+            self::assertSame('reactivate-native-runtime-service', $servePayload['next_action']);
+            self::assertFalse($servePayload['auto_reactivation']['attempted']);
+            self::assertSame('native-runtime-auto-reactivation-cooldown-active', $servePayload['auto_reactivation']['reason']);
+            self::assertSame($cooldownUntil, $servePayload['auto_reactivation']['cooldown_until_epoch_ms']);
+            self::assertSame($supervisorStatePath, $servePayload['auto_reactivation']['state_file_path']);
+            self::assertSame("0\n", file_get_contents($pidFilePath));
         } finally {
             $this->cleanupDirectory($baseDirectory);
         }
