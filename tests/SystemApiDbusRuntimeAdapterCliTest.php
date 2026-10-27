@@ -326,6 +326,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
                 'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
                 'W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE' => 'launch-process',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_KEEPALIVE_SECONDS' => '2',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_SUSTAINED_OBSERVATION_MS' => '150',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_REQUEST_NAME_STATE' => 'owned',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_REGISTER_OBJECT_STATE' => 'registered',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_WAIT_LOOP_STATE' => 'running',
@@ -357,6 +358,54 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             self::assertSame('native-runtime-bus-owned', $persistedStatus['status']);
             self::assertSame('bus-name-owned', $persistedStatus['ownership_state']);
             self::assertSame($payload['pid'], $persistedStatus['service_observation']['pid']);
+            self::assertGreaterThanOrEqual(150, $payload['sustained_observation_window_ms']);
+        } finally {
+            $this->cleanupDirectory($baseDirectory);
+        }
+    }
+
+    public function testStartNativeRuntimeServiceDoesNotPublishActiveStateBeforeSustainedObservationWindow(): void
+    {
+        $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-native-runtime-launch-sustained-' . bin2hex(random_bytes(6));
+        $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
+        $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
+        $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+        $environment = array_merge(
+            $this->readyRuntimeEnvironment(),
+            $this->nativeCompatibleBackendEnvironment(),
+            $this->nativeDbusExtensionDriverEnvironment(),
+            [
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusServiceOptionalBus',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE' => 'launch-process',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_LAUNCH_OBSERVATION_TIMEOUT_MS' => '800',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_SUSTAINED_OBSERVATION_MS' => '350',
+                'W4_SYSTEM_API_FAKE_DBUS_WAIT_LOOP_MS' => '120',
+            ]
+        );
+
+        try {
+            $startup = $this->runPhpScript([
+                $this->scriptPath(),
+                'StartNativeRuntimeService',
+            ], '', $environment);
+
+            self::assertSame(3, $startup['exitCode'], $startup['stderr']);
+
+            $startupPayload = $this->decodeJson($startup['stdout']);
+            self::assertSame('system-api-dbus-native-runtime-startup', $startupPayload['kind']);
+            self::assertSame('native-runtime-service-loop-exited', $startupPayload['status']);
+            self::assertFalse($startupPayload['launched']);
+            self::assertSame('startup-recorded-no-process', $startupPayload['ownership_state']);
+            self::assertSame('launch-native-runtime-service', $startupPayload['next_action']);
+
+            $persistedStatus = $this->decodeJson((string) file_get_contents($statusFilePath));
+            self::assertSame('native-runtime-service-loop-exited', $persistedStatus['status']);
+            self::assertSame('startup-recorded-no-process', $persistedStatus['ownership_state']);
+            self::assertSame('launch-native-runtime-service', $persistedStatus['next_action']);
+            self::assertSame("0\n", file_get_contents($pidFilePath));
         } finally {
             $this->cleanupDirectory($baseDirectory);
         }

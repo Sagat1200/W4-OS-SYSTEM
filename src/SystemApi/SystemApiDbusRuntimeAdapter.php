@@ -568,6 +568,8 @@ final class SystemApiDbusRuntimeAdapter
         }
 
         $deadline = microtime(true) + ($this->resolveNativeRuntimeLaunchObservationTimeoutMilliseconds($environment) / 1000);
+        $sustainedObservationWindowMilliseconds = $this->resolveNativeRuntimeLaunchSustainedObservationMilliseconds($environment);
+        $activeOwnershipObservedAt = null;
         do {
             $observation = $this->runtimeBackend->createNativeRuntimeServiceObservationReport($runtimeDiagnosis, $environment);
             $observedPid = is_int($observation['pid'] ?? null) ? $observation['pid'] : null;
@@ -576,7 +578,25 @@ final class SystemApiDbusRuntimeAdapter
                 : null;
 
             if ($observedPid === $pid && $ownershipState === 'bus-name-owned') {
-                return $this->mergeNativeRuntimeObservationIntoStartupReport($report, $observation);
+                $activeOwnershipObservedAt ??= microtime(true);
+                $elapsedMilliseconds = (int) floor((microtime(true) - $activeOwnershipObservedAt) * 1000);
+
+                if ($elapsedMilliseconds >= $sustainedObservationWindowMilliseconds) {
+                    return $this->mergeNativeRuntimeObservationIntoStartupReport(
+                        $report,
+                        $observation,
+                        $elapsedMilliseconds
+                    );
+                }
+            } else {
+                $activeOwnershipObservedAt = null;
+            }
+
+            if (($observation['status'] ?? null) === 'native-runtime-service-not-running') {
+                $terminatedReport = $this->captureTerminalObservationFromLaunchedRuntime($report, $runtimeDiagnosis, $environment);
+                if ($terminatedReport !== null) {
+                    return $terminatedReport;
+                }
             }
 
             if ($observedPid === $pid && ($observation['observed'] ?? false) === true) {
@@ -594,13 +614,20 @@ final class SystemApiDbusRuntimeAdapter
      * @param array<string, mixed> $observation
      * @return array<string, mixed>
      */
-    private function mergeNativeRuntimeObservationIntoStartupReport(array $report, array $observation): array
+    private function mergeNativeRuntimeObservationIntoStartupReport(
+        array $report,
+        array $observation,
+        int $sustainedObservationMilliseconds
+    ): array
     {
         $report['status'] = 'native-runtime-bus-owned';
         $report['ownership_state'] = 'bus-name-owned';
         $report['blocking_reason'] = null;
         $report['next_action'] = 'runtime-service-active';
-        $report['service_observation'] = $observation;
+        $report['service_observation'] = $observation + [
+            'sustained_observation_window_ms' => $sustainedObservationMilliseconds,
+        ];
+        $report['sustained_observation_window_ms'] = $sustainedObservationMilliseconds;
 
         if (is_array($report['service_definition'] ?? null)) {
             $report['service_definition']['startup_mode'] = 'launch-process';
@@ -824,6 +851,21 @@ final class SystemApiDbusRuntimeAdapter
         $milliseconds = (int) trim($value);
 
         return $milliseconds > 0 ? min($milliseconds, 5000) : 0;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeLaunchSustainedObservationMilliseconds(array $environment): int
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_SUSTAINED_OBSERVATION_MS'] ?? null;
+        if (!is_string($value) || preg_match('/^\d+$/', trim($value)) !== 1) {
+            return 150;
+        }
+
+        $milliseconds = (int) trim($value);
+
+        return $milliseconds > 0 ? min($milliseconds, 2000) : 0;
     }
 
     private function resolveWindowsCmdBinary(): string
