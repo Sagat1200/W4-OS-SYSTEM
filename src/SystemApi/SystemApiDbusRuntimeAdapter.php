@@ -127,7 +127,7 @@ final class SystemApiDbusRuntimeAdapter
             && $this->resolveNativeRuntimeStartupMode($environment) === 'launch-process'
         ) {
             $report = $this->launchNativeRuntimeServiceProcess($report, $runtimeDiagnosis, $environment);
-            if (($report['launched'] ?? false) !== true) {
+            if (($report['launched'] ?? false) !== true && ($report['terminal_observation_present'] ?? false) !== true) {
                 $this->runtimeBackend->persistNativeRuntimeStartupArtifacts($report);
             }
         }
@@ -138,6 +138,7 @@ final class SystemApiDbusRuntimeAdapter
     public function serveNativeRuntimeService(): string
     {
         $environment = $this->captureEnvironment();
+        $environment['W4_SYSTEM_API_NATIVE_RUNTIME_PERSIST_TERMINAL_STATE'] = '1';
         $runtimeDiagnosis = $this->runtimeProbe->createReport($environment);
         $startupReport = $this->runtimeBackend->createNativeRuntimeServiceStartupReport($runtimeDiagnosis, $environment);
 
@@ -168,7 +169,9 @@ final class SystemApiDbusRuntimeAdapter
         $this->runtimeBackend->persistNativeRuntimeStartupArtifacts($startupReport);
 
         $report = $this->runtimeBackend->createNativeBusOwnershipReport($runtimeDiagnosis, $environment);
-        $this->runtimeBackend->persistNativeRuntimeOwnershipArtifacts($report);
+        if (!$this->hasPersistedTerminalNativeRuntimeArtifacts($report)) {
+            $this->runtimeBackend->persistNativeRuntimeOwnershipArtifacts($report);
+        }
 
         $keepAliveSeconds = $this->resolveNativeRuntimeKeepAliveSeconds($environment);
         if ($keepAliveSeconds > 0) {
@@ -508,6 +511,11 @@ final class SystemApiDbusRuntimeAdapter
         $launched = $this->launchDetachedNativeRuntimeServiceProcess($environment);
         $pid = $pidFilePath !== null ? $this->waitForNativeRuntimePid($pidFilePath) : null;
         if (!$launched || $pid === null) {
+            $terminatedReport = $this->captureTerminalObservationFromLaunchedRuntime($report, $runtimeDiagnosis, $environment);
+            if ($terminatedReport !== null) {
+                return $terminatedReport;
+            }
+
             $report['status'] = 'native-runtime-service-launch-failed';
             $report['exit_code'] = 1;
             $report['ownership_state'] = 'startup-recorded-no-process';
@@ -599,6 +607,76 @@ final class SystemApiDbusRuntimeAdapter
             $report['service_definition']['blocking_reason'] = null;
             $report['service_definition']['next_action'] = 'runtime-service-active';
         }
+
+        return $report;
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     */
+    private function hasPersistedTerminalNativeRuntimeArtifacts(array $report): bool
+    {
+        $serviceDefinition = is_array($report['service_definition'] ?? null) ? $report['service_definition'] : [];
+        $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
+        $statusFilePath = is_string($artifacts['status_file_path'] ?? null) && trim((string) $artifacts['status_file_path']) !== ''
+            ? trim((string) $artifacts['status_file_path'])
+            : null;
+
+        if ($statusFilePath === null || !is_file($statusFilePath)) {
+            return false;
+        }
+
+        $rawStatus = file_get_contents($statusFilePath);
+        if (!is_string($rawStatus) || trim($rawStatus) === '') {
+            return false;
+        }
+
+        try {
+            $decodedStatus = json_decode($rawStatus, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return false;
+        }
+
+        if (!is_array($decodedStatus)) {
+            return false;
+        }
+
+        $status = is_string($decodedStatus['status'] ?? null)
+            ? trim((string) $decodedStatus['status'])
+            : null;
+
+        return in_array($status, ['native-runtime-service-loop-exited', 'native-runtime-wait-loop-failed'], true);
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, string> $environment
+     * @return array<string, mixed>|null
+     */
+    private function captureTerminalObservationFromLaunchedRuntime(
+        array $report,
+        array $runtimeDiagnosis,
+        array $environment
+    ): ?array {
+        $observation = $this->runtimeBackend->createNativeRuntimeServiceObservationReport($runtimeDiagnosis, $environment);
+        if (($observation['startup_acknowledged'] ?? false) !== true) {
+            return null;
+        }
+
+        if (($observation['status'] ?? null) !== 'native-runtime-service-not-running') {
+            return null;
+        }
+
+        $report['status'] = 'native-runtime-service-loop-exited';
+        $report['exit_code'] = 3;
+        $report['ownership_state'] = $observation['ownership_state'] ?? 'startup-recorded-no-process';
+        $report['blocking_reason'] = $observation['blocking_reason'] ?? 'native-runtime-service-not-running';
+        $report['next_action'] = $observation['next_action'] ?? 'launch-native-runtime-service';
+        $report['launch_mode'] = 'background-process';
+        $report['launched'] = false;
+        $report['service_observation'] = $observation;
+        $report['terminal_observation_present'] = true;
 
         return $report;
     }

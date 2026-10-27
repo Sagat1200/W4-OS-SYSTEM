@@ -362,6 +362,92 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         }
     }
 
+    public function testStartNativeRuntimeServiceDegradesArtifactsAfterNativeDriverLoopExits(): void
+    {
+        $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-native-runtime-launch-terminal-' . bin2hex(random_bytes(6));
+        $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
+        $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
+        $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+        $environment = array_merge(
+            $this->readyRuntimeEnvironment(),
+            $this->nativeCompatibleBackendEnvironment(),
+            $this->nativeDbusExtensionDriverEnvironment(),
+            [
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusServiceOptionalBus',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE' => 'launch-process',
+                'W4_SYSTEM_API_FAKE_DBUS_WAIT_LOOP_MS' => '250',
+            ]
+        );
+
+        try {
+            $startup = $this->runPhpScript([
+                $this->scriptPath(),
+                'StartNativeRuntimeService',
+            ], '', $environment);
+
+            self::assertContains($startup['exitCode'], [0, 3], $startup['stderr']);
+
+            $startupPayload = $this->decodeJson($startup['stdout']);
+            self::assertSame('system-api-dbus-native-runtime-startup', $startupPayload['kind']);
+            self::assertTrue($startupPayload['startup_acknowledged']);
+            self::assertContains(
+                $startupPayload['status'],
+                ['native-runtime-bus-owned', 'native-runtime-service-loop-exited']
+            );
+            if ($startupPayload['status'] === 'native-runtime-bus-owned') {
+                self::assertTrue($startupPayload['launched']);
+                self::assertSame('bus-name-owned', $startupPayload['ownership_state']);
+                self::assertSame('runtime-service-active', $startupPayload['next_action']);
+            } else {
+                self::assertFalse($startupPayload['launched']);
+                self::assertSame('startup-recorded-no-process', $startupPayload['ownership_state']);
+                self::assertSame('launch-native-runtime-service', $startupPayload['next_action']);
+            }
+
+            $observationPayload = null;
+            $observationExitCode = null;
+
+            for ($attempt = 0; $attempt < 20; $attempt++) {
+                usleep(50000);
+                $observation = $this->runPhpScript([
+                    $this->scriptPath(),
+                    'ObserveNativeRuntimeServiceState',
+                ], '', $environment);
+
+                $observationExitCode = $observation['exitCode'];
+                $decodedObservation = $this->decodeJson($observation['stdout']);
+                if (($decodedObservation['status'] ?? null) === 'native-runtime-service-not-running') {
+                    $observationPayload = $decodedObservation;
+                    break;
+                }
+            }
+
+            self::assertNotNull($observationPayload);
+            self::assertSame(3, $observationExitCode);
+            self::assertSame('system-api-dbus-native-runtime-observation', $observationPayload['kind']);
+            self::assertSame('native-runtime-service-not-running', $observationPayload['status']);
+            self::assertFalse($observationPayload['observed']);
+            self::assertTrue($observationPayload['startup_acknowledged']);
+            self::assertSame('startup-recorded-no-process', $observationPayload['ownership_state']);
+            self::assertSame('native-runtime-service-not-running', $observationPayload['blocking_reason']);
+            self::assertSame('launch-native-runtime-service', $observationPayload['next_action']);
+            self::assertSame("0\n", file_get_contents($pidFilePath));
+
+            $persistedStatus = $this->decodeJson((string) file_get_contents($statusFilePath));
+            self::assertContains(
+                $persistedStatus['status'],
+                ['native-runtime-service-loop-exited', 'native-runtime-service-not-running']
+            );
+            self::assertSame('startup-recorded-no-process', $persistedStatus['ownership_state']);
+            self::assertSame('launch-native-runtime-service', $persistedStatus['next_action']);
+        } finally {
+            $this->cleanupDirectory($baseDirectory);
+        }
+    }
+
     public function testStartNativeRuntimeServicePublishesActionableRecoveryWhenExtensionIsMissing(): void
     {
         $result = $this->runPhpScript([

@@ -118,6 +118,17 @@ final class FakeNativeDbusServiceOptionalBus
 
     public function waitLoop(): bool
     {
+        $delayMilliseconds = getenv('W4_SYSTEM_API_FAKE_DBUS_WAIT_LOOP_MS');
+        if (is_string($delayMilliseconds) && preg_match('/^\d+$/', trim($delayMilliseconds)) === 1) {
+            $resolvedDelay = (int) trim($delayMilliseconds);
+        } else {
+            $resolvedDelay = 100;
+        }
+
+        if ($resolvedDelay > 0) {
+            usleep($resolvedDelay * 1000);
+        }
+
         return true;
     }
 }

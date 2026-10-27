@@ -284,6 +284,17 @@ final class NativeDbusExtensionOwnershipDriver
             );
             $waitLoopResult = $waitLoopExecution['result'];
             if (($waitLoopExecution['ok'] ?? false) !== true) {
+                $this->persistTerminalRuntimeArtifacts(
+                    $serviceDefinition,
+                    $driver + [
+                        'wait_loop_signature' => $waitLoopSignature,
+                        'wait_loop_invocation_plan' => $waitLoopInvocationPlan['report'],
+                        'wait_loop_result' => false,
+                    ],
+                    'native-runtime-wait-loop-failed',
+                    'inspect-native-runtime-ownership-report',
+                    $environment
+                );
                 $this->writePhaseMarker($environment, 'wait-loop-failed');
                 return [
                     'request_name_state' => 'owned',
@@ -306,8 +317,26 @@ final class NativeDbusExtensionOwnershipDriver
                 'iterations' => $waitLoopExecution['iterations'] ?? 1,
                 'timeout_ms' => $waitLoopExecution['timeout_ms'] ?? 250,
             ];
+            $this->persistTerminalRuntimeArtifacts(
+                $serviceDefinition,
+                $driver,
+                'native-runtime-service-loop-exited',
+                'launch-native-runtime-service',
+                $environment
+            );
             $this->writePhaseMarker($environment, 'after-wait-loop');
         } catch (Throwable $exception) {
+            $this->persistTerminalRuntimeArtifacts(
+                $serviceDefinition,
+                $driver + [
+                    'wait_loop_signature' => $waitLoopSignature ?? null,
+                    'wait_loop_invocation_plan' => $waitLoopInvocationPlan['report'] ?? null,
+                    'error_message' => $exception->getMessage(),
+                ],
+                'native-runtime-wait-loop-failed',
+                'inspect-native-runtime-ownership-report',
+                $environment
+            );
             $this->writePhaseMarker($environment, 'wait-loop-exception');
             return [
                 'request_name_state' => 'owned',
@@ -438,6 +467,100 @@ final class NativeDbusExtensionOwnershipDriver
         if ($statusPayload !== false) {
             @file_put_contents($statusFilePath, $statusPayload . PHP_EOL);
         }
+    }
+
+    /**
+     * @param array<string, mixed> $serviceDefinition
+     * @param array<string, mixed> $driver
+     * @param array<string, string> $environment
+     */
+    private function persistTerminalRuntimeArtifacts(
+        array $serviceDefinition,
+        array $driver,
+        string $status,
+        string $nextAction,
+        array $environment
+    ): void {
+        if (!$this->shouldPersistTerminalRuntimeArtifacts($environment)) {
+            return;
+        }
+
+        $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
+        $readyMarkerPath = $this->resolveArtifactPath($artifacts, 'ready_marker_path');
+        $statusFilePath = $this->resolveArtifactPath($artifacts, 'status_file_path');
+        $pidFilePath = $this->resolveArtifactPath($artifacts, 'pid_file_path');
+
+        $resolvedServiceDefinition = $serviceDefinition;
+        $resolvedServiceDefinition['startup_mode'] = 'launch-process';
+        $resolvedServiceDefinition['blocking_reason'] = 'native-runtime-service-not-running';
+        $resolvedServiceDefinition['next_action'] = $nextAction;
+
+        if ($readyMarkerPath !== null) {
+            @file_put_contents($readyMarkerPath, "native-runtime-service-stopped\n");
+        }
+
+        if ($pidFilePath !== null) {
+            @file_put_contents($pidFilePath, "0\n");
+        }
+
+        if ($statusFilePath === null) {
+            return;
+        }
+
+        $blockingReason = $status === 'native-runtime-wait-loop-failed'
+            ? 'native-runtime-wait-loop-failed'
+            : 'native-runtime-service-not-running';
+
+        $statusPayload = json_encode([
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-native-runtime-observation',
+            'status' => $status,
+            'observed' => false,
+            'startup_acknowledged' => true,
+            'exit_code' => $status === 'native-runtime-wait-loop-failed' ? 1 : 3,
+            'bus_name' => $resolvedServiceDefinition['bus_name'] ?? 'org.w4.System1',
+            'object_path' => $resolvedServiceDefinition['object_path'] ?? '/org/w4/System1',
+            'interface' => $resolvedServiceDefinition['interface'] ?? 'org.w4.System1.Manager',
+            'service_definition' => $resolvedServiceDefinition,
+            'runtime_backend' => $resolvedServiceDefinition['runtime_backend'] ?? [],
+            'ownership_state' => 'startup-recorded-no-process',
+            'last_known_ownership_state' => 'bus-name-owned',
+            'pid' => 0,
+            'service_lifecycle' => [
+                'request_name' => [
+                    'required' => true,
+                    'state' => 'owned',
+                ],
+                'register_object' => [
+                    'required' => true,
+                    'state' => 'registered',
+                ],
+                'wait_loop' => [
+                    'required' => true,
+                    'state' => $status === 'native-runtime-wait-loop-failed' ? 'failed' : 'stopped',
+                ],
+            ],
+            'ownership_driver' => $driver + [
+                'mode' => 'native-driver',
+                'runtime_terminal_artifacts_persisted' => true,
+            ],
+            'blocking_reason' => $blockingReason,
+            'next_action' => $nextAction,
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+        if ($statusPayload !== false) {
+            @file_put_contents($statusFilePath, $statusPayload . PHP_EOL);
+        }
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function shouldPersistTerminalRuntimeArtifacts(array $environment): bool
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_PERSIST_TERMINAL_STATE'] ?? null;
+
+        return is_string($value) && in_array(strtolower(trim($value)), ['1', 'true', 'yes', 'on'], true);
     }
 
     private function putEnvironmentValue(string $key, string $value): void
