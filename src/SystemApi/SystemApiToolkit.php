@@ -1393,6 +1393,13 @@ final class SystemApiToolkit
             $resolvedService['next_action'] = trim((string) $observation['next_action']);
         }
 
+        if (is_array($observation['recovery_plan'] ?? null)) {
+            $resolvedService['recovery_plan'] = array_values(array_filter(
+                $observation['recovery_plan'],
+                static fn (mixed $candidate): bool => is_string($candidate) && trim($candidate) !== ''
+            ));
+        }
+
         return $resolvedService;
     }
 
@@ -1404,8 +1411,11 @@ final class SystemApiToolkit
     private function buildRuntimeRecoveryPlan(string $nextAction, ?array $nativeRuntimeService, array $fallbackPlan = []): array
     {
         $plan = [];
+        $nativeRuntimeServicePlan = is_array($nativeRuntimeService['recovery_plan'] ?? null)
+            ? $nativeRuntimeService['recovery_plan']
+            : [];
 
-        foreach ([$nextAction, $nativeRuntimeService['next_action'] ?? null, ...$fallbackPlan] as $candidate) {
+        foreach ([$nextAction, $nativeRuntimeService['next_action'] ?? null, ...$nativeRuntimeServicePlan, ...$fallbackPlan] as $candidate) {
             if (!is_string($candidate) || trim($candidate) === '' || in_array(trim($candidate), $plan, true)) {
                 continue;
             }

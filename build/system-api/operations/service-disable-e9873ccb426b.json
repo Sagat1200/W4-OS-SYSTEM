@@ -6,43 +6,46 @@
         "kind": "service-operation",
         "id": "ssh.service"
     },
-    "state": "succeeded",
-    "status": "ok",
+    "state": "failed",
+    "status": "failed",
     "cancel_requested": false,
     "cancelable": false,
     "progress": {
         "percent": 100,
-        "current_step": "observe-service-state"
+        "current_step": "inspect-service-state"
     },
     "result": {
         "kind": "system-api-service-operation",
-        "status": "ok",
+        "status": "failed",
         "backend": "systemctl",
         "action": "disable",
         "unit": "ssh.service",
         "operation_id": "service-disable-e9873ccb426b",
-        "state": "succeeded",
+        "state": "failed",
         "expected_revision": null,
-        "observed_revision_before": "8b50b765ce8968ea098e7598db957a262b36e209",
-        "observed_revision_after": "8b50b765ce8968ea098e7598db957a262b36e209",
+        "observed_revision_before": "8d7a368d85f0a22a12ce37135d8d87923ffb4fc9",
+        "observed_revision_after": "8d7a368d85f0a22a12ce37135d8d87923ffb4fc9",
         "command": "systemctl disable ssh.service",
-        "exit_code": 0,
+        "exit_code": 1,
         "stdout": "",
-        "stderr": "",
+        "stderr": "Access denied",
         "service": {
             "unit": "ssh.service",
             "description": "OpenBSD Secure Shell server",
             "load_state": "loaded",
-            "active_state": "inactive",
-            "sub_state": "dead",
-            "unit_file_state": "disabled",
+            "active_state": "active",
+            "sub_state": "running",
+            "unit_file_state": "enabled",
             "fragment_path": "/lib/systemd/system/ssh.service",
-            "revision": "8b50b765ce8968ea098e7598db957a262b36e209"
+            "revision": "8d7a368d85f0a22a12ce37135d8d87923ffb4fc9"
         },
-        "next_action": "observe-service-state"
+        "next_action": "inspect-service-state"
     },
-    "error": null,
-    "created_at": "2026-10-26T16:26:20+00:00",
-    "observed_at": "2026-10-26T16:26:20+00:00",
-    "completed_at": "2026-10-26T16:26:20+00:00"
+    "error": {
+        "code": "OPERATION_FAILED",
+        "message": "Access denied"
+    },
+    "created_at": "2026-10-27T07:31:28+00:00",
+    "observed_at": "2026-10-27T07:31:28+00:00",
+    "completed_at": "2026-10-27T07:31:28+00:00"
 }

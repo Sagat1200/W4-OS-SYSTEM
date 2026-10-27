@@ -1,9 +1,10 @@
 {
     "api_version": "1.0",
-    "kind": "system-api-dbus-native-runtime-startup",
-    "status": "native-runtime-service-launch-recorded",
+    "kind": "system-api-dbus-native-runtime-ownership",
+    "status": "native-runtime-bus-ownership-failed",
+    "attempted": true,
+    "exit_code": 1,
     "startup_acknowledged": true,
-    "exit_code": 0,
     "bus_name": "org.w4.System1",
     "object_path": "/org/w4/System1",
     "interface": "org.w4.System1.Manager",
@@ -17,7 +18,7 @@
         "object_path": "/org/w4/System1",
         "interface": "org.w4.System1.Manager",
         "startup_command": "StartNativeRuntimeService",
-        "startup_mode": "launch-process",
+        "startup_mode": "bootstrap-contract",
         "ownership_goal": "org.w4.System1",
         "service_lifecycle": "request-name-register-object-wait-loop",
         "artifacts": {
@@ -145,12 +146,6 @@
         },
         "blocking_reason": null
     },
-    "ownership_state": "pending-bus-name-ownership",
-    "blocking_reason": "native-runtime-bus-ownership-pending",
-    "next_action": "observe-native-runtime-service-state",
-    "launch_mode": "background-process",
-    "launched": true,
-    "pid": 15168,
     "service_observation": {
         "api_version": "1.0",
         "kind": "system-api-dbus-native-runtime-observation",
@@ -171,7 +166,7 @@
             "object_path": "/org/w4/System1",
             "interface": "org.w4.System1.Manager",
             "startup_command": "StartNativeRuntimeService",
-            "startup_mode": "launch-process",
+            "startup_mode": "bootstrap-contract",
             "ownership_goal": "org.w4.System1",
             "service_lifecycle": "request-name-register-object-wait-loop",
             "artifacts": {
@@ -300,6 +295,7 @@
             "blocking_reason": null
         },
         "ownership_state": "pending-bus-name-ownership",
+        "last_known_ownership_state": "pending-bus-name-ownership",
         "artifacts": {
             "ready_marker": {
                 "path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-runtime\\w4-system-api-native-runtime.ready",
@@ -414,8 +410,8 @@
                             },
                             "blocking_reason": null
                         },
-                        "blocking_reason": "native-runtime-service-not-started",
-                        "next_action": "start-native-runtime-service"
+                        "blocking_reason": "native-runtime-bus-ownership-pending",
+                        "next_action": "observe-native-runtime-service-state"
                     },
                     "runtime_backend": {
                         "kind": "system-api-dbus-runtime-backend",
@@ -461,15 +457,16 @@
                     "next_action": "observe-native-runtime-service-state",
                     "launch_mode": "background-process",
                     "launched": true,
-                    "pid": 15168
+                    "pid": 10356
                 },
                 "parse_error": null
             },
             "pid_file": {
                 "path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-runtime\\w4-system-api-native-runtime.pid",
                 "exists": true,
-                "pid": 15168,
-                "raw_value": "15168"
+                "pid": 10356,
+                "raw_value": "10356",
+                "is_running": false
             }
         },
         "startup_report": {
@@ -577,8 +574,8 @@
                     },
                     "blocking_reason": null
                 },
-                "blocking_reason": "native-runtime-service-not-started",
-                "next_action": "start-native-runtime-service"
+                "blocking_reason": "native-runtime-bus-ownership-pending",
+                "next_action": "observe-native-runtime-service-state"
             },
             "runtime_backend": {
                 "kind": "system-api-dbus-runtime-backend",
@@ -624,10 +621,41 @@
             "next_action": "observe-native-runtime-service-state",
             "launch_mode": "background-process",
             "launched": true,
-            "pid": 15168
+            "pid": 10356
         },
-        "pid": 15168,
+        "pid": 10356,
         "blocking_reason": "native-runtime-bus-ownership-pending",
-        "next_action": "materialize-native-bus-ownership"
-    }
+        "next_action": "materialize-native-bus-ownership",
+        "recovery_plan": [
+            "materialize-native-bus-ownership",
+            "launch-native-runtime-service",
+            "start-native-runtime-service"
+        ]
+    },
+    "execution_mode": "native-driver",
+    "ownership_driver": {
+        "runtime_class_name": "Dbus",
+        "mode": "native-driver",
+        "driver_class": "W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver",
+        "bootstrap_path": null,
+        "class_name": "W4\\OS\\SystemApi\\NativeDbusExtensionOwnershipDriver",
+        "available": true
+    },
+    "ownership_state": "native-runtime-ownership-failed",
+    "service_lifecycle": {
+        "request_name": {
+            "required": true,
+            "state": "failed"
+        },
+        "register_object": {
+            "required": true,
+            "state": "not-attempted"
+        },
+        "wait_loop": {
+            "required": true,
+            "state": "not-attempted"
+        }
+    },
+    "blocking_reason": "native-dbus-extension-class-unavailable",
+    "next_action": "inspect-native-runtime-ownership-report"
 }

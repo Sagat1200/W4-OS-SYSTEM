@@ -240,6 +240,75 @@ final class SystemApiDbusRuntimeBackendToolkitTest extends TestCase
             self::assertSame('startup-recorded-no-process', $report['ownership_state']);
             self::assertSame('native-runtime-service-not-running', $report['blocking_reason']);
             self::assertSame('launch-native-runtime-service', $report['next_action']);
+            self::assertSame(
+                ['launch-native-runtime-service', 'start-native-runtime-service'],
+                $report['recovery_plan']
+            );
+        } finally {
+            @unlink($readyMarkerPath);
+            @unlink($statusFilePath);
+            @unlink($pidFilePath);
+            @rmdir($baseDirectory);
+        }
+    }
+
+    public function testCreateNativeRuntimeServiceObservationReportPublishesReactivationPlanAfterLoopExit(): void
+    {
+        $toolkit = new SystemApiDbusRuntimeBackendToolkit();
+        $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-native-runtime-reactivate-' . bin2hex(random_bytes(6));
+        $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
+        $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
+        $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+
+        try {
+            self::assertTrue(mkdir($baseDirectory, 0777, true) || is_dir($baseDirectory));
+            file_put_contents($readyMarkerPath, "native-runtime-service-stopped\n");
+            file_put_contents($statusFilePath, json_encode([
+                'status' => 'native-runtime-service-loop-exited',
+                'startup_acknowledged' => true,
+                'ownership_state' => 'startup-recorded-no-process',
+                'last_known_ownership_state' => 'bus-name-owned',
+                'service_definition' => [
+                    'startup_mode' => 'launch-process',
+                    'blocking_reason' => 'native-runtime-service-not-running',
+                    'next_action' => 'launch-native-runtime-service',
+                ],
+                'next_action' => 'launch-native-runtime-service',
+            ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+            file_put_contents($pidFilePath, "0\n");
+
+            $report = $toolkit->createNativeRuntimeServiceObservationReport(
+                ['ready' => true],
+                [
+                    'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
+                    'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'Dbus',
+                    'W4_SYSTEM_API_NATIVE_DBUS_HAS_BUS_SYSTEM' => '1',
+                    'W4_SYSTEM_API_NATIVE_DBUS_HAS_REQUEST_NAME' => '1',
+                    'W4_SYSTEM_API_NATIVE_DBUS_HAS_REGISTER_OBJECT' => '1',
+                    'W4_SYSTEM_API_NATIVE_DBUS_HAS_WAIT_LOOP' => '1',
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
+                    'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+                ]
+            );
+
+            self::assertSame('system-api-dbus-native-runtime-observation', $report['kind']);
+            self::assertSame('native-runtime-service-not-running', $report['status']);
+            self::assertFalse($report['observed']);
+            self::assertTrue($report['startup_acknowledged']);
+            self::assertSame('startup-recorded-no-process', $report['ownership_state']);
+            self::assertSame('bus-name-owned', $report['last_known_ownership_state']);
+            self::assertSame('native-runtime-service-not-running', $report['blocking_reason']);
+            self::assertSame('reactivate-native-runtime-service', $report['next_action']);
+            self::assertSame(
+                [
+                    'reactivate-native-runtime-service',
+                    'inspect-native-runtime-service-report',
+                    'launch-native-runtime-service',
+                    'start-native-runtime-service',
+                ],
+                $report['recovery_plan']
+            );
         } finally {
             @unlink($readyMarkerPath);
             @unlink($statusFilePath);

@@ -22,7 +22,7 @@
         "unit": "ssh.service",
         "operation_id": "service-restart-fc5289cc39ac",
         "state": "succeeded",
-        "expected_revision": "8d7a368d85f0a22a12ce37135d8d87923ffb4fc9",
+        "expected_revision": null,
         "observed_revision_before": "8d7a368d85f0a22a12ce37135d8d87923ffb4fc9",
         "observed_revision_after": "8d7a368d85f0a22a12ce37135d8d87923ffb4fc9",
         "command": "systemctl restart ssh.service",
@@ -42,7 +42,7 @@
         "next_action": "observe-service-state"
     },
     "error": null,
-    "created_at": "2026-10-26T16:26:21+00:00",
-    "observed_at": "2026-10-26T16:26:21+00:00",
-    "completed_at": "2026-10-26T16:26:21+00:00"
+    "created_at": "2026-10-27T07:31:28+00:00",
+    "observed_at": "2026-10-27T07:31:28+00:00",
+    "completed_at": "2026-10-27T07:31:28+00:00"
 }

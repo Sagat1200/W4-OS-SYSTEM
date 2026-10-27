@@ -700,6 +700,9 @@ final class SystemApiDbusRuntimeAdapter
         $report['ownership_state'] = $observation['ownership_state'] ?? 'startup-recorded-no-process';
         $report['blocking_reason'] = $observation['blocking_reason'] ?? 'native-runtime-service-not-running';
         $report['next_action'] = $observation['next_action'] ?? 'launch-native-runtime-service';
+        $report['recovery_plan'] = is_array($observation['recovery_plan'] ?? null)
+            ? $observation['recovery_plan']
+            : ['launch-native-runtime-service', 'start-native-runtime-service'];
         $report['launch_mode'] = 'background-process';
         $report['launched'] = false;
         $report['service_observation'] = $observation;

@@ -399,7 +399,16 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             self::assertSame('native-runtime-service-loop-exited', $startupPayload['status']);
             self::assertFalse($startupPayload['launched']);
             self::assertSame('startup-recorded-no-process', $startupPayload['ownership_state']);
-            self::assertSame('launch-native-runtime-service', $startupPayload['next_action']);
+            self::assertSame('reactivate-native-runtime-service', $startupPayload['next_action']);
+            self::assertSame(
+                [
+                    'reactivate-native-runtime-service',
+                    'inspect-native-runtime-service-report',
+                    'launch-native-runtime-service',
+                    'start-native-runtime-service',
+                ],
+                $startupPayload['recovery_plan']
+            );
 
             $persistedStatus = $this->decodeJson((string) file_get_contents($statusFilePath));
             self::assertSame('native-runtime-service-loop-exited', $persistedStatus['status']);
@@ -453,7 +462,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             } else {
                 self::assertFalse($startupPayload['launched']);
                 self::assertSame('startup-recorded-no-process', $startupPayload['ownership_state']);
-                self::assertSame('launch-native-runtime-service', $startupPayload['next_action']);
+                self::assertSame('reactivate-native-runtime-service', $startupPayload['next_action']);
             }
 
             $observationPayload = null;
@@ -482,7 +491,16 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             self::assertTrue($observationPayload['startup_acknowledged']);
             self::assertSame('startup-recorded-no-process', $observationPayload['ownership_state']);
             self::assertSame('native-runtime-service-not-running', $observationPayload['blocking_reason']);
-            self::assertSame('launch-native-runtime-service', $observationPayload['next_action']);
+            self::assertSame('reactivate-native-runtime-service', $observationPayload['next_action']);
+            self::assertSame(
+                [
+                    'reactivate-native-runtime-service',
+                    'inspect-native-runtime-service-report',
+                    'launch-native-runtime-service',
+                    'start-native-runtime-service',
+                ],
+                $observationPayload['recovery_plan']
+            );
             self::assertSame("0\n", file_get_contents($pidFilePath));
 
             $persistedStatus = $this->decodeJson((string) file_get_contents($statusFilePath));

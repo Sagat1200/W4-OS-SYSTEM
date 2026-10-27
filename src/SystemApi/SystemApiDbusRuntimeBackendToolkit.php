@@ -150,6 +150,7 @@ final class SystemApiDbusRuntimeBackendToolkit
         $activeRuntimeProcess = $this->resolveBoolOverride($env, 'W4_SYSTEM_API_NATIVE_RUNTIME_ACTIVE') === true;
         $activeRuntimeOwnershipState = $this->resolveNativeRuntimeActiveOwnershipState($env);
         $ownershipState = $reportedOwnershipState;
+        $lastKnownOwnershipState = $this->resolveLastKnownNativeRuntimeOwnershipState($startupReport, $ownershipState);
         if ($activeRuntimeProcess && $activeRuntimeOwnershipState !== null) {
             $ownershipState = $activeRuntimeOwnershipState;
         }
@@ -196,12 +197,19 @@ final class SystemApiDbusRuntimeBackendToolkit
             : ($status === 'native-runtime-service-not-observed'
                 ? 'start-native-runtime-service'
                 : ($status === 'native-runtime-service-not-running'
-                    ? 'launch-native-runtime-service'
+                    ? ($this->shouldRecommendNativeRuntimeReactivation($startupReport, $lastKnownOwnershipState)
+                        ? 'reactivate-native-runtime-service'
+                        : 'launch-native-runtime-service')
                     : ($status === 'native-runtime-service-observation-incomplete'
                     ? 'inspect-native-runtime-service-artifacts'
                     : ($ownershipState === 'bus-name-owned'
                         ? 'runtime-service-active'
                         : 'materialize-native-bus-ownership'))));
+        $recoveryPlan = $this->buildNativeRuntimeObservationRecoveryPlan(
+            $status,
+            $nextAction,
+            $lastKnownOwnershipState
+        );
 
         return [
             'api_version' => '1.0',
@@ -216,6 +224,7 @@ final class SystemApiDbusRuntimeBackendToolkit
             'service_definition' => $serviceDefinition,
             'runtime_backend' => $serviceDefinition['runtime_backend'] ?? [],
             'ownership_state' => $ownershipState,
+            'last_known_ownership_state' => $lastKnownOwnershipState,
             'artifacts' => [
                 'ready_marker' => $readyMarker,
                 'status_file' => $statusFile,
@@ -225,7 +234,104 @@ final class SystemApiDbusRuntimeBackendToolkit
             'pid' => $pidFile['pid'] ?? null,
             'blocking_reason' => $blockingReason,
             'next_action' => $nextAction,
+            'recovery_plan' => $recoveryPlan,
         ];
+    }
+
+    /**
+     * @param array<string, mixed>|null $startupReport
+     */
+    private function resolveLastKnownNativeRuntimeOwnershipState(?array $startupReport, ?string $ownershipState): ?string
+    {
+        if (is_array($startupReport)
+            && is_string($startupReport['last_known_ownership_state'] ?? null)
+            && trim((string) $startupReport['last_known_ownership_state']) !== ''
+        ) {
+            return trim((string) $startupReport['last_known_ownership_state']);
+        }
+
+        if (is_string($ownershipState) && trim($ownershipState) !== '') {
+            return trim($ownershipState);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed>|null $startupReport
+     */
+    private function shouldRecommendNativeRuntimeReactivation(?array $startupReport, ?string $lastKnownOwnershipState): bool
+    {
+        if ($lastKnownOwnershipState === 'bus-name-owned') {
+            return true;
+        }
+
+        $status = is_array($startupReport) && is_string($startupReport['status'] ?? null)
+            ? trim((string) $startupReport['status'])
+            : null;
+
+        return in_array($status, [
+            'native-runtime-bus-owned',
+            'native-runtime-service-loop-exited',
+            'native-runtime-wait-loop-failed',
+        ], true);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildNativeRuntimeObservationRecoveryPlan(
+        string $status,
+        string $nextAction,
+        ?string $lastKnownOwnershipState
+    ): array {
+        $plan = [];
+        $candidates = match ($status) {
+            'native-runtime-service-observed-active' => [
+                $nextAction,
+                'reactivate-native-runtime-service',
+                'launch-native-runtime-service',
+                'start-native-runtime-service',
+            ],
+            'native-runtime-service-not-running' => $nextAction === 'reactivate-native-runtime-service'
+                ? [
+                    'reactivate-native-runtime-service',
+                    'inspect-native-runtime-service-report',
+                    'launch-native-runtime-service',
+                    'start-native-runtime-service',
+                ]
+                : [
+                    'launch-native-runtime-service',
+                    'start-native-runtime-service',
+                ],
+            'native-runtime-service-observation-incomplete' => [
+                'inspect-native-runtime-service-artifacts',
+                'launch-native-runtime-service',
+                'start-native-runtime-service',
+            ],
+            default => [
+                $nextAction,
+                $lastKnownOwnershipState === 'bus-name-owned'
+                    ? 'reactivate-native-runtime-service'
+                    : 'launch-native-runtime-service',
+                'start-native-runtime-service',
+            ],
+        };
+
+        foreach ($candidates as $candidate) {
+            if (!is_string($candidate) || trim($candidate) === '') {
+                continue;
+            }
+
+            $normalized = trim($candidate);
+            if (in_array($normalized, $plan, true)) {
+                continue;
+            }
+
+            $plan[] = $normalized;
+        }
+
+        return $plan;
     }
 
     /**
