@@ -1319,8 +1319,14 @@ final class SystemApiDbusRuntimeBackendToolkit
             throw new ValidationError(sprintf('No se pudo crear el directorio de artefacto %s', $directory));
         }
 
-        if (file_put_contents($path, $contents) === false) {
-            throw new ValidationError(sprintf('No se pudo escribir el artefacto %s', $path));
+        $tempPath = $path . '.tmp-' . bin2hex(random_bytes(6));
+        if (file_put_contents($tempPath, $contents) === false) {
+            throw new ValidationError(sprintf('No se pudo escribir el artefacto temporal %s', $tempPath));
+        }
+
+        if (!@rename($tempPath, $path)) {
+            @unlink($tempPath);
+            throw new ValidationError(sprintf('No se pudo reemplazar el artefacto %s', $path));
         }
     }
 }

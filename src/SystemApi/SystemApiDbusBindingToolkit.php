@@ -2514,8 +2514,15 @@ function writeArtifactFile(string $path, string $contents): void
         exit(1);
     }
 
-    if (file_put_contents($path, $contents) === false) {
-        fwrite(STDERR, sprintf("ERROR: No se pudo escribir el artefacto %s\n", $path));
+    $tempPath = $path . '.tmp-' . bin2hex(random_bytes(6));
+    if (file_put_contents($tempPath, $contents) === false) {
+        fwrite(STDERR, sprintf("ERROR: No se pudo escribir el artefacto temporal %s\n", $tempPath));
+        exit(1);
+    }
+
+    if (!@rename($tempPath, $path)) {
+        @unlink($tempPath);
+        fwrite(STDERR, sprintf("ERROR: No se pudo reemplazar el artefacto %s\n", $path));
         exit(1);
     }
 }

@@ -400,11 +400,11 @@ final class NativeDbusExtensionOwnershipDriver
         $resolvedServiceDefinition['next_action'] = 'runtime-service-active';
 
         if ($readyMarkerPath !== null) {
-            @file_put_contents($readyMarkerPath, "native-runtime-bus-owned\n");
+            $this->writeArtifactFile($readyMarkerPath, "native-runtime-bus-owned\n");
         }
 
         if ($pidFilePath !== null) {
-            @file_put_contents($pidFilePath, sprintf("%d\n", $resolvedPid));
+            $this->writeArtifactFile($pidFilePath, sprintf("%d\n", $resolvedPid));
         }
 
         if ($statusFilePath === null) {
@@ -465,7 +465,7 @@ final class NativeDbusExtensionOwnershipDriver
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
         if ($statusPayload !== false) {
-            @file_put_contents($statusFilePath, $statusPayload . PHP_EOL);
+            $this->writeArtifactFile($statusFilePath, $statusPayload . PHP_EOL);
         }
     }
 
@@ -496,11 +496,11 @@ final class NativeDbusExtensionOwnershipDriver
         $resolvedServiceDefinition['next_action'] = $nextAction;
 
         if ($readyMarkerPath !== null) {
-            @file_put_contents($readyMarkerPath, "native-runtime-service-stopped\n");
+            $this->writeArtifactFile($readyMarkerPath, "native-runtime-service-stopped\n");
         }
 
         if ($pidFilePath !== null) {
-            @file_put_contents($pidFilePath, "0\n");
+            $this->writeArtifactFile($pidFilePath, "0\n");
         }
 
         if ($statusFilePath === null) {
@@ -549,7 +549,7 @@ final class NativeDbusExtensionOwnershipDriver
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
         if ($statusPayload !== false) {
-            @file_put_contents($statusFilePath, $statusPayload . PHP_EOL);
+            $this->writeArtifactFile($statusFilePath, $statusPayload . PHP_EOL);
         }
     }
 
@@ -578,6 +578,24 @@ final class NativeDbusExtensionOwnershipDriver
         $value = $artifacts[$field] ?? null;
 
         return is_string($value) && trim($value) !== '' ? trim($value) : null;
+    }
+
+    private function writeArtifactFile(string $path, string $contents): void
+    {
+        $directory = dirname($path);
+        if ($directory !== '' && !is_dir($directory) && !mkdir($directory, 0777, true) && !is_dir($directory)) {
+            throw new RuntimeException(sprintf('No se pudo crear el directorio de artefacto %s', $directory));
+        }
+
+        $tempPath = $path . '.tmp-' . bin2hex(random_bytes(6));
+        if (file_put_contents($tempPath, $contents) === false) {
+            throw new RuntimeException(sprintf('No se pudo escribir el artefacto temporal %s', $tempPath));
+        }
+
+        if (!@rename($tempPath, $path)) {
+            @unlink($tempPath);
+            throw new RuntimeException(sprintf('No se pudo reemplazar el artefacto %s', $path));
+        }
     }
 
     /**
