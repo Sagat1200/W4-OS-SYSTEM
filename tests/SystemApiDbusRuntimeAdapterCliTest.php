@@ -543,6 +543,73 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertFalse($payload['service_definition']['native_backend_candidate']['native_runtime_api']['extension_loaded']);
     }
 
+    public function testServeNativeRuntimeServiceCanAutoReactivateAfterLoopExitWhenEnabled(): void
+    {
+        $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-native-runtime-auto-reactivate-' . bin2hex(random_bytes(6));
+        $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
+        $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
+        $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+        $environment = array_merge(
+            $this->readyRuntimeEnvironment(),
+            $this->nativeCompatibleBackendEnvironment(),
+            $this->nativeDbusExtensionDriverEnvironment(),
+            [
+                'W4_SYSTEM_API_NATIVE_DBUS_CLASS' => 'W4\\OS\\Tests\\Fixtures\\FakeNativeDbusServiceOptionalBus',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE' => '1',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_MAX_ATTEMPTS' => '1',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_LAUNCH_OBSERVATION_TIMEOUT_MS' => '500',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_SUSTAINED_OBSERVATION_MS' => '100',
+                'W4_SYSTEM_API_FAKE_DBUS_WAIT_LOOP_MS' => '700',
+            ]
+        );
+
+        try {
+            $serve = $this->runPhpScript([
+                $this->scriptPath(),
+                'ServeNativeRuntimeService',
+            ], '', $environment);
+
+            self::assertSame(0, $serve['exitCode'], $serve['stderr']);
+
+            $servePayload = $this->decodeJson($serve['stdout']);
+            self::assertSame('system-api-dbus-native-runtime-startup', $servePayload['kind']);
+            self::assertSame('native-runtime-service-reactivation-recorded', $servePayload['status']);
+            self::assertTrue($servePayload['startup_acknowledged']);
+            self::assertTrue($servePayload['launched']);
+            self::assertTrue($servePayload['reactivated']);
+            self::assertSame('observe-native-runtime-service-state', $servePayload['next_action']);
+            self::assertSame(1, $servePayload['auto_reactivation']['attempt']);
+            self::assertTrue($servePayload['auto_reactivation']['launched']);
+            self::assertGreaterThan(0, $servePayload['pid']);
+
+            $activeObservation = null;
+            for ($attempt = 0; $attempt < 12; $attempt++) {
+                usleep(50000);
+                $observation = $this->runPhpScript([
+                    $this->scriptPath(),
+                    'ObserveNativeRuntimeServiceState',
+                ], '', $environment);
+
+                $decodedObservation = $this->decodeJson($observation['stdout']);
+                if (($decodedObservation['status'] ?? null) === 'native-runtime-service-observed-active') {
+                    $activeObservation = $decodedObservation;
+                    break;
+                }
+            }
+
+            self::assertNotNull($activeObservation);
+            self::assertSame('bus-name-owned', $activeObservation['ownership_state']);
+            self::assertSame('runtime-service-active', $activeObservation['next_action']);
+
+            usleep(900000);
+        } finally {
+            $this->cleanupDirectory($baseDirectory);
+        }
+    }
+
     public function testObserveNativeRuntimeServiceStateReportsPendingOwnershipFromArtifacts(): void
     {
         $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-native-runtime-observe-cli-' . bin2hex(random_bytes(6));
