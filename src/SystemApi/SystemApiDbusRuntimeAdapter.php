@@ -587,7 +587,8 @@ final class SystemApiDbusRuntimeAdapter
                     return $this->mergeNativeRuntimeObservationIntoStartupReport(
                         $report,
                         $observation,
-                        $elapsedMilliseconds
+                        $elapsedMilliseconds,
+                        $environment
                     );
                 }
             } else {
@@ -619,7 +620,8 @@ final class SystemApiDbusRuntimeAdapter
     private function mergeNativeRuntimeObservationIntoStartupReport(
         array $report,
         array $observation,
-        int $sustainedObservationMilliseconds
+        int $sustainedObservationMilliseconds,
+        array $environment
     ): array
     {
         $report['status'] = 'native-runtime-bus-owned';
@@ -635,6 +637,17 @@ final class SystemApiDbusRuntimeAdapter
             $report['service_definition']['startup_mode'] = 'launch-process';
             $report['service_definition']['blocking_reason'] = null;
             $report['service_definition']['next_action'] = 'runtime-service-active';
+        }
+
+        $supervisorReset = $this->maybeResetNativeRuntimeSupervisorState(
+            is_array($report['service_definition'] ?? null) ? $report['service_definition'] : [],
+            $environment,
+            $sustainedObservationMilliseconds,
+            is_int($report['pid'] ?? null) ? (int) $report['pid'] : null,
+            'launch-stability-achieved'
+        );
+        if ($supervisorReset !== null) {
+            $report['supervisor_reset'] = $supervisorReset;
         }
 
         return $report;
@@ -1061,6 +1074,16 @@ final class SystemApiDbusRuntimeAdapter
         );
         $reactivationReport['service_observation'] = $observation;
         $reactivationReport['auto_reactivation'] = $reactivation;
+        $supervisorReset = $this->attemptStableSupervisorResetAfterReactivationLaunch(
+            $pid,
+            $runtimeDiagnosis,
+            $environment,
+            is_array($reactivationReport['service_definition'] ?? null) ? $reactivationReport['service_definition'] : []
+        );
+        if ($supervisorReset !== null) {
+            $reactivationReport['supervisor_reset'] = $supervisorReset;
+            $reactivationReport['auto_reactivation']['budget_reset'] = $supervisorReset;
+        }
 
         return $reactivationReport;
     }
@@ -1191,6 +1214,139 @@ final class SystemApiDbusRuntimeAdapter
         $milliseconds = (int) trim($value);
 
         return $milliseconds >= 0 ? min($milliseconds, 10000) : 0;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeAutoReactivationResetStabilityMilliseconds(array $environment): int
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_RESET_STABILITY_MS'] ?? null;
+        if (!is_string($value) || preg_match('/^\d+$/', trim($value)) !== 1) {
+            return 500;
+        }
+
+        $milliseconds = (int) trim($value);
+
+        return $milliseconds >= 0 ? min($milliseconds, 5000) : 0;
+    }
+
+    /**
+     * @param array<string, mixed> $serviceDefinition
+     * @param array<string, string> $environment
+     * @return array<string, mixed>|null
+     */
+    private function maybeResetNativeRuntimeSupervisorState(
+        array $serviceDefinition,
+        array $environment,
+        int $stableWindowMilliseconds,
+        ?int $pid,
+        string $trigger
+    ): ?array {
+        $thresholdMilliseconds = $this->resolveNativeRuntimeAutoReactivationResetStabilityMilliseconds($environment);
+        if ($stableWindowMilliseconds < $thresholdMilliseconds) {
+            return null;
+        }
+
+        $stateFilePath = $this->resolveNativeRuntimeSupervisorStateFilePath($serviceDefinition, $environment);
+        $state = $this->readNativeRuntimeSupervisorState($stateFilePath);
+        $attemptCount = is_int($state['attempt_count'] ?? null) ? (int) $state['attempt_count'] : 0;
+        if ($stateFilePath === null || $attemptCount <= 0) {
+            return null;
+        }
+
+        $resetState = [
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-native-runtime-supervisor-state',
+            'attempt_count' => 0,
+            'max_attempts' => is_int($state['max_attempts'] ?? null)
+                ? (int) $state['max_attempts']
+                : $this->resolveNativeRuntimeAutoReactivationMaxAttempts($environment),
+            'cooldown_backoff_ms' => is_int($state['cooldown_backoff_ms'] ?? null)
+                ? (int) $state['cooldown_backoff_ms']
+                : $this->resolveNativeRuntimeAutoReactivationBackoffMilliseconds($environment),
+            'last_attempt_epoch_ms' => is_int($state['last_attempt_epoch_ms'] ?? null)
+                ? (int) $state['last_attempt_epoch_ms']
+                : null,
+            'cooldown_until_epoch_ms' => 0,
+            'last_reset_epoch_ms' => (int) floor(microtime(true) * 1000),
+            'last_reset_reason' => 'native-runtime-stability-achieved',
+            'last_reset_trigger' => $trigger,
+            'last_stable_window_ms' => $stableWindowMilliseconds,
+            'reset_stability_threshold_ms' => $thresholdMilliseconds,
+            'last_successful_pid' => $pid,
+            'previous_attempt_count' => $attemptCount,
+        ];
+        $this->writeNativeRuntimeSupervisorState($stateFilePath, $resetState);
+
+        return [
+            'performed' => true,
+            'reason' => 'native-runtime-stability-achieved',
+            'trigger' => $trigger,
+            'previous_attempt_count' => $attemptCount,
+            'stable_window_ms' => $stableWindowMilliseconds,
+            'threshold_ms' => $thresholdMilliseconds,
+            'state_file_path' => $stateFilePath,
+            'pid' => $pid,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, string> $environment
+     * @param array<string, mixed> $serviceDefinition
+     * @return array<string, mixed>|null
+     */
+    private function attemptStableSupervisorResetAfterReactivationLaunch(
+        int $pid,
+        array $runtimeDiagnosis,
+        array $environment,
+        array $serviceDefinition
+    ): ?array {
+        $thresholdMilliseconds = $this->resolveNativeRuntimeAutoReactivationResetStabilityMilliseconds($environment);
+        if ($thresholdMilliseconds <= 0) {
+            return $this->maybeResetNativeRuntimeSupervisorState(
+                $serviceDefinition,
+                $environment,
+                0,
+                $pid,
+                'reactivation-stability-achieved'
+            );
+        }
+
+        $deadline = microtime(true) + ($this->resolveNativeRuntimeLaunchObservationTimeoutMilliseconds($environment) / 1000);
+        $activeOwnershipObservedAt = null;
+        do {
+            $observation = $this->runtimeBackend->createNativeRuntimeServiceObservationReport($runtimeDiagnosis, $environment);
+            $observedPid = is_int($observation['pid'] ?? null) ? (int) $observation['pid'] : null;
+            $ownershipState = is_string($observation['ownership_state'] ?? null)
+                ? trim((string) $observation['ownership_state'])
+                : null;
+
+            if ($observedPid === $pid && $ownershipState === 'bus-name-owned') {
+                $activeOwnershipObservedAt ??= microtime(true);
+                $elapsedMilliseconds = (int) floor((microtime(true) - $activeOwnershipObservedAt) * 1000);
+                if ($elapsedMilliseconds >= $thresholdMilliseconds) {
+                    return $this->maybeResetNativeRuntimeSupervisorState(
+                        $serviceDefinition,
+                        $environment,
+                        $elapsedMilliseconds,
+                        $pid,
+                        'reactivation-stability-achieved'
+                    );
+                }
+            } else {
+                $activeOwnershipObservedAt = null;
+            }
+
+            if (($observation['status'] ?? null) === 'native-runtime-service-not-running') {
+                return null;
+            }
+
+            usleep(50000);
+        } while (microtime(true) < $deadline);
+
+        return null;
     }
 
     private function resolveWindowsCmdBinary(): string

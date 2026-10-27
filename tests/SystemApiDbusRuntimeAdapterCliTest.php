@@ -317,6 +317,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
         $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
         $pidFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.pid';
+        $supervisorStatePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-supervisor.json';
         $environment = array_merge(
             $this->readyRuntimeEnvironment(),
             $this->nativeCompatibleBackendEnvironment(),
@@ -324,9 +325,11 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
                 'W4_SYSTEM_API_NATIVE_RUNTIME_READY_MARKER' => $readyMarkerPath,
                 'W4_SYSTEM_API_NATIVE_RUNTIME_STATUS_FILE' => $statusFilePath,
                 'W4_SYSTEM_API_NATIVE_RUNTIME_PID_FILE' => $pidFilePath,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_SUPERVISOR_STATE_FILE' => $supervisorStatePath,
                 'W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE' => 'launch-process',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_KEEPALIVE_SECONDS' => '2',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_SUSTAINED_OBSERVATION_MS' => '150',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_RESET_STABILITY_MS' => '150',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_REQUEST_NAME_STATE' => 'owned',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_REGISTER_OBJECT_STATE' => 'registered',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_WAIT_LOOP_STATE' => 'running',
@@ -334,6 +337,15 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         );
 
         try {
+            self::assertTrue(mkdir($baseDirectory, 0777, true) || is_dir($baseDirectory));
+            file_put_contents($supervisorStatePath, json_encode([
+                'api_version' => '1.0',
+                'kind' => 'system-api-dbus-native-runtime-supervisor-state',
+                'attempt_count' => 1,
+                'max_attempts' => 2,
+                'cooldown_until_epoch_ms' => 5000,
+            ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
             $result = $this->runPhpScript([
                 $this->scriptPath(),
                 'StartNativeRuntimeService',
@@ -359,6 +371,13 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             self::assertSame('bus-name-owned', $persistedStatus['ownership_state']);
             self::assertSame($payload['pid'], $persistedStatus['service_observation']['pid']);
             self::assertGreaterThanOrEqual(150, $payload['sustained_observation_window_ms']);
+            self::assertTrue($payload['supervisor_reset']['performed']);
+            self::assertSame('launch-stability-achieved', $payload['supervisor_reset']['trigger']);
+            self::assertSame($supervisorStatePath, $payload['supervisor_reset']['state_file_path']);
+            $supervisorState = $this->decodeJson((string) file_get_contents($supervisorStatePath));
+            self::assertSame(0, $supervisorState['attempt_count']);
+            self::assertSame('native-runtime-stability-achieved', $supervisorState['last_reset_reason']);
+            self::assertSame('launch-stability-achieved', $supervisorState['last_reset_trigger']);
         } finally {
             $this->cleanupDirectory($baseDirectory);
         }
@@ -563,6 +582,7 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
                 'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE' => '1',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_MAX_ATTEMPTS' => '1',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_BACKOFF_MS' => '10',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_RESET_STABILITY_MS' => '100',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_LAUNCH_OBSERVATION_TIMEOUT_MS' => '500',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_SUSTAINED_OBSERVATION_MS' => '100',
                 'W4_SYSTEM_API_FAKE_DBUS_WAIT_LOOP_MS' => '700',
@@ -589,6 +609,13 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             self::assertSame($supervisorStatePath, $servePayload['auto_reactivation']['state_file_path']);
             self::assertGreaterThan(0, $servePayload['pid']);
             self::assertFileExists($supervisorStatePath);
+            self::assertTrue($servePayload['supervisor_reset']['performed']);
+            self::assertSame('reactivation-stability-achieved', $servePayload['supervisor_reset']['trigger']);
+            self::assertSame($supervisorStatePath, $servePayload['supervisor_reset']['state_file_path']);
+            self::assertSame(
+                'reactivation-stability-achieved',
+                $servePayload['auto_reactivation']['budget_reset']['trigger']
+            );
 
             $activeObservation = null;
             for ($attempt = 0; $attempt < 12; $attempt++) {
@@ -608,6 +635,10 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             self::assertNotNull($activeObservation);
             self::assertSame('bus-name-owned', $activeObservation['ownership_state']);
             self::assertSame('runtime-service-active', $activeObservation['next_action']);
+            $supervisorState = $this->decodeJson((string) file_get_contents($supervisorStatePath));
+            self::assertSame(0, $supervisorState['attempt_count']);
+            self::assertSame('native-runtime-stability-achieved', $supervisorState['last_reset_reason']);
+            self::assertSame('reactivation-stability-achieved', $supervisorState['last_reset_trigger']);
 
             usleep(900000);
         } finally {

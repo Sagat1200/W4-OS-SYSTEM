@@ -457,15 +457,15 @@
                     "next_action": "observe-native-runtime-service-state",
                     "launch_mode": "background-process",
                     "launched": true,
-                    "pid": 7568
+                    "pid": 9092
                 },
                 "parse_error": null
             },
             "pid_file": {
                 "path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\native-runtime\\w4-system-api-native-runtime.pid",
                 "exists": true,
-                "pid": 7568,
-                "raw_value": "7568",
+                "pid": 9092,
+                "raw_value": "9092",
                 "is_running": false
             }
         },
@@ -621,9 +621,9 @@
             "next_action": "observe-native-runtime-service-state",
             "launch_mode": "background-process",
             "launched": true,
-            "pid": 7568
+            "pid": 9092
         },
-        "pid": 7568,
+        "pid": 9092,
         "blocking_reason": "native-runtime-bus-ownership-pending",
         "next_action": "materialize-native-bus-ownership",
         "recovery_plan": [
