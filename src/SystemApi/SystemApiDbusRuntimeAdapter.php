@@ -779,18 +779,23 @@ final class SystemApiDbusRuntimeAdapter
             ]
         );
         $environmentPrefix = $this->buildWindowsEnvironmentOverridePrefix($overrides);
-        $command = $this->resolveWindowsCmdBinary()
-            . ' /c "cd /d '
+        $command = 'cd /d '
             . $this->quoteCmdLiteral($this->rootDir)
             . ' && '
             . $environmentPrefix
             . 'start "" /B '
             . implode(' ', $phpCommand)
-            . ' >NUL 2>NUL"';
+            . ' >NUL 2>NUL';
 
-        shell_exec($command);
+        // Avoid shell_exec's extra shell and inherited output pipes keeping the launcher attached.
+        $process = proc_open($this->resolveWindowsCmdBinary() . ' /d /s /c "' . $command . '"', [
+            0 => ['file', 'NUL', 'r'],
+            1 => ['file', 'NUL', 'w'],
+            2 => ['file', 'NUL', 'w'],
+        ], $pipes, $this->rootDir, null, ['bypass_shell' => true]);
+        $launched = is_resource($process) && proc_close($process) === 0;
 
-        return true;
+        return $launched;
     }
 
     /**
@@ -1037,6 +1042,9 @@ final class SystemApiDbusRuntimeAdapter
         ]);
         $launched = $this->launchDetachedNativeRuntimeServiceProcess($environment, [
             'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_ATTEMPT' => (string) $nextAttempt,
+            // Ownership belongs to the failed process, never to its replacement.
+            'W4_SYSTEM_API_NATIVE_RUNTIME_ACTIVE' => '0',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_OWNERSHIP_STATE' => 'pending-bus-name-ownership',
         ]);
         $pid = $launched && $pidFilePath !== null ? $this->waitForNativeRuntimePid($pidFilePath) : null;
         $reactivation = $termination + [

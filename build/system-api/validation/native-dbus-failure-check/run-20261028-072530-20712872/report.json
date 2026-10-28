@@ -1,0 +1,20 @@
+{
+    "validated": false,
+    "checks": {
+        "native_extension": true,
+        "initial_capabilities": false,
+        "terminal_failure": false,
+        "penalty": false,
+        "cooldown_recorded": false,
+        "owner_replaced": false,
+        "capabilities_recovered": false,
+        "runtime_recovered": false,
+        "supervisor_reset": false
+    },
+    "kind": "native-dbus-private-bus-failure-check",
+    "evidence": {
+        "native_extension": true,
+        "owner_before": null,
+        "error": "No se observo owner inicial en el bus privado"
+    }
+}

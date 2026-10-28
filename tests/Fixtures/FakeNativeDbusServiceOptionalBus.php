@@ -28,6 +28,11 @@ final class FakeNativeDbusServiceOptionalBus
             throw new RuntimeException('El driver nativo no debe enviar flags inesperados');
         }
 
+        $auditPath = getenv('W4_SYSTEM_API_FAKE_DBUS_ACQUISITION_AUDIT');
+        if (is_string($auditPath) && $auditPath !== '') {
+            file_put_contents($auditPath, getmypid() . "\n", FILE_APPEND | LOCK_EX);
+        }
+
         return true;
     }
 

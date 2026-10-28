@@ -1,0 +1,1 @@
+dbus[13]: Unable to set up transient service directory: XDG_RUNTIME_DIR "/mnt/wslg/runtime-dir" can be written by others (mode 040777)

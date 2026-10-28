@@ -1,0 +1,21 @@
+{
+    "api_version": "1.0",
+    "kind": "system-api-dbus-native-runtime-supervisor-state",
+    "attempt_count": 0,
+    "termination_class": "wait-loop-failed",
+    "failure_backoff_multiplier": 3,
+    "max_attempts": 1,
+    "cooldown_backoff_base_ms": 1000,
+    "cooldown_backoff_multiplier": 1,
+    "cooldown_backoff_max_ms": 10000,
+    "cooldown_backoff_ms": 3000,
+    "last_attempt_epoch_ms": 1793172454085,
+    "cooldown_until_epoch_ms": 0,
+    "last_reset_epoch_ms": 1793172455706,
+    "last_reset_reason": "native-runtime-stability-achieved",
+    "last_reset_trigger": "reactivation-stability-achieved",
+    "last_stable_window_ms": 1012,
+    "reset_stability_threshold_ms": 1000,
+    "last_successful_pid": 44,
+    "previous_attempt_count": 1
+}
