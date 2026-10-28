@@ -191,7 +191,7 @@ final class NativeDbusServeDbusCheckWslRunnerCliTest extends TestCase
             $this->buildWslBashCommand($distribution, 'id -un') => $wslUser,
             $this->buildWslRootBashCommand(
                 $distribution,
-                $this->buildServeDbusCheckCommand($wslUser, $wslRepoRoot, $wslEvidenceDir, 4, true, 5)
+                $this->buildServeDbusCheckCommand($wslUser, $wslRepoRoot, $wslEvidenceDir, 12, true, 2)
             ) => [
                 'stdout' => $stdout,
                 'stderr' => '',

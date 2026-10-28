@@ -73,11 +73,13 @@ try {
     }
 
     if ($validateAutoReactivation && !$keepAliveExplicitlyProvided) {
-        $keepAliveSeconds = 4;
+        // The post-reactivation probe needs enough overlap with the relaunched runtime
+        // to distinguish real dispatch failures from keepalive expiry races.
+        $keepAliveSeconds = 12;
     }
 
     if ($validateAutoReactivation && $postReactivationWaitSeconds === null) {
-        $postReactivationWaitSeconds = max(5, min(45, $keepAliveSeconds + 1));
+        $postReactivationWaitSeconds = 2;
     }
 
     $resolvedDistribution = $distribution;
