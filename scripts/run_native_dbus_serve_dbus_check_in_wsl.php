@@ -19,6 +19,7 @@ $keepAliveSeconds = 20;
 $keepAliveExplicitlyProvided = false;
 $validateAutoReactivation = false;
 $postReactivationWaitSeconds = null;
+$reactivationCycles = 1;
 
 try {
     $arguments = $argv ?? [];
@@ -67,9 +68,21 @@ try {
                 $postReactivationWaitSeconds = max(0, min(45, (int) trim($value)));
                 break;
 
+            case '--reactivation-cycles':
+                if (preg_match('/^\d+$/', trim($value)) !== 1) {
+                    throw new ValidationError('--reactivation-cycles debe ser un entero positivo');
+                }
+
+                $reactivationCycles = max(1, min(5, (int) trim($value)));
+                break;
+
             default:
                 throw new ValidationError(sprintf('Argumento no soportado: %s', $argument));
         }
+    }
+
+    if ($reactivationCycles > 1 && !$validateAutoReactivation) {
+        throw new ValidationError('--reactivation-cycles > 1 requiere --validate-auto-reactivation=1');
     }
 
     if ($validateAutoReactivation && !$keepAliveExplicitlyProvided) {
@@ -102,72 +115,51 @@ try {
         throw new ValidationError('No se pudo determinar el usuario por defecto de la distribucion WSL');
     }
 
-    $callOutputPath = $evidenceDir . DIRECTORY_SEPARATOR . 'serve-dbus-call-output.txt';
-    $introspectionPath = $evidenceDir . DIRECTORY_SEPARATOR . 'gdbus-introspect.txt';
-    $launcherStdoutPath = $evidenceDir . DIRECTORY_SEPARATOR . 'serve-dbus-launcher-output.json';
-    $launcherStderrPath = $evidenceDir . DIRECTORY_SEPARATOR . 'serve-dbus-launcher-error.txt';
+    $artifactPaths = buildServeDbusCheckArtifactPaths($evidenceDir);
     $reportPath = $evidenceDir . DIRECTORY_SEPARATOR . 'serve-dbus-check-report.json';
     $summaryPath = $evidenceDir . DIRECTORY_SEPARATOR . 'serve-dbus-check-summary.md';
+    $cycleReports = [];
+    $lastCycleReport = null;
 
-    $rootBashCommand = buildServeDbusCheckCommand(
-        $wslUser,
-        $wslRepoRoot,
-        $wslEvidenceDir,
-        $keepAliveSeconds,
-        $validateAutoReactivation,
-        $postReactivationWaitSeconds ?? 0
-    );
-    $rootCommandResult = hasCommandFixturesConfigured()
-        ? runWslRootCommand($resolvedDistribution, $rootBashCommand)
-        : runWslRootScript($resolvedDistribution, $rootBashCommand);
+    for ($cycle = 1; $cycle <= $reactivationCycles; $cycle++) {
+        $cycleReport = executeServeDbusCheckCycle(
+            $resolvedDistribution,
+            $evidenceDir,
+            $wslUser,
+            $wslRepoRoot,
+            $wslEvidenceDir,
+            $keepAliveSeconds,
+            $validateAutoReactivation,
+            $postReactivationWaitSeconds ?? 0,
+            $artifactPaths
+        );
+        $archiveDir = $reactivationCycles > 1
+            ? archiveServeDbusCheckCycleArtifacts($evidenceDir, $cycle, $artifactPaths, $cycleReport)
+            : null;
+        $cycleReports[] = createCompactServeDbusCheckCycleReport($cycle, $cycleReport, $archiveDir);
+        $lastCycleReport = $cycleReport;
 
-    $stdout = trim($rootCommandResult['stdout']);
-    $stderr = trim($rootCommandResult['stderr']);
-    $busOwnerObserved = preg_match('/^org\.w4\.System1\b/m', $stdout) === 1;
-    $launcherCommandValidated = str_contains($stdout, '"requested_command": "serve-dbus"')
-        && str_contains($stdout, '"command": "StartNativeRuntimeService"');
-    $getCapabilitiesValidated = str_contains($stdout, 'dbus-launcher-capabilities')
-        && str_contains($stdout, '"method": "system.capabilities"');
-    $callValidated = str_contains($stdout, 'dbus-launcher-call')
-        && str_contains($stdout, '"method": "system.dbus-runtime"');
-    $postReactivationBusOwnerObserved = preg_match('/---POST-REACTIVATION-BUS-LIST---.*org\.w4\.System1/s', $stdout) === 1;
-    $postReactivationGetCapabilitiesValidated = str_contains($stdout, 'dbus-launcher-capabilities-reactivation');
-    $postReactivationCallValidated = str_contains($stdout, 'dbus-launcher-call-reactivation');
-    $postReactivationObservabilityValidated = $postReactivationBusOwnerObserved
-        && $postReactivationGetCapabilitiesValidated
-        && $postReactivationCallValidated;
-    $autoReactivationValidation = createAutoReactivationValidationReport(
-        $evidenceDir,
-        $validateAutoReactivation,
-        $postReactivationObservabilityValidated
-    );
-    $autoReactivationResetValidated = ($autoReactivationValidation['budget_reset_validated'] ?? false) === true;
-    $autoReactivationRuntimeActive = ($autoReactivationValidation['runtime_active_validated'] ?? false) === true;
-    $validated = $rootCommandResult['exit_code'] === 0
-        && $busOwnerObserved
-        && $launcherCommandValidated
-        && $getCapabilitiesValidated
-        && $callValidated
-        && (!$validateAutoReactivation || ($autoReactivationResetValidated && $autoReactivationRuntimeActive));
-
-    $combinedOutput = $stdout . "\n" . $stderr;
-    $blockingReason = null;
-    $nextAction = 'capture-serve-dbus-evidence';
-    if (!$validated) {
-        if (!$busOwnerObserved && str_contains($combinedOutput, 'ServiceUnknown')) {
-            $blockingReason = 'packaged-serve-dbus-owner-not-materialized';
-            $nextAction = 'inspect-packaged-serve-dbus-activation';
-        } elseif ($validateAutoReactivation && !$autoReactivationResetValidated) {
-            $blockingReason = 'native-dbus-auto-reactivation-reset-not-observed';
-            $nextAction = 'inspect-native-runtime-auto-reactivation';
-        } elseif ($validateAutoReactivation && !$autoReactivationRuntimeActive) {
-            $blockingReason = 'native-dbus-auto-reactivation-runtime-not-active';
-            $nextAction = 'inspect-native-runtime-auto-reactivation';
-        } else {
-            $blockingReason = 'native-dbus-serve-dbus-check-failed';
-            $nextAction = 'inspect-packaged-serve-dbus-activation';
+        if (($cycleReport['validated'] ?? false) !== true) {
+            break;
         }
     }
+
+    if (!is_array($lastCycleReport)) {
+        throw new ValidationError('No se pudo materializar ningun ciclo de validacion WSL');
+    }
+
+    $validated = ($lastCycleReport['validated'] ?? false) === true
+        && count($cycleReports) === $reactivationCycles;
+    $blockingReason = $validated
+        ? null
+        : (is_string($lastCycleReport['blocking_reason'] ?? null)
+            ? (string) $lastCycleReport['blocking_reason']
+            : 'native-dbus-serve-dbus-check-failed');
+    $nextAction = $validated
+        ? 'capture-serve-dbus-evidence'
+        : (is_string($lastCycleReport['next_action'] ?? null)
+            ? (string) $lastCycleReport['next_action']
+            : 'inspect-packaged-serve-dbus-activation');
 
     $report = [
         'api_version' => '1.0',
@@ -181,28 +173,22 @@ try {
         'wsl_repo_root' => $wslRepoRoot,
         'wsl_user' => $wslUser,
         'keepalive_seconds' => $keepAliveSeconds,
+        'reactivation_cycles_requested' => $reactivationCycles,
+        'reactivation_cycles_completed' => count($cycleReports),
         'auto_reactivation_validation_enabled' => $validateAutoReactivation,
         'post_reactivation_wait_seconds' => $validateAutoReactivation ? ($postReactivationWaitSeconds ?? 0) : 0,
         'report_path' => $reportPath,
         'summary_path' => $summaryPath,
-        'call_output_path' => $callOutputPath,
-        'introspection_path' => $introspectionPath,
-        'launcher_stdout_path' => $launcherStdoutPath,
-        'launcher_stderr_path' => $launcherStderrPath,
-        'checks' => [
-            'bus_owner_observed' => $busOwnerObserved,
-            'launcher_command_validated' => $launcherCommandValidated,
-            'get_capabilities_validated' => $getCapabilitiesValidated,
-            'call_validated' => $callValidated,
-            'post_reactivation_bus_owner_observed' => $postReactivationBusOwnerObserved,
-            'post_reactivation_get_capabilities_validated' => $postReactivationGetCapabilitiesValidated,
-            'post_reactivation_call_validated' => $postReactivationCallValidated,
-            'auto_reactivation_supervisor_state_observed' => ($autoReactivationValidation['supervisor_state_observed'] ?? false) === true,
-            'auto_reactivation_budget_reset_validated' => $autoReactivationResetValidated,
-            'auto_reactivation_runtime_active_validated' => $autoReactivationRuntimeActive,
-        ],
-        'auto_reactivation_validation' => $autoReactivationValidation,
-        'command_result' => $rootCommandResult,
+        'call_output_path' => $artifactPaths['call_output_path'],
+        'introspection_path' => $artifactPaths['introspection_path'],
+        'launcher_stdout_path' => $artifactPaths['launcher_stdout_path'],
+        'launcher_stderr_path' => $artifactPaths['launcher_stderr_path'],
+        'checks' => is_array($lastCycleReport['checks'] ?? null) ? $lastCycleReport['checks'] : [],
+        'auto_reactivation_validation' => is_array($lastCycleReport['auto_reactivation_validation'] ?? null)
+            ? $lastCycleReport['auto_reactivation_validation']
+            : ['enabled' => false],
+        'command_result' => is_array($lastCycleReport['command_result'] ?? null) ? $lastCycleReport['command_result'] : [],
+        'cycle_reports' => $cycleReports,
     ];
 
     writeJsonArtifact($reportPath, $report);
@@ -446,9 +432,217 @@ function writeTextArtifact(string $path, string $contents): void
     }
 }
 
+/**
+ * @return array<string, string>
+ */
+function buildServeDbusCheckArtifactPaths(string $evidenceDir): array
+{
+    return [
+        'call_output_path' => $evidenceDir . DIRECTORY_SEPARATOR . 'serve-dbus-call-output.txt',
+        'introspection_path' => $evidenceDir . DIRECTORY_SEPARATOR . 'gdbus-introspect.txt',
+        'launcher_stdout_path' => $evidenceDir . DIRECTORY_SEPARATOR . 'serve-dbus-launcher-output.json',
+        'launcher_stderr_path' => $evidenceDir . DIRECTORY_SEPARATOR . 'serve-dbus-launcher-error.txt',
+        'post_reactivation_introspection_path' => $evidenceDir . DIRECTORY_SEPARATOR . 'gdbus-post-reactivation-introspect.txt',
+        'post_reactivation_call_output_path' => $evidenceDir . DIRECTORY_SEPARATOR . 'serve-dbus-post-reactivation-call-output.txt',
+        'runtime_artifacts_dir' => $evidenceDir . DIRECTORY_SEPARATOR . 'runtime-artifacts',
+    ];
+}
+
 function quoteForSingleQuotedBash(string $value): string
 {
     return "'" . str_replace("'", "'\"'\"'", $value) . "'";
+}
+
+/**
+ * @param array<string, string> $artifactPaths
+ * @return array<string, mixed>
+ */
+function executeServeDbusCheckCycle(
+    string $resolvedDistribution,
+    string $evidenceDir,
+    string $wslUser,
+    string $wslRepoRoot,
+    string $wslEvidenceDir,
+    int $keepAliveSeconds,
+    bool $validateAutoReactivation,
+    int $postReactivationWaitSeconds,
+    array $artifactPaths
+): array {
+    $rootBashCommand = buildServeDbusCheckCommand(
+        $wslUser,
+        $wslRepoRoot,
+        $wslEvidenceDir,
+        $keepAliveSeconds,
+        $validateAutoReactivation,
+        $postReactivationWaitSeconds
+    );
+    $rootCommandResult = hasCommandFixturesConfigured()
+        ? runWslRootCommand($resolvedDistribution, $rootBashCommand)
+        : runWslRootScript($resolvedDistribution, $rootBashCommand);
+
+    $stdout = trim((string) ($rootCommandResult['stdout'] ?? ''));
+    $stderr = trim((string) ($rootCommandResult['stderr'] ?? ''));
+    $busOwnerObserved = preg_match('/^org\.w4\.System1\b/m', $stdout) === 1;
+    $launcherCommandValidated = str_contains($stdout, '"requested_command": "serve-dbus"')
+        && str_contains($stdout, '"command": "StartNativeRuntimeService"');
+    $getCapabilitiesValidated = str_contains($stdout, 'dbus-launcher-capabilities')
+        && str_contains($stdout, '"method": "system.capabilities"');
+    $callValidated = str_contains($stdout, 'dbus-launcher-call')
+        && str_contains($stdout, '"method": "system.dbus-runtime"');
+    $postReactivationBusOwnerObserved = preg_match('/---POST-REACTIVATION-BUS-LIST---.*org\.w4\.System1/s', $stdout) === 1;
+    $postReactivationGetCapabilitiesValidated = str_contains($stdout, 'dbus-launcher-capabilities-reactivation');
+    $postReactivationCallValidated = str_contains($stdout, 'dbus-launcher-call-reactivation');
+    $postReactivationObservabilityValidated = $postReactivationBusOwnerObserved
+        && $postReactivationGetCapabilitiesValidated
+        && $postReactivationCallValidated;
+    $autoReactivationValidation = createAutoReactivationValidationReport(
+        $evidenceDir,
+        $validateAutoReactivation,
+        $postReactivationObservabilityValidated
+    );
+    $autoReactivationResetValidated = ($autoReactivationValidation['budget_reset_validated'] ?? false) === true;
+    $autoReactivationRuntimeActive = ($autoReactivationValidation['runtime_active_validated'] ?? false) === true;
+    $validated = ($rootCommandResult['exit_code'] ?? 1) === 0
+        && $busOwnerObserved
+        && $launcherCommandValidated
+        && $getCapabilitiesValidated
+        && $callValidated
+        && (!$validateAutoReactivation || ($autoReactivationResetValidated && $autoReactivationRuntimeActive));
+
+    $combinedOutput = $stdout . "\n" . $stderr;
+    $blockingReason = null;
+    $nextAction = 'capture-serve-dbus-evidence';
+    if (!$validated) {
+        if (!$busOwnerObserved && str_contains($combinedOutput, 'ServiceUnknown')) {
+            $blockingReason = 'packaged-serve-dbus-owner-not-materialized';
+            $nextAction = 'inspect-packaged-serve-dbus-activation';
+        } elseif ($validateAutoReactivation && !$autoReactivationResetValidated) {
+            $blockingReason = 'native-dbus-auto-reactivation-reset-not-observed';
+            $nextAction = 'inspect-native-runtime-auto-reactivation';
+        } elseif ($validateAutoReactivation && !$autoReactivationRuntimeActive) {
+            $blockingReason = 'native-dbus-auto-reactivation-runtime-not-active';
+            $nextAction = 'inspect-native-runtime-auto-reactivation';
+        } else {
+            $blockingReason = 'native-dbus-serve-dbus-check-failed';
+            $nextAction = 'inspect-packaged-serve-dbus-activation';
+        }
+    }
+
+    return [
+        'status' => $validated ? 'validated' : 'blocked',
+        'validated' => $validated,
+        'exit_code' => $validated ? 0 : 3,
+        'blocking_reason' => $blockingReason,
+        'next_action' => $nextAction,
+        'call_output_path' => $artifactPaths['call_output_path'],
+        'introspection_path' => $artifactPaths['introspection_path'],
+        'launcher_stdout_path' => $artifactPaths['launcher_stdout_path'],
+        'launcher_stderr_path' => $artifactPaths['launcher_stderr_path'],
+        'checks' => [
+            'bus_owner_observed' => $busOwnerObserved,
+            'launcher_command_validated' => $launcherCommandValidated,
+            'get_capabilities_validated' => $getCapabilitiesValidated,
+            'call_validated' => $callValidated,
+            'post_reactivation_bus_owner_observed' => $postReactivationBusOwnerObserved,
+            'post_reactivation_get_capabilities_validated' => $postReactivationGetCapabilitiesValidated,
+            'post_reactivation_call_validated' => $postReactivationCallValidated,
+            'auto_reactivation_supervisor_state_observed' => ($autoReactivationValidation['supervisor_state_observed'] ?? false) === true,
+            'auto_reactivation_budget_reset_validated' => $autoReactivationResetValidated,
+            'auto_reactivation_runtime_active_validated' => $autoReactivationRuntimeActive,
+        ],
+        'auto_reactivation_validation' => $autoReactivationValidation,
+        'command_result' => $rootCommandResult,
+    ];
+}
+
+/**
+ * @param array<string, string> $artifactPaths
+ * @param array<string, mixed> $cycleReport
+ */
+function archiveServeDbusCheckCycleArtifacts(
+    string $evidenceDir,
+    int $cycle,
+    array $artifactPaths,
+    array $cycleReport
+): string {
+    $archiveDir = $evidenceDir . DIRECTORY_SEPARATOR . 'cycles' . DIRECTORY_SEPARATOR . sprintf('cycle-%02d', $cycle);
+    ensureDirectory($archiveDir);
+
+    $archiveMap = [
+        'serve-dbus-call-output.txt' => $artifactPaths['call_output_path'],
+        'gdbus-introspect.txt' => $artifactPaths['introspection_path'],
+        'serve-dbus-launcher-output.json' => $artifactPaths['launcher_stdout_path'],
+        'serve-dbus-launcher-error.txt' => $artifactPaths['launcher_stderr_path'],
+        'gdbus-post-reactivation-introspect.txt' => $artifactPaths['post_reactivation_introspection_path'],
+        'serve-dbus-post-reactivation-call-output.txt' => $artifactPaths['post_reactivation_call_output_path'],
+    ];
+
+    foreach ($archiveMap as $targetName => $sourcePath) {
+        if (is_file($sourcePath)) {
+            copyArtifactOrFail($sourcePath, $archiveDir . DIRECTORY_SEPARATOR . $targetName);
+        }
+    }
+
+    $runtimeArtifactsDir = $artifactPaths['runtime_artifacts_dir'];
+    if (is_dir($runtimeArtifactsDir)) {
+        copyDirectoryRecursively($runtimeArtifactsDir, $archiveDir . DIRECTORY_SEPARATOR . 'runtime-artifacts');
+    }
+
+    writeJsonArtifact($archiveDir . DIRECTORY_SEPARATOR . 'cycle-report.json', $cycleReport);
+    writeTextArtifact($archiveDir . DIRECTORY_SEPARATOR . 'cycle-summary.md', renderSummaryMarkdown($cycleReport));
+
+    return $archiveDir;
+}
+
+function copyArtifactOrFail(string $sourcePath, string $destinationPath): void
+{
+    ensureDirectory(dirname($destinationPath));
+    if (!copy($sourcePath, $destinationPath)) {
+        throw new ValidationError(sprintf('No se pudo copiar el artefacto %s hacia %s', $sourcePath, $destinationPath));
+    }
+}
+
+function copyDirectoryRecursively(string $sourceDir, string $destinationDir): void
+{
+    ensureDirectory($destinationDir);
+    $items = scandir($sourceDir);
+    if ($items === false) {
+        throw new ValidationError(sprintf('No se pudo leer el directorio: %s', $sourceDir));
+    }
+
+    foreach ($items as $item) {
+        if ($item === '.' || $item === '..') {
+            continue;
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . $item;
+        $destinationPath = $destinationDir . DIRECTORY_SEPARATOR . $item;
+
+        if (is_dir($sourcePath)) {
+            copyDirectoryRecursively($sourcePath, $destinationPath);
+            continue;
+        }
+
+        copyArtifactOrFail($sourcePath, $destinationPath);
+    }
+}
+
+/**
+ * @param array<string, mixed> $cycleReport
+ * @return array<string, mixed>
+ */
+function createCompactServeDbusCheckCycleReport(int $cycle, array $cycleReport, ?string $archiveDir): array
+{
+    return [
+        'cycle' => $cycle,
+        'status' => $cycleReport['status'] ?? 'blocked',
+        'validated' => ($cycleReport['validated'] ?? false) === true,
+        'exit_code' => $cycleReport['exit_code'] ?? 3,
+        'blocking_reason' => $cycleReport['blocking_reason'] ?? null,
+        'next_action' => $cycleReport['next_action'] ?? 'inspect-packaged-serve-dbus-activation',
+        'checks' => is_array($cycleReport['checks'] ?? null) ? $cycleReport['checks'] : [],
+        'archive_dir' => $archiveDir,
+    ];
 }
 
 function buildServeDbusCheckCommand(
@@ -669,6 +863,7 @@ function renderSummaryMarkdown(array $report): string
     $autoReactivation = is_array($report['auto_reactivation_validation'] ?? null)
         ? $report['auto_reactivation_validation']
         : ['enabled' => false];
+    $cycleReports = is_array($report['cycle_reports'] ?? null) ? $report['cycle_reports'] : [];
 
     $lines = [
         '# Native D-Bus Packaged serve-dbus Check in WSL',
@@ -680,6 +875,8 @@ function renderSummaryMarkdown(array $report): string
         '- WSL distribution: `' . (string) ($report['wsl_distribution'] ?? '') . '`',
         '- WSL repo root: `' . (string) ($report['wsl_repo_root'] ?? '') . '`',
         '- WSL user: `' . (string) ($report['wsl_user'] ?? '') . '`',
+        '- Reactivation cycles requested: `' . (string) ($report['reactivation_cycles_requested'] ?? 1) . '`',
+        '- Reactivation cycles completed: `' . (string) ($report['reactivation_cycles_completed'] ?? 1) . '`',
         '- Bus owner observed: `' . (($checks['bus_owner_observed'] ?? false) ? 'yes' : 'no') . '`',
         '- Launcher command validated: `' . (($checks['launcher_command_validated'] ?? false) ? 'yes' : 'no') . '`',
         '- GetCapabilities validated: `' . (($checks['get_capabilities_validated'] ?? false) ? 'yes' : 'no') . '`',
@@ -698,6 +895,23 @@ function renderSummaryMarkdown(array $report): string
     if (($autoReactivation['enabled'] ?? false) === true) {
         $lines[] = '- Supervisor state path: `' . (string) ($autoReactivation['supervisor_state_path'] ?? '') . '`';
         $lines[] = '- PID file path: `' . (string) ($autoReactivation['pid_file_path'] ?? '') . '`';
+        $lines[] = '';
+    }
+
+    if ($cycleReports !== []) {
+        $lines[] = '## Cycles';
+        $lines[] = '';
+
+        foreach ($cycleReports as $cycleReport) {
+            if (!is_array($cycleReport)) {
+                continue;
+            }
+
+            $lines[] = '- Cycle `' . (string) ($cycleReport['cycle'] ?? '?') . '`: `'
+                . (string) ($cycleReport['status'] ?? 'blocked')
+                . '`';
+        }
+
         $lines[] = '';
     }
 

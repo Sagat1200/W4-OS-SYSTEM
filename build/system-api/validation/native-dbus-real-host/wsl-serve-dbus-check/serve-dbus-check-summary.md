@@ -7,6 +7,8 @@
 - WSL distribution: `Ubuntu`
 - WSL repo root: `/mnt/c/W4/Packages/W4-OS SYSTEM`
 - WSL user: `sagat1200`
+- Reactivation cycles requested: `2`
+- Reactivation cycles completed: `2`
 - Bus owner observed: `yes`
 - Launcher command validated: `yes`
 - GetCapabilities validated: `yes`
@@ -22,4 +24,9 @@
 
 - Supervisor state path: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-serve-dbus-check\runtime-artifacts\w4-system-api-native-runtime-supervisor.json`
 - PID file path: `C:\W4\Packages\W4-OS SYSTEM\build\system-api\validation\native-dbus-real-host\wsl-serve-dbus-check\runtime-artifacts\w4-system-api-native-runtime.pid`
+
+## Cycles
+
+- Cycle `1`: `validated`
+- Cycle `2`: `validated`
 
