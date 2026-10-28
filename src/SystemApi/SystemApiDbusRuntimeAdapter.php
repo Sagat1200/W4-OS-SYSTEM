@@ -975,12 +975,21 @@ final class SystemApiDbusRuntimeAdapter
         $stateFilePath = $this->resolveNativeRuntimeSupervisorStateFilePath($serviceDefinition, $environment);
         $state = $this->readNativeRuntimeSupervisorState($stateFilePath);
         $effectiveAttempt = max($currentAttempt, is_int($state['attempt_count'] ?? null) ? (int) $state['attempt_count'] : 0);
-        $cooldownPlan = $this->resolveNativeRuntimeAutoReactivationCooldownPlan($effectiveAttempt, $environment);
+        $terminalStatus = $observation['startup_report']['status'] ?? null;
+        $cooldownPlan = $this->resolveNativeRuntimeAutoReactivationCooldownPlan(
+            $effectiveAttempt,
+            $environment,
+            is_string($terminalStatus) ? $terminalStatus : null
+        );
+        $termination = [
+            'termination_class' => $cooldownPlan['termination_class'],
+            'failure_backoff_multiplier' => $cooldownPlan['failure_backoff_multiplier'],
+        ];
         $cooldownMilliseconds = $cooldownPlan['cooldown_backoff_ms'];
         $cooldownUntil = is_int($state['cooldown_until_epoch_ms'] ?? null) ? (int) $state['cooldown_until_epoch_ms'] : 0;
         $now = (int) floor(microtime(true) * 1000);
         if ($cooldownUntil > $now) {
-            $observation['auto_reactivation'] = [
+            $observation['auto_reactivation'] = $termination + [
                 'enabled' => true,
                 'attempted' => false,
                 'attempt' => $effectiveAttempt,
@@ -998,7 +1007,7 @@ final class SystemApiDbusRuntimeAdapter
         }
 
         if ($effectiveAttempt >= $maxAttempts) {
-            $observation['auto_reactivation'] = [
+            $observation['auto_reactivation'] = $termination + [
                 'enabled' => true,
                 'attempted' => false,
                 'attempt' => $effectiveAttempt,
@@ -1012,7 +1021,7 @@ final class SystemApiDbusRuntimeAdapter
 
         $nextAttempt = $effectiveAttempt + 1;
         $nextCooldownUntil = $now + $cooldownMilliseconds;
-        $this->writeNativeRuntimeSupervisorState($stateFilePath, [
+        $this->writeNativeRuntimeSupervisorState($stateFilePath, $termination + [
             'api_version' => '1.0',
             'kind' => 'system-api-dbus-native-runtime-supervisor-state',
             'attempt_count' => $nextAttempt,
@@ -1030,7 +1039,7 @@ final class SystemApiDbusRuntimeAdapter
             'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_ATTEMPT' => (string) $nextAttempt,
         ]);
         $pid = $launched && $pidFilePath !== null ? $this->waitForNativeRuntimePid($pidFilePath) : null;
-        $reactivation = [
+        $reactivation = $termination + [
             'enabled' => true,
             'attempted' => true,
             'attempt' => $nextAttempt,
@@ -1259,13 +1268,29 @@ final class SystemApiDbusRuntimeAdapter
 
     /**
      * @param array<string, string> $environment
-     * @return array{cooldown_backoff_base_ms: int, cooldown_backoff_multiplier: int, cooldown_backoff_max_ms: int, cooldown_backoff_ms: int}
+     * @return array{cooldown_backoff_base_ms: int, cooldown_backoff_multiplier: int, cooldown_backoff_max_ms: int, cooldown_backoff_ms: int, termination_class: string, failure_backoff_multiplier: int}
      */
-    private function resolveNativeRuntimeAutoReactivationCooldownPlan(int $effectiveAttempt, array $environment): array
-    {
+    private function resolveNativeRuntimeAutoReactivationCooldownPlan(
+        int $effectiveAttempt,
+        array $environment,
+        ?string $terminalStatus = null
+    ): array {
         $baseBackoff = $this->resolveNativeRuntimeAutoReactivationBackoffMilliseconds($environment);
         $multiplier = $this->resolveNativeRuntimeAutoReactivationBackoffMultiplier($environment);
         $maximumBackoff = max($baseBackoff, $this->resolveNativeRuntimeAutoReactivationMaxBackoffMilliseconds($environment));
+        $terminationClass = match ($terminalStatus) {
+            'native-runtime-wait-loop-failed' => 'wait-loop-failed',
+            'native-runtime-service-loop-exited' => 'loop-exited',
+            default => 'unknown',
+        };
+        $failureMultiplier = 1;
+        $configured = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_FAILURE_BACKOFF_MULTIPLIER'] ?? null;
+        if ($terminationClass === 'wait-loop-failed'
+            && is_string($configured)
+            && preg_match('/^\d+$/', trim($configured)) === 1
+        ) {
+            $failureMultiplier = max(1, min(10, (int) trim($configured)));
+        }
         $cooldown = $baseBackoff;
 
         for ($attempt = 1; $attempt < max(1, $effectiveAttempt + 1); $attempt++) {
@@ -1276,10 +1301,12 @@ final class SystemApiDbusRuntimeAdapter
         }
 
         return [
+            'termination_class' => $terminationClass,
+            'failure_backoff_multiplier' => $failureMultiplier,
             'cooldown_backoff_base_ms' => $baseBackoff,
             'cooldown_backoff_multiplier' => $multiplier,
             'cooldown_backoff_max_ms' => $maximumBackoff,
-            'cooldown_backoff_ms' => $cooldown,
+            'cooldown_backoff_ms' => min($maximumBackoff, $cooldown * $failureMultiplier),
         ];
     }
 
@@ -1326,6 +1353,9 @@ final class SystemApiDbusRuntimeAdapter
             'api_version' => '1.0',
             'kind' => 'system-api-dbus-native-runtime-supervisor-state',
             'attempt_count' => 0,
+            // Retain the cause of the previous attempt as history, not current health.
+            'termination_class' => $state['termination_class'] ?? 'unknown',
+            'failure_backoff_multiplier' => $state['failure_backoff_multiplier'] ?? 1,
             'max_attempts' => is_int($state['max_attempts'] ?? null)
                 ? (int) $state['max_attempts']
                 : $this->resolveNativeRuntimeAutoReactivationMaxAttempts($environment),

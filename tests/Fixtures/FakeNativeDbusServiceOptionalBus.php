@@ -129,6 +129,17 @@ final class FakeNativeDbusServiceOptionalBus
             usleep($resolvedDelay * 1000);
         }
 
+        // Fail only the initial process so the relaunched child can stabilize.
+        if ((int) getenv('W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_ATTEMPT') === 0) {
+            $outcome = getenv('W4_SYSTEM_API_FAKE_DBUS_INITIAL_LOOP_OUTCOME');
+            if ($outcome === 'throw') {
+                throw new RuntimeException('Synthetic initial waitLoop failure');
+            }
+            if ($outcome === 'false') {
+                return false;
+            }
+        }
+
         return true;
     }
 }

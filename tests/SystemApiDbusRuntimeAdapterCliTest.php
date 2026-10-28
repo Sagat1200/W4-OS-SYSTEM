@@ -562,8 +562,29 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
         self::assertFalse($payload['service_definition']['native_backend_candidate']['native_runtime_api']['extension_loaded']);
     }
 
-    public function testServeNativeRuntimeServiceCanAutoReactivateAfterLoopExitWhenEnabled(): void
+    public static function terminationPolicyCases(): array
     {
+        return [
+            'normal-default' => ['true', '', '10000', 'loop-exited', 1, 10],
+            'normal-not-penalized' => ['true', '4', '10000', 'loop-exited', 1, 10],
+            'failure-default' => ['false', '', '10000', 'wait-loop-failed', 1, 10],
+            'failure-penalized' => ['false', '3', '10000', 'wait-loop-failed', 3, 30],
+            'exception-capped' => ['throw', '3', '20', 'wait-loop-failed', 3, 20],
+            'invalid-fallback' => ['false', 'invalid', '10000', 'wait-loop-failed', 1, 10],
+            'zero-fallback' => ['false', '0', '10000', 'wait-loop-failed', 1, 10],
+            'multiplier-bounded' => ['false', '999', '10000', 'wait-loop-failed', 10, 100],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('terminationPolicyCases')]
+    public function testServeNativeRuntimeServiceCanAutoReactivateAfterLoopExitWhenEnabled(
+        string $outcome,
+        string $failureMultiplier,
+        string $maximumBackoff,
+        string $expectedClass,
+        int $expectedMultiplier,
+        int $expectedBackoff
+    ): void {
         $baseDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'w4-native-runtime-auto-reactivate-' . bin2hex(random_bytes(6));
         $readyMarkerPath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime.ready';
         $statusFilePath = $baseDirectory . DIRECTORY_SEPARATOR . 'runtime-status.json';
@@ -582,10 +603,13 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
                 'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE' => '1',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_MAX_ATTEMPTS' => '1',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_BACKOFF_MS' => '10',
+                'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_FAILURE_BACKOFF_MULTIPLIER' => $failureMultiplier,
+                'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_MAX_BACKOFF_MS' => $maximumBackoff,
                 'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_RESET_STABILITY_MS' => '100',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_LAUNCH_OBSERVATION_TIMEOUT_MS' => '500',
                 'W4_SYSTEM_API_NATIVE_RUNTIME_SUSTAINED_OBSERVATION_MS' => '100',
                 'W4_SYSTEM_API_FAKE_DBUS_WAIT_LOOP_MS' => '700',
+                'W4_SYSTEM_API_FAKE_DBUS_INITIAL_LOOP_OUTCOME' => $outcome,
             ]
         );
 
@@ -605,6 +629,9 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             self::assertTrue($servePayload['reactivated']);
             self::assertSame('observe-native-runtime-service-state', $servePayload['next_action']);
             self::assertSame(1, $servePayload['auto_reactivation']['attempt']);
+            self::assertSame($expectedClass, $servePayload['auto_reactivation']['termination_class']);
+            self::assertSame($expectedMultiplier, $servePayload['auto_reactivation']['failure_backoff_multiplier']);
+            self::assertSame($expectedBackoff, $servePayload['auto_reactivation']['cooldown_backoff_ms']);
             self::assertTrue($servePayload['auto_reactivation']['launched']);
             self::assertSame($supervisorStatePath, $servePayload['auto_reactivation']['state_file_path']);
             self::assertGreaterThan(0, $servePayload['pid']);
@@ -639,6 +666,10 @@ final class SystemApiDbusRuntimeAdapterCliTest extends TestCase
             self::assertSame(0, $supervisorState['attempt_count']);
             self::assertSame('native-runtime-stability-achieved', $supervisorState['last_reset_reason']);
             self::assertSame('reactivation-stability-achieved', $supervisorState['last_reset_trigger']);
+            self::assertSame($expectedClass, $supervisorState['termination_class']);
+            self::assertSame($expectedMultiplier, $supervisorState['failure_backoff_multiplier']);
+            self::assertSame($expectedBackoff, $supervisorState['cooldown_backoff_ms']);
+            self::assertSame(0, $supervisorState['cooldown_until_epoch_ms']);
 
             usleep(900000);
         } finally {
