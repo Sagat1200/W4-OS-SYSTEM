@@ -93,4 +93,50 @@ final class NativeDbusFailureCheckTest extends TestCase
         self::assertSame([], \nativeDbusFailureDecode(['exit_code' => 0, 'stdout' => "('invalid json',)"]));
         self::assertSame([], \nativeDbusFailureDecode(['exit_code' => 0, 'stdout' => '{}']));
     }
+
+    private function rejectionEvidence(): array
+    {
+        $evidence = $this->evidence();
+        $evidence['owner_after'] = $evidence['owner_before'];
+        $evidence['parent_running'] = true;
+        $evidence['supervisor_absent'] = true;
+        foreach (\nativeDbusInvalidArgumentCases() as $label => $case) {
+            $evidence['rejections'][$label] = [
+                'api_version' => '1.0',
+                'request_id' => 'invalid-request',
+                'result' => null,
+                'error' => ['code' => 'VALIDATION_ERROR', 'retryable' => false],
+            ];
+        }
+        return $evidence;
+    }
+
+    public function testRejectionRequiresEveryMalformedCallResponse(): void
+    {
+        self::assertCount(10, \nativeDbusInvalidArgumentCases());
+        self::assertTrue(\validateNativeDbusRejectionEvidence($this->rejectionEvidence())['validated']);
+        foreach (\nativeDbusInvalidArgumentCases() as $label => $case) {
+            $evidence = $this->rejectionEvidence();
+            unset($evidence['rejections'][$label]);
+            self::assertFalse(\validateNativeDbusRejectionEvidence($evidence)['validated'], $label);
+        }
+    }
+
+    public function testRejectionRequiresContinuityRatherThanSuccessfulRecovery(): void
+    {
+        foreach ([
+            ['owner_after', "(':1.99',)"],
+            ['parent_running', false],
+            ['supervisor_absent', false],
+            ['after', []],
+            ['runtime', []],
+        ] as [$key, $value]) {
+            $evidence = $this->rejectionEvidence();
+            $evidence[$key] = $value;
+            self::assertFalse(\validateNativeDbusRejectionEvidence($evidence)['validated'], $key);
+        }
+        $evidence = $this->rejectionEvidence();
+        $evidence['rejections']['Call-array']['error']['code'] = 'INTERNAL_ERROR';
+        self::assertFalse(\validateNativeDbusRejectionEvidence($evidence)['validated']);
+    }
 }

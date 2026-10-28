@@ -3,9 +3,10 @@
 declare(strict_types=1);
 
 /**
- * This probe uses a private bus: never send the malformed call to the host bus.
+ * This rejection probe uses a private bus: never send malformed calls to the host bus.
  * No synthetic driver or runtime class override is used.
  */
+// Retained to validate historical recovery reports from before the argument boundary was hardened.
 function validateNativeDbusFailureEvidence(array $evidence): array
 {
     $parent = $evidence['parent'] ?? [];
@@ -49,6 +50,47 @@ function nativeDbusFailureResponseValid(array $response, string $id, string $met
     return ($response['request_id'] ?? null) === $id
         && array_key_exists('error', $response) && $response['error'] === null
         && ($response['result']['method'] ?? null) === $method;
+}
+
+function nativeDbusInvalidArgumentCases(): array
+{
+    $cases = [];
+    foreach (['Call', 'GetCapabilities'] as $method) {
+        foreach ([
+            'array' => ["['invalid-type']"],
+            'integer' => ['int32 7'],
+            'boolean' => ['true'],
+            'missing' => [],
+            'extra' => ['valid-string', 'extra-string'],
+        ] as $label => $arguments) {
+            $cases[$method . '-' . $label] = ['method' => $method, 'arguments' => $arguments];
+        }
+    }
+    return $cases;
+}
+
+function validateNativeDbusRejectionEvidence(array $evidence): array
+{
+    $checks = [
+        'native_extension' => ($evidence['native_extension'] ?? false) === true,
+        'initial_capabilities' => nativeDbusFailureResponseValid($evidence['before'] ?? [], 'failure-before', 'system.capabilities'),
+        'owner_unchanged' => is_string($evidence['owner_before'] ?? null)
+            && preg_match("/^\\(':\\d+\\.\\d+',\\)$/", $evidence['owner_before']) === 1
+            && $evidence['owner_before'] === ($evidence['owner_after'] ?? null),
+        'parent_running' => ($evidence['parent_running'] ?? false) === true,
+        'no_reactivation' => ($evidence['supervisor_absent'] ?? false) === true,
+        'capabilities_available' => nativeDbusFailureResponseValid($evidence['after'] ?? [], 'failure-after', 'system.capabilities'),
+        'runtime_available' => nativeDbusFailureResponseValid($evidence['runtime'] ?? [], 'failure-runtime', 'system.dbus-runtime'),
+    ];
+    foreach (nativeDbusInvalidArgumentCases() as $label => $case) {
+        $response = $evidence['rejections'][$label] ?? [];
+        $checks['rejected_' . $label] = ($response['api_version'] ?? null) === '1.0'
+            && ($response['request_id'] ?? null) === 'invalid-request'
+            && array_key_exists('result', $response) && $response['result'] === null
+            && ($response['error']['code'] ?? null) === 'VALIDATION_ERROR'
+            && ($response['error']['retryable'] ?? null) === false;
+    }
+    return ['validated' => !in_array(false, $checks, true), 'checks' => $checks];
 }
 
 function nativeDbusFailureReadJson(string $path): array
@@ -136,7 +178,7 @@ function nativeDbusFailureWorker(string $directory): int
         'W4_SYSTEM_API_PROBE_SYSTEM_BUS_SOCKET' => rawurldecode($socket[1]),
         'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
         'W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR' => $runtime,
-        'W4_SYSTEM_API_NATIVE_RUNTIME_KEEPALIVE_SECONDS' => '12',
+        'W4_SYSTEM_API_NATIVE_RUNTIME_KEEPALIVE_SECONDS' => '60',
         'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE' => '1',
         'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_MAX_ATTEMPTS' => '1',
         'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_BACKOFF_MS' => '1000',
@@ -169,25 +211,18 @@ function nativeDbusFailureWorker(string $directory): int
             throw new RuntimeException('No se observo owner inicial en el bus privado');
         }
         $evidence['before'] = nativeDbusFailureDecode(nativeDbusFailureCall($directory, 'before', 'GetCapabilities', ['failure-before']));
-        // The native dispatcher passes an array to the string callback parameter.
-        $evidence['injection'] = nativeDbusFailureCall($directory, 'injection', 'Call', ["['invalid-type']"]);
-        $deadline = microtime(true) + 20;
-        do {
-            $state = nativeDbusFailureReadJson("$runtime/w4-system-api-native-runtime-supervisor.json");
-            if (($state['attempt_count'] ?? null) === 1) {
-                $evidence['admission'] = $state;
-            }
-            $evidence['parent'] = nativeDbusFailureReadJson("$directory/parent.json");
-            if ($evidence['parent'] !== []) {
-                break;
-            }
-            usleep(20000);
-        } while (microtime(true) < $deadline);
-        $evidence['supervisor'] = nativeDbusFailureReadJson("$runtime/w4-system-api-native-runtime-supervisor.json");
+        foreach (nativeDbusInvalidArgumentCases() as $label => $case) {
+            $evidence['rejections'][$label] = nativeDbusFailureDecode(
+                nativeDbusFailureCall($directory, $label, $case['method'], $case['arguments'])
+            );
+        }
         $evidence['owner_after'] = nativeDbusFailureOwner($directory, 'owner-after');
         $evidence['after'] = nativeDbusFailureDecode(nativeDbusFailureCall($directory, 'after', 'GetCapabilities', ['failure-after']));
         $request = json_encode(['api_version' => '1.0', 'request_id' => 'failure-runtime', 'method' => 'system.dbus-runtime', 'params' => []], JSON_THROW_ON_ERROR);
         $evidence['runtime'] = nativeDbusFailureDecode(nativeDbusFailureCall($directory, 'runtime', 'Call', [$request]));
+        $evidence['parent_running'] = proc_get_status($parent)['running'];
+        clearstatcache();
+        $evidence['supervisor_absent'] = !file_exists("$runtime/w4-system-api-native-runtime-supervisor.json");
     } catch (Throwable $exception) {
         $evidence['error'] = $exception->getMessage();
     } finally {
@@ -204,8 +239,8 @@ function nativeDbusFailureWorker(string $directory): int
         }
         proc_close($parent);
     }
-    $result = validateNativeDbusFailureEvidence($evidence);
-    $report = $result + ['kind' => 'native-dbus-private-bus-failure-check', 'evidence' => $evidence];
+    $result = validateNativeDbusRejectionEvidence($evidence);
+    $report = $result + ['kind' => 'native-dbus-private-bus-rejection-check', 'evidence' => $evidence];
     nativeDbusFailureWriteJson("$directory/report.json", $report);
     return $result['validated'] ? 0 : 3;
 }

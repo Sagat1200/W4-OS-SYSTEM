@@ -1,0 +1,1 @@
+('{"api_version":"1.0","request_id":"invalid-request","result":null,"error":{"code":"VALIDATION_ERROR","message":"Call requiere exactamente un argumento string","retryable":false}}\n',)

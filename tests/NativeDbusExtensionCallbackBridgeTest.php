@@ -65,6 +65,32 @@ final class NativeDbusExtensionCallbackBridgeTest extends TestCase
         NativeDbusExtensionCallbackBridge::Call('{}');
     }
 
+    public static function invalidArgumentCases(): iterable
+    {
+        foreach (['Call', 'GetCapabilities'] as $method) {
+            foreach ([[], [null], [false], [7], [1.5], [[]], [new \stdClass()], ['ok', 'extra']] as $index => $arguments) {
+                yield $method . '-' . $index => [$method, $arguments];
+            }
+        }
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalidArgumentCases')]
+    public function testRejectsInvalidArgumentsWithoutDispatching(string $method, array $arguments): void
+    {
+        // Intentionally unprimed: invalid arguments must never reach the application object.
+        $response = json_decode(NativeDbusExtensionCallbackBridge::$method(...$arguments), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('1.0', $response['api_version']);
+        self::assertSame('invalid-request', $response['request_id']);
+        self::assertNull($response['result']);
+        self::assertSame('VALIDATION_ERROR', $response['error']['code']);
+        self::assertFalse($response['error']['retryable']);
+
+        NativeDbusExtensionCallbackBridge::prime($this->createRuntimeObject());
+        $valid = json_decode(NativeDbusExtensionCallbackBridge::GetCapabilities('after-rejection'), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('after-rejection', $valid['request_id']);
+        self::assertNull($valid['error']);
+    }
+
     private function createRuntimeObject(): NativeDbusExtensionRuntimeObject
     {
         return new NativeDbusExtensionRuntimeObject(
