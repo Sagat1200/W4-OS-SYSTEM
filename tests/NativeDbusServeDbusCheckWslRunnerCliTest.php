@@ -144,6 +144,90 @@ final class NativeDbusServeDbusCheckWslRunnerCliTest extends TestCase
         self::assertFalse($payload['checks']['call_validated']);
     }
 
+    public function testRunnerValidatesAutoReactivationSupervisorResetFromArtifacts(): void
+    {
+        $distribution = 'Ubuntu-Fixture';
+        $evidenceDir = $this->tempDir . DIRECTORY_SEPARATOR . 'serve-dbus-check-auto-reactivation';
+        $wslRepoRoot = '/mnt/c/W4/Packages/W4-OS SYSTEM';
+        $wslEvidenceDir = $this->toWslPath($evidenceDir);
+        $wslUser = 'sagat1200';
+        $artifactsDir = $evidenceDir . DIRECTORY_SEPARATOR . 'runtime-artifacts';
+
+        self::assertTrue(mkdir($artifactsDir, 0777, true) || is_dir($artifactsDir));
+        file_put_contents($artifactsDir . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime.ready', "native-runtime-bus-owned\n");
+        file_put_contents(
+            $artifactsDir . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime-status.json',
+            json_encode(['status' => 'native-runtime-bus-owned'], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)
+        );
+        file_put_contents($artifactsDir . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime.pid', "88\n");
+        file_put_contents(
+            $artifactsDir . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime-supervisor.json',
+            json_encode([
+                'api_version' => '1.0',
+                'kind' => 'system-api-dbus-native-runtime-supervisor-state',
+                'attempt_count' => 0,
+                'previous_attempt_count' => 1,
+                'last_reset_reason' => 'native-runtime-stability-achieved',
+                'last_reset_trigger' => 'reactivation-stability-achieved',
+            ], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)
+        );
+
+        $stdout = implode("\n", [
+            '---LAUNCHER-OUTPUT---',
+            "{\n    \"requested_command\": \"serve-dbus\",\n    \"target_command\": {\n        \"command\": \"StartNativeRuntimeService\"\n    }\n}",
+            '---BUS-LIST---',
+            'org.w4.System1                 34 php     sagat1200 :1.14         -    -       -',
+            '---GDBUS-INTROSPECT---',
+            'node /org/w4/System1 { interface org.w4.System1.Manager { methods: Call, GetCapabilities; }; };',
+            '---GETCAPABILITIES---',
+            "('{\n    \"request_id\": \"dbus-launcher-capabilities\",\n    \"result\": {\n        \"method\": \"system.capabilities\"\n    },\n    \"error\": null\n}\n',)",
+            '---CALL-SYSTEM-DBUS-RUNTIME---',
+            "('{\n    \"request_id\": \"dbus-launcher-call\",\n    \"result\": {\n        \"method\": \"system.dbus-runtime\"\n    },\n    \"error\": null\n}\n',)",
+        ]);
+
+        $commandMap = [
+            $this->buildWslPathCommand($distribution, $this->repoRoot) => $wslRepoRoot,
+            $this->buildWslPathCommand($distribution, $evidenceDir) => $wslEvidenceDir,
+            $this->buildWslBashCommand($distribution, 'id -un') => $wslUser,
+            $this->buildWslRootBashCommand(
+                $distribution,
+                $this->buildServeDbusCheckCommand($wslUser, $wslRepoRoot, $wslEvidenceDir, 4, true, 5)
+            ) => [
+                'stdout' => $stdout,
+                'stderr' => '',
+                'exit_code' => 0,
+            ],
+        ];
+
+        putenv('W4_RUN_NATIVE_DBUS_SERVE_DBUS_WSL_DISTROS_JSON=' . json_encode([$distribution], JSON_THROW_ON_ERROR));
+        putenv('W4_RUN_NATIVE_DBUS_SERVE_DBUS_WSL_COMMAND_MAP_JSON=' . json_encode($commandMap, JSON_THROW_ON_ERROR));
+
+        $result = $this->runPhpScript([
+            $this->scriptPath(),
+            '--distribution',
+            $distribution,
+            '--evidence-dir',
+            $evidenceDir,
+            '--validate-auto-reactivation',
+            '1',
+        ]);
+
+        self::assertSame(0, $result['exitCode'], $result['stderr']);
+
+        $payload = $this->decodeJson($result['stdout']);
+        self::assertSame('validated', $payload['status']);
+        self::assertTrue($payload['validated']);
+        self::assertTrue($payload['checks']['auto_reactivation_supervisor_state_observed']);
+        self::assertTrue($payload['checks']['auto_reactivation_budget_reset_validated']);
+        self::assertTrue($payload['checks']['auto_reactivation_runtime_active_validated']);
+        self::assertTrue($payload['auto_reactivation_validation']['enabled']);
+        self::assertSame(
+            'reactivation-stability-achieved',
+            $payload['auto_reactivation_validation']['supervisor_state']['last_reset_trigger']
+        );
+        self::assertSame(88, $payload['auto_reactivation_validation']['pid']);
+    }
+
     private function scriptPath(): string
     {
         return $this->repoRoot . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'run_native_dbus_serve_dbus_check_in_wsl.php';
@@ -239,7 +323,14 @@ final class NativeDbusServeDbusCheckWslRunnerCliTest extends TestCase
         return "'" . str_replace("'", "'\"'\"'", $value) . "'";
     }
 
-    private function buildServeDbusCheckCommand(string $wslUser, string $wslRepoRoot, string $wslEvidenceDir, int $keepAliveSeconds): string
+    private function buildServeDbusCheckCommand(
+        string $wslUser,
+        string $wslRepoRoot,
+        string $wslEvidenceDir,
+        int $keepAliveSeconds,
+        bool $validateAutoReactivation = false,
+        int $postReactivationWaitSeconds = 0
+    ): string
     {
         $userScript = implode("\n", [
             'set -euo pipefail',
@@ -250,12 +341,20 @@ final class NativeDbusServeDbusCheckWslRunnerCliTest extends TestCase
             'export W4_SYSTEM_API_RUNTIME_BACKEND=native-dbus-extension',
             'export W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR="${ART_DIR}"',
             'export W4_SYSTEM_API_NATIVE_RUNTIME_KEEPALIVE_SECONDS=' . $keepAliveSeconds,
+            ...($validateAutoReactivation ? [
+                'export W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE=1',
+                'export W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_MAX_ATTEMPTS=1',
+                'export W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_BACKOFF_MS=10',
+                'export W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_RESET_STABILITY_MS=100',
+            ] : []),
             'OUT="${BASE}/serve-dbus-launcher-output.json"',
             'ERR="${BASE}/serve-dbus-launcher-error.txt"',
             'INTROSPECT_TXT="${BASE}/gdbus-introspect.txt"',
             'CALL_TXT="${BASE}/serve-dbus-call-output.txt"',
-            'rm -f "${OUT}" "${ERR}" "${INTROSPECT_TXT}" "${CALL_TXT}"',
-            '/opt/php/8.4.3/bin/php scripts/system_api_dbus_runtime_launcher.php serve-dbus >"${OUT}" 2>"${ERR}"',
+            'POST_INTROSPECT_TXT="${BASE}/gdbus-post-reactivation-introspect.txt"',
+            'POST_CALL_TXT="${BASE}/serve-dbus-post-reactivation-call-output.txt"',
+            'rm -f "${OUT}" "${ERR}" "${INTROSPECT_TXT}" "${CALL_TXT}" "${POST_INTROSPECT_TXT}" "${POST_CALL_TXT}"',
+            '/opt/php/8.4.3/bin/php scripts/system_api_dbus_runtime_launcher.php serve-dbus >"${OUT}" 2>"${ERR}" || true',
             'for i in 1 2 3 4 5 6 7 8 9 10; do',
             '  if busctl --system list | grep -q org.w4.System1; then',
             '    break',
@@ -271,10 +370,34 @@ final class NativeDbusServeDbusCheckWslRunnerCliTest extends TestCase
             "  echo '---GDBUS-INTROSPECT---'",
             '  cat "${INTROSPECT_TXT}"',
             "  echo '---GETCAPABILITIES---'",
-            "  gdbus call --system --dest org.w4.System1 --object-path /org/w4/System1 --method org.w4.System1.Manager.GetCapabilities 'dbus-launcher-capabilities'",
+            ...($validateAutoReactivation
+                ? ["  gdbus call --system --dest org.w4.System1 --object-path /org/w4/System1 --method org.w4.System1.Manager.GetCapabilities 'dbus-launcher-capabilities' || true"]
+                : ["  gdbus call --system --dest org.w4.System1 --object-path /org/w4/System1 --method org.w4.System1.Manager.GetCapabilities 'dbus-launcher-capabilities'"]),
             "  echo '---CALL-SYSTEM-DBUS-RUNTIME---'",
-            "  gdbus call --system --dest org.w4.System1 --object-path /org/w4/System1 --method org.w4.System1.Manager.Call '{\"api_version\":\"1.0\",\"request_id\":\"dbus-launcher-call\",\"method\":\"system.dbus-runtime\",\"params\":[]}'",
+            ...($validateAutoReactivation
+                ? ["  gdbus call --system --dest org.w4.System1 --object-path /org/w4/System1 --method org.w4.System1.Manager.Call '{\"api_version\":\"1.0\",\"request_id\":\"dbus-launcher-call\",\"method\":\"system.dbus-runtime\",\"params\":[]}' || true"]
+                : ["  gdbus call --system --dest org.w4.System1 --object-path /org/w4/System1 --method org.w4.System1.Manager.Call '{\"api_version\":\"1.0\",\"request_id\":\"dbus-launcher-call\",\"method\":\"system.dbus-runtime\",\"params\":[]}'"]),
             '} | tee "${CALL_TXT}"',
+            ...($validateAutoReactivation && $postReactivationWaitSeconds > 0 ? [
+                'SUPERVISOR="${ART_DIR}/w4-system-api-native-runtime-supervisor.json"',
+                sprintf('for i in $(seq 1 %d); do', $postReactivationWaitSeconds),
+                '  if [ -f "${SUPERVISOR}" ] && grep -q \'"last_reset_trigger": "reactivation-stability-achieved"\' "${SUPERVISOR}"; then',
+                '    break',
+                '  fi',
+                '  sleep 1',
+                'done',
+                'gdbus introspect --system --dest org.w4.System1 --object-path /org/w4/System1 >"${POST_INTROSPECT_TXT}" 2>/dev/null || true',
+                '{',
+                "  echo '---POST-REACTIVATION-BUS-LIST---'",
+                '  busctl --system list | grep org.w4.System1 || true',
+                "  echo '---POST-REACTIVATION-GDBUS-INTROSPECT---'",
+                '  cat "${POST_INTROSPECT_TXT}"',
+                "  echo '---POST-REACTIVATION-GETCAPABILITIES---'",
+                "  gdbus call --system --dest org.w4.System1 --object-path /org/w4/System1 --method org.w4.System1.Manager.GetCapabilities 'dbus-launcher-capabilities-reactivation' || true",
+                "  echo '---POST-REACTIVATION-CALL-SYSTEM-DBUS-RUNTIME---'",
+                "  gdbus call --system --dest org.w4.System1 --object-path /org/w4/System1 --method org.w4.System1.Manager.Call '{\"api_version\":\"1.0\",\"request_id\":\"dbus-launcher-call-reactivation\",\"method\":\"system.dbus-runtime\",\"params\":[]}' || true",
+                '} | tee "${POST_CALL_TXT}"',
+            ] : []),
         ]);
 
         return implode("\n", [
