@@ -668,7 +668,7 @@ final class SystemApiToolkit
             $operationId = $this->requireString($params, 'operation_id');
             $operation = $this->operations->get($operationId);
             $operation = $this->refreshOperationFromDurableStores($operation);
-            $this->enforceOperationOwnership($authorizationContext, $operation);
+            $this->enforceOperationOwnership($authorizationContext, $operation, $operationId);
 
             return $this->createSuccessResponse(
                 requestId: $requestId,
@@ -683,7 +683,7 @@ final class SystemApiToolkit
         if ($method === 'operations.cancel') {
             $operationId = $this->requireString($params, 'operation_id');
             $operation = $this->operations->get($operationId);
-            $this->enforceOperationOwnership($authorizationContext, $operation);
+            $this->enforceOperationOwnership($authorizationContext, $operation, $operationId);
 
             return $this->createSuccessResponse(
                 requestId: $requestId,
@@ -1253,6 +1253,10 @@ final class SystemApiToolkit
             return 'DENIED';
         }
 
+        if (str_starts_with($exception->getMessage(), 'Operacion no encontrada:')) {
+            return 'NOT_FOUND';
+        }
+
         if (str_starts_with($exception->getMessage(), 'Metodo no soportado:')) {
             return 'NOT_SUPPORTED';
         }
@@ -1346,7 +1350,7 @@ final class SystemApiToolkit
         throw new ValidationError(sprintf('Denegado: permiso insuficiente (%s)', $requiredPermission));
     }
 
-    private function enforceOperationOwnership(array $authorizationContext, array $operation): void
+    private function enforceOperationOwnership(array $authorizationContext, array $operation, string $operationId): void
     {
         if (($authorizationContext['mode'] ?? 'open') !== 'required') {
             return;
@@ -1356,10 +1360,10 @@ final class SystemApiToolkit
         }
         $operationScope = $operation['principal_scope'] ?? null;
         if (!is_string($operationScope) || trim($operationScope) === '') {
-            throw new ValidationError('Denegado: operacion fuera de alcance');
+            throw new ValidationError(sprintf('Operacion no encontrada: %s', $operationId));
         }
         if (trim($operationScope) !== ($authorizationContext['principal_scope'] ?? '')) {
-            throw new ValidationError('Denegado: operacion fuera de alcance');
+            throw new ValidationError(sprintf('Operacion no encontrada: %s', $operationId));
         }
     }
 

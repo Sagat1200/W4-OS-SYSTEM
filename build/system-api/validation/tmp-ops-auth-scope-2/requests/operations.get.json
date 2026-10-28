@@ -1,0 +1,11 @@
+{
+    "api_version": "1.0",
+    "request_id": "ops-get-admin",
+    "method": "operations.get",
+    "authorization": {
+        "token": "admin"
+    },
+    "params": {
+        "operation_id": "op-9590b84d"
+    }
+}

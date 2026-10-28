@@ -106,6 +106,17 @@ final class SystemApiOperationsToolkit
             throw new ValidationError(sprintf('Operacion invalida: %s', $operationId));
         }
 
+        $state = is_string($decoded['state'] ?? null) ? trim((string) $decoded['state']) : 'unknown';
+        $completedAt = is_string($decoded['completed_at'] ?? null) ? trim((string) $decoded['completed_at']) : null;
+        if (in_array($state, ['succeeded', 'failed', 'partial', 'unknown', 'cancelled'], true) && is_string($completedAt) && $completedAt !== '') {
+            $retentionSeconds = $this->resolveRetentionSeconds();
+            $completedEpoch = strtotime($completedAt);
+            if ($retentionSeconds > 0 && is_int($completedEpoch) && $completedEpoch > 0 && (time() - $completedEpoch) > $retentionSeconds) {
+                @unlink($path);
+                throw new ValidationError(sprintf('Operacion no encontrada: %s', $operationId));
+            }
+        }
+
         return $decoded;
     }
 
@@ -132,6 +143,16 @@ final class SystemApiOperationsToolkit
 
         if (!is_array($decoded)) {
             throw new ValidationError(sprintf('Ledger invalido: %s', $ledgerPath));
+        }
+
+        $observedAt = $decoded['observed_at'] ?? null;
+        if (is_string($observedAt) && trim($observedAt) !== '') {
+            $retentionSeconds = $this->resolveRetentionSeconds();
+            $observedEpoch = strtotime(trim($observedAt));
+            if ($retentionSeconds > 0 && is_int($observedEpoch) && $observedEpoch > 0 && (time() - $observedEpoch) > $retentionSeconds) {
+                @unlink($ledgerPath);
+                return null;
+            }
         }
 
         $storedDigest = $decoded['digest'] ?? null;
@@ -330,6 +351,17 @@ final class SystemApiOperationsToolkit
         }
 
         return $this->ledgerDir . DIRECTORY_SEPARATOR . $scopeToken . DIRECTORY_SEPARATOR . $methodToken . '--' . $keyToken . '.json';
+    }
+
+    private function resolveRetentionSeconds(): int
+    {
+        $raw = getenv('W4_SYSTEM_API_OPERATIONS_RETENTION_SECONDS');
+        if (is_string($raw) && trim($raw) !== '' && preg_match('/^-?\d+$/', trim($raw)) === 1) {
+            $value = (int) trim($raw);
+            return max(0, $value);
+        }
+
+        return 30 * 24 * 60 * 60;
     }
 
     private function resolveExclusiveLockPath(string $scope): string

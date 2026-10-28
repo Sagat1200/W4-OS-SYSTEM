@@ -1,0 +1,25 @@
+{
+    "kind": "system-api-operation",
+    "operation_id": "op-e4245180",
+    "principal_scope": "scope-a",
+    "method": "updates.apply",
+    "resource": {
+        "kind": "update-operation",
+        "id": "op-e4245180"
+    },
+    "state": "running",
+    "status": "ok",
+    "cancel_requested": false,
+    "cancelable": true,
+    "progress": {
+        "percent": 50,
+        "current_step": "running"
+    },
+    "result": {
+        "kind": "system-api-operation-result"
+    },
+    "error": null,
+    "created_at": "2026-10-28T17:27:05+00:00",
+    "observed_at": "2026-10-28T17:27:05+00:00",
+    "completed_at": null
+}

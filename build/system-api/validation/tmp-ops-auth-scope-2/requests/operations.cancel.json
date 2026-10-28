@@ -1,0 +1,11 @@
+{
+    "api_version": "1.0",
+    "request_id": "ops-cancel-owner",
+    "method": "operations.cancel",
+    "authorization": {
+        "token": "token-a"
+    },
+    "params": {
+        "operation_id": "op-9590b84d"
+    }
+}

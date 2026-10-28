@@ -73,7 +73,7 @@ final class SystemApiOperationsOwnershipCliTest extends TestCase
                 'params' => ['operation_id' => $operationId],
             ], $policy, $operationsDir, $ledgerDir);
             self::assertNull($payload['result']);
-            self::assertSame('DENIED', $payload['error']['code']);
+            self::assertSame('NOT_FOUND', $payload['error']['code']);
 
             $payload = $this->callManager([
                 'api_version' => '1.0',
@@ -141,7 +141,7 @@ final class SystemApiOperationsOwnershipCliTest extends TestCase
                 'params' => ['operation_id' => $operationId],
             ], $policy, $operationsDir, $ledgerDir);
             self::assertNull($payload['result']);
-            self::assertSame('DENIED', $payload['error']['code']);
+            self::assertSame('NOT_FOUND', $payload['error']['code']);
             self::assertSame($original, (string) file_get_contents($operationPath));
 
             $payload = $this->callManager([
@@ -252,4 +252,3 @@ final class SystemApiOperationsOwnershipCliTest extends TestCase
         rmdir($path);
     }
 }
-

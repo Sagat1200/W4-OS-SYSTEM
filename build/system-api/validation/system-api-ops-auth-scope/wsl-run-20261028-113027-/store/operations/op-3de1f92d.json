@@ -1,0 +1,25 @@
+{
+    "kind": "system-api-operation",
+    "operation_id": "op-3de1f92d",
+    "principal_scope": "scope-a",
+    "method": "updates.apply",
+    "resource": {
+        "kind": "update-operation",
+        "id": "op-3de1f92d"
+    },
+    "state": "running",
+    "status": "ok",
+    "cancel_requested": true,
+    "cancelable": true,
+    "progress": {
+        "percent": 50,
+        "current_step": "running"
+    },
+    "result": {
+        "kind": "system-api-operation-result"
+    },
+    "error": null,
+    "created_at": "2026-10-28T17:31:00+00:00",
+    "observed_at": "2026-10-28T17:31:03+00:00",
+    "completed_at": null
+}
