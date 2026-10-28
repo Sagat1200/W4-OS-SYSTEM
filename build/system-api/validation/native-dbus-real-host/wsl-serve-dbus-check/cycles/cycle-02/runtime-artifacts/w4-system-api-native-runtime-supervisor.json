@@ -4,13 +4,13 @@
     "attempt_count": 0,
     "max_attempts": 1,
     "cooldown_backoff_ms": 10,
-    "last_attempt_epoch_ms": 1793166174783,
+    "last_attempt_epoch_ms": 1793168277352,
     "cooldown_until_epoch_ms": 0,
-    "last_reset_epoch_ms": 1793166175630,
+    "last_reset_epoch_ms": 1793168278104,
     "last_reset_reason": "native-runtime-stability-achieved",
     "last_reset_trigger": "reactivation-stability-achieved",
-    "last_stable_window_ms": 181,
+    "last_stable_window_ms": 175,
     "reset_stability_threshold_ms": 100,
-    "last_successful_pid": 120,
+    "last_successful_pid": 222,
     "previous_attempt_count": 1
 }

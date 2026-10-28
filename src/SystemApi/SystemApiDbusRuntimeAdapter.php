@@ -974,8 +974,9 @@ final class SystemApiDbusRuntimeAdapter
             : null;
         $stateFilePath = $this->resolveNativeRuntimeSupervisorStateFilePath($serviceDefinition, $environment);
         $state = $this->readNativeRuntimeSupervisorState($stateFilePath);
-        $cooldownMilliseconds = $this->resolveNativeRuntimeAutoReactivationBackoffMilliseconds($environment);
         $effectiveAttempt = max($currentAttempt, is_int($state['attempt_count'] ?? null) ? (int) $state['attempt_count'] : 0);
+        $cooldownPlan = $this->resolveNativeRuntimeAutoReactivationCooldownPlan($effectiveAttempt, $environment);
+        $cooldownMilliseconds = $cooldownPlan['cooldown_backoff_ms'];
         $cooldownUntil = is_int($state['cooldown_until_epoch_ms'] ?? null) ? (int) $state['cooldown_until_epoch_ms'] : 0;
         $now = (int) floor(microtime(true) * 1000);
         if ($cooldownUntil > $now) {
@@ -985,7 +986,11 @@ final class SystemApiDbusRuntimeAdapter
                 'attempt' => $effectiveAttempt,
                 'max_attempts' => $maxAttempts,
                 'reason' => 'native-runtime-auto-reactivation-cooldown-active',
+                'cooldown_backoff_ms' => is_int($state['cooldown_backoff_ms'] ?? null)
+                    ? (int) $state['cooldown_backoff_ms']
+                    : $cooldownMilliseconds,
                 'cooldown_until_epoch_ms' => $cooldownUntil,
+                'cooldown_remaining_ms' => max(0, $cooldownUntil - $now),
                 'state_file_path' => $stateFilePath,
             ];
 
@@ -1012,6 +1017,9 @@ final class SystemApiDbusRuntimeAdapter
             'kind' => 'system-api-dbus-native-runtime-supervisor-state',
             'attempt_count' => $nextAttempt,
             'max_attempts' => $maxAttempts,
+            'cooldown_backoff_base_ms' => $cooldownPlan['cooldown_backoff_base_ms'],
+            'cooldown_backoff_multiplier' => $cooldownPlan['cooldown_backoff_multiplier'],
+            'cooldown_backoff_max_ms' => $cooldownPlan['cooldown_backoff_max_ms'],
             'cooldown_backoff_ms' => $cooldownMilliseconds,
             'last_attempt_epoch_ms' => $now,
             'cooldown_until_epoch_ms' => $nextCooldownUntil,
@@ -1027,6 +1035,9 @@ final class SystemApiDbusRuntimeAdapter
             'attempted' => true,
             'attempt' => $nextAttempt,
             'max_attempts' => $maxAttempts,
+            'cooldown_backoff_base_ms' => $cooldownPlan['cooldown_backoff_base_ms'],
+            'cooldown_backoff_multiplier' => $cooldownPlan['cooldown_backoff_multiplier'],
+            'cooldown_backoff_max_ms' => $cooldownPlan['cooldown_backoff_max_ms'],
             'cooldown_backoff_ms' => $cooldownMilliseconds,
             'cooldown_until_epoch_ms' => $nextCooldownUntil,
             'launch_mode' => 'background-process',
@@ -1219,6 +1230,62 @@ final class SystemApiDbusRuntimeAdapter
     /**
      * @param array<string, string> $environment
      */
+    private function resolveNativeRuntimeAutoReactivationBackoffMultiplier(array $environment): int
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_BACKOFF_MULTIPLIER'] ?? null;
+        if (!is_string($value) || preg_match('/^\d+$/', trim($value)) !== 1) {
+            return 1;
+        }
+
+        $multiplier = (int) trim($value);
+
+        return $multiplier > 0 ? min($multiplier, 10) : 1;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeAutoReactivationMaxBackoffMilliseconds(array $environment): int
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_MAX_BACKOFF_MS'] ?? null;
+        if (!is_string($value) || preg_match('/^\d+$/', trim($value)) !== 1) {
+            return 10000;
+        }
+
+        $milliseconds = (int) trim($value);
+
+        return $milliseconds >= 0 ? min($milliseconds, 60000) : 10000;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     * @return array{cooldown_backoff_base_ms: int, cooldown_backoff_multiplier: int, cooldown_backoff_max_ms: int, cooldown_backoff_ms: int}
+     */
+    private function resolveNativeRuntimeAutoReactivationCooldownPlan(int $effectiveAttempt, array $environment): array
+    {
+        $baseBackoff = $this->resolveNativeRuntimeAutoReactivationBackoffMilliseconds($environment);
+        $multiplier = $this->resolveNativeRuntimeAutoReactivationBackoffMultiplier($environment);
+        $maximumBackoff = max($baseBackoff, $this->resolveNativeRuntimeAutoReactivationMaxBackoffMilliseconds($environment));
+        $cooldown = $baseBackoff;
+
+        for ($attempt = 1; $attempt < max(1, $effectiveAttempt + 1); $attempt++) {
+            $cooldown = min($maximumBackoff, $cooldown * $multiplier);
+            if ($cooldown >= $maximumBackoff) {
+                break;
+            }
+        }
+
+        return [
+            'cooldown_backoff_base_ms' => $baseBackoff,
+            'cooldown_backoff_multiplier' => $multiplier,
+            'cooldown_backoff_max_ms' => $maximumBackoff,
+            'cooldown_backoff_ms' => $cooldown,
+        ];
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
     private function resolveNativeRuntimeAutoReactivationResetStabilityMilliseconds(array $environment): int
     {
         $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_RESET_STABILITY_MS'] ?? null;
@@ -1262,6 +1329,15 @@ final class SystemApiDbusRuntimeAdapter
             'max_attempts' => is_int($state['max_attempts'] ?? null)
                 ? (int) $state['max_attempts']
                 : $this->resolveNativeRuntimeAutoReactivationMaxAttempts($environment),
+            'cooldown_backoff_base_ms' => is_int($state['cooldown_backoff_base_ms'] ?? null)
+                ? (int) $state['cooldown_backoff_base_ms']
+                : $this->resolveNativeRuntimeAutoReactivationBackoffMilliseconds($environment),
+            'cooldown_backoff_multiplier' => is_int($state['cooldown_backoff_multiplier'] ?? null)
+                ? (int) $state['cooldown_backoff_multiplier']
+                : $this->resolveNativeRuntimeAutoReactivationBackoffMultiplier($environment),
+            'cooldown_backoff_max_ms' => is_int($state['cooldown_backoff_max_ms'] ?? null)
+                ? (int) $state['cooldown_backoff_max_ms']
+                : $this->resolveNativeRuntimeAutoReactivationMaxBackoffMilliseconds($environment),
             'cooldown_backoff_ms' => is_int($state['cooldown_backoff_ms'] ?? null)
                 ? (int) $state['cooldown_backoff_ms']
                 : $this->resolveNativeRuntimeAutoReactivationBackoffMilliseconds($environment),
