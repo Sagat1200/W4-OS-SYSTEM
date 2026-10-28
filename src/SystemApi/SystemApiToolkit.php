@@ -247,6 +247,7 @@ final class SystemApiToolkit
                     'name' => 'packages.apply',
                     'resource_kind' => 'package-operation',
                     'mutates_state' => true,
+                    'permission' => 'org.w4.packages.modify',
                     'params' => ['plan_id', 'plan_hash', 'idempotency_key', 'expected_catalog_revision?', 'plan?', 'plan_path?'],
                 ],
                 [
@@ -265,12 +266,14 @@ final class SystemApiToolkit
                     'name' => 'updates.apply',
                     'resource_kind' => 'update-operation',
                     'mutates_state' => true,
+                    'permission' => 'org.w4.updates.modify',
                     'params' => ['operation_id', 'plan_hash', 'idempotency_key', 'expected_catalog_revision?', 'plan?', 'plan_path?'],
                 ],
                 [
                     'name' => 'updates.reconcile',
                     'resource_kind' => 'update-operation',
                     'mutates_state' => true,
+                    'permission' => 'org.w4.updates.modify',
                     'params' => ['operation_id', 'observed_stage?', 'health_result_path?', 'details?', 'observed_error?'],
                 ],
                 [
@@ -283,6 +286,7 @@ final class SystemApiToolkit
                     'name' => 'operations.cancel',
                     'resource_kind' => 'system-api-operation-cancel',
                     'mutates_state' => true,
+                    'permission' => 'org.w4.operations.cancel',
                     'params' => ['operation_id'],
                 ],
                 [
@@ -301,30 +305,35 @@ final class SystemApiToolkit
                     'name' => 'services.start',
                     'resource_kind' => 'service-operation',
                     'mutates_state' => true,
+                    'permission' => 'org.w4.services.modify',
                     'params' => ['unit', 'expected_revision?', 'idempotency_key?'],
                 ],
                 [
                     'name' => 'services.stop',
                     'resource_kind' => 'service-operation',
                     'mutates_state' => true,
+                    'permission' => 'org.w4.services.modify',
                     'params' => ['unit', 'expected_revision?', 'idempotency_key?'],
                 ],
                 [
                     'name' => 'services.restart',
                     'resource_kind' => 'service-operation',
                     'mutates_state' => true,
+                    'permission' => 'org.w4.services.modify',
                     'params' => ['unit', 'expected_revision?', 'idempotency_key?'],
                 ],
                 [
                     'name' => 'services.enable',
                     'resource_kind' => 'service-operation',
                     'mutates_state' => true,
+                    'permission' => 'org.w4.services.modify',
                     'params' => ['unit', 'expected_revision?', 'idempotency_key?'],
                 ],
                 [
                     'name' => 'services.disable',
                     'resource_kind' => 'service-operation',
                     'mutates_state' => true,
+                    'permission' => 'org.w4.services.modify',
                     'params' => ['unit', 'expected_revision?', 'idempotency_key?'],
                 ],
                 [
@@ -346,6 +355,7 @@ final class SystemApiToolkit
                     'name' => 'system.dbus-native-startup',
                     'resource_kind' => 'system-api-dbus-native-runtime-startup',
                     'mutates_state' => true,
+                    'permission' => 'org.w4.system.modify',
                 ],
                 [
                     'name' => 'system.dbus-native-observation',
@@ -361,6 +371,7 @@ final class SystemApiToolkit
                     'name' => 'system.dbus-native-ownership',
                     'resource_kind' => 'system-api-dbus-native-runtime-ownership',
                     'mutates_state' => true,
+                    'permission' => 'org.w4.system.modify',
                 ],
                 [
                     'name' => 'profiles.get',
@@ -424,6 +435,11 @@ final class SystemApiToolkit
         $params = $request['params'] ?? [];
         if (!is_array($params)) {
             throw new ValidationError('params debe ser un objeto JSON');
+        }
+
+        $requiredPermission = $this->resolveRequiredPermission($method);
+        if ($requiredPermission !== null) {
+            $this->enforceAuthorization($request, $requiredPermission);
         }
 
         if ($method === 'system.capabilities') {
@@ -1222,6 +1238,10 @@ final class SystemApiToolkit
 
     private function resolveErrorCode(ValidationError $exception): string
     {
+        if (str_starts_with($exception->getMessage(), 'Denegado:')) {
+            return 'DENIED';
+        }
+
         if (str_starts_with($exception->getMessage(), 'Metodo no soportado:')) {
             return 'NOT_SUPPORTED';
         }
@@ -1239,6 +1259,53 @@ final class SystemApiToolkit
         }
 
         return 'VALIDATION_ERROR';
+    }
+
+    private function resolveRequiredPermission(string $method): ?string
+    {
+        return match ($method) {
+            'packages.apply' => 'org.w4.packages.modify',
+            'updates.apply', 'updates.reconcile' => 'org.w4.updates.modify',
+            'services.start', 'services.stop', 'services.restart', 'services.enable', 'services.disable' => 'org.w4.services.modify',
+            'operations.cancel' => 'org.w4.operations.cancel',
+            'system.dbus-native-startup', 'system.dbus-native-ownership' => 'org.w4.system.modify',
+            default => null,
+        };
+    }
+    private function enforceAuthorization(array $request, string $requiredPermission): void
+    {
+        $mode = getenv('W4_SYSTEM_API_AUTH_MODE');
+        if (!is_string($mode) || trim($mode) === '' || strtolower(trim($mode)) === 'open') {
+            return;
+        }
+        if (strtolower(trim($mode)) !== 'required') {
+            throw new ValidationError('Denegado: modo de autorizacion desconocido');
+        }
+        $authorization = $request['authorization'] ?? null;
+        $token = is_array($authorization) ? ($authorization['token'] ?? null) : null;
+        if (!is_string($token) || trim($token) === '') {
+            throw new ValidationError(sprintf('Denegado: falta token para %s', $requiredPermission));
+        }
+        $policyRaw = getenv('W4_SYSTEM_API_AUTH_POLICY_JSON');
+        if (!is_string($policyRaw) || trim($policyRaw) === '') {
+            throw new ValidationError(sprintf('Denegado: politica no configurada para %s', $requiredPermission));
+        }
+        $policy = json_decode($policyRaw, true);
+        if (!is_array($policy)) {
+            throw new ValidationError(sprintf('Denegado: politica invalida para %s', $requiredPermission));
+        }
+        $tokens = $policy['tokens'] ?? null;
+        $entry = is_array($tokens) ? ($tokens[trim($token)] ?? null) : null;
+        $permissions = is_array($entry) ? ($entry['permissions'] ?? null) : null;
+        if (!is_array($permissions)) {
+            throw new ValidationError(sprintf('Denegado: token no reconocido para %s', $requiredPermission));
+        }
+        foreach ($permissions as $permission) {
+            if ($permission === '*' || $permission === $requiredPermission) {
+                return;
+            }
+        }
+        throw new ValidationError(sprintf('Denegado: permiso insuficiente (%s)', $requiredPermission));
     }
 
     /**

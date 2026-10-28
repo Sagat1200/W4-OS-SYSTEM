@@ -2602,13 +2602,14 @@ final class SystemApiCliTest extends TestCase
     public function testUpdatesApplyConsumesUpdatePlanAndReturnsPendingRebootOperation(): void
     {
         $suffix = bin2hex(random_bytes(6));
-        $planPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'system-api-update-apply-' . $suffix . '.json';
+        $operationId = 'system-api-update-apply-' . $suffix;
+        $planPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $operationId . '.json';
 
         try {
             $plan = [
                 'update_plan_schema_version' => 1,
                 'kind' => 'update-plan',
-                'operation_id' => 'system-api-update-apply-001',
+                'operation_id' => $operationId,
                 'profile_id' => 'w4-os-home',
                 'source_version' => '1.0.0-lab',
                 'target_version' => '1.0.1-lab',
@@ -2645,12 +2646,12 @@ final class SystemApiCliTest extends TestCase
                 ],
                 'snapshot' => [
                     'root_subvolume' => '/@',
-                    'snapshot_name' => 'pre-update-system-api-update-apply-001',
-                    'snapshot_path' => '/.snapshots/pre-update-system-api-update-apply-001',
+                    'snapshot_name' => 'pre-update-' . $operationId,
+                    'snapshot_path' => '/.snapshots/pre-update-' . $operationId,
                     'retention' => 'protected-until-confirmed',
                 ],
                 'staging' => [
-                    'directory' => '/var/lib/w4-update/staging/system-api-update-apply-001',
+                    'directory' => '/var/lib/w4-update/staging/' . $operationId,
                     'estimated_space_kib' => 262144,
                     'cache_policy' => 'protected-until-confirmed',
                 ],
@@ -2669,7 +2670,7 @@ final class SystemApiCliTest extends TestCase
                 'durable_state_template' => [
                     'update_operation_schema_version' => 1,
                     'kind' => 'update-operation',
-                    'operation_id' => 'system-api-update-apply-001',
+                    'operation_id' => $operationId,
                     'stage' => 'planned',
                     'last_error' => null,
                 ],
@@ -2689,7 +2690,7 @@ final class SystemApiCliTest extends TestCase
                 'request_id' => 'req-updates-apply-001',
                 'method' => 'updates.apply',
                 'params' => [
-                    'operation_id' => 'system-api-update-apply-001',
+                    'operation_id' => $operationId,
                     'plan_hash' => $planHash,
                     'idempotency_key' => 'updates-apply-' . $suffix,
                     'expected_catalog_revision' => 'updates-catalog-' . $suffix,

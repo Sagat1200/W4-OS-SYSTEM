@@ -393,6 +393,18 @@ final class NativeDbusExtensionOwnershipDriver
         $pidFilePath = $this->resolveArtifactPath($artifacts, 'pid_file_path');
         $pid = getmypid();
         $resolvedPid = is_int($pid) && $pid > 0 ? $pid : 0;
+        $pidToReport = $resolvedPid;
+        $existingPid = null;
+        if ($pidFilePath !== null && is_file($pidFilePath)) {
+            $rawPid = file_get_contents($pidFilePath);
+            $trimmedPid = $rawPid === false ? null : trim($rawPid);
+            if (is_string($trimmedPid) && preg_match('/^-?\d+$/', $trimmedPid) === 1) {
+                $existingPid = (int) $trimmedPid;
+            }
+        }
+        if (is_int($existingPid) && $existingPid > 0) {
+            $pidToReport = $existingPid;
+        }
 
         $resolvedServiceDefinition = $serviceDefinition;
         $resolvedServiceDefinition['startup_mode'] = 'launch-process';
@@ -403,8 +415,8 @@ final class NativeDbusExtensionOwnershipDriver
             $this->writeArtifactFile($readyMarkerPath, "native-runtime-bus-owned\n");
         }
 
-        if ($pidFilePath !== null) {
-            $this->writeArtifactFile($pidFilePath, sprintf("%d\n", $resolvedPid));
+        if ($pidFilePath !== null && (!is_int($existingPid) || $existingPid <= 0)) {
+            $this->writeArtifactFile($pidFilePath, sprintf("%d\n", $pidToReport));
         }
 
         if ($statusFilePath === null) {
@@ -436,7 +448,7 @@ final class NativeDbusExtensionOwnershipDriver
                 'service_definition' => $resolvedServiceDefinition,
                 'runtime_backend' => $resolvedServiceDefinition['runtime_backend'] ?? [],
                 'ownership_state' => 'bus-name-owned',
-                'pid' => $resolvedPid,
+                'pid' => $pidToReport,
                 'blocking_reason' => null,
                 'next_action' => 'runtime-service-active',
             ],

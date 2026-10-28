@@ -13,14 +13,20 @@ final class SystemApiOperationsToolkit
 
     public function __construct(string $rootDir)
     {
-        $this->storeDir = rtrim($rootDir, DIRECTORY_SEPARATOR)
-            . DIRECTORY_SEPARATOR . 'build'
-            . DIRECTORY_SEPARATOR . 'system-api'
-            . DIRECTORY_SEPARATOR . 'operations';
-        $this->ledgerDir = rtrim($rootDir, DIRECTORY_SEPARATOR)
-            . DIRECTORY_SEPARATOR . 'build'
-            . DIRECTORY_SEPARATOR . 'system-api'
-            . DIRECTORY_SEPARATOR . 'operations-ledger';
+        $storeOverride = getenv('W4_SYSTEM_API_OPERATIONS_STORE_DIR');
+        $ledgerOverride = getenv('W4_SYSTEM_API_OPERATIONS_LEDGER_DIR');
+        $this->storeDir = is_string($storeOverride) && trim($storeOverride) !== ''
+            ? rtrim(trim($storeOverride), "\\/ ")
+            : (rtrim($rootDir, DIRECTORY_SEPARATOR)
+                . DIRECTORY_SEPARATOR . 'build'
+                . DIRECTORY_SEPARATOR . 'system-api'
+                . DIRECTORY_SEPARATOR . 'operations');
+        $this->ledgerDir = is_string($ledgerOverride) && trim($ledgerOverride) !== ''
+            ? rtrim(trim($ledgerOverride), "\\/ ")
+            : (rtrim($rootDir, DIRECTORY_SEPARATOR)
+                . DIRECTORY_SEPARATOR . 'build'
+                . DIRECTORY_SEPARATOR . 'system-api'
+                . DIRECTORY_SEPARATOR . 'operations-ledger');
     }
 
     /**
