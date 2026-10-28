@@ -212,4 +212,84 @@ final class NativeDbusFailureCheckTest extends TestCase
         $evidence['error'] = 'Incomplete probe';
         self::assertFalse(\validateNativeDbusCooldownEvidence($evidence)['validated']);
     }
+
+    private function daemonLossEvidence(): array
+    {
+        return [
+            'native_extension' => true,
+            'before' => ['request_id' => 'failure-before', 'error' => null, 'result' => ['method' => 'system.capabilities']],
+            'owner_before' => "(':1.3',)",
+            'daemon_pid' => 4242,
+            'daemon_dead' => true,
+            'owner_check_after' => ['exit_code' => 2],
+            'capabilities_after_command' => ['exit_code' => 2],
+            'runtime_after_command' => ['exit_code' => 2],
+        ];
+    }
+
+    public function testDaemonLossRequiresAllEvidenceKeys(): void
+    {
+        self::assertTrue(\validateNativeDbusDaemonLossEvidence($this->daemonLossEvidence())['validated']);
+        foreach (array_keys($this->daemonLossEvidence()) as $key) {
+            $evidence = $this->daemonLossEvidence();
+            unset($evidence[$key]);
+            self::assertFalse(\validateNativeDbusDaemonLossEvidence($evidence)['validated'], $key);
+        }
+    }
+
+    public function testDaemonLossRejectsHealthyBusAndServiceCalls(): void
+    {
+        $evidence = $this->daemonLossEvidence();
+        $evidence['daemon_dead'] = false;
+        self::assertFalse(\validateNativeDbusDaemonLossEvidence($evidence)['validated']);
+
+        $evidence = $this->daemonLossEvidence();
+        $evidence['owner_check_after']['exit_code'] = 0;
+        self::assertFalse(\validateNativeDbusDaemonLossEvidence($evidence)['validated']);
+
+        $evidence = $this->daemonLossEvidence();
+        $evidence['capabilities_after_command']['exit_code'] = 0;
+        self::assertFalse(\validateNativeDbusDaemonLossEvidence($evidence)['validated']);
+    }
+
+    private function runtimeKillEvidence(): array
+    {
+        return [
+            'native_extension' => true,
+            'before' => ['request_id' => 'failure-before', 'error' => null, 'result' => ['method' => 'system.capabilities']],
+            'owner_before' => "(':1.3',)",
+            'parent_pid' => 4242,
+            'runtime_kill_sent' => true,
+            'runtime_running_after_kill' => false,
+            'runtime_dead' => true,
+            'owner_check_after' => ['exit_code' => 0, 'stdout' => '(false,)'],
+            'capabilities_after_command' => ['exit_code' => 2],
+            'runtime_after_command' => ['exit_code' => 2],
+        ];
+    }
+
+    public function testRuntimeKillRequiresAllEvidenceKeys(): void
+    {
+        self::assertTrue(\validateNativeDbusRuntimeKillEvidence($this->runtimeKillEvidence())['validated']);
+        foreach (array_keys($this->runtimeKillEvidence()) as $key) {
+            $evidence = $this->runtimeKillEvidence();
+            unset($evidence[$key]);
+            self::assertFalse(\validateNativeDbusRuntimeKillEvidence($evidence)['validated'], $key);
+        }
+    }
+
+    public function testRuntimeKillRejectsSurvivingOwnerOrSuccessfulCalls(): void
+    {
+        $evidence = $this->runtimeKillEvidence();
+        $evidence['runtime_dead'] = false;
+        self::assertFalse(\validateNativeDbusRuntimeKillEvidence($evidence)['validated']);
+
+        $evidence = $this->runtimeKillEvidence();
+        $evidence['owner_check_after']['stdout'] = '(true,)';
+        self::assertFalse(\validateNativeDbusRuntimeKillEvidence($evidence)['validated']);
+
+        $evidence = $this->runtimeKillEvidence();
+        $evidence['capabilities_after_command']['exit_code'] = 0;
+        self::assertFalse(\validateNativeDbusRuntimeKillEvidence($evidence)['validated']);
+    }
 }

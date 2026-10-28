@@ -18,7 +18,9 @@ Matriz operativa para seguimiento continuo del desarrollo. Su objetivo es mostra
 - [x] Evitar ownership heredado y desacoplar lanzamiento Windows; regresion focalizada: 78 tests/956 aserciones.
 - [x] P0: rechazar argumentos D-Bus incompatibles sin derribar el bucle (TECH-1.370). Diez casos nativos WSL devuelven VALIDATION_ERROR con el mismo owner; 106 tests/1141 aserciones.
 - [x] Admision durante cooldown en Linux real: primera reactivacion efectiva seguida de un ciclo independiente sobre el mismo store; relanzamiento denegado con presupuesto 1/3 y estado intacto (TECH-1.371).
-- [ ] Backlog: probar muerte abrupta y perdida de conexion con el daemon; despues abordar autorizacion y operaciones durables del contrato V1.
+- [x] Perdida del daemon del bus privado en Linux real: SIGKILL al `dbus-daemon` identificado por inode del socket; los probes posteriores fallan sin tocar el bus del sistema (TECH-1.372).
+- [x] Muerte abrupta del runtime en bus privado: SIGKILL al proceso de servicio; el bus sigue vivo con `NameHasOwner=false` y las llamadas del servicio fallan (TECH-1.373).
+- [ ] Backlog: despues abordar autorizacion y operaciones durables del contrato V1.
 
 Contrato operativo: `W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_FAILURE_BACKOFF_MULTIPLIER`
 acepta enteros 1..10 (valores mayores se limitan a 10; cero/invalido/ausente usan 1).
@@ -70,13 +72,40 @@ El cooldown restringe la **auto-reactivacion**, no el arranque explicito de ese
 ciclo de prueba. No se inyecta un estado de supervisor ni un fallo sintetico.
 Se usa el limite efectivo de backoff base (10000 ms), keepalive=1s y una ventana
 de estabilidad insuficiente para resetear el budget. No demuestra reconexion
-tras perder el daemon, recuperacion tras SIGKILL ni readmision al expirar el plazo.
+ni readmision al expirar el plazo.
 
 Evidencia: `run-20261028-084929-fc07cbd6/report.json` y
 `run-20261028-085337-bf438789/report.json`. El escenario rejection sigue validado
 en `run-20261028-085348-8348b82f/report.json`. Todas las rutas estan bajo
 `build/system-api/validation/native-dbus-failure-check/`.
 Cobertura focalizada: 109 tests, 1164 aserciones.
+
+### Validacion de perdida del daemon (bus privado)
+
+```powershell
+wsl -d Ubuntu -u sagat1200 -- /opt/php/8.4.3/bin/php "/mnt/c/W4/Packages/W4-OS SYSTEM/scripts/run_native_dbus_failure_check.php" --scenario daemon-loss
+```
+
+El escenario `daemon-loss` mata el `dbus-daemon` del bus privado usando SIGKILL,
+sin interactuar con el bus del sistema. El worker resuelve el PID real del daemon
+buscando el inode del socket en `/proc/net/unix` y verificando `socket:[inode]`
+en `/proc/*/fd`. Tras la terminacion, los probes `NameHasOwner`, `GetCapabilities`
+y `Call(system.dbus-runtime)` fallan como evidencia de perdida de transporte.
+
+Evidencia: `run-20261028-092459-c0cb2b6e/report.json`.
+
+### Validacion de muerte abrupta del runtime (bus privado)
+
+```powershell
+wsl -d Ubuntu -u sagat1200 -- /opt/php/8.4.3/bin/php "/mnt/c/W4/Packages/W4-OS SYSTEM/scripts/run_native_dbus_failure_check.php" --scenario runtime-kill
+```
+
+El escenario `runtime-kill` termina con SIGKILL al proceso `ServeNativeRuntimeService`
+que exporta `org.w4.System1` dentro del bus privado. Luego confirma que el bus
+sigue vivo (NameHasOwner devuelve false) mientras las llamadas al servicio fallan
+por ausencia de owner.
+
+Evidencia: `run-20261028-093055-64d8b93a/report.json`.
 
 ## Estados sugeridos
 

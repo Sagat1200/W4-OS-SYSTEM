@@ -100,6 +100,45 @@ function nativeDbusFailureReadJson(string $path): array
     return is_array($value) ? $value : [];
 }
 
+function nativeDbusFailureFindUnixSocketPid(string $socketPath): int
+{
+    $rows = @file('/proc/net/unix', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if (!is_array($rows)) {
+        return 0;
+    }
+    $inode = null;
+    foreach ($rows as $row) {
+        if (!str_contains($row, $socketPath)) {
+            continue;
+        }
+        $parts = preg_split('/\\s+/', trim($row));
+        if (!is_array($parts) || count($parts) < 7) {
+            continue;
+        }
+        $inode = $parts[6];
+        break;
+    }
+    if ($inode === null) {
+        return 0;
+    }
+    foreach (glob('/proc/[0-9]*', GLOB_ONLYDIR) ?: [] as $procDir) {
+        $pid = (int) basename($procDir);
+        if ($pid <= 0) {
+            continue;
+        }
+        foreach (glob($procDir . '/fd/*') ?: [] as $fd) {
+            $target = @readlink($fd);
+            if ($target === false) {
+                continue;
+            }
+            if ($target === 'socket:[' . $inode . ']') {
+                return $pid;
+            }
+        }
+    }
+    return 0;
+}
+
 function validateNativeDbusCooldownEvidence(array $evidence): array
 {
     $first = $evidence['first']['auto_reactivation'] ?? [];
@@ -131,6 +170,44 @@ function validateNativeDbusCooldownEvidence(array $evidence): array
             && ($evidence['probe_command']['exit_code'] ?? null) === 3,
         'no_owner' => ($evidence['owner_check']['exit_code'] ?? null) === 0
             && ($evidence['owner_check']['stdout'] ?? null) === '(false,)',
+        'no_error' => !isset($evidence['error']),
+    ];
+    return ['validated' => !in_array(false, $checks, true), 'checks' => $checks];
+}
+
+function validateNativeDbusDaemonLossEvidence(array $evidence): array
+{
+    $checks = [
+        'native_extension' => ($evidence['native_extension'] ?? false) === true,
+        'initial_call' => nativeDbusFailureResponseValid($evidence['before'] ?? [], 'failure-before', 'system.capabilities'),
+        'owner_observed' => is_string($evidence['owner_before'] ?? null)
+            && preg_match("/^\\(':\\d+\\.\\d+',\\)$/", $evidence['owner_before']) === 1,
+        'daemon_pid' => is_int($evidence['daemon_pid'] ?? null) && $evidence['daemon_pid'] > 0,
+        'daemon_dead' => ($evidence['daemon_dead'] ?? false) === true,
+        'owner_probe_failed' => ($evidence['owner_check_after']['exit_code'] ?? 0) !== 0,
+        'capabilities_failed' => ($evidence['capabilities_after_command']['exit_code'] ?? 0) !== 0,
+        'runtime_failed' => ($evidence['runtime_after_command']['exit_code'] ?? 0) !== 0,
+        'no_error' => !isset($evidence['error']),
+    ];
+    return ['validated' => !in_array(false, $checks, true), 'checks' => $checks];
+}
+
+function validateNativeDbusRuntimeKillEvidence(array $evidence): array
+{
+    $running = $evidence['runtime_running_after_kill'] ?? null;
+    $checks = [
+        'native_extension' => ($evidence['native_extension'] ?? false) === true,
+        'initial_call' => nativeDbusFailureResponseValid($evidence['before'] ?? [], 'failure-before', 'system.capabilities'),
+        'owner_observed' => is_string($evidence['owner_before'] ?? null)
+            && preg_match("/^\\(':\\d+\\.\\d+',\\)$/", $evidence['owner_before']) === 1,
+        'parent_pid' => is_int($evidence['parent_pid'] ?? null) && $evidence['parent_pid'] > 0,
+        'kill_sent' => ($evidence['runtime_kill_sent'] ?? false) === true,
+        'runtime_stopped' => $running === false,
+        'runtime_dead' => ($evidence['runtime_dead'] ?? false) === true,
+        'owner_absent' => ($evidence['owner_check_after']['exit_code'] ?? null) === 0
+            && ($evidence['owner_check_after']['stdout'] ?? null) === '(false,)',
+        'capabilities_failed' => ($evidence['capabilities_after_command']['exit_code'] ?? 0) !== 0,
+        'runtime_failed' => ($evidence['runtime_after_command']['exit_code'] ?? 0) !== 0,
         'no_error' => !isset($evidence['error']),
     ];
     return ['validated' => !in_array(false, $checks, true), 'checks' => $checks];
@@ -169,6 +246,94 @@ function nativeDbusCooldownProbe(string $directory, string $runtime, array $evid
         '--timeout', '2', '--dest', 'org.freedesktop.DBus', '--object-path', '/org/freedesktop/DBus',
         '--method', 'org.freedesktop.DBus.NameHasOwner', 'org.w4.System1',
     ], $directory, 'owner-absent');
+    return $evidence;
+}
+
+function nativeDbusDaemonLossProbe(string $directory, string $socketPath, array $evidence): array
+{
+    $daemonPid = nativeDbusFailureFindUnixSocketPid($socketPath);
+    if ($daemonPid <= 0) {
+        throw new RuntimeException('No se encontro el pid del daemon del bus privado');
+    }
+    $evidence['daemon_pid'] = $daemonPid;
+    $evidence['daemon_kill_sent'] = posix_kill($daemonPid, SIGKILL);
+    $deadline = microtime(true) + 2;
+    do {
+        if (!posix_kill($daemonPid, 0)) {
+            break;
+        }
+        usleep(50000);
+    } while (microtime(true) < $deadline);
+    $evidence['daemon_dead'] = !posix_kill($daemonPid, 0);
+    $evidence['owner_check_after'] = nativeDbusFailureCommand([
+        'gdbus', 'call', '--address', (string) getenv('DBUS_SESSION_BUS_ADDRESS'),
+        '--timeout', '2', '--dest', 'org.freedesktop.DBus', '--object-path', '/org/freedesktop/DBus',
+        '--method', 'org.freedesktop.DBus.NameHasOwner', 'org.w4.System1',
+    ], $directory, 'daemon-loss-owner');
+    $evidence['capabilities_after_command'] = nativeDbusFailureCall(
+        $directory,
+        'daemon-loss-capabilities',
+        'GetCapabilities',
+        ['failure-daemon-loss']
+    );
+    $request = json_encode([
+        'api_version' => '1.0',
+        'request_id' => 'failure-daemon-loss-runtime',
+        'method' => 'system.dbus-runtime',
+        'params' => [],
+    ], JSON_THROW_ON_ERROR);
+    $evidence['runtime_after_command'] = nativeDbusFailureCall(
+        $directory,
+        'daemon-loss-runtime',
+        'Call',
+        [$request]
+    );
+    return $evidence;
+}
+
+function nativeDbusRuntimeKillProbe(string $directory, mixed $parent, array $evidence): array
+{
+    $status = is_resource($parent) ? proc_get_status($parent) : [];
+    $pid = (int) ($status['pid'] ?? 0);
+    if ($pid <= 0) {
+        throw new RuntimeException('No se pudo resolver el pid del runtime');
+    }
+    $evidence['parent_pid'] = $pid;
+    $evidence['runtime_kill_sent'] = posix_kill($pid, SIGKILL);
+    $deadline = microtime(true) + 2;
+    do {
+        $status = is_resource($parent) ? proc_get_status($parent) : [];
+        if (($status['running'] ?? false) !== true) {
+            break;
+        }
+        usleep(50000);
+    } while (microtime(true) < $deadline);
+    $status = is_resource($parent) ? proc_get_status($parent) : [];
+    $evidence['runtime_running_after_kill'] = ($status['running'] ?? false) === true;
+    $evidence['runtime_dead'] = ($status['running'] ?? false) !== true;
+    $evidence['owner_check_after'] = nativeDbusFailureCommand([
+        'gdbus', 'call', '--address', (string) getenv('DBUS_SESSION_BUS_ADDRESS'),
+        '--timeout', '2', '--dest', 'org.freedesktop.DBus', '--object-path', '/org/freedesktop/DBus',
+        '--method', 'org.freedesktop.DBus.NameHasOwner', 'org.w4.System1',
+    ], $directory, 'runtime-kill-owner');
+    $evidence['capabilities_after_command'] = nativeDbusFailureCall(
+        $directory,
+        'runtime-kill-capabilities',
+        'GetCapabilities',
+        ['failure-runtime-kill']
+    );
+    $request = json_encode([
+        'api_version' => '1.0',
+        'request_id' => 'failure-runtime-kill-runtime',
+        'method' => 'system.dbus-runtime',
+        'params' => [],
+    ], JSON_THROW_ON_ERROR);
+    $evidence['runtime_after_command'] = nativeDbusFailureCall(
+        $directory,
+        'runtime-kill-runtime',
+        'Call',
+        [$request]
+    );
     return $evidence;
 }
 
@@ -236,6 +401,7 @@ function nativeDbusFailureWorker(string $directory, string $scenario = 'rejectio
     if (preg_match('/^unix:path=([^,;]+)/', (string) getenv('DBUS_SESSION_BUS_ADDRESS'), $socket) !== 1) {
         throw new RuntimeException('Se requiere un socket privado con ruta observable');
     }
+    $socketPath = rawurldecode($socket[1]);
     $runtime = "$directory/runtime-artifacts";
     if (!mkdir($runtime, 0700)) {
         throw new RuntimeException('No se pudo crear el directorio de runtime');
@@ -247,7 +413,7 @@ function nativeDbusFailureWorker(string $directory, string $scenario = 'rejectio
     }
     $environment = [
         'DBUS_SYSTEM_BUS_ADDRESS' => (string) getenv('DBUS_SESSION_BUS_ADDRESS'),
-        'W4_SYSTEM_API_PROBE_SYSTEM_BUS_SOCKET' => rawurldecode($socket[1]),
+        'W4_SYSTEM_API_PROBE_SYSTEM_BUS_SOCKET' => $socketPath,
         'W4_SYSTEM_API_RUNTIME_BACKEND' => 'native-dbus-extension',
         'W4_SYSTEM_API_NATIVE_RUNTIME_ARTIFACTS_DIR' => $runtime,
         'W4_SYSTEM_API_NATIVE_RUNTIME_KEEPALIVE_SECONDS' => '60',
@@ -294,6 +460,10 @@ function nativeDbusFailureWorker(string $directory, string $scenario = 'rejectio
         $evidence['before'] = nativeDbusFailureDecode(nativeDbusFailureCall($directory, 'before', 'GetCapabilities', ['failure-before']));
         if ($scenario === 'cooldown') {
             $evidence = nativeDbusCooldownProbe($directory, $runtime, $evidence);
+        } elseif ($scenario === 'daemon-loss') {
+            $evidence = nativeDbusDaemonLossProbe($directory, $socketPath, $evidence);
+        } elseif ($scenario === 'runtime-kill') {
+            $evidence = nativeDbusRuntimeKillProbe($directory, $parent, $evidence);
         } else {
             foreach (nativeDbusInvalidArgumentCases() as $label => $case) {
                 $evidence['rejections'][$label] = nativeDbusFailureDecode(
@@ -326,7 +496,11 @@ function nativeDbusFailureWorker(string $directory, string $scenario = 'rejectio
     }
     $result = $scenario === 'cooldown'
         ? validateNativeDbusCooldownEvidence($evidence)
-        : validateNativeDbusRejectionEvidence($evidence);
+        : ($scenario === 'daemon-loss'
+            ? validateNativeDbusDaemonLossEvidence($evidence)
+            : ($scenario === 'runtime-kill'
+                ? validateNativeDbusRuntimeKillEvidence($evidence)
+                : validateNativeDbusRejectionEvidence($evidence)));
     $report = $result + ['kind' => 'native-dbus-private-bus-' . $scenario . '-check', 'evidence' => $evidence];
     nativeDbusFailureWriteJson("$directory/report.json", $report);
     return $result['validated'] ? 0 : 3;
@@ -338,17 +512,17 @@ function runNativeDbusFailureCheck(array $arguments): int
         throw new RuntimeException('Requiere Linux, PHP 8.4+, dbus y posix');
     }
     if (($arguments[1] ?? null) === '--private-worker' && count($arguments) === 4
-        && in_array($arguments[3], ['rejection', 'cooldown'], true)
+        && in_array($arguments[3], ['rejection', 'cooldown', 'daemon-loss', 'runtime-kill'], true)
     ) {
         return nativeDbusFailureWorker($arguments[2], $arguments[3]);
     }
     $scenario = 'rejection';
-    if (($arguments[1] ?? null) === '--scenario' && in_array($arguments[2] ?? null, ['rejection', 'cooldown'], true)) {
+    if (($arguments[1] ?? null) === '--scenario' && in_array($arguments[2] ?? null, ['rejection', 'cooldown', 'daemon-loss', 'runtime-kill'], true)) {
         $scenario = $arguments[2];
         array_splice($arguments, 1, 2);
     }
     if (count($arguments) !== 1 && !(count($arguments) === 3 && $arguments[1] === '--evidence-dir')) {
-        throw new RuntimeException('Uso: php run_native_dbus_failure_check.php [--scenario rejection|cooldown] [--evidence-dir PATH]');
+        throw new RuntimeException('Uso: php run_native_dbus_failure_check.php [--scenario rejection|cooldown|daemon-loss|runtime-kill] [--evidence-dir PATH]');
     }
     $base = $arguments[2] ?? dirname(__DIR__) . '/build/system-api/validation/native-dbus-failure-check';
     $directory = $base . '/run-' . gmdate('Ymd-His') . '-' . bin2hex(random_bytes(4));
