@@ -139,4 +139,77 @@ final class NativeDbusFailureCheckTest extends TestCase
         $evidence['rejections']['Call-array']['error']['code'] = 'INTERNAL_ERROR';
         self::assertFalse(\validateNativeDbusRejectionEvidence($evidence)['validated']);
     }
+
+    private function cooldownEvidence(): array
+    {
+        $state = [
+            'attempt_count' => 1, 'max_attempts' => 3,
+            'last_attempt_epoch_ms' => 1000, 'cooldown_until_epoch_ms' => 11000,
+        ];
+        return [
+            'native_extension' => true,
+            'before' => ['request_id' => 'failure-before', 'error' => null, 'result' => ['method' => 'system.capabilities']],
+            'owner_before' => "(':1.3',)",
+            'owner_replacement' => "(':1.8',)",
+            'first' => ['auto_reactivation' => ['attempted' => true, 'launched' => true, 'attempt' => 1]],
+            'state_before' => $state, 'state_after' => $state,
+            'probe_command' => ['exit_code' => 3],
+            'probe' => [
+                'status' => 'native-runtime-service-not-running',
+                'startup_report' => ['status' => 'native-runtime-service-loop-exited'],
+                'auto_reactivation' => [
+                    'reason' => 'native-runtime-auto-reactivation-cooldown-active',
+                    'attempted' => false, 'attempt' => 1, 'max_attempts' => 3,
+                    'cooldown_until_epoch_ms' => 11000, 'cooldown_remaining_ms' => 4000,
+                ],
+            ],
+            'owner_check' => ['exit_code' => 0, 'stdout' => '(false,)'],
+        ];
+    }
+
+    public function testCooldownRequiresAllIndependentEvidence(): void
+    {
+        self::assertTrue(\validateNativeDbusCooldownEvidence($this->cooldownEvidence())['validated']);
+        foreach (array_keys($this->cooldownEvidence()) as $key) {
+            $evidence = $this->cooldownEvidence();
+            unset($evidence[$key]);
+            self::assertFalse(\validateNativeDbusCooldownEvidence($evidence)['validated'], $key);
+        }
+    }
+
+    public function testCooldownRejectsBudgetExhaustionAndExpiredDeadlines(): void
+    {
+        foreach ([
+            ['reason', 'native-runtime-auto-reactivation-budget-exhausted'],
+            ['attempted', true],
+            ['attempt', 2],
+            ['cooldown_remaining_ms', 0],
+            ['cooldown_remaining_ms', 10001],
+            ['cooldown_remaining_ms', '4000'],
+            ['cooldown_until_epoch_ms', 12000],
+        ] as [$key, $value]) {
+            $evidence = $this->cooldownEvidence();
+            $evidence['probe']['auto_reactivation'][$key] = $value;
+            self::assertFalse(\validateNativeDbusCooldownEvidence($evidence)['validated'], $key);
+        }
+    }
+
+    public function testCooldownRejectsStateChangesAndFailedBusProbes(): void
+    {
+        $evidence = $this->cooldownEvidence();
+        $evidence['state_after']['attempt_count'] = 2;
+        self::assertFalse(\validateNativeDbusCooldownEvidence($evidence)['validated']);
+        $evidence = $this->cooldownEvidence();
+        $evidence['owner_check']['exit_code'] = 1;
+        self::assertFalse(\validateNativeDbusCooldownEvidence($evidence)['validated']);
+        $evidence = $this->cooldownEvidence();
+        $evidence['owner_check']['stdout'] = '(true,)';
+        self::assertFalse(\validateNativeDbusCooldownEvidence($evidence)['validated']);
+        $evidence = $this->cooldownEvidence();
+        $evidence['owner_replacement'] = $evidence['owner_before'];
+        self::assertFalse(\validateNativeDbusCooldownEvidence($evidence)['validated']);
+        $evidence = $this->cooldownEvidence();
+        $evidence['error'] = 'Incomplete probe';
+        self::assertFalse(\validateNativeDbusCooldownEvidence($evidence)['validated']);
+    }
 }

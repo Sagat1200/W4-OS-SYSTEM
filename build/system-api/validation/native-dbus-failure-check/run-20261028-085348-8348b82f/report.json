@@ -1,0 +1,1489 @@
+{
+    "validated": true,
+    "checks": {
+        "native_extension": true,
+        "initial_capabilities": true,
+        "owner_unchanged": true,
+        "parent_running": true,
+        "no_reactivation": true,
+        "capabilities_available": true,
+        "runtime_available": true,
+        "rejected_Call-array": true,
+        "rejected_Call-integer": true,
+        "rejected_Call-boolean": true,
+        "rejected_Call-missing": true,
+        "rejected_Call-extra": true,
+        "rejected_GetCapabilities-array": true,
+        "rejected_GetCapabilities-integer": true,
+        "rejected_GetCapabilities-boolean": true,
+        "rejected_GetCapabilities-missing": true,
+        "rejected_GetCapabilities-extra": true
+    },
+    "kind": "native-dbus-private-bus-rejection-check",
+    "evidence": {
+        "native_extension": true,
+        "owner_before": "(':1.4',)",
+        "before": {
+            "api_version": "1.0",
+            "request_id": "failure-before",
+            "result": {
+                "operation_id": null,
+                "method": "system.capabilities",
+                "resource": {
+                    "id": "system-api",
+                    "kind": "system-api-capabilities",
+                    "revision": "7b37fa7254956a406744b7f7e8e7adaee1c661ed",
+                    "observed_at": "2026-10-28T08:53:50+00:00",
+                    "provider": "local-w4ctl-facade"
+                },
+                "capabilities": [
+                    "read-state",
+                    "local-cli-json",
+                    "w4ctl-contract-reuse"
+                ],
+                "data": {
+                    "kind": "system-api-capabilities",
+                    "transport": {
+                        "default": "local-cli-json",
+                        "tcp_listener_enabled_by_default": false
+                    },
+                    "binding": {
+                        "status": "local-manager-ready",
+                        "dbus": {
+                            "bus": "system",
+                            "name": "org.w4.System1",
+                            "object_path": "/org/w4/System1",
+                            "interface": "org.w4.System1.Manager",
+                            "methods": [
+                                "Call",
+                                "GetCapabilities"
+                            ]
+                        },
+                        "local_manager": {
+                            "script": "scripts/system_api_manager.php",
+                            "commands": [
+                                "call",
+                                "get-capabilities"
+                            ]
+                        },
+                        "local_dbus_bridge": {
+                            "script": "scripts/system_api_dbus_bridge.php",
+                            "commands": [
+                                "Call",
+                                "GetCapabilities",
+                                "DiagnoseRuntime",
+                                "DescribeRuntime",
+                                "serve-stdio-bridge",
+                                "serve-dbus"
+                            ],
+                            "adapter_status": "pending-runtime-adapter",
+                            "activation_command": "serve-dbus",
+                            "activation_method": "system.dbus-activation",
+                            "native_service_method": "system.dbus-native-service",
+                            "native_startup_method": "system.dbus-native-startup",
+                            "native_observation_method": "system.dbus-native-observation",
+                            "native_coupling_method": "system.dbus-native-coupling",
+                            "native_ownership_method": "system.dbus-native-ownership",
+                            "activation_next_action": "runtime-service-active",
+                            "activation_recovery_plan": [
+                                "runtime-service-active",
+                                "reactivate-native-runtime-service",
+                                "launch-native-runtime-service",
+                                "start-native-runtime-service"
+                            ]
+                        },
+                        "local_runtime_adapter": {
+                            "script": "scripts/system_api_dbus_runtime_adapter.php",
+                            "commands": [
+                                "Call",
+                                "GetCapabilities",
+                                "DiagnoseRuntime",
+                                "DescribeRuntime",
+                                "DescribeSpecification",
+                                "DescribeActivationPreparation",
+                                "AttemptActivation",
+                                "ExecuteActivation",
+                                "serve-stdio-adapter",
+                                "serve-dbus"
+                            ],
+                            "status": "spec-ready",
+                            "supported_runtime_backends": [
+                                "contract-pending",
+                                "experimental-embedded-runtime",
+                                "native-dbus-extension"
+                            ],
+                            "runtime_status": "ready-for-runtime-adapter",
+                            "selected_runtime_backend": "native-dbus-extension",
+                            "runtime_backend_status": "native-runtime-backend-materialized",
+                            "activation_next_action": "runtime-service-active",
+                            "activation_recovery_plan": [
+                                "runtime-service-active",
+                                "reactivate-native-runtime-service",
+                                "launch-native-runtime-service",
+                                "start-native-runtime-service"
+                            ]
+                        },
+                        "local_runtime_host": {
+                            "script": "scripts/system_api_dbus_runtime_host.php",
+                            "commands": [
+                                "DescribeHost",
+                                "DescribeSpecification",
+                                "DescribeRuntime",
+                                "DiagnoseRuntime",
+                                "GetCapabilities",
+                                "Call",
+                                "serve-stdio-host",
+                                "serve-dbus"
+                            ],
+                            "status": "host-ready",
+                            "transport": "stdio-ndjson-host",
+                            "runtime_status": "ready-for-runtime-adapter",
+                            "runtime_next_action": "runtime-service-active",
+                            "runtime_recovery_plan": [
+                                "runtime-service-active",
+                                "reactivate-native-runtime-service",
+                                "launch-native-runtime-service",
+                                "start-native-runtime-service"
+                            ]
+                        },
+                        "local_runtime_launcher": {
+                            "script": "scripts/system_api_dbus_runtime_launcher.php",
+                            "commands": [
+                                "DescribeLauncher",
+                                "DescribeLaunchPlan",
+                                "DescribeActivationBootstrap",
+                                "DescribeActivationPreparation",
+                                "AttemptActivation",
+                                "ExecuteActivation",
+                                "DescribeHost",
+                                "DescribeSpecification",
+                                "DescribeRuntime",
+                                "DiagnoseRuntime",
+                                "GetCapabilities",
+                                "Call",
+                                "serve-stdio-launcher",
+                                "serve-dbus"
+                            ],
+                            "status": "launcher-ready",
+                            "transport": "stdio-ndjson-launcher",
+                            "handoff_mode": "child-process-stdio-relay",
+                            "selected_runtime_backend": "native-dbus-extension",
+                            "runtime_backend_status": "native-runtime-backend-materialized",
+                            "activation_next_action": "runtime-service-active",
+                            "activation_recovery_plan": [
+                                "runtime-service-active",
+                                "reactivate-native-runtime-service",
+                                "launch-native-runtime-service",
+                                "start-native-runtime-service"
+                            ],
+                            "runtime_backend_command": "StartNativeRuntimeService",
+                            "runtime_backend_command_role": "native-runtime-service-bootstrap"
+                        },
+                        "local_daemon": {
+                            "script": "scripts/system_api_daemon.php",
+                            "commands": [
+                                "serve-stdio"
+                            ],
+                            "protocol": "ndjson"
+                        }
+                    },
+                    "methods": [
+                        {
+                            "name": "system.capabilities",
+                            "resource_kind": "system-api-capabilities",
+                            "mutates_state": false
+                        },
+                        {
+                            "name": "profiles.list",
+                            "resource_kind": "profile-collection",
+                            "mutates_state": false
+                        },
+                        {
+                            "name": "packages.search",
+                            "resource_kind": "package-search-result",
+                            "mutates_state": false,
+                            "params": [
+                                "query"
+                            ]
+                        },
+                        {
+                            "name": "packages.info",
+                            "resource_kind": "package",
+                            "mutates_state": false,
+                            "params": [
+                                "name",
+                                "architecture?"
+                            ]
+                        },
+                        {
+                            "name": "packages.list_installed",
+                            "resource_kind": "package-installed-collection",
+                            "mutates_state": false,
+                            "params": [
+                                "limit?"
+                            ]
+                        },
+                        {
+                            "name": "packages.plan",
+                            "resource_kind": "package-plan",
+                            "mutates_state": false,
+                            "params": [
+                                "action",
+                                "selection",
+                                "conffile_policy",
+                                "output_path?"
+                            ]
+                        },
+                        {
+                            "name": "packages.apply",
+                            "resource_kind": "package-operation",
+                            "mutates_state": true,
+                            "params": [
+                                "plan_id",
+                                "plan_hash",
+                                "idempotency_key",
+                                "expected_catalog_revision?",
+                                "plan?",
+                                "plan_path?"
+                            ]
+                        },
+                        {
+                            "name": "updates.check",
+                            "resource_kind": "updates-check",
+                            "mutates_state": false,
+                            "params": [
+                                "refresh?",
+                                "limit?"
+                            ]
+                        },
+                        {
+                            "name": "updates.list",
+                            "resource_kind": "updates-list",
+                            "mutates_state": false,
+                            "params": [
+                                "limit?"
+                            ]
+                        },
+                        {
+                            "name": "updates.apply",
+                            "resource_kind": "update-operation",
+                            "mutates_state": true,
+                            "params": [
+                                "operation_id",
+                                "plan_hash",
+                                "idempotency_key",
+                                "expected_catalog_revision?",
+                                "plan?",
+                                "plan_path?"
+                            ]
+                        },
+                        {
+                            "name": "updates.reconcile",
+                            "resource_kind": "update-operation",
+                            "mutates_state": true,
+                            "params": [
+                                "operation_id",
+                                "observed_stage?",
+                                "health_result_path?",
+                                "details?",
+                                "observed_error?"
+                            ]
+                        },
+                        {
+                            "name": "operations.get",
+                            "resource_kind": "system-api-operation",
+                            "mutates_state": false,
+                            "params": [
+                                "operation_id"
+                            ]
+                        },
+                        {
+                            "name": "operations.cancel",
+                            "resource_kind": "system-api-operation-cancel",
+                            "mutates_state": true,
+                            "params": [
+                                "operation_id"
+                            ]
+                        },
+                        {
+                            "name": "services.list",
+                            "resource_kind": "service-collection",
+                            "mutates_state": false,
+                            "params": [
+                                "unit?"
+                            ]
+                        },
+                        {
+                            "name": "services.status",
+                            "resource_kind": "service-status",
+                            "mutates_state": false,
+                            "params": [
+                                "unit"
+                            ]
+                        },
+                        {
+                            "name": "services.start",
+                            "resource_kind": "service-operation",
+                            "mutates_state": true,
+                            "params": [
+                                "unit",
+                                "expected_revision?",
+                                "idempotency_key?"
+                            ]
+                        },
+                        {
+                            "name": "services.stop",
+                            "resource_kind": "service-operation",
+                            "mutates_state": true,
+                            "params": [
+                                "unit",
+                                "expected_revision?",
+                                "idempotency_key?"
+                            ]
+                        },
+                        {
+                            "name": "services.restart",
+                            "resource_kind": "service-operation",
+                            "mutates_state": true,
+                            "params": [
+                                "unit",
+                                "expected_revision?",
+                                "idempotency_key?"
+                            ]
+                        },
+                        {
+                            "name": "services.enable",
+                            "resource_kind": "service-operation",
+                            "mutates_state": true,
+                            "params": [
+                                "unit",
+                                "expected_revision?",
+                                "idempotency_key?"
+                            ]
+                        },
+                        {
+                            "name": "services.disable",
+                            "resource_kind": "service-operation",
+                            "mutates_state": true,
+                            "params": [
+                                "unit",
+                                "expected_revision?",
+                                "idempotency_key?"
+                            ]
+                        },
+                        {
+                            "name": "system.dbus-runtime",
+                            "resource_kind": "system-api-dbus-runtime-diagnosis",
+                            "mutates_state": false
+                        },
+                        {
+                            "name": "system.dbus-activation",
+                            "resource_kind": "system-api-dbus-runtime-activation",
+                            "mutates_state": false
+                        },
+                        {
+                            "name": "system.dbus-native-service",
+                            "resource_kind": "system-api-dbus-native-runtime-service",
+                            "mutates_state": false
+                        },
+                        {
+                            "name": "system.dbus-native-startup",
+                            "resource_kind": "system-api-dbus-native-runtime-startup",
+                            "mutates_state": true
+                        },
+                        {
+                            "name": "system.dbus-native-observation",
+                            "resource_kind": "system-api-dbus-native-runtime-observation",
+                            "mutates_state": false
+                        },
+                        {
+                            "name": "system.dbus-native-coupling",
+                            "resource_kind": "system-api-dbus-native-runtime-coupling",
+                            "mutates_state": false
+                        },
+                        {
+                            "name": "system.dbus-native-ownership",
+                            "resource_kind": "system-api-dbus-native-runtime-ownership",
+                            "mutates_state": true
+                        },
+                        {
+                            "name": "profiles.get",
+                            "resource_kind": "edition-profile",
+                            "mutates_state": false,
+                            "params": [
+                                "profile_id"
+                            ]
+                        },
+                        {
+                            "name": "builds.validate",
+                            "resource_kind": "build-validation",
+                            "mutates_state": false,
+                            "params": [
+                                "profile_id",
+                                "channel?",
+                                "format?"
+                            ]
+                        },
+                        {
+                            "name": "live.inspect",
+                            "resource_kind": "live-inspection",
+                            "mutates_state": false,
+                            "params": [
+                                "profile_id",
+                                "live_output_dir?",
+                                "live_manifest?"
+                            ]
+                        },
+                        {
+                            "name": "artifacts.manifest",
+                            "resource_kind": "artifact-manifest",
+                            "mutates_state": false,
+                            "params": [
+                                "artifact",
+                                "profile_id?",
+                                "manifest?"
+                            ]
+                        },
+                        {
+                            "name": "updates.plan",
+                            "resource_kind": "update-plan",
+                            "mutates_state": false,
+                            "params": [
+                                "request_path",
+                                "operation_id?",
+                                "output_path?"
+                            ]
+                        }
+                    ]
+                },
+                "links": {
+                    "self": "/system-api/system/capabilities"
+                }
+            },
+            "error": null
+        },
+        "rejections": {
+            "Call-array": {
+                "api_version": "1.0",
+                "request_id": "invalid-request",
+                "result": null,
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Call requiere exactamente un argumento string",
+                    "retryable": false
+                }
+            },
+            "Call-integer": {
+                "api_version": "1.0",
+                "request_id": "invalid-request",
+                "result": null,
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Call requiere exactamente un argumento string",
+                    "retryable": false
+                }
+            },
+            "Call-boolean": {
+                "api_version": "1.0",
+                "request_id": "invalid-request",
+                "result": null,
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Call requiere exactamente un argumento string",
+                    "retryable": false
+                }
+            },
+            "Call-missing": {
+                "api_version": "1.0",
+                "request_id": "invalid-request",
+                "result": null,
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Call requiere exactamente un argumento string",
+                    "retryable": false
+                }
+            },
+            "Call-extra": {
+                "api_version": "1.0",
+                "request_id": "invalid-request",
+                "result": null,
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Call requiere exactamente un argumento string",
+                    "retryable": false
+                }
+            },
+            "GetCapabilities-array": {
+                "api_version": "1.0",
+                "request_id": "invalid-request",
+                "result": null,
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "GetCapabilities requiere exactamente un argumento string",
+                    "retryable": false
+                }
+            },
+            "GetCapabilities-integer": {
+                "api_version": "1.0",
+                "request_id": "invalid-request",
+                "result": null,
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "GetCapabilities requiere exactamente un argumento string",
+                    "retryable": false
+                }
+            },
+            "GetCapabilities-boolean": {
+                "api_version": "1.0",
+                "request_id": "invalid-request",
+                "result": null,
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "GetCapabilities requiere exactamente un argumento string",
+                    "retryable": false
+                }
+            },
+            "GetCapabilities-missing": {
+                "api_version": "1.0",
+                "request_id": "invalid-request",
+                "result": null,
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "GetCapabilities requiere exactamente un argumento string",
+                    "retryable": false
+                }
+            },
+            "GetCapabilities-extra": {
+                "api_version": "1.0",
+                "request_id": "invalid-request",
+                "result": null,
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "GetCapabilities requiere exactamente un argumento string",
+                    "retryable": false
+                }
+            }
+        },
+        "owner_after": "(':1.4',)",
+        "after": {
+            "api_version": "1.0",
+            "request_id": "failure-after",
+            "result": {
+                "operation_id": null,
+                "method": "system.capabilities",
+                "resource": {
+                    "id": "system-api",
+                    "kind": "system-api-capabilities",
+                    "revision": "7b37fa7254956a406744b7f7e8e7adaee1c661ed",
+                    "observed_at": "2026-10-28T08:53:50+00:00",
+                    "provider": "local-w4ctl-facade"
+                },
+                "capabilities": [
+                    "read-state",
+                    "local-cli-json",
+                    "w4ctl-contract-reuse"
+                ],
+                "data": {
+                    "kind": "system-api-capabilities",
+                    "transport": {
+                        "default": "local-cli-json",
+                        "tcp_listener_enabled_by_default": false
+                    },
+                    "binding": {
+                        "status": "local-manager-ready",
+                        "dbus": {
+                            "bus": "system",
+                            "name": "org.w4.System1",
+                            "object_path": "/org/w4/System1",
+                            "interface": "org.w4.System1.Manager",
+                            "methods": [
+                                "Call",
+                                "GetCapabilities"
+                            ]
+                        },
+                        "local_manager": {
+                            "script": "scripts/system_api_manager.php",
+                            "commands": [
+                                "call",
+                                "get-capabilities"
+                            ]
+                        },
+                        "local_dbus_bridge": {
+                            "script": "scripts/system_api_dbus_bridge.php",
+                            "commands": [
+                                "Call",
+                                "GetCapabilities",
+                                "DiagnoseRuntime",
+                                "DescribeRuntime",
+                                "serve-stdio-bridge",
+                                "serve-dbus"
+                            ],
+                            "adapter_status": "pending-runtime-adapter",
+                            "activation_command": "serve-dbus",
+                            "activation_method": "system.dbus-activation",
+                            "native_service_method": "system.dbus-native-service",
+                            "native_startup_method": "system.dbus-native-startup",
+                            "native_observation_method": "system.dbus-native-observation",
+                            "native_coupling_method": "system.dbus-native-coupling",
+                            "native_ownership_method": "system.dbus-native-ownership",
+                            "activation_next_action": "runtime-service-active",
+                            "activation_recovery_plan": [
+                                "runtime-service-active",
+                                "reactivate-native-runtime-service",
+                                "launch-native-runtime-service",
+                                "start-native-runtime-service"
+                            ]
+                        },
+                        "local_runtime_adapter": {
+                            "script": "scripts/system_api_dbus_runtime_adapter.php",
+                            "commands": [
+                                "Call",
+                                "GetCapabilities",
+                                "DiagnoseRuntime",
+                                "DescribeRuntime",
+                                "DescribeSpecification",
+                                "DescribeActivationPreparation",
+                                "AttemptActivation",
+                                "ExecuteActivation",
+                                "serve-stdio-adapter",
+                                "serve-dbus"
+                            ],
+                            "status": "spec-ready",
+                            "supported_runtime_backends": [
+                                "contract-pending",
+                                "experimental-embedded-runtime",
+                                "native-dbus-extension"
+                            ],
+                            "runtime_status": "ready-for-runtime-adapter",
+                            "selected_runtime_backend": "native-dbus-extension",
+                            "runtime_backend_status": "native-runtime-backend-materialized",
+                            "activation_next_action": "runtime-service-active",
+                            "activation_recovery_plan": [
+                                "runtime-service-active",
+                                "reactivate-native-runtime-service",
+                                "launch-native-runtime-service",
+                                "start-native-runtime-service"
+                            ]
+                        },
+                        "local_runtime_host": {
+                            "script": "scripts/system_api_dbus_runtime_host.php",
+                            "commands": [
+                                "DescribeHost",
+                                "DescribeSpecification",
+                                "DescribeRuntime",
+                                "DiagnoseRuntime",
+                                "GetCapabilities",
+                                "Call",
+                                "serve-stdio-host",
+                                "serve-dbus"
+                            ],
+                            "status": "host-ready",
+                            "transport": "stdio-ndjson-host",
+                            "runtime_status": "ready-for-runtime-adapter",
+                            "runtime_next_action": "runtime-service-active",
+                            "runtime_recovery_plan": [
+                                "runtime-service-active",
+                                "reactivate-native-runtime-service",
+                                "launch-native-runtime-service",
+                                "start-native-runtime-service"
+                            ]
+                        },
+                        "local_runtime_launcher": {
+                            "script": "scripts/system_api_dbus_runtime_launcher.php",
+                            "commands": [
+                                "DescribeLauncher",
+                                "DescribeLaunchPlan",
+                                "DescribeActivationBootstrap",
+                                "DescribeActivationPreparation",
+                                "AttemptActivation",
+                                "ExecuteActivation",
+                                "DescribeHost",
+                                "DescribeSpecification",
+                                "DescribeRuntime",
+                                "DiagnoseRuntime",
+                                "GetCapabilities",
+                                "Call",
+                                "serve-stdio-launcher",
+                                "serve-dbus"
+                            ],
+                            "status": "launcher-ready",
+                            "transport": "stdio-ndjson-launcher",
+                            "handoff_mode": "child-process-stdio-relay",
+                            "selected_runtime_backend": "native-dbus-extension",
+                            "runtime_backend_status": "native-runtime-backend-materialized",
+                            "activation_next_action": "runtime-service-active",
+                            "activation_recovery_plan": [
+                                "runtime-service-active",
+                                "reactivate-native-runtime-service",
+                                "launch-native-runtime-service",
+                                "start-native-runtime-service"
+                            ],
+                            "runtime_backend_command": "StartNativeRuntimeService",
+                            "runtime_backend_command_role": "native-runtime-service-bootstrap"
+                        },
+                        "local_daemon": {
+                            "script": "scripts/system_api_daemon.php",
+                            "commands": [
+                                "serve-stdio"
+                            ],
+                            "protocol": "ndjson"
+                        }
+                    },
+                    "methods": [
+                        {
+                            "name": "system.capabilities",
+                            "resource_kind": "system-api-capabilities",
+                            "mutates_state": false
+                        },
+                        {
+                            "name": "profiles.list",
+                            "resource_kind": "profile-collection",
+                            "mutates_state": false
+                        },
+                        {
+                            "name": "packages.search",
+                            "resource_kind": "package-search-result",
+                            "mutates_state": false,
+                            "params": [
+                                "query"
+                            ]
+                        },
+                        {
+                            "name": "packages.info",
+                            "resource_kind": "package",
+                            "mutates_state": false,
+                            "params": [
+                                "name",
+                                "architecture?"
+                            ]
+                        },
+                        {
+                            "name": "packages.list_installed",
+                            "resource_kind": "package-installed-collection",
+                            "mutates_state": false,
+                            "params": [
+                                "limit?"
+                            ]
+                        },
+                        {
+                            "name": "packages.plan",
+                            "resource_kind": "package-plan",
+                            "mutates_state": false,
+                            "params": [
+                                "action",
+                                "selection",
+                                "conffile_policy",
+                                "output_path?"
+                            ]
+                        },
+                        {
+                            "name": "packages.apply",
+                            "resource_kind": "package-operation",
+                            "mutates_state": true,
+                            "params": [
+                                "plan_id",
+                                "plan_hash",
+                                "idempotency_key",
+                                "expected_catalog_revision?",
+                                "plan?",
+                                "plan_path?"
+                            ]
+                        },
+                        {
+                            "name": "updates.check",
+                            "resource_kind": "updates-check",
+                            "mutates_state": false,
+                            "params": [
+                                "refresh?",
+                                "limit?"
+                            ]
+                        },
+                        {
+                            "name": "updates.list",
+                            "resource_kind": "updates-list",
+                            "mutates_state": false,
+                            "params": [
+                                "limit?"
+                            ]
+                        },
+                        {
+                            "name": "updates.apply",
+                            "resource_kind": "update-operation",
+                            "mutates_state": true,
+                            "params": [
+                                "operation_id",
+                                "plan_hash",
+                                "idempotency_key",
+                                "expected_catalog_revision?",
+                                "plan?",
+                                "plan_path?"
+                            ]
+                        },
+                        {
+                            "name": "updates.reconcile",
+                            "resource_kind": "update-operation",
+                            "mutates_state": true,
+                            "params": [
+                                "operation_id",
+                                "observed_stage?",
+                                "health_result_path?",
+                                "details?",
+                                "observed_error?"
+                            ]
+                        },
+                        {
+                            "name": "operations.get",
+                            "resource_kind": "system-api-operation",
+                            "mutates_state": false,
+                            "params": [
+                                "operation_id"
+                            ]
+                        },
+                        {
+                            "name": "operations.cancel",
+                            "resource_kind": "system-api-operation-cancel",
+                            "mutates_state": true,
+                            "params": [
+                                "operation_id"
+                            ]
+                        },
+                        {
+                            "name": "services.list",
+                            "resource_kind": "service-collection",
+                            "mutates_state": false,
+                            "params": [
+                                "unit?"
+                            ]
+                        },
+                        {
+                            "name": "services.status",
+                            "resource_kind": "service-status",
+                            "mutates_state": false,
+                            "params": [
+                                "unit"
+                            ]
+                        },
+                        {
+                            "name": "services.start",
+                            "resource_kind": "service-operation",
+                            "mutates_state": true,
+                            "params": [
+                                "unit",
+                                "expected_revision?",
+                                "idempotency_key?"
+                            ]
+                        },
+                        {
+                            "name": "services.stop",
+                            "resource_kind": "service-operation",
+                            "mutates_state": true,
+                            "params": [
+                                "unit",
+                                "expected_revision?",
+                                "idempotency_key?"
+                            ]
+                        },
+                        {
+                            "name": "services.restart",
+                            "resource_kind": "service-operation",
+                            "mutates_state": true,
+                            "params": [
+                                "unit",
+                                "expected_revision?",
+                                "idempotency_key?"
+                            ]
+                        },
+                        {
+                            "name": "services.enable",
+                            "resource_kind": "service-operation",
+                            "mutates_state": true,
+                            "params": [
+                                "unit",
+                                "expected_revision?",
+                                "idempotency_key?"
+                            ]
+                        },
+                        {
+                            "name": "services.disable",
+                            "resource_kind": "service-operation",
+                            "mutates_state": true,
+                            "params": [
+                                "unit",
+                                "expected_revision?",
+                                "idempotency_key?"
+                            ]
+                        },
+                        {
+                            "name": "system.dbus-runtime",
+                            "resource_kind": "system-api-dbus-runtime-diagnosis",
+                            "mutates_state": false
+                        },
+                        {
+                            "name": "system.dbus-activation",
+                            "resource_kind": "system-api-dbus-runtime-activation",
+                            "mutates_state": false
+                        },
+                        {
+                            "name": "system.dbus-native-service",
+                            "resource_kind": "system-api-dbus-native-runtime-service",
+                            "mutates_state": false
+                        },
+                        {
+                            "name": "system.dbus-native-startup",
+                            "resource_kind": "system-api-dbus-native-runtime-startup",
+                            "mutates_state": true
+                        },
+                        {
+                            "name": "system.dbus-native-observation",
+                            "resource_kind": "system-api-dbus-native-runtime-observation",
+                            "mutates_state": false
+                        },
+                        {
+                            "name": "system.dbus-native-coupling",
+                            "resource_kind": "system-api-dbus-native-runtime-coupling",
+                            "mutates_state": false
+                        },
+                        {
+                            "name": "system.dbus-native-ownership",
+                            "resource_kind": "system-api-dbus-native-runtime-ownership",
+                            "mutates_state": true
+                        },
+                        {
+                            "name": "profiles.get",
+                            "resource_kind": "edition-profile",
+                            "mutates_state": false,
+                            "params": [
+                                "profile_id"
+                            ]
+                        },
+                        {
+                            "name": "builds.validate",
+                            "resource_kind": "build-validation",
+                            "mutates_state": false,
+                            "params": [
+                                "profile_id",
+                                "channel?",
+                                "format?"
+                            ]
+                        },
+                        {
+                            "name": "live.inspect",
+                            "resource_kind": "live-inspection",
+                            "mutates_state": false,
+                            "params": [
+                                "profile_id",
+                                "live_output_dir?",
+                                "live_manifest?"
+                            ]
+                        },
+                        {
+                            "name": "artifacts.manifest",
+                            "resource_kind": "artifact-manifest",
+                            "mutates_state": false,
+                            "params": [
+                                "artifact",
+                                "profile_id?",
+                                "manifest?"
+                            ]
+                        },
+                        {
+                            "name": "updates.plan",
+                            "resource_kind": "update-plan",
+                            "mutates_state": false,
+                            "params": [
+                                "request_path",
+                                "operation_id?",
+                                "output_path?"
+                            ]
+                        }
+                    ]
+                },
+                "links": {
+                    "self": "/system-api/system/capabilities"
+                }
+            },
+            "error": null
+        },
+        "runtime": {
+            "api_version": "1.0",
+            "request_id": "failure-runtime",
+            "result": {
+                "operation_id": null,
+                "method": "system.dbus-runtime",
+                "resource": {
+                    "id": "org.w4.System1",
+                    "kind": "system-api-dbus-runtime-diagnosis",
+                    "revision": "81d0b363dd7f7c8b07aae77c44b07b1ed6a3ea6b",
+                    "observed_at": "2026-10-28T08:53:50+00:00",
+                    "provider": "local-system-api-runtime-contract"
+                },
+                "capabilities": [
+                    "read-state",
+                    "local-cli-json",
+                    "w4ctl-contract-reuse"
+                ],
+                "data": {
+                    "api_version": "1.0",
+                    "kind": "system-api-dbus-runtime-diagnosis",
+                    "ready": true,
+                    "status": "ready-for-runtime-adapter",
+                    "bus_name": "org.w4.System1",
+                    "object_path": "/org/w4/System1",
+                    "interface": "org.w4.System1.Manager",
+                    "environment": {
+                        "os_family": "Linux",
+                        "php_binary": "/opt/php/8.4.3/bin/php",
+                        "php_version": "8.4.3"
+                    },
+                    "probes": {
+                        "php_dbus_extension": true,
+                        "pecl": true,
+                        "busctl": true,
+                        "gdbus": true,
+                        "dbus_daemon": true,
+                        "system_bus_socket": true
+                    },
+                    "native_dbus_extension_installation": {
+                        "state": "installed",
+                        "pecl_available": true,
+                        "extension_loaded": true,
+                        "blocking_reason": null,
+                        "next_action": "observe-runtime-backend",
+                        "build_phase": "unknown",
+                        "reason": null,
+                        "failure_signature": null,
+                        "log_path": null
+                    },
+                    "missing_capabilities": [],
+                    "next_action": "runtime-service-active",
+                    "recovery_plan": [
+                        "runtime-service-active",
+                        "reactivate-native-runtime-service",
+                        "launch-native-runtime-service",
+                        "start-native-runtime-service"
+                    ],
+                    "runtime_backend": {
+                        "kind": "system-api-dbus-runtime-backend",
+                        "selected_backend": "native-dbus-extension",
+                        "status": "native-runtime-backend-materialized",
+                        "materialized": true,
+                        "transport": "dbus-system-bus",
+                        "ownership_model": "native-php-dbus-extension",
+                        "supports_bus_ownership": true,
+                        "native_runtime_api": {
+                            "extension_name": "dbus",
+                            "extension_loaded": true,
+                            "class_name": "Dbus",
+                            "class_candidates": [
+                                "Dbus",
+                                "DBus"
+                            ],
+                            "class_resolution_source": "runtime-detection",
+                            "class_available": true,
+                            "has_bus_system_constant": true,
+                            "has_request_name_method": true,
+                            "has_register_object_method": true,
+                            "has_wait_loop_method": true,
+                            "compatible_for_service": true,
+                            "missing_api": [],
+                            "diagnostic_blocking_reason": null,
+                            "diagnostic_next_action": "start-native-runtime-service",
+                            "service_contract": {
+                                "bus_name": "org.w4.System1",
+                                "object_path": "/org/w4/System1",
+                                "interface": "org.w4.System1.Manager",
+                                "required_methods": [
+                                    "requestName",
+                                    "registerObject",
+                                    "waitLoop"
+                                ]
+                            }
+                        },
+                        "blocking_reason": null
+                    },
+                    "native_runtime_service": {
+                        "api_version": "1.0",
+                        "kind": "system-api-dbus-native-runtime-service",
+                        "status": "native-runtime-service-ready-to-start",
+                        "eligible": true,
+                        "selected_backend": "native-dbus-extension",
+                        "bus_name": "org.w4.System1",
+                        "object_path": "/org/w4/System1",
+                        "interface": "org.w4.System1.Manager",
+                        "startup_command": "StartNativeRuntimeService",
+                        "startup_mode": "launch-process",
+                        "ownership_goal": "org.w4.System1",
+                        "service_lifecycle": "request-name-register-object-wait-loop",
+                        "artifacts": {
+                            "ready_marker_path": "/mnt/c/W4/Packages/W4-OS SYSTEM/build/system-api/validation/native-dbus-failure-check/run-20261028-085348-8348b82f/runtime-artifacts/w4-system-api-native-runtime.ready",
+                            "status_file_path": "/mnt/c/W4/Packages/W4-OS SYSTEM/build/system-api/validation/native-dbus-failure-check/run-20261028-085348-8348b82f/runtime-artifacts/w4-system-api-native-runtime-status.json",
+                            "pid_file_path": "/mnt/c/W4/Packages/W4-OS SYSTEM/build/system-api/validation/native-dbus-failure-check/run-20261028-085348-8348b82f/runtime-artifacts/w4-system-api-native-runtime.pid"
+                        },
+                        "runtime_backend": {
+                            "kind": "system-api-dbus-runtime-backend",
+                            "selected_backend": "native-dbus-extension",
+                            "status": "native-runtime-backend-materialized",
+                            "materialized": true,
+                            "transport": "dbus-system-bus",
+                            "ownership_model": "native-php-dbus-extension",
+                            "supports_bus_ownership": true,
+                            "native_runtime_api": {
+                                "extension_name": "dbus",
+                                "extension_loaded": true,
+                                "class_name": "Dbus",
+                                "class_candidates": [
+                                    "Dbus",
+                                    "DBus"
+                                ],
+                                "class_resolution_source": "runtime-detection",
+                                "class_available": true,
+                                "has_bus_system_constant": true,
+                                "has_request_name_method": true,
+                                "has_register_object_method": true,
+                                "has_wait_loop_method": true,
+                                "compatible_for_service": true,
+                                "missing_api": [],
+                                "diagnostic_blocking_reason": null,
+                                "diagnostic_next_action": "start-native-runtime-service",
+                                "service_contract": {
+                                    "bus_name": "org.w4.System1",
+                                    "object_path": "/org/w4/System1",
+                                    "interface": "org.w4.System1.Manager",
+                                    "required_methods": [
+                                        "requestName",
+                                        "registerObject",
+                                        "waitLoop"
+                                    ]
+                                }
+                            },
+                            "blocking_reason": null
+                        },
+                        "native_backend_candidate": {
+                            "kind": "system-api-dbus-runtime-backend",
+                            "selected_backend": "native-dbus-extension",
+                            "status": "native-runtime-backend-materialized",
+                            "materialized": true,
+                            "transport": "dbus-system-bus",
+                            "ownership_model": "native-php-dbus-extension",
+                            "supports_bus_ownership": true,
+                            "native_runtime_api": {
+                                "extension_name": "dbus",
+                                "extension_loaded": true,
+                                "class_name": "Dbus",
+                                "class_candidates": [
+                                    "Dbus",
+                                    "DBus"
+                                ],
+                                "class_resolution_source": "runtime-detection",
+                                "class_available": true,
+                                "has_bus_system_constant": true,
+                                "has_request_name_method": true,
+                                "has_register_object_method": true,
+                                "has_wait_loop_method": true,
+                                "compatible_for_service": true,
+                                "missing_api": [],
+                                "diagnostic_blocking_reason": null,
+                                "diagnostic_next_action": "start-native-runtime-service",
+                                "service_contract": {
+                                    "bus_name": "org.w4.System1",
+                                    "object_path": "/org/w4/System1",
+                                    "interface": "org.w4.System1.Manager",
+                                    "required_methods": [
+                                        "requestName",
+                                        "registerObject",
+                                        "waitLoop"
+                                    ]
+                                }
+                            },
+                            "blocking_reason": null
+                        },
+                        "blocking_reason": null,
+                        "next_action": "runtime-service-active",
+                        "recovery_plan": [
+                            "runtime-service-active",
+                            "reactivate-native-runtime-service",
+                            "launch-native-runtime-service",
+                            "start-native-runtime-service"
+                        ]
+                    },
+                    "activation_preparation": {
+                        "api_version": "1.0",
+                        "kind": "system-api-dbus-runtime-activation-context",
+                        "status": "ready-for-runtime-adapter",
+                        "ready": true,
+                        "binding_status": "pending-runtime-adapter",
+                        "resolved_contract": {
+                            "bus_name": "org.w4.System1",
+                            "object_path": "/org/w4/System1",
+                            "interface": "org.w4.System1.Manager",
+                            "runtime_launcher_entry": "scripts/system_api_dbus_runtime_launcher.php",
+                            "runtime_host_entry": "scripts/system_api_dbus_runtime_host.php",
+                            "runtime_adapter_entry": "scripts/system_api_dbus_runtime_adapter.php",
+                            "runtime_bootstrap_spec": "embedded:DescribeActivationBootstrap"
+                        },
+                        "activation_bootstrap": {
+                            "api_version": "1.0",
+                            "kind": "system-api-dbus-runtime-bootstrap",
+                            "status": "pending-runtime-adapter",
+                            "bus_name": "org.w4.System1",
+                            "object_path": "/org/w4/System1",
+                            "interface": "org.w4.System1.Manager",
+                            "launcher": {
+                                "entrypoint": "scripts/system_api_dbus_runtime_launcher.php",
+                                "command": "serve-dbus",
+                                "transport": "stdio-ndjson-launcher"
+                            },
+                            "host_handoff": {
+                                "entrypoint": "scripts/system_api_dbus_runtime_host.php",
+                                "command": "serve-stdio-host",
+                                "mode": "child-process-stdio-relay"
+                            },
+                            "runtime_adapter": {
+                                "entrypoint": "scripts/system_api_dbus_runtime_adapter.php",
+                                "command": "serve-dbus",
+                                "status": "pending-runtime-adapter",
+                                "required_capabilities": [
+                                    "php-dbus-runtime-adapter",
+                                    "bus-name-ownership",
+                                    "dbus-method-dispatch"
+                                ]
+                            },
+                            "environment_contract": [
+                                "W4_SYSTEM_API_BUS_NAME",
+                                "W4_SYSTEM_API_OBJECT_PATH",
+                                "W4_SYSTEM_API_INTERFACE",
+                                "W4_SYSTEM_API_RUNTIME_LAUNCHER_ENTRY",
+                                "W4_SYSTEM_API_RUNTIME_HOST_ENTRY",
+                                "W4_SYSTEM_API_RUNTIME_ADAPTER_ENTRY"
+                            ],
+                            "phases": [
+                                "launch-runtime-launcher",
+                                "handoff-to-runtime-host",
+                                "materialize-runtime-adapter",
+                                "own-org.w4.System1"
+                            ]
+                        },
+                        "runtime_diagnosis": {
+                            "api_version": "1.0",
+                            "kind": "system-api-dbus-runtime-diagnosis",
+                            "ready": true,
+                            "status": "ready-for-runtime-adapter",
+                            "bus_name": "org.w4.System1",
+                            "object_path": "/org/w4/System1",
+                            "interface": "org.w4.System1.Manager",
+                            "environment": {
+                                "os_family": "Linux",
+                                "php_binary": "/opt/php/8.4.3/bin/php",
+                                "php_version": "8.4.3"
+                            },
+                            "probes": {
+                                "php_dbus_extension": true,
+                                "pecl": true,
+                                "busctl": true,
+                                "gdbus": true,
+                                "dbus_daemon": true,
+                                "system_bus_socket": true
+                            },
+                            "native_dbus_extension_installation": {
+                                "state": "installed",
+                                "pecl_available": true,
+                                "extension_loaded": true,
+                                "blocking_reason": null,
+                                "next_action": "observe-runtime-backend",
+                                "build_phase": "unknown",
+                                "reason": null,
+                                "failure_signature": null,
+                                "log_path": null
+                            },
+                            "missing_capabilities": []
+                        },
+                        "runtime_backend": {
+                            "kind": "system-api-dbus-runtime-backend",
+                            "selected_backend": "native-dbus-extension",
+                            "status": "native-runtime-backend-materialized",
+                            "materialized": true,
+                            "transport": "dbus-system-bus",
+                            "ownership_model": "native-php-dbus-extension",
+                            "supports_bus_ownership": true,
+                            "native_runtime_api": {
+                                "extension_name": "dbus",
+                                "extension_loaded": true,
+                                "class_name": "Dbus",
+                                "class_candidates": [
+                                    "Dbus",
+                                    "DBus"
+                                ],
+                                "class_resolution_source": "runtime-detection",
+                                "class_available": true,
+                                "has_bus_system_constant": true,
+                                "has_request_name_method": true,
+                                "has_register_object_method": true,
+                                "has_wait_loop_method": true,
+                                "compatible_for_service": true,
+                                "missing_api": [],
+                                "diagnostic_blocking_reason": null,
+                                "diagnostic_next_action": "start-native-runtime-service",
+                                "service_contract": {
+                                    "bus_name": "org.w4.System1",
+                                    "object_path": "/org/w4/System1",
+                                    "interface": "org.w4.System1.Manager",
+                                    "required_methods": [
+                                        "requestName",
+                                        "registerObject",
+                                        "waitLoop"
+                                    ]
+                                }
+                            },
+                            "blocking_reason": null
+                        },
+                        "native_runtime_service": {
+                            "api_version": "1.0",
+                            "kind": "system-api-dbus-native-runtime-service",
+                            "status": "native-runtime-service-ready-to-start",
+                            "eligible": true,
+                            "selected_backend": "native-dbus-extension",
+                            "bus_name": "org.w4.System1",
+                            "object_path": "/org/w4/System1",
+                            "interface": "org.w4.System1.Manager",
+                            "startup_command": "StartNativeRuntimeService",
+                            "startup_mode": "launch-process",
+                            "ownership_goal": "org.w4.System1",
+                            "service_lifecycle": "request-name-register-object-wait-loop",
+                            "artifacts": {
+                                "ready_marker_path": "/mnt/c/W4/Packages/W4-OS SYSTEM/build/system-api/validation/native-dbus-failure-check/run-20261028-085348-8348b82f/runtime-artifacts/w4-system-api-native-runtime.ready",
+                                "status_file_path": "/mnt/c/W4/Packages/W4-OS SYSTEM/build/system-api/validation/native-dbus-failure-check/run-20261028-085348-8348b82f/runtime-artifacts/w4-system-api-native-runtime-status.json",
+                                "pid_file_path": "/mnt/c/W4/Packages/W4-OS SYSTEM/build/system-api/validation/native-dbus-failure-check/run-20261028-085348-8348b82f/runtime-artifacts/w4-system-api-native-runtime.pid"
+                            },
+                            "runtime_backend": {
+                                "kind": "system-api-dbus-runtime-backend",
+                                "selected_backend": "native-dbus-extension",
+                                "status": "native-runtime-backend-materialized",
+                                "materialized": true,
+                                "transport": "dbus-system-bus",
+                                "ownership_model": "native-php-dbus-extension",
+                                "supports_bus_ownership": true,
+                                "native_runtime_api": {
+                                    "extension_name": "dbus",
+                                    "extension_loaded": true,
+                                    "class_name": "Dbus",
+                                    "class_candidates": [
+                                        "Dbus",
+                                        "DBus"
+                                    ],
+                                    "class_resolution_source": "runtime-detection",
+                                    "class_available": true,
+                                    "has_bus_system_constant": true,
+                                    "has_request_name_method": true,
+                                    "has_register_object_method": true,
+                                    "has_wait_loop_method": true,
+                                    "compatible_for_service": true,
+                                    "missing_api": [],
+                                    "diagnostic_blocking_reason": null,
+                                    "diagnostic_next_action": "start-native-runtime-service",
+                                    "service_contract": {
+                                        "bus_name": "org.w4.System1",
+                                        "object_path": "/org/w4/System1",
+                                        "interface": "org.w4.System1.Manager",
+                                        "required_methods": [
+                                            "requestName",
+                                            "registerObject",
+                                            "waitLoop"
+                                        ]
+                                    }
+                                },
+                                "blocking_reason": null
+                            },
+                            "native_backend_candidate": {
+                                "kind": "system-api-dbus-runtime-backend",
+                                "selected_backend": "native-dbus-extension",
+                                "status": "native-runtime-backend-materialized",
+                                "materialized": true,
+                                "transport": "dbus-system-bus",
+                                "ownership_model": "native-php-dbus-extension",
+                                "supports_bus_ownership": true,
+                                "native_runtime_api": {
+                                    "extension_name": "dbus",
+                                    "extension_loaded": true,
+                                    "class_name": "Dbus",
+                                    "class_candidates": [
+                                        "Dbus",
+                                        "DBus"
+                                    ],
+                                    "class_resolution_source": "runtime-detection",
+                                    "class_available": true,
+                                    "has_bus_system_constant": true,
+                                    "has_request_name_method": true,
+                                    "has_register_object_method": true,
+                                    "has_wait_loop_method": true,
+                                    "compatible_for_service": true,
+                                    "missing_api": [],
+                                    "diagnostic_blocking_reason": null,
+                                    "diagnostic_next_action": "start-native-runtime-service",
+                                    "service_contract": {
+                                        "bus_name": "org.w4.System1",
+                                        "object_path": "/org/w4/System1",
+                                        "interface": "org.w4.System1.Manager",
+                                        "required_methods": [
+                                            "requestName",
+                                            "registerObject",
+                                            "waitLoop"
+                                        ]
+                                    }
+                                },
+                                "blocking_reason": null
+                            },
+                            "blocking_reason": null,
+                            "next_action": "runtime-service-active",
+                            "recovery_plan": [
+                                "runtime-service-active",
+                                "reactivate-native-runtime-service",
+                                "launch-native-runtime-service",
+                                "start-native-runtime-service"
+                            ]
+                        },
+                        "execution_plan": {
+                            "launcher": {
+                                "entrypoint": "scripts/system_api_dbus_runtime_launcher.php",
+                                "command": "serve-dbus",
+                                "transport": "stdio-ndjson-launcher"
+                            },
+                            "host_handoff": {
+                                "entrypoint": "scripts/system_api_dbus_runtime_host.php",
+                                "command": "serve-stdio-host",
+                                "mode": "child-process-stdio-relay"
+                            },
+                            "runtime_adapter": {
+                                "entrypoint": "scripts/system_api_dbus_runtime_adapter.php",
+                                "command": "serve-dbus",
+                                "ownership_goal": "org.w4.System1"
+                            },
+                            "runtime_backend": {
+                                "selected_backend": "native-dbus-extension",
+                                "entrypoint": "scripts/system_api_dbus_runtime_adapter.php",
+                                "command": "StartNativeRuntimeService",
+                                "command_role": "native-runtime-service-bootstrap",
+                                "activation_mode": "long-running-dbus-service",
+                                "ownership_goal": "org.w4.System1",
+                                "service_lifecycle": "request-name-and-wait-loop"
+                            }
+                        },
+                        "unresolved_requirements": [],
+                        "next_action": "runtime-service-active",
+                        "recovery_plan": [
+                            "runtime-service-active",
+                            "reactivate-native-runtime-service",
+                            "launch-native-runtime-service",
+                            "start-native-runtime-service"
+                        ]
+                    }
+                },
+                "links": {
+                    "self": "/system-api/system/dbus-runtime"
+                }
+            },
+            "error": null
+        },
+        "parent_running": true,
+        "supervisor_absent": true
+    }
+}

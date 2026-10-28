@@ -1,0 +1,16 @@
+{
+    "termination_class": "loop-exited",
+    "failure_backoff_multiplier": 1,
+    "api_version": "1.0",
+    "kind": "system-api-dbus-native-runtime-supervisor-state",
+    "attempt_count": 2,
+    "max_attempts": 3,
+    "cooldown_backoff_base_ms": 10000,
+    "cooldown_backoff_multiplier": 1,
+    "cooldown_backoff_max_ms": 10000,
+    "cooldown_backoff_ms": 10000,
+    "last_attempt_epoch_ms": 1793177312766,
+    "cooldown_until_epoch_ms": 1793177322766,
+    "last_observed_status": "native-runtime-service-not-running",
+    "last_observed_next_action": "reactivate-native-runtime-service"
+}
