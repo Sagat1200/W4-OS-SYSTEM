@@ -280,6 +280,7 @@ final class SystemApiToolkit
                     'name' => 'operations.get',
                     'resource_kind' => 'system-api-operation',
                     'mutates_state' => false,
+                    'permission' => 'org.w4.operations.read',
                     'params' => ['operation_id'],
                 ],
                 [
@@ -437,9 +438,11 @@ final class SystemApiToolkit
             throw new ValidationError('params debe ser un objeto JSON');
         }
 
+        $authorizationContext = $this->resolveAuthorizationContext($request);
+        $principalScope = $authorizationContext['principal_scope'];
         $requiredPermission = $this->resolveRequiredPermission($method);
         if ($requiredPermission !== null) {
-            $this->enforceAuthorization($request, $requiredPermission);
+            $this->enforceAuthorization($authorizationContext, $requiredPermission);
         }
 
         if ($method === 'system.capabilities') {
@@ -509,7 +512,7 @@ final class SystemApiToolkit
                 'plan_hash' => $planHash,
                 'expected_catalog_revision' => $expectedCatalogRevision,
             ]);
-            $reusedOperation = $this->operations->reuseIdempotentOperation('packages.apply', $idempotencyKey, $digest);
+            $reusedOperation = $this->operations->reuseIdempotentOperation($principalScope, 'packages.apply', $idempotencyKey, $digest);
             if ($reusedOperation !== null) {
                 $reusedResult = is_array($reusedOperation['result'] ?? null) ? $reusedOperation['result'] : $reusedOperation;
 
@@ -532,12 +535,14 @@ final class SystemApiToolkit
                 $this->optionalString($params, 'plan_path')
             );
             $storedOperation = $this->operations->record(
+                $principalScope,
                 'packages.apply',
                 'package-operation',
                 (string) ($operation['plan_id'] ?? 'package-operation'),
                 $operation
             );
             $this->operations->rememberIdempotentOperation(
+                $principalScope,
                 'packages.apply',
                 $idempotencyKey,
                 $digest,
@@ -586,7 +591,7 @@ final class SystemApiToolkit
                 'plan_hash' => $planHash,
                 'expected_catalog_revision' => $expectedCatalogRevision,
             ]);
-            $reusedOperation = $this->operations->reuseIdempotentOperation('updates.apply', $idempotencyKey, $digest);
+            $reusedOperation = $this->operations->reuseIdempotentOperation($principalScope, 'updates.apply', $idempotencyKey, $digest);
             if ($reusedOperation !== null) {
                 $reusedResult = is_array($reusedOperation['result'] ?? null) ? $reusedOperation['result'] : $reusedOperation;
 
@@ -611,12 +616,14 @@ final class SystemApiToolkit
                     $this->optionalString($params, 'plan_path')
                 );
                 $storedOperation = $this->operations->record(
+                    $principalScope,
                     'updates.apply',
                     'update-operation',
                     (string) ($operation['operation_id'] ?? 'update-operation'),
                     $operation
                 );
                 $this->operations->rememberIdempotentOperation(
+                    $principalScope,
                     'updates.apply',
                     $idempotencyKey,
                     $digest,
@@ -661,6 +668,7 @@ final class SystemApiToolkit
             $operationId = $this->requireString($params, 'operation_id');
             $operation = $this->operations->get($operationId);
             $operation = $this->refreshOperationFromDurableStores($operation);
+            $this->enforceOperationOwnership($authorizationContext, $operation);
 
             return $this->createSuccessResponse(
                 requestId: $requestId,
@@ -674,6 +682,8 @@ final class SystemApiToolkit
 
         if ($method === 'operations.cancel') {
             $operationId = $this->requireString($params, 'operation_id');
+            $operation = $this->operations->get($operationId);
+            $this->enforceOperationOwnership($authorizationContext, $operation);
 
             return $this->createSuccessResponse(
                 requestId: $requestId,
@@ -710,23 +720,23 @@ final class SystemApiToolkit
         }
 
         if ($method === 'services.start') {
-            return $this->handleServiceOperation($requestId, 'services.start', $params, fn (string $unit, ?string $expectedRevision): array => $this->services->start($unit, $expectedRevision));
+            return $this->handleServiceOperation($requestId, $principalScope, 'services.start', $params, fn (string $unit, ?string $expectedRevision): array => $this->services->start($unit, $expectedRevision));
         }
 
         if ($method === 'services.stop') {
-            return $this->handleServiceOperation($requestId, 'services.stop', $params, fn (string $unit, ?string $expectedRevision): array => $this->services->stop($unit, $expectedRevision));
+            return $this->handleServiceOperation($requestId, $principalScope, 'services.stop', $params, fn (string $unit, ?string $expectedRevision): array => $this->services->stop($unit, $expectedRevision));
         }
 
         if ($method === 'services.restart') {
-            return $this->handleServiceOperation($requestId, 'services.restart', $params, fn (string $unit, ?string $expectedRevision): array => $this->services->restart($unit, $expectedRevision));
+            return $this->handleServiceOperation($requestId, $principalScope, 'services.restart', $params, fn (string $unit, ?string $expectedRevision): array => $this->services->restart($unit, $expectedRevision));
         }
 
         if ($method === 'services.enable') {
-            return $this->handleServiceOperation($requestId, 'services.enable', $params, fn (string $unit, ?string $expectedRevision): array => $this->services->enable($unit, $expectedRevision));
+            return $this->handleServiceOperation($requestId, $principalScope, 'services.enable', $params, fn (string $unit, ?string $expectedRevision): array => $this->services->enable($unit, $expectedRevision));
         }
 
         if ($method === 'services.disable') {
-            return $this->handleServiceOperation($requestId, 'services.disable', $params, fn (string $unit, ?string $expectedRevision): array => $this->services->disable($unit, $expectedRevision));
+            return $this->handleServiceOperation($requestId, $principalScope, 'services.disable', $params, fn (string $unit, ?string $expectedRevision): array => $this->services->disable($unit, $expectedRevision));
         }
 
         if ($method === 'system.dbus-runtime') {
@@ -1087,7 +1097,7 @@ final class SystemApiToolkit
      * @param callable(string, ?string): array<string, mixed> $executor
      * @return array<string, mixed>
      */
-    private function handleServiceOperation(string $requestId, string $method, array $params, callable $executor): array
+    private function handleServiceOperation(string $requestId, string $principalScope, string $method, array $params, callable $executor): array
     {
         $unit = $this->requireString($params, 'unit');
         $expectedRevision = $this->optionalString($params, 'expected_revision');
@@ -1098,7 +1108,7 @@ final class SystemApiToolkit
                 'unit' => $unit,
                 'expected_revision' => $expectedRevision,
             ]);
-            $reusedOperation = $this->operations->reuseIdempotentOperation($method, $idempotencyKey, $digest);
+            $reusedOperation = $this->operations->reuseIdempotentOperation($principalScope, $method, $idempotencyKey, $digest);
             if ($reusedOperation !== null) {
                 $reusedResult = is_array($reusedOperation['result'] ?? null) ? $reusedOperation['result'] : $reusedOperation;
 
@@ -1114,10 +1124,11 @@ final class SystemApiToolkit
         }
 
         $operation = $executor($unit, $expectedRevision);
-        $storedOperation = $this->operations->record($method, 'service-operation', $unit, $operation);
+        $storedOperation = $this->operations->record($principalScope, $method, 'service-operation', $unit, $operation);
 
         if ($idempotencyKey !== null) {
             $this->operations->rememberIdempotentOperation(
+                $principalScope,
                 $method,
                 $idempotencyKey,
                 $this->operations->buildIdempotencyDigest($method, [
@@ -1267,16 +1278,22 @@ final class SystemApiToolkit
             'packages.apply' => 'org.w4.packages.modify',
             'updates.apply', 'updates.reconcile' => 'org.w4.updates.modify',
             'services.start', 'services.stop', 'services.restart', 'services.enable', 'services.disable' => 'org.w4.services.modify',
+            'operations.get' => 'org.w4.operations.read',
             'operations.cancel' => 'org.w4.operations.cancel',
             'system.dbus-native-startup', 'system.dbus-native-ownership' => 'org.w4.system.modify',
             default => null,
         };
     }
-    private function enforceAuthorization(array $request, string $requiredPermission): void
+
+    private function resolveAuthorizationContext(array $request): array
     {
         $mode = getenv('W4_SYSTEM_API_AUTH_MODE');
         if (!is_string($mode) || trim($mode) === '' || strtolower(trim($mode)) === 'open') {
-            return;
+            return [
+                'mode' => 'open',
+                'principal_scope' => 'open',
+                'permissions' => [],
+            ];
         }
         if (strtolower(trim($mode)) !== 'required') {
             throw new ValidationError('Denegado: modo de autorizacion desconocido');
@@ -1284,28 +1301,66 @@ final class SystemApiToolkit
         $authorization = $request['authorization'] ?? null;
         $token = is_array($authorization) ? ($authorization['token'] ?? null) : null;
         if (!is_string($token) || trim($token) === '') {
-            throw new ValidationError(sprintf('Denegado: falta token para %s', $requiredPermission));
+            throw new ValidationError('Denegado: falta token');
         }
         $policyRaw = getenv('W4_SYSTEM_API_AUTH_POLICY_JSON');
         if (!is_string($policyRaw) || trim($policyRaw) === '') {
-            throw new ValidationError(sprintf('Denegado: politica no configurada para %s', $requiredPermission));
+            throw new ValidationError('Denegado: politica no configurada');
         }
         $policy = json_decode($policyRaw, true);
         if (!is_array($policy)) {
-            throw new ValidationError(sprintf('Denegado: politica invalida para %s', $requiredPermission));
+            throw new ValidationError('Denegado: politica invalida');
         }
         $tokens = $policy['tokens'] ?? null;
         $entry = is_array($tokens) ? ($tokens[trim($token)] ?? null) : null;
         $permissions = is_array($entry) ? ($entry['permissions'] ?? null) : null;
         if (!is_array($permissions)) {
-            throw new ValidationError(sprintf('Denegado: token no reconocido para %s', $requiredPermission));
+            throw new ValidationError('Denegado: token no reconocido');
         }
+        $principalScope = is_array($entry) && is_string($entry['principal_scope'] ?? null) && trim((string) $entry['principal_scope']) !== ''
+            ? trim((string) $entry['principal_scope'])
+            : trim((string) $token);
+        $resolvedPermissions = [];
         foreach ($permissions as $permission) {
+            if (is_string($permission) && trim($permission) !== '') {
+                $resolvedPermissions[] = trim($permission);
+            }
+        }
+        return [
+            'mode' => 'required',
+            'principal_scope' => $principalScope,
+            'permissions' => $resolvedPermissions,
+        ];
+    }
+
+    private function enforceAuthorization(array $authorizationContext, string $requiredPermission): void
+    {
+        if (($authorizationContext['mode'] ?? 'open') !== 'required') {
+            return;
+        }
+        foreach ($authorizationContext['permissions'] as $permission) {
             if ($permission === '*' || $permission === $requiredPermission) {
                 return;
             }
         }
         throw new ValidationError(sprintf('Denegado: permiso insuficiente (%s)', $requiredPermission));
+    }
+
+    private function enforceOperationOwnership(array $authorizationContext, array $operation): void
+    {
+        if (($authorizationContext['mode'] ?? 'open') !== 'required') {
+            return;
+        }
+        if (in_array('*', $authorizationContext['permissions'], true)) {
+            return;
+        }
+        $operationScope = $operation['principal_scope'] ?? null;
+        if (!is_string($operationScope) || trim($operationScope) === '') {
+            throw new ValidationError('Denegado: operacion fuera de alcance');
+        }
+        if (trim($operationScope) !== ($authorizationContext['principal_scope'] ?? '')) {
+            throw new ValidationError('Denegado: operacion fuera de alcance');
+        }
     }
 
     /**

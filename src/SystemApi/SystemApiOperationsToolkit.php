@@ -33,11 +33,14 @@ final class SystemApiOperationsToolkit
      * @param array<string, mixed> $operation
      * @return array<string, mixed>
      */
-    public function record(string $method, string $resourceKind, string $resourceId, array $operation): array
+    public function record(string $principalScope, string $method, string $resourceKind, string $resourceId, array $operation): array
     {
         $operationId = $operation['operation_id'] ?? null;
         if (!is_string($operationId) || trim($operationId) === '') {
             throw new ValidationError('Operacion invalida: operation_id ausente');
+        }
+        if (trim($principalScope) === '') {
+            throw new ValidationError('Operacion invalida: principal_scope ausente');
         }
 
         $state = $this->normalizeState($operation['state'] ?? null);
@@ -45,6 +48,7 @@ final class SystemApiOperationsToolkit
         $storedOperation = [
             'kind' => 'system-api-operation',
             'operation_id' => trim($operationId),
+            'principal_scope' => trim($principalScope),
             'method' => $method,
             'resource' => [
                 'kind' => $resourceKind,
@@ -108,9 +112,9 @@ final class SystemApiOperationsToolkit
     /**
      * @return array<string, mixed>|null
      */
-    public function reuseIdempotentOperation(string $method, string $idempotencyKey, string $digest): ?array
+    public function reuseIdempotentOperation(string $principalScope, string $method, string $idempotencyKey, string $digest): ?array
     {
-        $ledgerPath = $this->resolveLedgerPath($method, $idempotencyKey);
+        $ledgerPath = $this->resolveLedgerPath($principalScope, $method, $idempotencyKey);
         if (!is_file($ledgerPath)) {
             return null;
         }
@@ -144,14 +148,16 @@ final class SystemApiOperationsToolkit
     }
 
     public function rememberIdempotentOperation(
+        string $principalScope,
         string $method,
         string $idempotencyKey,
         string $digest,
         string $operationId
     ): void {
-        $ledgerPath = $this->resolveLedgerPath($method, $idempotencyKey);
+        $ledgerPath = $this->resolveLedgerPath($principalScope, $method, $idempotencyKey);
         $payload = [
             'kind' => 'system-api-idempotency-ledger-entry',
+            'principal_scope' => $principalScope,
             'method' => $method,
             'idempotency_key' => $idempotencyKey,
             'digest' => $digest,
@@ -314,15 +320,16 @@ final class SystemApiOperationsToolkit
         return $this->storeDir . DIRECTORY_SEPARATOR . $sanitized . '.json';
     }
 
-    private function resolveLedgerPath(string $method, string $idempotencyKey): string
+    private function resolveLedgerPath(string $principalScope, string $method, string $idempotencyKey): string
     {
+        $scopeToken = preg_replace('/[^A-Za-z0-9._-]/', '-', trim($principalScope));
         $methodToken = preg_replace('/[^A-Za-z0-9._-]/', '-', trim($method));
         $keyToken = preg_replace('/[^A-Za-z0-9._-]/', '-', trim($idempotencyKey));
-        if (!is_string($methodToken) || $methodToken === '' || !is_string($keyToken) || $keyToken === '') {
+        if (!is_string($scopeToken) || $scopeToken === '' || !is_string($methodToken) || $methodToken === '' || !is_string($keyToken) || $keyToken === '') {
             throw new ValidationError('idempotency_key invalida');
         }
 
-        return $this->ledgerDir . DIRECTORY_SEPARATOR . $methodToken . '--' . $keyToken . '.json';
+        return $this->ledgerDir . DIRECTORY_SEPARATOR . $scopeToken . DIRECTORY_SEPARATOR . $methodToken . '--' . $keyToken . '.json';
     }
 
     private function resolveExclusiveLockPath(string $scope): string

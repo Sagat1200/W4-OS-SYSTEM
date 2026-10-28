@@ -1,0 +1,9 @@
+{
+    "kind": "system-api-idempotency-ledger-entry",
+    "principal_scope": "open",
+    "method": "updates.apply",
+    "idempotency_key": "updates-apply-a1c4d674517f",
+    "digest": "d300e90826c7af7d79f772a8a55e99e3130b7b0c",
+    "operation_id": "system-api-update-apply-a1c4d674517f",
+    "observed_at": "2026-10-28T16:52:27+00:00"
+}

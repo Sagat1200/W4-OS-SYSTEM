@@ -1,6 +1,7 @@
 {
     "kind": "system-api-operation",
     "operation_id": "service-restart-fc5289cc39ac",
+    "principal_scope": "open",
     "method": "services.restart",
     "resource": {
         "kind": "service-operation",
@@ -42,7 +43,7 @@
         "next_action": "observe-service-state"
     },
     "error": null,
-    "created_at": "2026-10-28T10:02:35+00:00",
-    "observed_at": "2026-10-28T10:02:35+00:00",
-    "completed_at": "2026-10-28T10:02:35+00:00"
+    "created_at": "2026-10-28T16:52:17+00:00",
+    "observed_at": "2026-10-28T16:52:17+00:00",
+    "completed_at": "2026-10-28T16:52:17+00:00"
 }

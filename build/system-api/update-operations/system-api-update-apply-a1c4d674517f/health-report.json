@@ -1,0 +1,14 @@
+{
+    "health_report_schema_version": 1,
+    "kind": "health-report",
+    "operation_id": "system-api-update-apply-a1c4d674517f",
+    "stage": "pending_health",
+    "status": "pending",
+    "required_checks": [
+        "boot-entry-present",
+        "dpkg-consistent"
+    ],
+    "test_file_path": "\/var\/lib\/w4-update\/test-file",
+    "last_error": null,
+    "updated_at": "2026-10-28T16:52:27+00:00"
+}

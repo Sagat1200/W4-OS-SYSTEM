@@ -21,7 +21,8 @@ Matriz operativa para seguimiento continuo del desarrollo. Su objetivo es mostra
 - [x] Perdida del daemon del bus privado en Linux real: SIGKILL al `dbus-daemon` identificado por inode del socket; los probes posteriores fallan sin tocar el bus del sistema (TECH-1.372).
 - [x] Muerte abrupta del runtime en bus privado: SIGKILL al proceso de servicio; el bus sigue vivo con `NameHasOwner=false` y las llamadas del servicio fallan (TECH-1.373).
 - [x] Iniciar autorizacion V1 (matriz positiva/negativa y cero efectos al denegar) en modo opt-in `W4_SYSTEM_API_AUTH_MODE=required` (TECH-1.374).
-- [ ] Backlog: operaciones durables del contrato V1 (principal_scope en ledger, scoping de operations.get/cancel, y cierres end-to-end).
+- [x] Operaciones durables: ledger idempotente por `(principal_scope, method, idempotency_key)` y scoping de `operations.get/cancel` en modo required (TECH-1.375).
+- [ ] Backlog: cierre end-to-end de operaciones V1 (retencion, cancelacion segura, reconciliacion tras timeout y evidencia en host real).
 
 Contrato operativo: `W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_FAILURE_BACKOFF_MULTIPLIER`
 acepta enteros 1..10 (valores mayores se limitan a 10; cero/invalido/ausente usan 1).

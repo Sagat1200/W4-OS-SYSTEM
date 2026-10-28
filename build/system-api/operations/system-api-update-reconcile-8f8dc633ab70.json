@@ -1,0 +1,181 @@
+{
+    "kind": "system-api-operation",
+    "operation_id": "system-api-update-reconcile-8f8dc633ab70",
+    "principal_scope": "open",
+    "method": "updates.apply",
+    "resource": {
+        "kind": "update-operation",
+        "id": "system-api-update-reconcile-8f8dc633ab70"
+    },
+    "state": "succeeded",
+    "status": "ok",
+    "cancel_requested": false,
+    "cancelable": false,
+    "progress": {
+        "percent": 100,
+        "current_step": "record-update-confirmation"
+    },
+    "result": {
+        "kind": "system-api-update-operation",
+        "status": "ok",
+        "backend": "apt-get",
+        "operation_id": "system-api-update-reconcile-8f8dc633ab70",
+        "plan_hash": "92c4d6f9169c48b75f68e32f1cb25be26ff2640f",
+        "expected_catalog_revision": null,
+        "observed_catalog_revision": "updates-reconcile-catalog-8f8dc633ab70",
+        "profile_id": "w4-os-home",
+        "source_version": "1.0.0-lab",
+        "target_version": "1.0.1-lab",
+        "apply_mode": "live-apt",
+        "stage": "confirmed",
+        "state": "succeeded",
+        "command": "updates:reconcile",
+        "reconciled": true,
+        "observed_stage": "confirmed",
+        "details": {
+            "health_status": "ok",
+            "checks_passed": [
+                "boot-entry-present",
+                "dpkg-consistent"
+            ]
+        },
+        "observed_error": null,
+        "package_changes": {
+            "install": [
+                "w4-recovery-tools"
+            ],
+            "upgrade": [
+                "w4-home-meta"
+            ],
+            "remove": [],
+            "counts": {
+                "install": 1,
+                "upgrade": 1,
+                "remove": 0,
+                "total": 2
+            }
+        },
+        "repository_snapshot": {
+            "id": "w4-main-2026-09-19T120000Z",
+            "channel": "testing"
+        },
+        "snapshot": {
+            "root_subvolume": "/@",
+            "snapshot_name": "pre-update-system-api-update-reconcile-8f8dc633ab70",
+            "snapshot_path": "/.snapshots/pre-update-system-api-update-reconcile-8f8dc633ab70",
+            "retention": "protected-until-confirmed"
+        },
+        "staging": {
+            "directory": "/var/lib/w4-update/staging/system-api-update-reconcile-8f8dc633ab70",
+            "estimated_space_kib": 262144,
+            "cache_policy": "protected-until-confirmed"
+        },
+        "boot_manifest": {
+            "kernel_package": "linux-image-amd64",
+            "boot_mode": "efi",
+            "initramfs_strategy": "update-initramfs"
+        },
+        "reboot_required": true,
+        "stages": [
+            "planned",
+            "downloading",
+            "ready",
+            "prepared",
+            "applying_offline",
+            "pending_health",
+            "confirmed"
+        ],
+        "evidence": [
+            "update-plan.json",
+            "operation.json"
+        ],
+        "notes": [
+            "Una sola operacion mutante puede estar activa a la vez."
+        ],
+        "durable_state": {
+            "update_operation_schema_version": 1,
+            "kind": "update-operation",
+            "operation_id": "system-api-update-reconcile-8f8dc633ab70",
+            "profile_id": "w4-os-home",
+            "source_version": "1.0.0-lab",
+            "target_version": "1.0.1-lab",
+            "stage": "confirmed",
+            "repository_snapshot": {
+                "id": "w4-main-2026-09-19T120000Z",
+                "channel": "testing"
+            },
+            "snapshot": {
+                "root_subvolume": "/@",
+                "snapshot_name": "pre-update-system-api-update-reconcile-8f8dc633ab70",
+                "snapshot_path": "/.snapshots/pre-update-system-api-update-reconcile-8f8dc633ab70",
+                "retention": "protected-until-confirmed"
+            },
+            "boot_manifest": {
+                "kernel_package": "linux-image-amd64",
+                "boot_mode": "efi",
+                "initramfs_strategy": "update-initramfs"
+            },
+            "last_error": null,
+            "timestamps": {
+                "created_at": "2026-10-28T16:52:27+00:00",
+                "updated_at": "2026-10-28T16:52:28+00:00"
+            },
+            "plan_hash": "92c4d6f9169c48b75f68e32f1cb25be26ff2640f",
+            "apply_mode": "live-apt",
+            "reboot_required": true
+        },
+        "health_report": {
+            "health_report_schema_version": 1,
+            "kind": "health-report",
+            "operation_id": "system-api-update-reconcile-8f8dc633ab70",
+            "stage": "confirmed",
+            "status": "ok",
+            "required_checks": [
+                "boot-entry-present",
+                "dpkg-consistent"
+            ],
+            "test_file_path": "/var/lib/w4-update/test-file",
+            "last_error": null,
+            "updated_at": "2026-10-28T16:52:28+00:00"
+        },
+        "health_check_results": null,
+        "durable_store": {
+            "store_dir": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-reconcile-8f8dc633ab70",
+            "health_result_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-reconcile-8f8dc633ab70\\health-check-results.json",
+            "executor": {
+                "run_update_offline_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-reconcile-8f8dc633ab70\\run-update-offline.sh",
+                "run_update_with_repo_env_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-reconcile-8f8dc633ab70\\run-update-with-repo-env.sh",
+                "run_health_checks_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-reconcile-8f8dc633ab70\\run-health-checks.sh",
+                "reconcile_after_reboot_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-reconcile-8f8dc633ab70\\reconcile-after-reboot.sh",
+                "reconcile_operation_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-reconcile-8f8dc633ab70\\reconcile-update-operation.php",
+                "manifest_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-reconcile-8f8dc633ab70\\update-executor.json",
+                "env_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-reconcile-8f8dc633ab70\\executor.env",
+                "readme_path": "C:\\W4\\Packages\\W4-OS SYSTEM\\build\\system-api\\update-operations\\system-api-update-reconcile-8f8dc633ab70\\UPDATE_EXECUTOR_README.txt"
+            }
+        },
+        "post_reboot": {
+            "pending_state": "pending_health",
+            "success_state": "confirmed",
+            "failure_state": "failed",
+            "required_checks": [
+                "boot-entry-present",
+                "dpkg-consistent"
+            ],
+            "test_file_path": "/var/lib/w4-update/test-file",
+            "resume_from_stage": "confirmed",
+            "next_action": "run-post-reboot-health-checks"
+        },
+        "coordination": {
+            "exclusive_scope": "system-updates",
+            "mutating_operation_policy": "single-active-operation",
+            "busy_state": "pending-reboot-health-reconciliation",
+            "reboot_required": true,
+            "next_stage": "confirmed"
+        },
+        "next_action": "record-update-confirmation"
+    },
+    "error": null,
+    "created_at": "2026-10-28T16:52:27+00:00",
+    "observed_at": "2026-10-28T16:52:28+00:00",
+    "completed_at": "2026-10-28T16:52:28+00:00"
+}
