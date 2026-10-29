@@ -24,7 +24,8 @@ Matriz operativa para seguimiento continuo del desarrollo. Su objetivo es mostra
 - [x] Operaciones durables: ledger idempotente por `(principal_scope, method, idempotency_key)` y scoping de `operations.get/cancel` en modo required (TECH-1.375).
 - [x] Retencion y no-filtracion: operaciones/ledger terminales con retencion default 30 dias (override `W4_SYSTEM_API_OPERATIONS_RETENTION_SECONDS`) y `operations.get/cancel` out-of-scope devuelven `NOT_FOUND` (TECH-1.376).
 - [x] Evidencia host Linux (WSL) para autorizacion/scoping de operaciones y cancel-requested sin efectos para token ajeno (TECH-1.377).
-- [ ] Backlog: cierre end-to-end de operaciones V1 (cancelacion segura real, reconciliacion tras timeout y evidencia en host real fuera de WSL).
+- [x] Evidencia host real fuera de WSL (VirtualBox VM `W4-OS-Server-DbusModern`) para autorizacion/scoping de operaciones; runner host-side sube bundle minimo, resuelve NAT forwarding SSH, ejecuta el worker remoto y recupera `report.json` validado (TECH-1.378).
+- [ ] Backlog: cierre end-to-end de operaciones V1 (cancelacion segura real y reconciliacion tras timeout/needs_attention sobre providers reales).
 
 Contrato operativo: `W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_FAILURE_BACKOFF_MULTIPLIER`
 acepta enteros 1..10 (valores mayores se limitan a 10; cero/invalido/ausente usan 1).
