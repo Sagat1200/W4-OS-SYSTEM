@@ -1,0 +1,1617 @@
+<?php
+
+declare(strict_types=1);
+
+namespace W4\OS\SystemApi;
+
+use W4\OS\Support\ValidationError;
+
+final class SystemApiDbusRuntimeAdapter
+{
+    private string $rootDir;
+    private SystemApiDbusBridge $bridge;
+    private SystemApiDbusRuntimeActivationToolkit $activationToolkit;
+    private SystemApiDbusRuntimeBackendToolkit $runtimeBackend;
+    private SystemApiDbusRuntimeProbeToolkit $runtimeProbe;
+
+    public function __construct(string $rootDir)
+    {
+        $this->rootDir = $rootDir;
+        $this->bridge = new SystemApiDbusBridge($rootDir);
+        $this->activationToolkit = new SystemApiDbusRuntimeActivationToolkit();
+        $this->runtimeBackend = new SystemApiDbusRuntimeBackendToolkit();
+        $this->runtimeProbe = new SystemApiDbusRuntimeProbeToolkit();
+    }
+
+    public function call(string $requestJson): string
+    {
+        return $this->bridge->call($requestJson);
+    }
+
+    public function getCapabilities(?string $requestId = null): string
+    {
+        return $this->bridge->getCapabilities($requestId);
+    }
+
+    public function diagnoseRuntime(): string
+    {
+        return $this->bridge->diagnoseRuntime();
+    }
+
+    public function describeRuntime(): string
+    {
+        $runtimeDiagnosis = $this->runtimeProbe->createReport();
+        $runtimeBackend = $this->runtimeBackend->createReport($runtimeDiagnosis);
+
+        return $this->encodeJson([
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-runtime-adapter',
+            'status' => $runtimeBackend['status'] ?? 'pending-runtime-adapter',
+            'bus_name' => 'org.w4.System1',
+            'object_path' => '/org/w4/System1',
+            'interface' => 'org.w4.System1.Manager',
+            'commands' => [
+                'DescribeSpecification',
+                'DescribeActivationPreparation',
+                'AttemptActivation',
+                'ExecuteActivation',
+                'DescribeNativeRuntimeService',
+                'StartNativeRuntimeService',
+                'DescribeNativeRuntimeCoupling',
+                'ObserveNativeRuntimeServiceState',
+                'MaterializeNativeBusOwnership',
+                'DescribeRuntime',
+                'DiagnoseRuntime',
+                'GetCapabilities',
+                'Call',
+                'serve-stdio-adapter',
+                'serve-dbus',
+            ],
+            'runtime_diagnosis' => $runtimeDiagnosis,
+            'runtime_backend' => $runtimeBackend,
+            'adapter_specification' => $this->activationToolkit->createAdapterSpecification(),
+        ]);
+    }
+
+    public function serveDbus(): string
+    {
+        $runtimeDiagnosis = $this->runtimeProbe->createReport();
+        $runtimeBackend = $this->runtimeBackend->createReport($runtimeDiagnosis);
+
+        if (($runtimeBackend['materialized'] ?? false) === true) {
+            return $this->encodeJson([
+                'api_version' => '1.0',
+                'kind' => 'system-api-dbus-runtime-activation',
+                'status' => $runtimeBackend['status'] ?? 'runtime-backend-materialized',
+                'bridge_kind' => 'local-runtime-adapter',
+                'requested_command' => 'serve-dbus',
+                'bus_name' => 'org.w4.System1',
+                'object_path' => '/org/w4/System1',
+                'interface' => 'org.w4.System1.Manager',
+                'materialized' => true,
+                'exit_code' => 0,
+                'adapter_specification' => $this->activationToolkit->createAdapterSpecification(),
+                'activation_bootstrap' => $this->activationToolkit->createActivationBootstrap(),
+                'runtime_diagnosis' => $runtimeDiagnosis,
+                'runtime_backend' => $runtimeBackend,
+                'next_action' => 'observe-runtime-backend',
+            ]);
+        }
+
+        $report = $this->activationToolkit->createPendingActivationReport(
+            $runtimeDiagnosis,
+            'local-runtime-adapter'
+        );
+        $report['runtime_backend'] = $runtimeBackend;
+        $report['exit_code'] = 3;
+
+        return $this->encodeJson($report);
+    }
+
+    public function describeNativeRuntimeService(): string
+    {
+        return $this->encodeJson(
+            $this->runtimeBackend->createNativeRuntimeServiceDefinition($this->runtimeProbe->createReport())
+        );
+    }
+
+    public function startNativeRuntimeService(): string
+    {
+        $environment = $this->captureEnvironment();
+        $runtimeDiagnosis = $this->runtimeProbe->createReport($environment);
+        $report = $this->runtimeBackend->createNativeRuntimeServiceStartupReport($runtimeDiagnosis, $environment);
+        $this->runtimeBackend->persistNativeRuntimeStartupArtifacts($report);
+
+        if (
+            ($report['startup_acknowledged'] ?? false) === true
+            && $this->resolveNativeRuntimeStartupMode($environment) === 'launch-process'
+        ) {
+            $report = $this->launchNativeRuntimeServiceProcess($report, $runtimeDiagnosis, $environment);
+            if (($report['launched'] ?? false) !== true && ($report['terminal_observation_present'] ?? false) !== true) {
+                $this->runtimeBackend->persistNativeRuntimeStartupArtifacts($report);
+            }
+        }
+
+        return $this->encodeJson($report);
+    }
+
+    public function serveNativeRuntimeService(): string
+    {
+        $environment = $this->captureEnvironment();
+        $environment['W4_SYSTEM_API_NATIVE_RUNTIME_PERSIST_TERMINAL_STATE'] = '1';
+        $runtimeDiagnosis = $this->runtimeProbe->createReport($environment);
+        $startupReport = $this->runtimeBackend->createNativeRuntimeServiceStartupReport($runtimeDiagnosis, $environment);
+
+        if (($startupReport['startup_acknowledged'] ?? false) !== true) {
+            return $this->encodeJson($startupReport);
+        }
+
+        $pid = getmypid();
+        if (!is_int($pid) || $pid <= 0) {
+            $startupReport['status'] = 'native-runtime-service-launch-failed';
+            $startupReport['exit_code'] = 1;
+            $startupReport['blocking_reason'] = 'native-runtime-service-pid-unavailable';
+            $startupReport['next_action'] = 'inspect-native-runtime-service-report';
+
+            return $this->encodeJson($startupReport);
+        }
+
+        $startupReport['status'] = 'native-runtime-service-launch-recorded';
+        $startupReport['ownership_state'] = 'pending-bus-name-ownership';
+        $startupReport['blocking_reason'] = 'native-runtime-bus-ownership-pending';
+        $startupReport['next_action'] = 'observe-native-runtime-service-state';
+        $startupReport['launch_mode'] = 'background-process';
+        $startupReport['launched'] = true;
+        $startupReport['pid'] = $pid;
+        $startupReport['service_definition'] = $this->markNativeRuntimeServiceDefinitionAsLaunched(
+            is_array($startupReport['service_definition'] ?? null) ? $startupReport['service_definition'] : []
+        );
+        $this->runtimeBackend->persistNativeRuntimeStartupArtifacts($startupReport);
+
+        $report = $this->runtimeBackend->createNativeBusOwnershipReport($runtimeDiagnosis, $environment);
+        if (!$this->hasPersistedTerminalNativeRuntimeArtifacts($report)) {
+            $this->runtimeBackend->persistNativeRuntimeOwnershipArtifacts($report);
+        }
+
+        $keepAliveSeconds = $this->resolveNativeRuntimeKeepAliveSeconds($environment);
+        if ($keepAliveSeconds > 0) {
+            sleep($keepAliveSeconds);
+        }
+
+        $report = $this->attemptNativeRuntimeServiceAutoReactivation($report, $runtimeDiagnosis, $environment);
+
+        return $this->encodeJson($report);
+    }
+
+    public function describeNativeRuntimeCoupling(): string
+    {
+        return $this->encodeJson(
+            $this->runtimeBackend->createNativeRuntimeCouplingReport($this->runtimeProbe->createReport())
+        );
+    }
+
+    public function observeNativeRuntimeServiceState(): string
+    {
+        return $this->encodeJson(
+            $this->runtimeBackend->createNativeRuntimeServiceObservationReport($this->runtimeProbe->createReport())
+        );
+    }
+
+    public function materializeNativeBusOwnership(): string
+    {
+        $report = $this->runtimeBackend->createNativeBusOwnershipReport($this->runtimeProbe->createReport());
+        $this->runtimeBackend->persistNativeRuntimeOwnershipArtifacts($report);
+
+        return $this->encodeJson($report);
+    }
+
+    public function describeSpecification(): string
+    {
+        return $this->encodeJson($this->activationToolkit->createAdapterSpecification());
+    }
+
+    public function describeActivationPreparation(): string
+    {
+        return $this->encodeJson($this->activationToolkit->createActivationPreparation(
+            $this->runtimeProbe->createReport(),
+            null,
+            [
+                'runtime_launcher_entry' => 'scripts/system_api_dbus_runtime_launcher.php',
+                'runtime_host_entry' => 'scripts/system_api_dbus_runtime_host.php',
+                'runtime_adapter_entry' => 'scripts/system_api_dbus_runtime_adapter.php',
+                'runtime_bootstrap_spec' => 'embedded:DescribeActivationBootstrap',
+            ]
+        ));
+    }
+
+    public function attemptActivation(): string
+    {
+        return $this->encodeJson($this->activationToolkit->createActivationAttempt(
+            $this->runtimeProbe->createReport(),
+            'local-runtime-adapter',
+            null,
+            [
+                'runtime_launcher_entry' => 'scripts/system_api_dbus_runtime_launcher.php',
+                'runtime_host_entry' => 'scripts/system_api_dbus_runtime_host.php',
+                'runtime_adapter_entry' => 'scripts/system_api_dbus_runtime_adapter.php',
+                'runtime_bootstrap_spec' => 'embedded:DescribeActivationBootstrap',
+            ]
+        ));
+    }
+
+    public function executeActivation(): string
+    {
+        $report = $this->activationToolkit->createActivationExecution(
+            $this->runtimeProbe->createReport(),
+            'local-runtime-adapter',
+            null,
+            [
+                'runtime_launcher_entry' => 'scripts/system_api_dbus_runtime_launcher.php',
+                'runtime_host_entry' => 'scripts/system_api_dbus_runtime_host.php',
+                'runtime_adapter_entry' => 'scripts/system_api_dbus_runtime_adapter.php',
+                'runtime_bootstrap_spec' => 'embedded:DescribeActivationBootstrap',
+            ]
+        );
+
+        if (!in_array($report['status'] ?? null, ['execution-pending-runtime-adapter', 'execution-pending-native-runtime-service'], true)) {
+            return $this->encodeJson($report);
+        }
+
+        return $this->encodeJson($this->finalizeActivationExecution(
+            $report,
+            $this->executeTargetCommand($report['target_command'] ?? null)
+        ));
+    }
+
+    public function invoke(string $method, array $arguments = []): string
+    {
+        return match ($method) {
+            'Call' => $this->call($this->resolveRequestJson($arguments)),
+            'GetCapabilities' => $this->getCapabilities($this->optionalStringArgument($arguments, 'request_id')),
+            'DiagnoseRuntime' => $this->diagnoseRuntime(),
+            'DescribeRuntime' => $this->describeRuntime(),
+            'DescribeSpecification' => $this->describeSpecification(),
+            'DescribeActivationPreparation' => $this->describeActivationPreparation(),
+            'AttemptActivation' => $this->attemptActivation(),
+            'ExecuteActivation' => $this->executeActivation(),
+            'DescribeNativeRuntimeService' => $this->describeNativeRuntimeService(),
+            'StartNativeRuntimeService' => $this->startNativeRuntimeService(),
+            'ServeNativeRuntimeService' => $this->serveNativeRuntimeService(),
+            'DescribeNativeRuntimeCoupling' => $this->describeNativeRuntimeCoupling(),
+            'ObserveNativeRuntimeServiceState' => $this->observeNativeRuntimeServiceState(),
+            'MaterializeNativeBusOwnership' => $this->materializeNativeBusOwnership(),
+            'ServeDbus' => $this->serveDbus(),
+            default => throw new ValidationError(sprintf('Metodo de runtime adapter no soportado: %s', $method)),
+        };
+    }
+
+    /**
+     * @param resource $input
+     * @param resource $output
+     */
+    public function serveStdioAdapter($input, $output): void
+    {
+        while (($line = fgets($input)) !== false) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+
+            fwrite($output, $this->handleEnvelopeLine($line));
+            fflush($output);
+        }
+    }
+
+    public function handleEnvelopeLine(string $line): string
+    {
+        try {
+            $envelope = $this->decodeEnvelope($line);
+            $method = $this->requireMethod($envelope);
+            $arguments = $this->resolveArguments($envelope);
+
+            $response = $this->decodeResponseJson($this->invoke($method, $arguments));
+        } catch (ValidationError $exception) {
+            $response = [
+                'api_version' => '1.0',
+                'request_id' => 'runtime-adapter-invalid-request',
+                'result' => null,
+                'error' => [
+                    'code' => 'INVALID_ARGUMENT',
+                    'message' => $exception->getMessage(),
+                    'retryable' => false,
+                ],
+            ];
+        }
+
+        return $this->encodeNdjson($response);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decodeEnvelope(string $line): array
+    {
+        try {
+            $decoded = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            throw new ValidationError(sprintf('Envelope JSON invalido: %s', $exception->getMessage()));
+        }
+
+        if (!is_array($decoded)) {
+            throw new ValidationError('El envelope del runtime adapter debe decodificar a un objeto');
+        }
+
+        return $decoded;
+    }
+
+    /**
+     * @param array<string, mixed> $envelope
+     */
+    private function requireMethod(array $envelope): string
+    {
+        $method = $envelope['method'] ?? null;
+        if (!is_string($method) || trim($method) === '') {
+            throw new ValidationError('method debe ser un string no vacio');
+        }
+
+        return trim($method);
+    }
+
+    /**
+     * @param array<string, mixed> $envelope
+     * @return array<string, mixed>
+     */
+    private function resolveArguments(array $envelope): array
+    {
+        $arguments = $envelope['arguments'] ?? [];
+        if (!is_array($arguments)) {
+            throw new ValidationError('arguments debe ser un objeto JSON');
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    private function resolveRequestJson(array $arguments): string
+    {
+        $requestJson = $arguments['request_json'] ?? null;
+        $request = $arguments['request'] ?? null;
+
+        if (is_string($requestJson) && trim($requestJson) !== '') {
+            return trim($requestJson);
+        }
+
+        if (is_array($request)) {
+            $encoded = json_encode($request, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($encoded === false) {
+                throw new ValidationError('No se pudo serializar request dentro del runtime adapter');
+            }
+
+            return $encoded;
+        }
+
+        throw new ValidationError('Call requiere arguments.request_json o arguments.request');
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    private function optionalStringArgument(array $arguments, string $field): ?string
+    {
+        $value = $arguments[$field] ?? null;
+        if ($value === null) {
+            return null;
+        }
+
+        if (!is_string($value) || trim($value) === '') {
+            throw new ValidationError(sprintf('arguments.%s debe ser un string no vacio cuando se usa', $field));
+        }
+
+        return trim($value);
+    }
+
+    /**
+     * @param mixed $targetCommand
+     * @return array<string, mixed>
+     */
+    private function executeTargetCommand(mixed $targetCommand): array
+    {
+        if (!is_array($targetCommand)) {
+            throw new ValidationError('target_command debe ser un objeto para ejecutar la activacion');
+        }
+
+        $entrypoint = $targetCommand['entrypoint'] ?? null;
+        $command = $targetCommand['command'] ?? null;
+
+        if (!is_string($entrypoint) || trim($entrypoint) === '') {
+            throw new ValidationError('target_command.entrypoint debe ser un string no vacio');
+        }
+
+        if (!is_string($command) || trim($command) === '') {
+            throw new ValidationError('target_command.command debe ser un string no vacio');
+        }
+
+        $resolvedEntrypoint = trim($entrypoint);
+        $commandRole = is_string($targetCommand['command_role'] ?? null)
+            ? trim((string) $targetCommand['command_role'])
+            : '';
+        $processCommand = str_ends_with(strtolower($resolvedEntrypoint), '.php')
+            ? [PHP_BINARY, $resolvedEntrypoint, trim($command)]
+            : [$resolvedEntrypoint, trim($command)];
+        $environment = $this->captureEnvironment();
+        if (
+            $commandRole === 'native-runtime-service-bootstrap'
+            && !isset($environment['W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE'])
+        ) {
+            $environment['W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE'] = 'launch-process';
+        }
+
+        $descriptorSpec = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+
+        $process = proc_open(
+            $processCommand,
+            $descriptorSpec,
+            $pipes,
+            dirname(__DIR__, 2),
+            $environment
+        );
+
+        if (!is_resource($process)) {
+            throw new ValidationError(sprintf('No se pudo ejecutar el target command %s %s', $resolvedEntrypoint, $command));
+        }
+
+        fclose($pipes[0]);
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+
+        $exitCode = proc_close($process);
+        $payload = null;
+
+        if (is_string($stdout) && trim($stdout) !== '') {
+            try {
+                $decoded = json_decode($stdout, true, 512, JSON_THROW_ON_ERROR);
+                if (is_array($decoded)) {
+                    $payload = $decoded;
+                }
+            } catch (\JsonException) {
+                $payload = null;
+            }
+        }
+
+        return [
+            'invoked' => true,
+            'entrypoint' => $resolvedEntrypoint,
+            'command' => trim($command),
+            'exit_code' => $exitCode,
+            'stdout' => is_string($stdout) ? $stdout : '',
+            'stderr' => is_string($stderr) ? $stderr : '',
+            'payload' => $payload,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, string> $environment
+     * @return array<string, mixed>
+     */
+    private function launchNativeRuntimeServiceProcess(array $report, array $runtimeDiagnosis, array $environment): array
+    {
+        $serviceDefinition = is_array($report['service_definition'] ?? null) ? $report['service_definition'] : [];
+        $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
+        $pidFilePath = is_string($artifacts['pid_file_path'] ?? null) && trim((string) $artifacts['pid_file_path']) !== ''
+            ? trim((string) $artifacts['pid_file_path'])
+            : null;
+        $launched = $this->launchDetachedNativeRuntimeServiceProcess($environment);
+        $pid = $pidFilePath !== null ? $this->waitForNativeRuntimePid($pidFilePath) : null;
+        if (!$launched || $pid === null) {
+            $terminatedReport = $this->captureTerminalObservationFromLaunchedRuntime($report, $runtimeDiagnosis, $environment);
+            if ($terminatedReport !== null) {
+                return $terminatedReport;
+            }
+
+            $report['status'] = 'native-runtime-service-launch-failed';
+            $report['exit_code'] = 1;
+            $report['ownership_state'] = 'startup-recorded-no-process';
+            $report['blocking_reason'] = 'native-runtime-service-launch-failed';
+            $report['next_action'] = 'inspect-native-runtime-service-report';
+            $report['launch_mode'] = 'background-process';
+            $report['launched'] = false;
+
+            return $report;
+        }
+
+        $report['status'] = 'native-runtime-service-launch-recorded';
+        $report['ownership_state'] = 'pending-bus-name-ownership';
+        $report['blocking_reason'] = 'native-runtime-bus-ownership-pending';
+        $report['next_action'] = 'observe-native-runtime-service-state';
+        $report['launch_mode'] = 'background-process';
+        $report['launched'] = true;
+        $report['pid'] = $pid;
+        $report['service_definition'] = $this->markNativeRuntimeServiceDefinitionAsLaunched(
+            is_array($report['service_definition'] ?? null) ? $report['service_definition'] : []
+        );
+
+        return $this->reconcileLaunchedNativeRuntimeServiceReport($report, $runtimeDiagnosis, $environment);
+    }
+
+    /**
+     * @param array<string, mixed> $serviceDefinition
+     * @return array<string, mixed>
+     */
+    private function markNativeRuntimeServiceDefinitionAsLaunched(array $serviceDefinition): array
+    {
+        $serviceDefinition['startup_mode'] = 'launch-process';
+        $serviceDefinition['blocking_reason'] = 'native-runtime-bus-ownership-pending';
+        $serviceDefinition['next_action'] = 'observe-native-runtime-service-state';
+
+        return $serviceDefinition;
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, string> $environment
+     * @return array<string, mixed>
+     */
+    private function reconcileLaunchedNativeRuntimeServiceReport(array $report, array $runtimeDiagnosis, array $environment): array
+    {
+        $pid = is_int($report['pid'] ?? null) ? $report['pid'] : null;
+        if (!is_int($pid) || $pid <= 0) {
+            return $report;
+        }
+
+        $deadline = microtime(true) + ($this->resolveNativeRuntimeLaunchObservationTimeoutMilliseconds($environment) / 1000);
+        $sustainedObservationWindowMilliseconds = $this->resolveNativeRuntimeLaunchSustainedObservationMilliseconds($environment);
+        $activeOwnershipObservedAt = null;
+        do {
+            $observation = $this->runtimeBackend->createNativeRuntimeServiceObservationReport($runtimeDiagnosis, $environment);
+            $observedPid = is_int($observation['pid'] ?? null) ? $observation['pid'] : null;
+            $ownershipState = is_string($observation['ownership_state'] ?? null)
+                ? trim((string) $observation['ownership_state'])
+                : null;
+
+            if ($observedPid === $pid && $ownershipState === 'bus-name-owned') {
+                $activeOwnershipObservedAt ??= microtime(true);
+                $elapsedMilliseconds = (int) floor((microtime(true) - $activeOwnershipObservedAt) * 1000);
+
+                if ($elapsedMilliseconds >= $sustainedObservationWindowMilliseconds) {
+                    return $this->mergeNativeRuntimeObservationIntoStartupReport(
+                        $report,
+                        $observation,
+                        $elapsedMilliseconds,
+                        $environment
+                    );
+                }
+            } else {
+                $activeOwnershipObservedAt = null;
+            }
+
+            if (($observation['status'] ?? null) === 'native-runtime-service-not-running') {
+                $terminatedReport = $this->captureTerminalObservationFromLaunchedRuntime($report, $runtimeDiagnosis, $environment);
+                if ($terminatedReport !== null) {
+                    return $terminatedReport;
+                }
+            }
+
+            if ($observedPid === $pid && ($observation['observed'] ?? false) === true) {
+                $report['service_observation'] = $observation;
+            }
+
+            usleep(50000);
+        } while (microtime(true) < $deadline);
+
+        return $report;
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     * @param array<string, mixed> $observation
+     * @return array<string, mixed>
+     */
+    private function mergeNativeRuntimeObservationIntoStartupReport(
+        array $report,
+        array $observation,
+        int $sustainedObservationMilliseconds,
+        array $environment
+    ): array
+    {
+        $report['status'] = 'native-runtime-bus-owned';
+        $report['ownership_state'] = 'bus-name-owned';
+        $report['blocking_reason'] = null;
+        $report['next_action'] = 'runtime-service-active';
+        $report['service_observation'] = $observation + [
+            'sustained_observation_window_ms' => $sustainedObservationMilliseconds,
+        ];
+        $report['sustained_observation_window_ms'] = $sustainedObservationMilliseconds;
+
+        if (is_array($report['service_definition'] ?? null)) {
+            $report['service_definition']['startup_mode'] = 'launch-process';
+            $report['service_definition']['blocking_reason'] = null;
+            $report['service_definition']['next_action'] = 'runtime-service-active';
+        }
+
+        $supervisorReset = $this->maybeResetNativeRuntimeSupervisorState(
+            is_array($report['service_definition'] ?? null) ? $report['service_definition'] : [],
+            $environment,
+            $sustainedObservationMilliseconds,
+            is_int($report['pid'] ?? null) ? (int) $report['pid'] : null,
+            'launch-stability-achieved'
+        );
+        if ($supervisorReset !== null) {
+            $report['supervisor_reset'] = $supervisorReset;
+        }
+
+        return $report;
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     */
+    private function hasPersistedTerminalNativeRuntimeArtifacts(array $report): bool
+    {
+        $serviceDefinition = is_array($report['service_definition'] ?? null) ? $report['service_definition'] : [];
+        $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
+        $statusFilePath = is_string($artifacts['status_file_path'] ?? null) && trim((string) $artifacts['status_file_path']) !== ''
+            ? trim((string) $artifacts['status_file_path'])
+            : null;
+
+        if ($statusFilePath === null || !is_file($statusFilePath)) {
+            return false;
+        }
+
+        $rawStatus = file_get_contents($statusFilePath);
+        if (!is_string($rawStatus) || trim($rawStatus) === '') {
+            return false;
+        }
+
+        try {
+            $decodedStatus = json_decode($rawStatus, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return false;
+        }
+
+        if (!is_array($decodedStatus)) {
+            return false;
+        }
+
+        $status = is_string($decodedStatus['status'] ?? null)
+            ? trim((string) $decodedStatus['status'])
+            : null;
+
+        return in_array($status, ['native-runtime-service-loop-exited', 'native-runtime-wait-loop-failed'], true);
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, string> $environment
+     * @return array<string, mixed>|null
+     */
+    private function captureTerminalObservationFromLaunchedRuntime(
+        array $report,
+        array $runtimeDiagnosis,
+        array $environment
+    ): ?array {
+        $observation = $this->runtimeBackend->createNativeRuntimeServiceObservationReport($runtimeDiagnosis, $environment);
+        if (($observation['startup_acknowledged'] ?? false) !== true) {
+            return null;
+        }
+
+        if (($observation['status'] ?? null) !== 'native-runtime-service-not-running') {
+            return null;
+        }
+
+        $report['status'] = 'native-runtime-service-loop-exited';
+        $report['exit_code'] = 3;
+        $report['ownership_state'] = $observation['ownership_state'] ?? 'startup-recorded-no-process';
+        $report['blocking_reason'] = $observation['blocking_reason'] ?? 'native-runtime-service-not-running';
+        $report['next_action'] = $observation['next_action'] ?? 'launch-native-runtime-service';
+        $report['recovery_plan'] = is_array($observation['recovery_plan'] ?? null)
+            ? $observation['recovery_plan']
+            : ['launch-native-runtime-service', 'start-native-runtime-service'];
+        $report['launch_mode'] = 'background-process';
+        $report['launched'] = false;
+        $report['service_observation'] = $observation;
+        $report['terminal_observation_present'] = true;
+
+        return $report;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function launchDetachedNativeRuntimeServiceProcess(array $environment, array $overrides = []): bool
+    {
+        $scriptPath = $this->rootDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'system_api_dbus_runtime_adapter.php';
+        if (!is_file($scriptPath)) {
+            return false;
+        }
+
+        return PHP_OS_FAMILY === 'Windows'
+            ? $this->launchDetachedNativeRuntimeServiceProcessOnWindows($scriptPath, $environment, $overrides)
+            : $this->launchDetachedNativeRuntimeServiceProcessOnUnix($scriptPath, $environment, $overrides);
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function launchDetachedNativeRuntimeServiceProcessOnUnix(string $scriptPath, array $environment, array $overrides): bool
+    {
+        $environmentPrefix = $this->buildUnixEnvironmentOverridePrefix($overrides);
+        $phpArguments = [
+            escapeshellarg(PHP_BINARY),
+            ...$this->resolveNativeRuntimeDetachedPhpArguments($environment, static fn (string $argument): string => escapeshellarg($argument)),
+            escapeshellarg($scriptPath),
+            escapeshellarg('serve-native-runtime-service'),
+        ];
+        $command = sprintf(
+            'cd %s && %snohup %s >/dev/null 2>&1 &',
+            escapeshellarg($this->rootDir),
+            $environmentPrefix,
+            implode(' ', $phpArguments)
+        );
+
+        shell_exec('sh -c ' . escapeshellarg($command));
+
+        return true;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function launchDetachedNativeRuntimeServiceProcessOnWindows(string $scriptPath, array $environment, array $overrides): bool
+    {
+        $phpCommand = array_merge(
+            [$this->quoteCmdLiteral(PHP_BINARY)],
+            $this->resolveNativeRuntimeDetachedPhpArguments($environment, fn (string $argument): string => $this->quoteCmdLiteral($argument)),
+            [
+                $this->quoteCmdLiteral($scriptPath),
+                'serve-native-runtime-service',
+            ]
+        );
+        $environmentPrefix = $this->buildWindowsEnvironmentOverridePrefix($overrides);
+        $command = 'cd /d '
+            . $this->quoteCmdLiteral($this->rootDir)
+            . ' && '
+            . $environmentPrefix
+            . 'start "" /B '
+            . implode(' ', $phpCommand)
+            . ' >NUL 2>NUL';
+
+        // Avoid shell_exec's extra shell and inherited output pipes keeping the launcher attached.
+        $process = proc_open($this->resolveWindowsCmdBinary() . ' /d /s /c "' . $command . '"', [
+            0 => ['file', 'NUL', 'r'],
+            1 => ['file', 'NUL', 'w'],
+            2 => ['file', 'NUL', 'w'],
+        ], $pipes, $this->rootDir, null, ['bypass_shell' => true]);
+        $launched = is_resource($process) && proc_close($process) === 0;
+
+        return $launched;
+    }
+
+    /**
+     * @param array<string, string> $overrides
+     */
+    private function buildUnixEnvironmentOverridePrefix(array $overrides): string
+    {
+        $segments = [];
+
+        foreach ($overrides as $key => $value) {
+            if (!preg_match('/^[A-Z0-9_]+$/', $key)) {
+                continue;
+            }
+
+            $segments[] = $key . '=' . escapeshellarg($value);
+        }
+
+        return $segments === [] ? '' : implode(' ', $segments) . ' ';
+    }
+
+    /**
+     * @param array<string, string> $overrides
+     */
+    private function buildWindowsEnvironmentOverridePrefix(array $overrides): string
+    {
+        $segments = [];
+
+        foreach ($overrides as $key => $value) {
+            if (!preg_match('/^[A-Z0-9_]+$/', $key)) {
+                continue;
+            }
+
+            $segments[] = 'set ' . $this->quoteCmdLiteral($key . '=' . $value) . ' && ';
+        }
+
+        return implode('', $segments);
+    }
+
+    /**
+     * @param array<string, string> $environment
+     * @param callable(string): string $quoteArgument
+     * @return list<string>
+     */
+    private function resolveNativeRuntimeDetachedPhpArguments(array $environment, callable $quoteArgument): array
+    {
+        $extensionPath = $this->resolveNativeRuntimeExtensionPath($environment);
+        if ($extensionPath === null) {
+            return [];
+        }
+
+        return [
+            $quoteArgument('-d'),
+            $quoteArgument('extension=' . $extensionPath),
+        ];
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeExtensionPath(array $environment): ?string
+    {
+        foreach ([
+            'W4_SYSTEM_API_NATIVE_RUNTIME_EXTENSION_PATH',
+            'W4_SYSTEM_API_REMOTE_DBUS_MODULE',
+        ] as $key) {
+            $value = $environment[$key] ?? null;
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return null;
+    }
+
+    private function quoteCmdLiteral(string $value): string
+    {
+        return '"' . str_replace('"', '""', $value) . '"';
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeStartupMode(array $environment): string
+    {
+        $mode = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_STARTUP_MODE'] ?? 'bootstrap-contract';
+
+        return is_string($mode) && trim($mode) === 'launch-process'
+            ? 'launch-process'
+            : 'bootstrap-contract';
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeKeepAliveSeconds(array $environment): int
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_KEEPALIVE_SECONDS'] ?? null;
+        if (!is_string($value) || preg_match('/^\d+$/', trim($value)) !== 1) {
+            return 0;
+        }
+
+        $seconds = (int) trim($value);
+
+        return $seconds > 0 ? min($seconds, 30) : 0;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeLaunchObservationTimeoutMilliseconds(array $environment): int
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_LAUNCH_OBSERVATION_TIMEOUT_MS'] ?? null;
+        if (!is_string($value) || preg_match('/^\d+$/', trim($value)) !== 1) {
+            return 1500;
+        }
+
+        $milliseconds = (int) trim($value);
+
+        return $milliseconds > 0 ? min($milliseconds, 5000) : 0;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeLaunchSustainedObservationMilliseconds(array $environment): int
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_SUSTAINED_OBSERVATION_MS'] ?? null;
+        if (!is_string($value) || preg_match('/^\d+$/', trim($value)) !== 1) {
+            return 150;
+        }
+
+        $milliseconds = (int) trim($value);
+
+        return $milliseconds > 0 ? min($milliseconds, 2000) : 0;
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, string> $environment
+     * @return array<string, mixed>
+     */
+    private function attemptNativeRuntimeServiceAutoReactivation(
+        array $report,
+        array $runtimeDiagnosis,
+        array $environment
+    ): array {
+        if (!$this->resolveNativeRuntimeAutoReactivationEnabled($environment)) {
+            return $report;
+        }
+
+        $maxAttempts = $this->resolveNativeRuntimeAutoReactivationMaxAttempts($environment);
+        $currentAttempt = $this->resolveNativeRuntimeAutoReactivationAttempt($environment);
+        if ($maxAttempts <= 0 || $currentAttempt >= $maxAttempts) {
+            return $report + [
+                'auto_reactivation' => [
+                    'enabled' => true,
+                    'attempted' => false,
+                    'attempt' => $currentAttempt,
+                    'max_attempts' => $maxAttempts,
+                    'reason' => 'native-runtime-auto-reactivation-budget-exhausted',
+                ],
+            ];
+        }
+
+        if (!$this->hasPersistedTerminalNativeRuntimeArtifacts($report)) {
+            return $report;
+        }
+
+        $observation = $this->runtimeBackend->createNativeRuntimeServiceObservationReport($runtimeDiagnosis, $environment);
+        if (($observation['status'] ?? null) !== 'native-runtime-service-not-running'
+            || ($observation['next_action'] ?? null) !== 'reactivate-native-runtime-service'
+        ) {
+            return $report;
+        }
+
+        $serviceDefinition = is_array($observation['service_definition'] ?? null) ? $observation['service_definition'] : [];
+        $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
+        $pidFilePath = is_string($artifacts['pid_file_path'] ?? null) && trim((string) $artifacts['pid_file_path']) !== ''
+            ? trim((string) $artifacts['pid_file_path'])
+            : null;
+        $stateFilePath = $this->resolveNativeRuntimeSupervisorStateFilePath($serviceDefinition, $environment);
+        $state = $this->readNativeRuntimeSupervisorState($stateFilePath);
+        $effectiveAttempt = max($currentAttempt, is_int($state['attempt_count'] ?? null) ? (int) $state['attempt_count'] : 0);
+        $terminalStatus = $observation['startup_report']['status'] ?? null;
+        $cooldownPlan = $this->resolveNativeRuntimeAutoReactivationCooldownPlan(
+            $effectiveAttempt,
+            $environment,
+            is_string($terminalStatus) ? $terminalStatus : null
+        );
+        $termination = [
+            'termination_class' => $cooldownPlan['termination_class'],
+            'failure_backoff_multiplier' => $cooldownPlan['failure_backoff_multiplier'],
+        ];
+        $cooldownMilliseconds = $cooldownPlan['cooldown_backoff_ms'];
+        $cooldownUntil = is_int($state['cooldown_until_epoch_ms'] ?? null) ? (int) $state['cooldown_until_epoch_ms'] : 0;
+        $now = (int) floor(microtime(true) * 1000);
+        if ($cooldownUntil > $now) {
+            $observation['auto_reactivation'] = $termination + [
+                'enabled' => true,
+                'attempted' => false,
+                'attempt' => $effectiveAttempt,
+                'max_attempts' => $maxAttempts,
+                'reason' => 'native-runtime-auto-reactivation-cooldown-active',
+                'cooldown_backoff_ms' => is_int($state['cooldown_backoff_ms'] ?? null)
+                    ? (int) $state['cooldown_backoff_ms']
+                    : $cooldownMilliseconds,
+                'cooldown_until_epoch_ms' => $cooldownUntil,
+                'cooldown_remaining_ms' => max(0, $cooldownUntil - $now),
+                'state_file_path' => $stateFilePath,
+            ];
+
+            return $observation;
+        }
+
+        if ($effectiveAttempt >= $maxAttempts) {
+            $observation['auto_reactivation'] = $termination + [
+                'enabled' => true,
+                'attempted' => false,
+                'attempt' => $effectiveAttempt,
+                'max_attempts' => $maxAttempts,
+                'reason' => 'native-runtime-auto-reactivation-budget-exhausted',
+                'state_file_path' => $stateFilePath,
+            ];
+
+            return $observation;
+        }
+
+        $nextAttempt = $effectiveAttempt + 1;
+        $nextCooldownUntil = $now + $cooldownMilliseconds;
+        $this->writeNativeRuntimeSupervisorState($stateFilePath, $termination + [
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-native-runtime-supervisor-state',
+            'attempt_count' => $nextAttempt,
+            'max_attempts' => $maxAttempts,
+            'cooldown_backoff_base_ms' => $cooldownPlan['cooldown_backoff_base_ms'],
+            'cooldown_backoff_multiplier' => $cooldownPlan['cooldown_backoff_multiplier'],
+            'cooldown_backoff_max_ms' => $cooldownPlan['cooldown_backoff_max_ms'],
+            'cooldown_backoff_ms' => $cooldownMilliseconds,
+            'last_attempt_epoch_ms' => $now,
+            'cooldown_until_epoch_ms' => $nextCooldownUntil,
+            'last_observed_status' => $observation['status'] ?? null,
+            'last_observed_next_action' => $observation['next_action'] ?? null,
+        ]);
+        $launched = $this->launchDetachedNativeRuntimeServiceProcess($environment, [
+            'W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_ATTEMPT' => (string) $nextAttempt,
+            // Ownership belongs to the failed process, never to its replacement.
+            'W4_SYSTEM_API_NATIVE_RUNTIME_ACTIVE' => '0',
+            'W4_SYSTEM_API_NATIVE_RUNTIME_OWNERSHIP_STATE' => 'pending-bus-name-ownership',
+        ]);
+        $pid = $launched && $pidFilePath !== null ? $this->waitForNativeRuntimePid($pidFilePath) : null;
+        $reactivation = $termination + [
+            'enabled' => true,
+            'attempted' => true,
+            'attempt' => $nextAttempt,
+            'max_attempts' => $maxAttempts,
+            'cooldown_backoff_base_ms' => $cooldownPlan['cooldown_backoff_base_ms'],
+            'cooldown_backoff_multiplier' => $cooldownPlan['cooldown_backoff_multiplier'],
+            'cooldown_backoff_max_ms' => $cooldownPlan['cooldown_backoff_max_ms'],
+            'cooldown_backoff_ms' => $cooldownMilliseconds,
+            'cooldown_until_epoch_ms' => $nextCooldownUntil,
+            'launch_mode' => 'background-process',
+            'launched' => $launched && $pid !== null,
+            'parent_observation_status' => $observation['status'] ?? null,
+            'parent_next_action' => $observation['next_action'] ?? null,
+            'state_file_path' => $stateFilePath,
+        ];
+
+        if (!$launched || $pid === null) {
+            $report['status'] = 'native-runtime-service-reactivation-failed';
+            $report['exit_code'] = 1;
+            $report['blocking_reason'] = 'native-runtime-service-reactivation-failed';
+            $report['next_action'] = 'inspect-native-runtime-service-report';
+            $report['recovery_plan'] = [
+                'inspect-native-runtime-service-report',
+                'launch-native-runtime-service',
+                'start-native-runtime-service',
+            ];
+            $report['launched'] = false;
+            $report['auto_reactivation'] = $reactivation;
+
+            return $report;
+        }
+
+        $reactivationReport = $this->runtimeBackend->createNativeRuntimeServiceStartupReport($runtimeDiagnosis, $environment);
+        $reactivationReport['status'] = 'native-runtime-service-reactivation-recorded';
+        $reactivationReport['startup_acknowledged'] = true;
+        $reactivationReport['exit_code'] = 0;
+        $reactivationReport['ownership_state'] = 'pending-bus-name-ownership';
+        $reactivationReport['blocking_reason'] = 'native-runtime-bus-ownership-pending';
+        $reactivationReport['next_action'] = 'observe-native-runtime-service-state';
+        $reactivationReport['recovery_plan'] = [
+            'observe-native-runtime-service-state',
+            'inspect-native-runtime-service-report',
+            'launch-native-runtime-service',
+            'start-native-runtime-service',
+        ];
+        $reactivationReport['launch_mode'] = 'background-process';
+        $reactivationReport['launched'] = true;
+        $reactivationReport['reactivated'] = true;
+        $reactivationReport['pid'] = $pid;
+        $reactivationReport['service_definition'] = $this->markNativeRuntimeServiceDefinitionAsLaunched(
+            is_array($reactivationReport['service_definition'] ?? null) ? $reactivationReport['service_definition'] : []
+        );
+        $reactivationReport['service_observation'] = $observation;
+        $reactivationReport['auto_reactivation'] = $reactivation;
+        $supervisorReset = $this->attemptStableSupervisorResetAfterReactivationLaunch(
+            $pid,
+            $runtimeDiagnosis,
+            $environment,
+            is_array($reactivationReport['service_definition'] ?? null) ? $reactivationReport['service_definition'] : []
+        );
+        if ($supervisorReset !== null) {
+            $reactivationReport['supervisor_reset'] = $supervisorReset;
+            $reactivationReport['auto_reactivation']['budget_reset'] = $supervisorReset;
+        }
+
+        return $reactivationReport;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeAutoReactivationEnabled(array $environment): bool
+    {
+        return ($environment['W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE'] ?? null) === '1';
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeAutoReactivationMaxAttempts(array $environment): int
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_MAX_ATTEMPTS'] ?? null;
+        if (!is_string($value) || preg_match('/^\d+$/', trim($value)) !== 1) {
+            return 1;
+        }
+
+        $attempts = (int) trim($value);
+
+        return $attempts > 0 ? min($attempts, 3) : 0;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeAutoReactivationAttempt(array $environment): int
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_ATTEMPT'] ?? null;
+        if (!is_string($value) || preg_match('/^\d+$/', trim($value)) !== 1) {
+            return 0;
+        }
+
+        $attempt = (int) trim($value);
+
+        return $attempt > 0 ? min($attempt, 10) : 0;
+    }
+
+    /**
+     * @param array<string, mixed> $serviceDefinition
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeSupervisorStateFilePath(array $serviceDefinition, array $environment): ?string
+    {
+        $configured = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_SUPERVISOR_STATE_FILE'] ?? null;
+        if (is_string($configured) && trim($configured) !== '') {
+            return trim($configured);
+        }
+
+        $artifacts = is_array($serviceDefinition['artifacts'] ?? null) ? $serviceDefinition['artifacts'] : [];
+        $statusFilePath = $artifacts['status_file_path'] ?? null;
+        if (!is_string($statusFilePath) || trim($statusFilePath) === '') {
+            return null;
+        }
+
+        $directory = dirname(trim($statusFilePath));
+        if ($directory === '' || $directory === '.' || $directory === DIRECTORY_SEPARATOR) {
+            return null;
+        }
+
+        return $directory . DIRECTORY_SEPARATOR . 'w4-system-api-native-runtime-supervisor.json';
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function readNativeRuntimeSupervisorState(?string $path): array
+    {
+        if ($path === null || !is_file($path)) {
+            return [];
+        }
+
+        $raw = file_get_contents($path);
+        if (!is_string($raw) || trim($raw) === '') {
+            return [];
+        }
+
+        try {
+            $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return [];
+        }
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * @param array<string, mixed> $state
+     */
+    private function writeNativeRuntimeSupervisorState(?string $path, array $state): void
+    {
+        if ($path === null) {
+            return;
+        }
+
+        $directory = dirname($path);
+        if (!is_dir($directory) && !@mkdir($directory, 0777, true) && !is_dir($directory)) {
+            return;
+        }
+
+        $encoded = json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        if ($encoded === false) {
+            return;
+        }
+
+        $temporaryPath = $path . '.tmp';
+        if (@file_put_contents($temporaryPath, $encoded . PHP_EOL) === false) {
+            return;
+        }
+
+        @rename($temporaryPath, $path);
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeAutoReactivationBackoffMilliseconds(array $environment): int
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_BACKOFF_MS'] ?? null;
+        if (!is_string($value) || preg_match('/^\d+$/', trim($value)) !== 1) {
+            return 250;
+        }
+
+        $milliseconds = (int) trim($value);
+
+        return $milliseconds >= 0 ? min($milliseconds, 10000) : 0;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeAutoReactivationBackoffMultiplier(array $environment): int
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_BACKOFF_MULTIPLIER'] ?? null;
+        if (!is_string($value) || preg_match('/^\d+$/', trim($value)) !== 1) {
+            return 1;
+        }
+
+        $multiplier = (int) trim($value);
+
+        return $multiplier > 0 ? min($multiplier, 10) : 1;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeAutoReactivationMaxBackoffMilliseconds(array $environment): int
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_MAX_BACKOFF_MS'] ?? null;
+        if (!is_string($value) || preg_match('/^\d+$/', trim($value)) !== 1) {
+            return 10000;
+        }
+
+        $milliseconds = (int) trim($value);
+
+        return $milliseconds >= 0 ? min($milliseconds, 60000) : 10000;
+    }
+
+    /**
+     * @param array<string, string> $environment
+     * @return array{cooldown_backoff_base_ms: int, cooldown_backoff_multiplier: int, cooldown_backoff_max_ms: int, cooldown_backoff_ms: int, termination_class: string, failure_backoff_multiplier: int}
+     */
+    private function resolveNativeRuntimeAutoReactivationCooldownPlan(
+        int $effectiveAttempt,
+        array $environment,
+        ?string $terminalStatus = null
+    ): array {
+        $baseBackoff = $this->resolveNativeRuntimeAutoReactivationBackoffMilliseconds($environment);
+        $multiplier = $this->resolveNativeRuntimeAutoReactivationBackoffMultiplier($environment);
+        $maximumBackoff = max($baseBackoff, $this->resolveNativeRuntimeAutoReactivationMaxBackoffMilliseconds($environment));
+        $terminationClass = match ($terminalStatus) {
+            'native-runtime-wait-loop-failed' => 'wait-loop-failed',
+            'native-runtime-service-loop-exited' => 'loop-exited',
+            default => 'unknown',
+        };
+        $failureMultiplier = 1;
+        $configured = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_FAILURE_BACKOFF_MULTIPLIER'] ?? null;
+        if ($terminationClass === 'wait-loop-failed'
+            && is_string($configured)
+            && preg_match('/^\d+$/', trim($configured)) === 1
+        ) {
+            $failureMultiplier = max(1, min(10, (int) trim($configured)));
+        }
+        $cooldown = $baseBackoff;
+
+        for ($attempt = 1; $attempt < max(1, $effectiveAttempt + 1); $attempt++) {
+            $cooldown = min($maximumBackoff, $cooldown * $multiplier);
+            if ($cooldown >= $maximumBackoff) {
+                break;
+            }
+        }
+
+        return [
+            'termination_class' => $terminationClass,
+            'failure_backoff_multiplier' => $failureMultiplier,
+            'cooldown_backoff_base_ms' => $baseBackoff,
+            'cooldown_backoff_multiplier' => $multiplier,
+            'cooldown_backoff_max_ms' => $maximumBackoff,
+            'cooldown_backoff_ms' => min($maximumBackoff, $cooldown * $failureMultiplier),
+        ];
+    }
+
+    /**
+     * @param array<string, string> $environment
+     */
+    private function resolveNativeRuntimeAutoReactivationResetStabilityMilliseconds(array $environment): int
+    {
+        $value = $environment['W4_SYSTEM_API_NATIVE_RUNTIME_AUTO_REACTIVATE_RESET_STABILITY_MS'] ?? null;
+        if (!is_string($value) || preg_match('/^\d+$/', trim($value)) !== 1) {
+            return 500;
+        }
+
+        $milliseconds = (int) trim($value);
+
+        return $milliseconds >= 0 ? min($milliseconds, 5000) : 0;
+    }
+
+    /**
+     * @param array<string, mixed> $serviceDefinition
+     * @param array<string, string> $environment
+     * @return array<string, mixed>|null
+     */
+    private function maybeResetNativeRuntimeSupervisorState(
+        array $serviceDefinition,
+        array $environment,
+        int $stableWindowMilliseconds,
+        ?int $pid,
+        string $trigger
+    ): ?array {
+        $thresholdMilliseconds = $this->resolveNativeRuntimeAutoReactivationResetStabilityMilliseconds($environment);
+        if ($stableWindowMilliseconds < $thresholdMilliseconds) {
+            return null;
+        }
+
+        $stateFilePath = $this->resolveNativeRuntimeSupervisorStateFilePath($serviceDefinition, $environment);
+        $state = $this->readNativeRuntimeSupervisorState($stateFilePath);
+        $attemptCount = is_int($state['attempt_count'] ?? null) ? (int) $state['attempt_count'] : 0;
+        if ($stateFilePath === null || $attemptCount <= 0) {
+            return null;
+        }
+
+        $resetState = [
+            'api_version' => '1.0',
+            'kind' => 'system-api-dbus-native-runtime-supervisor-state',
+            'attempt_count' => 0,
+            // Retain the cause of the previous attempt as history, not current health.
+            'termination_class' => $state['termination_class'] ?? 'unknown',
+            'failure_backoff_multiplier' => $state['failure_backoff_multiplier'] ?? 1,
+            'max_attempts' => is_int($state['max_attempts'] ?? null)
+                ? (int) $state['max_attempts']
+                : $this->resolveNativeRuntimeAutoReactivationMaxAttempts($environment),
+            'cooldown_backoff_base_ms' => is_int($state['cooldown_backoff_base_ms'] ?? null)
+                ? (int) $state['cooldown_backoff_base_ms']
+                : $this->resolveNativeRuntimeAutoReactivationBackoffMilliseconds($environment),
+            'cooldown_backoff_multiplier' => is_int($state['cooldown_backoff_multiplier'] ?? null)
+                ? (int) $state['cooldown_backoff_multiplier']
+                : $this->resolveNativeRuntimeAutoReactivationBackoffMultiplier($environment),
+            'cooldown_backoff_max_ms' => is_int($state['cooldown_backoff_max_ms'] ?? null)
+                ? (int) $state['cooldown_backoff_max_ms']
+                : $this->resolveNativeRuntimeAutoReactivationMaxBackoffMilliseconds($environment),
+            'cooldown_backoff_ms' => is_int($state['cooldown_backoff_ms'] ?? null)
+                ? (int) $state['cooldown_backoff_ms']
+                : $this->resolveNativeRuntimeAutoReactivationBackoffMilliseconds($environment),
+            'last_attempt_epoch_ms' => is_int($state['last_attempt_epoch_ms'] ?? null)
+                ? (int) $state['last_attempt_epoch_ms']
+                : null,
+            'cooldown_until_epoch_ms' => 0,
+            'last_reset_epoch_ms' => (int) floor(microtime(true) * 1000),
+            'last_reset_reason' => 'native-runtime-stability-achieved',
+            'last_reset_trigger' => $trigger,
+            'last_stable_window_ms' => $stableWindowMilliseconds,
+            'reset_stability_threshold_ms' => $thresholdMilliseconds,
+            'last_successful_pid' => $pid,
+            'previous_attempt_count' => $attemptCount,
+        ];
+        $this->writeNativeRuntimeSupervisorState($stateFilePath, $resetState);
+
+        return [
+            'performed' => true,
+            'reason' => 'native-runtime-stability-achieved',
+            'trigger' => $trigger,
+            'previous_attempt_count' => $attemptCount,
+            'stable_window_ms' => $stableWindowMilliseconds,
+            'threshold_ms' => $thresholdMilliseconds,
+            'state_file_path' => $stateFilePath,
+            'pid' => $pid,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $runtimeDiagnosis
+     * @param array<string, string> $environment
+     * @param array<string, mixed> $serviceDefinition
+     * @return array<string, mixed>|null
+     */
+    private function attemptStableSupervisorResetAfterReactivationLaunch(
+        int $pid,
+        array $runtimeDiagnosis,
+        array $environment,
+        array $serviceDefinition
+    ): ?array {
+        $thresholdMilliseconds = $this->resolveNativeRuntimeAutoReactivationResetStabilityMilliseconds($environment);
+        if ($thresholdMilliseconds <= 0) {
+            return $this->maybeResetNativeRuntimeSupervisorState(
+                $serviceDefinition,
+                $environment,
+                0,
+                $pid,
+                'reactivation-stability-achieved'
+            );
+        }
+
+        $deadline = microtime(true) + ($this->resolveNativeRuntimeLaunchObservationTimeoutMilliseconds($environment) / 1000);
+        $activeOwnershipObservedAt = null;
+        do {
+            $observation = $this->runtimeBackend->createNativeRuntimeServiceObservationReport($runtimeDiagnosis, $environment);
+            $observedPid = is_int($observation['pid'] ?? null) ? (int) $observation['pid'] : null;
+            $ownershipState = is_string($observation['ownership_state'] ?? null)
+                ? trim((string) $observation['ownership_state'])
+                : null;
+
+            if ($observedPid === $pid && $ownershipState === 'bus-name-owned') {
+                $activeOwnershipObservedAt ??= microtime(true);
+                $elapsedMilliseconds = (int) floor((microtime(true) - $activeOwnershipObservedAt) * 1000);
+                if ($elapsedMilliseconds >= $thresholdMilliseconds) {
+                    return $this->maybeResetNativeRuntimeSupervisorState(
+                        $serviceDefinition,
+                        $environment,
+                        $elapsedMilliseconds,
+                        $pid,
+                        'reactivation-stability-achieved'
+                    );
+                }
+            } else {
+                $activeOwnershipObservedAt = null;
+            }
+
+            if (($observation['status'] ?? null) === 'native-runtime-service-not-running') {
+                return null;
+            }
+
+            usleep(50000);
+        } while (microtime(true) < $deadline);
+
+        return null;
+    }
+
+    private function resolveWindowsCmdBinary(): string
+    {
+        $roots = [];
+        $systemRoot = getenv('SystemRoot');
+        if (is_string($systemRoot) && trim($systemRoot) !== '') {
+            $roots[] = trim($systemRoot);
+        }
+
+        $windir = getenv('WINDIR');
+        if (is_string($windir) && trim($windir) !== '') {
+            $roots[] = trim($windir);
+        }
+
+        $roots[] = 'C:\\WINDOWS';
+        $roots[] = 'C:\\Windows';
+
+        foreach (array_unique($roots) as $root) {
+            $candidate = rtrim($root, "\\/") . DIRECTORY_SEPARATOR . 'System32' . DIRECTORY_SEPARATOR . 'cmd.exe';
+            if (is_file($candidate)) {
+                return $this->quoteCmdLiteral($candidate);
+            }
+        }
+
+        return 'cmd.exe';
+    }
+
+    private function waitForNativeRuntimePid(string $pidFilePath): ?int
+    {
+        for ($attempt = 0; $attempt < 20; $attempt++) {
+            if (is_file($pidFilePath)) {
+                $raw = file_get_contents($pidFilePath);
+                $trimmed = is_string($raw) ? trim($raw) : '';
+                if ($trimmed !== '' && preg_match('/^\d+$/', $trimmed) === 1) {
+                    $pid = (int) $trimmed;
+                    if ($pid > 0) {
+                        return $pid;
+                    }
+                }
+            }
+
+            usleep(50000);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     * @param array<string, mixed> $commandResult
+     * @return array<string, mixed>
+     */
+    private function finalizeActivationExecution(array $report, array $commandResult): array
+    {
+        $exitCode = is_int($commandResult['exit_code'] ?? null) ? $commandResult['exit_code'] : 1;
+        $commandRole = is_string($report['target_command']['command_role'] ?? null)
+            ? $report['target_command']['command_role']
+            : 'runtime-adapter-activation';
+
+        $report['executed'] = true;
+        $report['exit_code'] = $exitCode;
+        $report['status'] = match ($exitCode) {
+            0 => 'execution-completed',
+            3 => 'execution-attempted-pending-runtime-adapter',
+            default => 'execution-attempted-failed',
+        };
+        $report['blocking_reason'] = match ($exitCode) {
+            0 => null,
+            3 => $commandRole === 'native-runtime-service-bootstrap'
+                ? 'native-runtime-service-returned-pending'
+                : 'runtime-adapter-returned-pending',
+            default => 'runtime-adapter-command-failed',
+        };
+        $report['command_result'] = $commandResult;
+        $report['next_action'] = match ($exitCode) {
+            0 => $commandRole === 'native-runtime-service-bootstrap'
+                ? 'observe-native-runtime-service-state'
+                : 'observe-runtime-adapter-state',
+            3 => $commandRole === 'native-runtime-service-bootstrap'
+                ? 'inspect-native-runtime-service-report'
+                : 'inspect-runtime-adapter-report',
+            default => 'inspect-runtime-adapter-error',
+        };
+
+        return $this->activationToolkit->reconcileNativeRuntimeLaunchExecution($report, $commandResult);
+    }
+
+
+    /**
+     * @return array<string, string>
+     */
+    private function captureEnvironment(): array
+    {
+        $environment = getenv();
+        if (!is_array($environment)) {
+            return [];
+        }
+
+        $captured = [];
+        foreach ($environment as $key => $value) {
+            if (is_string($key) && is_string($value)) {
+                $captured[$key] = $value;
+            }
+        }
+
+        return $captured;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decodeResponseJson(string $json): array
+    {
+        try {
+            $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            throw new ValidationError(sprintf('La respuesta JSON del runtime adapter es invalida: %s', $exception->getMessage()));
+        }
+
+        if (!is_array($decoded)) {
+            throw new ValidationError('La respuesta JSON del runtime adapter debe decodificar a un objeto');
+        }
+
+        return $decoded;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function encodeJson(array $payload): string
+    {
+        $encoded = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($encoded === false) {
+            throw new ValidationError('No se pudo serializar la respuesta del runtime adapter D-Bus');
+        }
+
+        return $encoded . PHP_EOL;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function encodeNdjson(array $payload): string
+    {
+        $encoded = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($encoded === false) {
+            throw new ValidationError('No se pudo serializar la respuesta NDJSON del runtime adapter D-Bus');
+        }
+
+        return $encoded . PHP_EOL;
+    }
+
+}

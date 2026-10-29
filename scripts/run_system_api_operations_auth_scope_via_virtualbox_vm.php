@@ -214,6 +214,79 @@ function decodeJsonFile(string $path, string $label): array
     return $decoded;
 }
 
+function resolvePasswordFromCredentialsFile(string $rootDir, string $vmName, string $username, int $sshPort): ?string
+{
+    $path = $rootDir . DIRECTORY_SEPARATOR . 'Docs' . DIRECTORY_SEPARATOR . 'DEVELOPMENT' . DIRECTORY_SEPARATOR . 'CONTRASEÑAS_OS.md';
+    if (!is_file($path)) {
+        return null;
+    }
+
+    $raw = file_get_contents($path);
+    if (!is_string($raw) || trim($raw) === '') {
+        return null;
+    }
+
+    $lines = preg_split('/\r?\n/', $raw) ?: [];
+    $candidates = [
+        '/^\s*VM_W4_OS_SERVER_DBUSMODERN_PASSWORD\s*[:=]\s*(.+?)\s*$/i',
+        '/^\s*W4_OS_SERVER_DBUSMODERN_SSH_PASSWORD\s*[:=]\s*(.+?)\s*$/i',
+        '/^\s*VIRTUALBOX_W4LIVE_PASSWORD\s*[:=]\s*(.+?)\s*$/i',
+        '/^\s*W4LIVE_PASSWORD\s*[:=]\s*(.+?)\s*$/i',
+        '/^\s*SSH_PASSWORD\s*[:=]\s*(.+?)\s*$/i',
+    ];
+
+    foreach ($lines as $line) {
+        foreach ($candidates as $pattern) {
+            if (preg_match($pattern, $line, $matches) === 1) {
+                $value = trim((string) ($matches[1] ?? ''));
+                $value = trim($value, "`'\" ");
+                if ($value !== '') {
+                    return $value;
+                }
+            }
+        }
+    }
+
+    foreach ($lines as $line) {
+        $lower = strtolower($line);
+        if (!str_contains($lower, 'pass') && !str_contains($lower, 'clave')) {
+            continue;
+        }
+        if (!str_contains($line, $vmName) && !str_contains($line, $username) && !str_contains($line, (string) $sshPort)) {
+            continue;
+        }
+
+        if (preg_match('/(?:password|pass|clave)\s*[:=]\s*(.+?)\s*$/i', $line, $matches) === 1) {
+            $value = trim((string) ($matches[1] ?? ''));
+            $value = trim($value, "`'\" ");
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        if (str_contains($line, '|')) {
+            $parts = array_values(array_filter(array_map('trim', explode('|', $line)), static fn (string $part): bool => $part !== ''));
+            if (count($parts) >= 2) {
+                $value = trim((string) $parts[count($parts) - 1]);
+                $value = trim($value, "`'\" ");
+                if ($value !== '' && !str_contains(strtolower($value), 'password')) {
+                    return $value;
+                }
+            }
+        }
+
+        if (preg_match('/' . preg_quote($username, '/') . '\s*:\s*(\S+)\s*$/', $line, $matches) === 1) {
+            $value = trim((string) ($matches[1] ?? ''));
+            $value = trim($value, "`'\" ");
+            if ($value !== '') {
+                return $value;
+            }
+        }
+    }
+
+    return null;
+}
+
 function printJson(array $payload): void
 {
     echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL;
@@ -236,12 +309,17 @@ try {
     $waitMs = 1500;
     $checkOnly = false;
     $remotePhp = '/opt/php/8.4.24/bin/php';
+    $autoLivePassword = false;
 
     for ($index = 1, $count = count($arguments); $index < $count; $index++) {
         $argument = $arguments[$index];
 
         if ($argument === '--check-only') {
             $checkOnly = true;
+            continue;
+        }
+        if ($argument === '--auto-live-password') {
+            $autoLivePassword = true;
             continue;
         }
 
@@ -353,6 +431,15 @@ try {
 
     if ($password === null || trim($password) === '') {
         $password = $livePassword;
+    }
+    if ($password === null || trim($password) === '') {
+        $password = resolvePasswordFromCredentialsFile($rootDir, $vmName, $username, $sshPort);
+    }
+    if ($password === null || trim($password) === '') {
+        if ($autoLivePassword && ($livePassword === null || trim($livePassword) === '')) {
+            $livePassword = bin2hex(random_bytes(12));
+            $password = $livePassword;
+        }
     }
     if ($password === null || trim($password) === '') {
         throw new ValidationError('Debe indicar --password o --live-password');
