@@ -125,6 +125,60 @@ function waitForVmRunning(string $vboxManage, string $vmName, int $timeoutSecond
     return inspectVirtualMachine($vboxManage, $vmName);
 }
 
+function resolveForwardedSshPort(string $vboxManage, string $vmName): ?int
+{
+    $output = runChecked([$vboxManage, 'showvminfo', $vmName, '--machinereadable']);
+    $lines = preg_split('/\r?\n/', $output) ?: [];
+    $forwardings = [];
+
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || !str_starts_with($line, 'Forwarding(') || !str_contains($line, '=')) {
+            continue;
+        }
+
+        [, $value] = explode('=', $line, 2);
+        $value = trim($value);
+        if ($value !== '' && str_starts_with($value, '"') && str_ends_with($value, '"')) {
+            $value = substr($value, 1, -1);
+        }
+
+        $parts = array_map('trim', explode(',', $value));
+        if (count($parts) < 6) {
+            continue;
+        }
+
+        $name = $parts[0] ?? '';
+        $hostPort = $parts[3] ?? '';
+        $guestPort = $parts[5] ?? '';
+        if (!is_string($name) || !is_string($hostPort) || !is_string($guestPort)) {
+            continue;
+        }
+        if (trim($guestPort) !== '22' || preg_match('/^\d+$/', trim($hostPort)) !== 1) {
+            continue;
+        }
+
+        $forwardings[] = [
+            'name' => $name,
+            'host_port' => (int) trim($hostPort),
+        ];
+    }
+
+    foreach (['w4livessh', 'guestssh', 'ssh'] as $preferred) {
+        foreach ($forwardings as $forwarding) {
+            if (str_contains(strtolower((string) $forwarding['name']), $preferred)) {
+                return (int) $forwarding['host_port'];
+            }
+        }
+    }
+
+    if ($forwardings !== []) {
+        return (int) $forwardings[0]['host_port'];
+    }
+
+    return null;
+}
+
 function findPhpBinary(): string
 {
     $binary = PHP_BINARY;
@@ -301,7 +355,8 @@ try {
     $vmName = 'W4-OS-Server-DbusModern';
     $remoteRoot = '/home/w4live/system-api-ops-auth-scope';
     $sshHost = '127.0.0.1';
-    $sshPort = 2242;
+    $sshPort = 2222;
+    $sshPortExplicit = false;
     $username = 'w4live';
     $password = null;
     $liveUser = 'w4live';
@@ -341,6 +396,7 @@ try {
                 break;
             case '--ssh-port':
                 $sshPort = (int) $value;
+                $sshPortExplicit = true;
                 break;
             case '--username':
                 $username = $value;
@@ -426,6 +482,13 @@ try {
         $vmInfo = waitForVmRunning($vboxManage, $vmName, 90);
         if (($vmInfo['state'] ?? null) !== 'running') {
             throw new ValidationError(sprintf('La VM no quedo corriendo: %s', $vmName));
+        }
+    }
+
+    if (!$sshPortExplicit) {
+        $resolvedPort = resolveForwardedSshPort($vboxManage, $vmName);
+        if (is_int($resolvedPort) && $resolvedPort > 0) {
+            $sshPort = $resolvedPort;
         }
     }
 
@@ -529,6 +592,25 @@ try {
         '--artifact',
         'report.json',
     ]);
+
+    if ($executionResult['exit_code'] !== 0) {
+        $message = $executionResult['stderr'] !== '' ? $executionResult['stderr'] : $executionResult['stdout'];
+        if ($message === '') {
+            $message = 'Fallo al ejecutar el worker remoto';
+        }
+        throw new ValidationError($message);
+    }
+
+    $downloadSummary = null;
+    try {
+        $downloadSummary = json_decode($downloadOutput, true, 512, JSON_THROW_ON_ERROR);
+    } catch (Throwable) {
+        $downloadSummary = null;
+    }
+    $missing = is_array($downloadSummary) ? ($downloadSummary['missing'] ?? null) : null;
+    if (is_array($missing) && in_array('report.json', $missing, true)) {
+        throw new ValidationError('La VM no entrego report.json para esta ejecucion');
+    }
 
     $report = decodeJsonFile($localRunDir . DIRECTORY_SEPARATOR . 'report.json', 'report.json');
     $validated = ($report['validated'] ?? false) === true;
